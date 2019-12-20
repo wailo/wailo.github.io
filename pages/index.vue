@@ -1,0 +1,77 @@
+<template>
+  <div class="container">
+    <b-container fluid class="bv-example-row">
+      <b-row>
+        <b-col><Bio /></b-col>
+        <b-col>
+          <div>
+            <logo />
+            <h1 class="title">wa.il</h1>
+            <h2 class="badge badge-secondary">C++</h2>
+            <h2 class="badge badge-secondary">Software</h2>
+            <h2 class="badge badge-secondary">Finance</h2>
+            <h2 class="badge badge-secondary">Aerospace</h2>
+            <div class="links">
+              <a
+                href="http://www.linkedin.com/in/wailyahia"
+                target="_blank"
+                class="button--blue"
+                >Linkedin</a
+              >
+              <a
+                href="https://github.com/wailo"
+                target="_blank"
+                class="button--grey"
+                >GitHub</a
+              >
+            </div>
+          </div></b-col
+        >
+      </b-row>
+    </b-container>
+  </div>
+</template>
+
+<script>
+import Logo from '~/components/Logo.vue'
+import Bio from '~/components/Bio.vue'
+export default {
+  components: {
+    Logo,
+    Bio
+  }
+}
+</script>
+
+<style>
+.container {
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.title {
+  font-family: 'Quicksand', 'Source Sans Pro', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  display: block;
+  font-weight: 300;
+  font-size: 100px;
+  color: #35495e;
+  letter-spacing: 1px;
+}
+
+.subtitle {
+  font-weight: 300;
+  font-size: 42px;
+  color: #526488;
+  word-spacing: 5px;
+  padding-bottom: 15px;
+}
+
+.links {
+  padding-top: 15px;
+}
+</style>
