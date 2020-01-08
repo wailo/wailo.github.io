@@ -1,5 +1,5 @@
 <template>
-  <pre class="NuxtLogo ascii">{{ updatedPhoto }}</pre>
+  <pre class="ascii">{{ updatedPhoto }}</pre>
 </template>
 
 <script>
@@ -65,22 +65,11 @@ export default {
     shufflePhoto() {
       const el = this
 
-      // if (!index) {
-      // index = 0
-      // }
-      // if (
-      //   index > el.originalPhoto.length - 1 ||
-      //   el.updatedPhoto === el.originalPhoto
-      // ) {
-      //   return
-      // }
-
       let index = Math.ceil(Math.random() * (el.originalPhoto.length - 1))
       while (
         el.updatedPhoto !== el.originalPhoto &&
         el.originalPhoto[index] === el.updatedPhoto[index]
       ) {
-        // index = (index + 1) % (el.originalPhoto.length - 1)
         index = Math.ceil(Math.random() * (el.originalPhoto.length - 1))
       }
       if (el.updatedPhoto === el.originalPhoto) {
@@ -93,14 +82,8 @@ export default {
         el.originalPhoto[index]
       )
       setTimeout(() => {
-        // const randomStr = '123456789'
-        // const newChar = Math.random()
-        //   .toString(36)
-        //   .substring(2, 3)
-        // el.updatedPhoto = el.originalPhoto.replace(/M/g, newChar)
-        // index++
         el.shufflePhoto()
-      }, 5)
+      }, 50)
     }
   }
 }
@@ -125,18 +108,12 @@ export default {
   font-size: 4pt;
 }
 .ascii {
-  /* display: inline-block; */
-  /* font-family: monospace; */
-  /* letter-spacing: -0.1em; */
-  /* line-height: 0.8em; */
-  /* text-shadow: 0 0 5px rgba(100, 100, 100, 0.5); */
-  color: greenyellow;
-
+  display: inline-block;
   font-family: monospace;
-  font-size: 8px;
-  font-style: normal;
-  font-variant: normal;
-  font-weight: 400;
-  line-height: 10px;
+  letter-spacing: -0.1em;
+  line-height: 1em;
+  text-shadow: 0 0 5px rgba(100, 100, 100, 0.5);
+  background-color: transparent;
+  /* color: white; */
 }
 </style>

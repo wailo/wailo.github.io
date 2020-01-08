@@ -1,28 +1,32 @@
 <template>
   <div class="text-left">
-    <h2>About</h2>
-    <p>
-      I'm an independent contractor with 9 years of software development in
-      aerospace and finance domains. Specialized in C++ systems developement and
-      software/hardware integratrion.
-    </p>
-    <h2>Timline</h2>
-    <dl class="row">
+    <div class="panel panel-primary">
+      <h1 class="panel-heading panel-title">About</h1>
+      <p class="panel-body">
+        I'm an independent contractor with 9 years of software development in
+        aerospace and finance domains. Specialized in C++ systems developement
+        and software/hardware integratrion.
+      </p>
+    </div>
+    <div class="panel panel-primary">
+      <h1 class="panel-heading panel-title">Timline</h1>
+
       <template v-for="item in timelineItems">
-        <dt v-bind:key="item.id" class="col-sm-2">
-          <span class="badge badge-dark">{{ item.title }}</span>
-        </dt>
-        <dd v-bind:key="item.id" class="col-sm-9 ht-tm-element text-mono">
+        <h2 v-bind:key="item.id" class="panel-title">
+          {{ item.title }}
+        </h2>
+        <p v-bind:key="item.id" class="panel-body">
           {{ item.description }}
-        </dd>
+        </p>
       </template>
-    </dl>
-    <dl>
+    </div>
+    <div class="panel panel-primary">
+      <h1 class="panel-heading panel-title">Repos</h1>
       <template v-for="r in repos">
-        <dt v-bind:key="r.id">{{ r.name }}</dt>
-        <dd v-bind:key="r.id">{{ r.description }}</dd>
+        <h2 v-bind:key="r.id" class="panel-title">{{ r.name }}</h2>
+        <p v-bind:key="r.id" class="panel-body">{{ r.description }}</p>
       </template>
-    </dl>
+    </div>
   </div>
 </template>
 

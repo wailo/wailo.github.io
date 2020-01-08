@@ -6,7 +6,7 @@
         <b-col>
           <div>
             <Photo />
-            <h1 class="display-1">Wa.il</h1>
+            <h1>Wa.il</h1>
             <h2 class="badge badge-pill badge-success">C++</h2>
             <h2 class="badge badge-pill badge-success">Software</h2>
             <h2 class="badge badge-pill badge-success">Finance</h2>
@@ -15,21 +15,21 @@
               <a
                 href="https://github.com/wailo"
                 target="_blank"
-                class="ht-tm-element btn btn-shadow btn-outline-light"
+                class="btn btn-light"
               >
                 GitHub</a
               >
               <a
                 href="http://www.linkedin.com/in/wailyahia"
                 target="_blank"
-                class="ht-tm-element btn btn-shadow btn-outline-info"
+                class="btn btn-info"
                 >LinkedIn</a
               >
 
               <a
                 href="https://youtube.com/wailo"
                 target="_blank"
-                class="ht-tm-element btn btn-shadow btn-outline-danger"
+                class="btn btn-danger"
                 >YouTube</a
               >
             </div>
@@ -52,7 +52,7 @@ export default {
 </script>
 
 <style>
-@import '@/assets/styles/bootstrap4-neon-glow.min.css';
+@import '@/assets/styles/hacker.css';
 .container {
   margin: 0 auto;
   min-height: 100vh;
@@ -82,5 +82,15 @@ export default {
 
 .links {
   padding-top: 15px;
+}
+
+.btn-light {
+  @apply --btn-light;
+  color: black;
+  background-color: white;
+  border-color: black;
+}
+pre {
+  border-color: transparent;
 }
 </style>
