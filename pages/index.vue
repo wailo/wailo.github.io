@@ -52,7 +52,7 @@ export default {
 </script>
 
 <style>
-@import '@/assets/styles/hacker.css';
+@import '@/assets/styles/hacker_dark.css';
 .container {
   margin: 0 auto;
   min-height: 100vh;
