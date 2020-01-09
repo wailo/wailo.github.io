@@ -3,9 +3,9 @@
     <div class="panel panel-primary">
       <h1 class="panel-heading panel-title">About</h1>
       <p class="panel-body">
-        I'm an independent contractor with 9 years of software development in
-        aerospace and finance domains. Specialized in C++ systems developement
-        and software/hardware integratrion.
+        I'm an independent contractor with 9 years of C++ software development
+        in aerospace and finance domains. Specialized in low-latency systems,
+        communication protocols and software/hardware integratrion.
       </p>
     </div>
     <div class="panel panel-primary">
