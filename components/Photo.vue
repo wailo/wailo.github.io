@@ -13,44 +13,44 @@ export default {
   data: () => {
     return {
       updatedPhoto: '',
-      originalPhoto: `                                        
-                       .':llool:,.                       
-                 .,lkKMMMWWWWWMMMMW0d:.                  
-              ;xNMWWWNXK0OxxOKXXKXXNWMMWOc.              
-           :OMMWXK00000KXNWNKKOkkxdxO0KXNWWXl.           
-        .dWWWWKK000KXNWMMMMMMWWXK00O00KOOkOKNNx'         
-       dMMMMMWNNXNNWMMMMMMMMMMMMMMWWWNX0Odoooxddl.       
-     'NMMMMMMWNXNNNWMMMMMMMMMMMMMMMMMMWKOxdolcclc:;      
-    .WMMMMMWNKK0KXNWMMMMMMMMMMMMMMMMMMMNKkkxlc;:;cc;     
-    XMMMMMWNK0OOKXXNWMMMMMMMMMMMMMMMWNXX00Okd;',''',,    
-   ;MMMMMWXXXXNWWMMMMMMMMMMMMMMMMMMMMMWNK0Okkl,'. ..;    
-   kMMMMMWNXXWWMMMMMMMMMMMMMMMMMMMMMMMMMWX0Oxc'.   . .   
-   0MMMMKc   .'':dKWMMMMMMMMMMMMMMMMWN0xxc:lko,.    ..   
-   NMMWc     ..     cOWMMMMMMMMKo,..         ..   . .'   
-   WMMKocokKNMMWNKx;  'OMMMMMMd.':dxkO00Odo:,.   .,  '   
-   MMM0OXkkdxxxkKWXKk. xMMMMMNxkXWWWMMMMMMWWOl,  ;c  '   
-   MMMXx;:.lX. . WNKXd ,WMMMMNxXWNNW0 , ;0oclloxc:l. '   
-  ;MMMWXXWOKXk:dKMMMXN;cWMMMMW0NWWMMMol;XMk''lKMXdl, l:, 
- :kMMMMMMWXKXWWMMMMMW0oOMMMMMWXWMMMMMMMMMMMWXXWMWOll:;.' 
- .XMMMMMMMMMMMMMMMMMNk0WMMMMMMNNWMMMMMMMMMMMMMMMNkc;:;o  
-  WMMMMMMMMMMMMMMMMWxXMMMMMMMMWXXMMMMMMMMMMMMMMMXO:',X:  
-  0MWWMMMMMMMMMMMMMNXMMMMMMMMMWNNNMMMMMMMMMMMMMWXo;.oMx  
- .'KKK0XXNMMMMMMMMMMMMMMMMMMMMMMMWWMMMMMMMMMMMWN0:. :0K  
- ',d000000NMMMMMMMKlo;:lkNMNkoc:k0WMMMMMMMMMMWX0o'  oKk  
-  xlkkOOXNNMMMMMMMMKOo;':c0dddlxkXMMMMMMMMMWWXkx;.  xo.  
-  cxlxOOKNNWNWX0KXXOOxkxWMMWWKK0KWWMMMMMMMMNXKkc'  :x'   
-   .dlxO0KNX0dxkxxooxkkXWWNNWXXKKKKWWMWWWWNXO0d,  ..     
-    occddOXKkdO00koxOOOOKKNNNWXXK0KNNNXNXK0dxo;   ,      
-    ,;,;,d0kdol''.  ,co0K0KKKkc;,...:oXNX0xlc;.   .      
-     c....'dx:,'.ok0XNWMMMMMMMWNXX0kxkXWNO;.''   ,       
-     .'    ..';:cloxkKN0xkxkKNNNXKO0KKkkOc      .        
-      ..       .cxxOK00OO0kOO0KXNXKKKx:'.      .         
-       .'       ;xOKXXK00KKXKNWWWNKOd,        .          
-         '       ;::kO0KXWNXKXNNNNKxl.       .           
-         ;          .ckNWWWWX0OOkoc'.        .           
-         l            'okOk0Okc;,.           .           
+      originalPhoto: `
+                       .':wwwww:,.                       
+                 .,wwWWWWWWWWWWWWWWWw:.                  
+              ;wWWWWWWWWWWwwWWWWWWWWWWWWWw.              
+           :WWWWWWWWWWWWWWWWWWWwwwwwWWWWWWWWw.           
+        .wWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWwWWWWw'         
+       wWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWwwwwwwww.       
+     'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWwwwwwwww:;      
+    .WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWwwwww;:;ww;     
+    WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWww;',''',,    
+   ;WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWwww,'. ..;    
+   wWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWww'.   . .   
+   WWWWWWw   .'':wWWWWWWWWWWWWWWWWWWWWWwww:www,.    ..   
+   WWWWw     ..     wWWWWWWWWWWWw,..         ..   . .'   
+   WWWWwwwwWWWWWWWw;  'WWWWWWWw.':wwwWWWWww:,.   .,  '   
+   WWWWWWwwwwwwwWWWWw. wWWWWWWwwWWWWWWWWWWWWWw,  ;w  '   
+   WWWWw;:.wW. . WWWWw ,WWWWWWwWWWWWW , ;Wwwwwwww:w. '   
+  ;WWWWWWWWWWw:wWWWWWW;wWWWWWWWWWWWWWww;WWw''wWWWww, w:, 
+ :wWWWWWWWWWWWWWWWWWWWwWWWWWWWWWWWWWWWWWWWWWWWWWWWww:;.' 
+ .WWWWWWWWWWWWWWWWWWWwWWWWWWWWWWWWWWWWWWWWWWWWWWWww;:;w  
+  WWWWWWWWWWWWWWWWWWwWWWWWWWWWWWWWWWWWWWWWWWWWWWWW:',W:  
+  WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWw;.wWw  
+ .'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW:. :WW  
+ ',wWWWWWWWWWWWWWWWww;:wwWWWwww:wWWWWWWWWWWWWWWWw'  wWw  
+  wwwwWWWWWWWWWWWWWWWw;':wWwwwwwwWWWWWWWWWWWWWww;.  ww.  
+  wwwwWWWWWWWWWWWWWWWwwwWWWWWWWWWWWWWWWWWWWWWWww'  :w'   
+   .wwwWWWWWWwwwwwwwwwwWWWWWWWWWWWWWWWWWWWWWWWw,  ..     
+    wwwwwWWWwwWWWwwwWWWWWWWWWWWWWWWWWWWWWWWwww;   ,      
+    ,;,;,wWwwww''.  ,wwWWWWWWww;,...:wWWWWwww;.   .      
+     w....'ww:,'.wwWWWWWWWWWWWWWWWWwwwWWWW;.''   ,       
+     .'    ..';:wwwwwWWWwwwwWWWWWWWWWWwwWw      .        
+      ..       .wwwWWWWWWWwWWWWWWWWWWw:'.      .         
+       .'       ;wWWWWWWWWWWWWWWWWWWw,        .          
+         '       ;::wWWWWWWWWWWWWWWww.       .           
+         ;          .wwWWWWWWWWWwww'.        .           
+         w            'wwWwWWww;,.           .           
         .,             .;';:;,.              .           
-    ....O'                                   . .         
+    ....W'                                   . .         
       `
     }
   },
@@ -83,7 +83,7 @@ export default {
       )
       setTimeout(() => {
         el.shufflePhoto()
-      }, 50)
+      }, 10)
     }
   }
 }
@@ -112,8 +112,9 @@ export default {
   font-family: monospace;
   letter-spacing: -0.1em;
   line-height: 1em;
-  text-shadow: 0 0 5px rgba(100, 100, 100, 0.5);
+  /* text-shadow: 0 0 5px rgba(100, 100, 100, 0.5); */
   background-color: transparent;
   /* color: white; */
+  /* color: rgba(182, 182, 182, 1.068); */
 }
 </style>
