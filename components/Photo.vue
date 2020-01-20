@@ -1,89 +1,36 @@
 <template>
-  <pre class="ascii">{{ updatedPhoto }}</pre>
+  <div>
+    <pre @mouseover="shufflePhoto" class="ascii">{{ updatedPhoto }}</pre>
+  </div>
 </template>
 
 <script>
-const replaceAt = function(str, index, replacement) {
-  return (
-    str.substr(0, index) + replacement + str.substr(index + replacement.length)
-  )
-}
-
+import { photo, photoFilled } from '~/components/ascii.js'
 export default {
   data: () => {
     return {
       updatedPhoto: '',
-      originalPhoto: `
-                       .':wwwww:,.                       
-                 .,wwWWWWWWWWWWWWWWWw:.                  
-              ;wWWWWWWWWWWwwWWWWWWWWWWWWWw.              
-           :WWWWWWWWWWWWWWWWWWWwwwwwWWWWWWWWw.           
-        .wWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWwWWWWw'         
-       wWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWwwwwwwww.       
-     'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWwwwwwwww:;      
-    .WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWwwwww;:;ww;     
-    WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWww;',''',,    
-   ;WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWwww,'. ..;    
-   wWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWww'.   . .   
-   WWWWWWw   .'':wWWWWWWWWWWWWWWWWWWWWWwww:www,.    ..   
-   WWWWw     ..     wWWWWWWWWWWWw,..         ..   . .'   
-   WWWWwwwwWWWWWWWw;  'WWWWWWWw.':wwwWWWWww:,.   .,  '   
-   WWWWWWwwwwwwwWWWWw. wWWWWWWwwWWWWWWWWWWWWWw,  ;w  '   
-   WWWWw;:.wW. . WWWWw ,WWWWWWwWWWWWW , ;Wwwwwwww:w. '   
-  ;WWWWWWWWWWw:wWWWWWW;wWWWWWWWWWWWWWww;WWw''wWWWww, w:, 
- :wWWWWWWWWWWWWWWWWWWWwWWWWWWWWWWWWWWWWWWWWWWWWWWWww:;.' 
- .WWWWWWWWWWWWWWWWWWWwWWWWWWWWWWWWWWWWWWWWWWWWWWWww;:;w  
-  WWWWWWWWWWWWWWWWWWwWWWWWWWWWWWWWWWWWWWWWWWWWWWWW:',W:  
-  WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWw;.wWw  
- .'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW:. :WW  
- ',wWWWWWWWWWWWWWWWww;:wwWWWwww:wWWWWWWWWWWWWWWWw'  wWw  
-  wwwwWWWWWWWWWWWWWWWw;':wWwwwwwwWWWWWWWWWWWWWww;.  ww.  
-  wwwwWWWWWWWWWWWWWWWwwwWWWWWWWWWWWWWWWWWWWWWWww'  :w'   
-   .wwwWWWWWWwwwwwwwwwwWWWWWWWWWWWWWWWWWWWWWWWw,  ..     
-    wwwwwWWWwwWWWwwwWWWWWWWWWWWWWWWWWWWWWWWwww;   ,      
-    ,;,;,wWwwww''.  ,wwWWWWWWww;,...:wWWWWwww;.   .      
-     w....'ww:,'.wwWWWWWWWWWWWWWWWWwwwWWWW;.''   ,       
-     .'    ..';:wwwwwWWWwwwwWWWWWWWWWWwwWw      .        
-      ..       .wwwWWWWWWWwWWWWWWWWWWw:'.      .         
-       .'       ;wWWWWWWWWWWWWWWWWWWw,        .          
-         '       ;::wWWWWWWWWWWWWWWww.       .           
-         ;          .wwWWWWWWWWWwww'.        .           
-         w            'wwWwWWww;,.           .           
-        .,             .;';:;,.              .           
-    ....W'                                   . .         
-      `
+      originalPhoto: photo,
+      originalPhotoFilled: photoFilled
     }
   },
   mounted() {
-    this.updatedPhoto = this.originalPhoto.replace(/\w/g, ' ')
-    this.$nextTick(function() {
-      const vm = this
-      vm.shufflePhoto()
-    })
+    this.updatedPhoto = this.originalPhoto
+    this.$nextTick(function() {})
   },
   methods: {
     shufflePhoto() {
       const el = this
 
-      let index = Math.ceil(Math.random() * (el.originalPhoto.length - 1))
-      while (
-        el.updatedPhoto !== el.originalPhoto &&
-        el.originalPhoto[index] === el.updatedPhoto[index]
-      ) {
-        index = Math.ceil(Math.random() * (el.originalPhoto.length - 1))
-      }
-      if (el.updatedPhoto === el.originalPhoto) {
+      if (el.updatedPhoto === el.originalPhotoFilled) {
+        el.updatedPhoto = el.originalPhoto
         return
       }
+      el.updatedPhoto = el.originalPhotoFilled
 
-      el.updatedPhoto = replaceAt(
-        el.updatedPhoto,
-        index,
-        el.originalPhoto[index]
-      )
       setTimeout(() => {
         el.shufflePhoto()
-      }, 10)
+      }, 500)
     }
   }
 }
