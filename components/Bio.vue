@@ -18,12 +18,27 @@
             </div>
           </template></b-tab
         >
+
         <b-tab title="Repos">
-          <template v-for="r in repos">
-            <h2 v-bind:key="r.id" class="panel-title">{{ r.name }}</h2>
-            <p v-bind:key="r.id" class="panel-body">{{ r.description }}</p>
-          </template></b-tab
-        >
+          <b-list-group>
+            <template v-for="r in repos">
+              <b-list-group-item
+                v-bind:key="r.id"
+                :href="r.html_url"
+                class="flex-column align-items-start"
+              >
+                <div class="d-flex w-100 justify-content-between">
+                  <h3 class="mb-1">{{ r.name }}</h3>
+                  <small class="text-danger">{{ r.language }}</small>
+                </div>
+
+                <p class="mb-1">
+                  {{ r.description }}
+                </p>
+              </b-list-group-item>
+            </template>
+          </b-list-group>
+        </b-tab>
       </b-tabs>
     </div>
   </div>
@@ -37,7 +52,7 @@ export default {
       timelineItems: [
         {
           title: '2019',
-          description: 'Started software consultancy'
+          description: 'Started software consultancy Wa.IL'
         },
         {
           title: '2017',
