@@ -5,21 +5,23 @@
         <b-tab title="About" active
           ><p>
             I'm an independent contractor with 9 years of C++ software
-            development in aerospace and finance domains. Specialized in
-            low-latency systems, communication protocols and software/hardware
-            integratrion.
-          </p></b-tab
-        >
-        <b-tab title="Timeline">
+            development, specialized in simulation and finance domains.
+          </p>
+          <p>
+            I like to work with low-latency systems, communication protocols and
+            software/hardware integratrion.
+          </p>
+
           <template v-for="item in timelineItems">
             <div v-bind:key="item.id" class="panel-body">
               <div id="title">{{ item.title }}</div>
               <div id="description">{{ item.description }}</div>
             </div>
-          </template></b-tab
-        >
+          </template>
+        </b-tab>
+        <b-tab title="Travel Map"> </b-tab>
 
-        <b-tab title="Repos">
+        <b-tab title="GitHub Portfolio">
           <b-list-group>
             <template v-for="r in repos">
               <b-list-group-item
