@@ -30,7 +30,7 @@ export default {
 
       setTimeout(() => {
         el.shufflePhoto()
-      }, 1000)
+      }, 3000)
     }
   }
 }

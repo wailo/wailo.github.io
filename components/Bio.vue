@@ -2,25 +2,40 @@
   <div class="text-left">
     <div>
       <b-tabs content-class="mt-3">
-        <b-tab title="About" active
-          ><p>
-            I'm an independent contractor with 9 years of C++ software
+        <b-tab title="About" active>
+          <p>
+            I am an independent contractor with 9 years of C++ software
             development, specialized in simulation and finance domains.
           </p>
           <p>
             I like to work with low-latency systems, communication protocols and
             software/hardware integratrion.
           </p>
+          <div>
+            <h5>Everyday</h5>
+            <b-button disabled variant="dark">C++</b-button>
+            <b-button disabled variant="dark">Python</b-button>
+            <b-button disabled variant="dark">sql</b-button>
+            <b-button disabled variant="dark">mongodb</b-button>
 
-          <template v-for="item in timelineItems">
-            <div v-bind:key="item.id" class="panel-body">
-              <div id="title">{{ item.title }}</div>
-              <div id="description">{{ item.description }}</div>
-            </div>
-          </template>
+            <h5>
+              <p>Learning</p>
+              <b-button disabled variant="dark">javascript</b-button>
+              <b-button disabled variant="dark">nodejs</b-button>
+              <b-button disabled variant="dark">lisp</b-button>
+            </h5>
+            <h5>Enjoy</h5>
+            <b-button disabled variant="dark">functional programming</b-button>
+            <b-button disabled variant="dark">Open source</b-button>
+
+            <h5>Toolset</h5>
+            <b-button disabled variant="dark">Emacs</b-button>
+            <b-button disabled variant="dark">Linux</b-button>
+            <b-button disabled variant="dark">cmake</b-button>
+            <b-button disabled variant="dark">git</b-button>
+            <b-button disabled variant="dark">docker</b-button>
+          </div>
         </b-tab>
-        <b-tab title="Travel Map"> </b-tab>
-
         <b-tab title="GitHub Portfolio">
           <b-list-group>
             <template v-for="r in repos">
@@ -30,16 +45,16 @@
                 class="flex-column align-items-start"
               >
                 <div class="d-flex w-100 justify-content-between">
-                  <h3 class="mb-1">{{ r.name }}</h3>
-                  <small class="text-danger">{{ r.language }}</small>
+                  <h5 class="mb-1">{{ r.name }}</h5>
+                  <small>{{ r.language }}</small>
                 </div>
-
-                <p class="mb-1">
-                  {{ r.description }}
-                </p>
+                <p class="mb-1">{{ r.description }}</p>
               </b-list-group-item>
             </template>
           </b-list-group>
+        </b-tab>
+        <b-tab title="Travel Map" lazy>
+          <TravelMap />
         </b-tab>
       </b-tabs>
     </div>
@@ -47,7 +62,11 @@
 </template>
 
 <script>
+import TravelMap from '~/components/Map.vue'
 export default {
+  components: {
+    TravelMap
+  },
   data() {
     return {
       repos: null,
@@ -89,8 +108,9 @@ export default {
       this.getJSON(
         'https://api.github.com/users/wailo/repos',
         (err, response) => {
-          if (err !== null) {
-            alert('Something went wrong: ' + err)
+          if (err) {
+            // alert('Something went wrong: ' + err)
+            return
           }
           vm.repos = response.filter((repo) => {
             return repo.fork === false && repo.archived === false
@@ -127,5 +147,8 @@ export default {
 #description {
   display: inline-block;
   width: 300px;
+}
+.list-group-item {
+  background-color: rgba(0, 0, 0, 0);
 }
 </style>

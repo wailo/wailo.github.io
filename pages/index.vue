@@ -7,30 +7,31 @@
           <div>
             <Photo />
             <h1>Wa.il</h1>
-            <h2 class="badge badge-pill badge-success">C++</h2>
-            <h2 class="badge badge-pill badge-success">Software</h2>
-            <h2 class="badge badge-pill badge-success">Finance</h2>
-            <h2 class="badge badge-pill badge-success">Aerospace</h2>
+            <h2 class="badge badge-pill badge-success">Software Developer</h2>
+
             <div class="links">
-              <a
+              <b-button
                 href="https://github.com/wailo"
                 target="_blank"
-                class="btn btn-light"
+                class="border border-light"
+                variant="outline-light"
               >
-                GitHub</a
-              >
-              <a
-                href="http://www.linkedin.com/in/wailyahia"
+                GitHub
+              </b-button>
+              <b-button
+                href="https://www.linkedin.com/in/wailyahia"
                 target="_blank"
-                class="btn btn-info"
-                >LinkedIn</a
+                class="border border-light"
+                variant="outline-light"
+                >LinkedIn</b-button
               >
 
-              <a
+              <b-button
                 href="https://youtube.com/wailo"
                 target="_blank"
-                class="btn btn-danger"
-                >YouTube</a
+                class="border border-light"
+                variant="outline-light"
+                >YouTube</b-button
               >
             </div>
           </div></b-col
