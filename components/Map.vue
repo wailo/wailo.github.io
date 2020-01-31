@@ -28,9 +28,7 @@ export default {
         doubleClickZoom: false,
         scrollWheelZoom: false,
         tap: false,
-        touchZoom: false,
-        minZoom: 1,
-        maxZoom: 5
+        touchZoom: false
       })
       this.map.setView([0, 0], 1)
 
