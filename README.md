@@ -2,7 +2,7 @@
 
 > personal website
 
-## Build Setup
+## Build Locally
 
 ``` bash
 # install dependencies
@@ -19,4 +19,6 @@ $ yarn start
 $ yarn generate
 ```
 
-For detailed explanation on how things work, check out [Nuxt.js docs](https://nuxtjs.org).
+## Publish
+- Commit and push changed to the development branch.
+- Website will be automatically deployed by travis CI
