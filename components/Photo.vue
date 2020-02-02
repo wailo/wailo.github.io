@@ -1,18 +1,11 @@
 <template>
   <div>
-    <pre class="ascii">{{ updatedPhoto }}</pre>
+    <pre @mouseover="shufflePhoto" class="ascii">{{ updatedPhoto }}</pre>
   </div>
 </template>
 
 <script>
 import { photo, photoFilled } from '~/components/ascii.js'
-
-const replaceAt = function(str, index, replacement) {
-  return (
-    str.substr(0, index) + replacement + str.substr(index + replacement.length)
-  )
-}
-
 export default {
   data: () => {
     return {
@@ -23,34 +16,21 @@ export default {
   },
   mounted() {
     this.updatedPhoto = this.originalPhoto
-    this.$nextTick(function() {
-      this.animatedReplace(0)
-    })
+    this.$nextTick(function() {})
   },
   methods: {
-    animatedReplace(index) {
+    shufflePhoto() {
       const el = this
 
       if (el.updatedPhoto === el.originalPhotoFilled) {
+        el.updatedPhoto = el.originalPhoto
         return
       }
-
-      while (
-        index < el.originalPhoto.length - 1 &&
-        el.originalPhotoFilled[index] === el.updatedPhoto[index]
-      ) {
-        index++
-      }
+      el.updatedPhoto = el.originalPhotoFilled
 
       setTimeout(() => {
-        el.animatedReplace(index++)
-      }, 20)
-
-      el.updatedPhoto = replaceAt(
-        el.updatedPhoto,
-        index,
-        el.originalPhotoFilled[index]
-      )
+        el.shufflePhoto()
+      }, 3000)
     }
   }
 }
