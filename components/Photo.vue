@@ -1,11 +1,18 @@
 <template>
   <div>
-    <pre @mouseover="shufflePhoto" class="ascii">{{ updatedPhoto }}</pre>
+    <pre class="ascii">{{ updatedPhoto }}</pre>
   </div>
 </template>
 
 <script>
 import { photo, photoFilled } from '~/components/ascii.js'
+
+const replaceAt = function(str, index, replacement) {
+  return (
+    str.substr(0, index) + replacement + str.substr(index + replacement.length)
+  )
+}
+
 export default {
   data: () => {
     return {
@@ -16,21 +23,36 @@ export default {
   },
   mounted() {
     this.updatedPhoto = this.originalPhoto
-    this.$nextTick(function() {})
+    this.$nextTick(function() {
+      this.animatedReplace(0)
+    })
   },
   methods: {
-    shufflePhoto() {
+    animatedReplace(index) {
       const el = this
 
       if (el.updatedPhoto === el.originalPhotoFilled) {
-        el.updatedPhoto = el.originalPhoto
         return
       }
-      el.updatedPhoto = el.originalPhotoFilled
+
+      while (
+        index <
+          Math.min(el.originalPhoto.length, el.originalPhotoFilled.length) -
+            1 &&
+        el.originalPhotoFilled[index] === el.updatedPhoto[index]
+      ) {
+        index++
+      }
+
+      el.updatedPhoto = replaceAt(
+        el.updatedPhoto,
+        index,
+        el.originalPhotoFilled[index]
+      )
 
       setTimeout(() => {
-        el.shufflePhoto()
-      }, 3000)
+        el.animatedReplace(index++)
+      }, 100)
     }
   }
 }
@@ -57,11 +79,12 @@ export default {
 .ascii {
   display: inline-block;
   font-family: monospace;
-  letter-spacing: -0.1em;
+  /* letter-spacing: -0.1em; */
   line-height: 1em;
   /* text-shadow: 0 0 5px rgba(100, 100, 100, 0.5); */
   background-color: transparent;
   /* color: white; */
   /* color: rgba(182, 182, 182, 1.068); */
+  text-align: initial;
 }
 </style>
