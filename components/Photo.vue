@@ -1,60 +1,23 @@
 <template>
   <div>
-    <pre class="ascii">{{ updatedPhoto }}</pre>
+    <pre class="ascii">{{ originalPhoto }}</pre>
   </div>
 </template>
 
 <script>
-import { photo, photoFilled } from '~/components/ascii.js'
-
-const replaceAt = function(str, index, replacement) {
-  return (
-    str.substr(0, index) + replacement + str.substr(index + replacement.length)
-  )
-}
+import { photo } from '~/components/ascii.js'
 
 export default {
   data: () => {
     return {
-      updatedPhoto: '',
-      originalPhoto: photo,
-      originalPhotoFilled: photoFilled
+      originalPhoto: photo
     }
   },
   mounted() {
     this.updatedPhoto = this.originalPhoto
-    this.$nextTick(function() {
-      this.animatedReplace(0)
-    })
+    this.$nextTick(function() {})
   },
-  methods: {
-    animatedReplace(index) {
-      const el = this
-
-      if (el.updatedPhoto === el.originalPhotoFilled) {
-        return
-      }
-
-      while (
-        index <
-          Math.min(el.originalPhoto.length, el.originalPhotoFilled.length) -
-            1 &&
-        el.originalPhotoFilled[index] === el.updatedPhoto[index]
-      ) {
-        index++
-      }
-
-      el.updatedPhoto = replaceAt(
-        el.updatedPhoto,
-        index,
-        el.originalPhotoFilled[index]
-      )
-
-      setTimeout(() => {
-        el.animatedReplace(index++)
-      }, 100)
-    }
-  }
+  methods: {}
 }
 </script>
 
