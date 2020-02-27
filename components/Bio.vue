@@ -20,14 +20,10 @@
 
             <h5>
               <p>Learning</p>
-              <b-button disabled variant="dark">javascript</b-button>
-              <b-button disabled variant="dark">nodejs</b-button>
-              <b-button disabled variant="dark">lisp</b-button>
+              <b-button disabled variant="dark">Javascript</b-button>
+              <b-button disabled variant="dark">Node.js</b-button>
+              <b-button disabled variant="dark">WebAssembly</b-button>
             </h5>
-            <h5>Enjoy</h5>
-            <b-button disabled variant="dark">functional programming</b-button>
-            <b-button disabled variant="dark">Open source</b-button>
-
             <h5>Toolset</h5>
             <b-button disabled variant="dark">Emacs</b-button>
             <b-button disabled variant="dark">Linux</b-button>
