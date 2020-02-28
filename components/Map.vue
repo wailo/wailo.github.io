@@ -1,5 +1,5 @@
 <template>
-  <div id="map"></div>
+  <div id="map" class="container border-solid-black"></div>
 </template>
 
 <script>
@@ -17,8 +17,6 @@ export default {
   },
 
   mounted() {
-    // Update flight plans
-
     this.$nextTick(() => {
       this.map = L.map('map', {
         keyboard: false,
@@ -28,7 +26,8 @@ export default {
         doubleClickZoom: false,
         scrollWheelZoom: false,
         tap: false,
-        touchZoom: false
+        touchZoom: false,
+        attributionControl: false
       })
       this.map.setView([0, 0], 1)
 
