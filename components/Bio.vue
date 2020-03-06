@@ -32,7 +32,7 @@
             <b-button disabled variant="dark">docker</b-button>
           </div>
         </b-tab>
-        <b-tab title="GitHub Portfolio">
+        <b-tab v-on:click="fetchGitHubProjects" title="GitHub Portfolio">
           <b-list-group>
             <template v-for="r in repos">
               <b-list-group-item
@@ -52,6 +52,9 @@
         <b-tab title="Travel Map" lazy>
           <TravelMap />
         </b-tab>
+        <b-tab title="Flight Simulator" lazy>
+          <flightSim />
+        </b-tab>
       </b-tabs>
     </div>
   </div>
@@ -59,9 +62,11 @@
 
 <script>
 import TravelMap from '~/components/Map.vue'
+import flightSim from '~/components/FlightSim.vue'
 export default {
   components: {
-    TravelMap
+    TravelMap,
+    flightSim
   },
   data() {
     return {
@@ -99,21 +104,7 @@ export default {
     }
   },
   mounted() {
-    this.$nextTick(function() {
-      const vm = this
-      this.getJSON(
-        'https://api.github.com/users/wailo/repos',
-        (err, response) => {
-          if (err) {
-            // alert('Something went wrong: ' + err)
-            return
-          }
-          vm.repos = response.filter((repo) => {
-            return repo.fork === false && repo.archived === false
-          })
-        }
-      )
-    })
+    this.$nextTick(function() {})
   },
   methods: {
     getJSON(url, callback) {
@@ -129,6 +120,21 @@ export default {
         }
       }
       xhr.send()
+    },
+    fetchGitHubProjects() {
+      const vm = this
+      this.getJSON(
+        'https://api.github.com/users/wailo/repos',
+        (err, response) => {
+          if (err) {
+            // alert('Something went wrong: ' + err)
+            return
+          }
+          vm.repos = response.filter((repo) => {
+            return repo.fork === false && repo.archived === false
+          })
+        }
+      )
     }
   }
 }
