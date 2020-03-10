@@ -52,6 +52,7 @@
         <b-tab title="Travel Map" lazy>
           <TravelMap />
         </b-tab>
+        <b-tab title="Flight Simulator" lazy> <FlightSim /> </b-tab>
       </b-tabs>
     </div>
   </div>
@@ -59,9 +60,11 @@
 
 <script>
 import TravelMap from '~/components/Map.vue'
+import FlightSim from '~/components/FlightSim.vue'
 export default {
   components: {
-    TravelMap
+    TravelMap,
+    FlightSim
   },
   data() {
     return {
