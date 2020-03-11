@@ -11,7 +11,7 @@
     "generate": "nuxt generate",
     "lint": "eslint --ext .js,.vue --ignore-path .gitignore .",
     "deploy": "push-dir --dir=dist --branch=master --cleanup",
-    "build:emscripten": "base_dir=($pwd) && node_modules/Compact-Flight-Simulator && ./build_wasm.sh && popd && mv node_modules/Compact-Flight-Simulator/build_wasm/bin/flightSimulator* static/ && cd $base_dir",
+    "build:emscripten": "./node_modules/Compact-Flight-Simulator/build_wasm.sh && mv node_modules/Compact-Flight-Simulator/build_wasm/bin/flightSimulator* static/",
     "preinstall": "git clone --recursive https://$GITHUB_ACCESS_TOKEN@github.com/wailo/Compact-Flight-Simulator.git node_modules/Compact-Flight-Simulator && yarn run build:emscripten"
   },
   "lint-staged": {
