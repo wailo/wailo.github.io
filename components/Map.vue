@@ -81,6 +81,5 @@ export default {
 <style scoped>
 #map {
   width: 400px;
-  height: 400px;
 }
 </style>
