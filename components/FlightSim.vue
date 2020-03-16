@@ -11,11 +11,6 @@
     <div v-show="is_running">
       <div id="status" class="emscripten">Downloading...</div>
       <span id="controls">
-        <span><input id="resize" type="checkbox" checked />Resize canvas</span>
-        <span
-          ><input id="pointerLock" type="checkbox" checked />Lock/hide mouse
-          pointer &nbsp;&nbsp;&nbsp;</span
-        >
         <span>
           <b-button v-on:click="requestFullScreen" variant="dark"
             >Fullscreen</b-button
@@ -35,7 +30,7 @@
           tabindex="-1"
         ></canvas>
       </div>
-      <textarea id="output" rows="8"></textarea>
+      <textarea id="output" v-show="is_development" rows="8"></textarea>
     </div>
   </div>
 </template>
@@ -51,17 +46,15 @@ export default {
     return {
       FlightSimulator: null,
       is_running: false,
-      simulatorButtonText: 'Start'
+      simulatorButtonText: 'Start',
+      is_development: process.env.NODE_ENV === 'development'
     }
   },
 
   mounted() {},
   methods: {
     requestFullScreen() {
-      this.FlightSimulator.requestFullscreen(
-        document.getElementById('pointerLock').checked,
-        document.getElementById('resize').checked
-      )
+      this.FlightSimulator.requestFullscreen(true, true)
     },
     startSimulator() {
       this.is_running = true
