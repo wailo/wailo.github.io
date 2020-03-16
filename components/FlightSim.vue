@@ -15,6 +15,9 @@
           <b-button v-on:click="requestFullScreen" variant="dark"
             >Fullscreen</b-button
           >
+          <b-button v-on:click="toggle_ap" variant="danger"
+            >Toggle Autopilot</b-button
+          >
         </span>
       </span>
 
@@ -53,6 +56,10 @@ export default {
 
   mounted() {},
   methods: {
+    toggle_ap() {
+      const toggleAp = this.FlightSimulator.cwrap('toggle_ap')
+      toggleAp()
+    },
     requestFullScreen() {
       this.FlightSimulator.requestFullscreen(true, true)
     },
@@ -99,6 +106,8 @@ export default {
       }).then(() => {
         // eslint-disable-next-line no-console
         console.log('Loaded!')
+        const main = this.FlightSimulator.cwrap('main')
+        main()
       })
 
       // this.$nextTick(() => {})
