@@ -1,10 +1,31 @@
 <template>
   <div>
+    <div v-show="!is_running">
+      <h3>Usage</h3>
+      <ul>
+        <li><kbd>w</kbd> pitch down</li>
+        <li><kbd>s</kbd> pitch up</li>
+        <li><kbd>a</kbd> bank left</li>
+        <li><kbd>d</kbd> bank right</li>
+        <li><kbd>q</kbd> yaw left</li>
+        <li><kbd>e</kbd> yaw right</li>
+        <li><kbd>F1</kbd> set throttle to idle</li>
+        <li><kbd>F2</kbd> increment throttle</li>
+        <li><kbd>F3</kbd> decrement throttle</li>
+        <li><kbd>F4</kbd> set throttle to max</li>
+        <li><kbd>=</kbd> increment target heading</li>
+        <li><kbd>-</kbd> decrement target heading</li>
+        <li><kbd>z</kbd> toggle Autopilot</li>
+        <li><kbd>f</kbd> reset control surfaces positions to 0</li>
+        <li><kbd>h</kbd> reset flight</li>
+        <li><kbd>ese</kbd> quit</li>
+      </ul>
+    </div>
     <span>
       <b-button
         v-show="!is_running"
         v-on:click="startSimulator"
-        variant="dark"
+        variant="danger"
         >{{ simulatorButtonText }}</b-button
       ></span
     >
@@ -18,6 +39,18 @@
           <b-button v-on:click="toggle_ap" variant="danger"
             >Toggle Autopilot</b-button
           >
+        </span>
+        <span v-show="APEnabled">
+          <label for="range-2">Target Heading: {{ target_heading }}</label>
+          <b-form-input
+            id="range-2"
+            v-model="target_heading"
+            v-on:update="set_target_heading"
+            type="range"
+            min="0"
+            max="359"
+            step="1.0"
+          ></b-form-input>
         </span>
       </span>
 
@@ -49,16 +82,39 @@ export default {
     return {
       FlightSimulator: null,
       is_running: false,
-      simulatorButtonText: 'Start',
-      is_development: process.env.NODE_ENV === 'development'
+      simulatorButtonText: 'Start th simulator',
+      is_development: process.env.NODE_ENV === 'development',
+      APEnabled: false,
+      target_heading: 45
     }
   },
 
   mounted() {},
   methods: {
+    handleOrientation(event) {
+      // eslint-disable-next-line no-console
+      console.log(event.absolute, event.alpha, event.beta, event.gamma)
+    },
     toggle_ap() {
       const toggleAp = this.FlightSimulator.cwrap('toggle_ap')
       toggleAp()
+      this.APEnabled = true
+    },
+    aileron_right() {
+      const aileronRight = this.FlightSimulator.cwrap('aileron_right')
+      aileronRight()
+    },
+    aileron_left() {
+      const aileronLeft = this.FlightSimulator.cwrap('aileron_left')
+      aileronLeft()
+    },
+    set_target_heading(heading) {
+      const setTargetHeading = this.FlightSimulator.cwrap(
+        'set_target_heading',
+        null,
+        ['number']
+      )
+      setTargetHeading(heading)
     },
     requestFullScreen() {
       this.FlightSimulator.requestFullscreen(true, true)
@@ -112,7 +168,9 @@ export default {
 
       // this.$nextTick(() => {})
     },
-    beforeCreate() {}
+    beforeCreate() {
+      window.addEventListener('deviceorientation', this.handleOrientation, true)
+    }
   }
 }
 </script>
