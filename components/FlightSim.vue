@@ -132,9 +132,6 @@ export default {
       this.FlightSimulator.requestFullscreen(true, true)
     },
     startSimulator() {
-      this.is_running = true
-
-      this.simulatorButtonText = 'Stop'
       const statusElement = document.getElementById('status')
       const progressElement = document.getElementById('progress')
 
@@ -172,6 +169,8 @@ export default {
 
         canvas: (() => document.getElementById('canvas'))()
       }).then(() => {
+        this.is_running = true
+        this.simulatorButtonText = 'Stop'
         // eslint-disable-next-line no-console
         console.log('Loaded!')
         const main = this.FlightSimulator.cwrap('main')
