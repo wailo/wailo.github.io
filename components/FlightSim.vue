@@ -1,26 +1,5 @@
 <template>
   <div>
-    <div v-show="!is_running">
-      <h3>Usage</h3>
-      <ul>
-        <li><kbd>w</kbd> pitch down</li>
-        <li><kbd>s</kbd> pitch up</li>
-        <li><kbd>a</kbd> bank left</li>
-        <li><kbd>d</kbd> bank right</li>
-        <li><kbd>q</kbd> yaw left</li>
-        <li><kbd>e</kbd> yaw right</li>
-        <li><kbd>F1</kbd> set throttle to idle</li>
-        <li><kbd>F2</kbd> increment throttle</li>
-        <li><kbd>F3</kbd> decrement throttle</li>
-        <li><kbd>F4</kbd> set throttle to max</li>
-        <li><kbd>=</kbd> increment target heading</li>
-        <li><kbd>-</kbd> decrement target heading</li>
-        <li><kbd>z</kbd> toggle Autopilot</li>
-        <li><kbd>f</kbd> reset control surfaces positions to 0</li>
-        <li><kbd>h</kbd> reset flight</li>
-        <li><kbd>ese</kbd> quit</li>
-      </ul>
-    </div>
     <span>
       <b-button
         v-show="!is_running"
@@ -33,6 +12,23 @@
       <div id="status" class="emscripten">Downloading...</div>
       <span id="controls">
         <span>
+          <b-button id="popover-target-1">
+            Instructions
+          </b-button>
+          <b-popover
+            variant="dark"
+            target="popover-target-1"
+            triggers="hover"
+            placement="bottom"
+          >
+            <template v-slot:title>Commands</template>
+            <ul style="list-style-type:none;margin: 0; padding: 0">
+              <li v-for="command in instructions.commands" :key="command.key">
+                <kbd>{{ command.key }}</kbd> {{ command.command }}
+              </li>
+            </ul>
+          </b-popover>
+
           <b-button v-on:click="requestFullScreen" variant="dark"
             >Fullscreen</b-button
           >
@@ -64,7 +60,8 @@
           class="emscripten"
           oncontextmenu="event.preventDefault()"
           tabindex="-1"
-        ></canvas>
+        >
+        </canvas>
       </div>
       <textarea id="output" v-show="is_development" rows="8"></textarea>
     </div>
@@ -82,10 +79,25 @@ export default {
     return {
       FlightSimulator: null,
       is_running: false,
-      simulatorButtonText: 'Start th simulator',
+      simulatorButtonText: 'Start simulation',
       is_development: process.env.NODE_ENV === 'development',
       APEnabled: false,
-      target_heading: 45
+      target_heading: 45,
+      instructions: {
+        commands: [
+          { key: 'w', command: ' pitch down' },
+          { key: 's', command: ' pitch up' },
+          { key: 'a', command: ' bank left' },
+          { key: 'd', command: ' bank right' },
+          { key: 'F1', command: 'set throttle to idle' },
+          { key: 'F2', command: 'increment throttle' },
+          { key: 'F3', command: 'decrement throttle' },
+          { key: 'F4', command: 'set throttle to max' },
+          { key: '=', command: 'increment target heading' },
+          { key: '-', command: 'decrement target heading' },
+          { key: 'z', command: 'toggle Autopilot' }
+        ]
+      }
     }
   },
 
