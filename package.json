@@ -26,7 +26,7 @@
     "@nuxtjs/axios": "^5.3.6",
     "@nuxtjs/dotenv": "^1.4.0",
     "@nuxtjs/pwa": "^3.0.0-0",
-    "bootstrap-vue": "^2.0.0",
+    "bootstrap-vue": "^2.8.0",
     "nuxt": "^2.0.0",
     "nuxt-leaflet": "^0.0.19",
     "vue2-leaflet": "^2.4.2"
