@@ -35,10 +35,17 @@
         </span>
 
         <div>
-          <b-button v-on:click="toggle_autopilot" variant="danger"
+          <b-button
+            v-on:click="toggle_autopilot"
+            :variant="APEnabled ? 'success' : 'outline-danger'"
             >Toggle autopilot</b-button
           >
-          <b-button :variant="APEnabled ? 'warning' : 'dark'">
+          <b-button
+            v-on:click="toggle_heading_hold"
+            :variant="headingHoldEnabled ? 'success' : 'outline-danger'"
+            >Toggle Heading Hold</b-button
+          >
+          <b-button :variant="APEnabled ? 'warning' : 'outline-warning'">
             Autopilot
           </b-button>
 
@@ -47,7 +54,7 @@
             id="range-2"
             :disabled="!APEnabled"
             v-model="target_heading"
-            v-on:update="set_heading_hold"
+            v-on:update="toggle_heading_hold"
             type="range"
             min="0"
             max="359"
@@ -88,9 +95,11 @@ export default {
       simulatorButtonText: 'Start simulation',
       is_development: process.env.NODE_ENV === 'development',
       APEnabled: false,
+      headingHoldEnabled: false,
       target_heading: 45,
       api_toggleAutopilot: null,
-      api_setHeadingHold: null,
+      api_toggleHeadingHold: null,
+      api_setHeadingHoldValue: null,
       instructions: {
         commands: [
           { key: 'w', command: ' pitch down' },
@@ -114,6 +123,10 @@ export default {
       this.api_toggleAutopilot(!this.APEnabled)
       this.APEnabled = !this.APEnabled
     },
+    toggle_heading_hold() {
+      this.api_toggleHeadingHold(!this.headingHoldEnabled)
+      this.headingHoldEnabled = !this.headingHoldEnabled
+    },
     aileron_right() {
       const aileronRight = this.FlightSimulator.cwrap('aileron_right')
       aileronRight()
@@ -122,8 +135,8 @@ export default {
       const aileronLeft = this.FlightSimulator.cwrap('aileron_left')
       aileronLeft()
     },
-    set_heading_hold(heading) {
-      this.api_setHeadingHold(heading)
+    set_heading_hold_value(heading) {
+      this.api_setHeadingHoldValue(heading)
     },
     requestFullScreen() {
       this.FlightSimulator.requestFullscreen(true, true)
@@ -176,13 +189,19 @@ export default {
           ['bool']
         )
 
-        this.api_setHeadingHold = this.FlightSimulator.cwrap(
+        this.api_toggleHeadingHold = this.FlightSimulator.cwrap(
+          'set_heading_hold',
+          null,
+          ['bool']
+        )
+
+        this.api_setHeadingHoldValue = this.FlightSimulator.cwrap(
           'set_target_heading',
           null,
           ['number']
         )
-        // eslint-disable-next-line no-console
-        console.log('Loaded!')
+
+        // At this stage, the module is loaded.
         const main = this.FlightSimulator.cwrap('main')
         main()
       })
