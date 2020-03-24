@@ -32,22 +32,28 @@
           <b-button v-on:click="requestFullScreen" variant="dark"
             >Fullscreen</b-button
           >
-          <b-button v-on:click="toggle_ap" variant="danger"
-            >Toggle Autopilot</b-button
-          >
         </span>
-        <span v-show="APEnabled">
+
+        <div>
+          <b-button v-on:click="toggle_autopilot" variant="danger"
+            >Toggle autopilot</b-button
+          >
+          <b-button :variant="APEnabled ? 'warning' : 'dark'">
+            Autopilot
+          </b-button>
+
           <label for="range-2">Target Heading: {{ target_heading }}</label>
           <b-form-input
             id="range-2"
+            :disabled="!APEnabled"
             v-model="target_heading"
-            v-on:update="set_target_heading"
+            v-on:update="set_heading_hold"
             type="range"
             min="0"
             max="359"
             step="1.0"
           ></b-form-input>
-        </span>
+        </div>
       </span>
 
       <div class="emscripten">
@@ -83,6 +89,8 @@ export default {
       is_development: process.env.NODE_ENV === 'development',
       APEnabled: false,
       target_heading: 45,
+      api_toggleAutopilot: null,
+      api_setHeadingHold: null,
       instructions: {
         commands: [
           { key: 'w', command: ' pitch down' },
@@ -94,8 +102,7 @@ export default {
           { key: 'F3', command: 'decrement throttle' },
           { key: 'F4', command: 'set throttle to max' },
           { key: '=', command: 'increment target heading' },
-          { key: '-', command: 'decrement target heading' },
-          { key: 'z', command: 'toggle Autopilot' }
+          { key: '-', command: 'decrement target heading' }
         ]
       }
     }
@@ -103,14 +110,9 @@ export default {
 
   mounted() {},
   methods: {
-    handleOrientation(event) {
-      // eslint-disable-next-line no-console
-      console.log(event.absolute, event.alpha, event.beta, event.gamma)
-    },
-    toggle_ap() {
-      const toggleAp = this.FlightSimulator.cwrap('toggle_ap')
-      toggleAp()
-      this.APEnabled = true
+    toggle_autopilot() {
+      this.api_toggleAutopilot(!this.APEnabled)
+      this.APEnabled = !this.APEnabled
     },
     aileron_right() {
       const aileronRight = this.FlightSimulator.cwrap('aileron_right')
@@ -120,13 +122,8 @@ export default {
       const aileronLeft = this.FlightSimulator.cwrap('aileron_left')
       aileronLeft()
     },
-    set_target_heading(heading) {
-      const setTargetHeading = this.FlightSimulator.cwrap(
-        'set_target_heading',
-        null,
-        ['number']
-      )
-      setTargetHeading(heading)
+    set_heading_hold(heading) {
+      this.api_setHeadingHold(heading)
     },
     requestFullScreen() {
       this.FlightSimulator.requestFullscreen(true, true)
@@ -171,6 +168,19 @@ export default {
       }).then(() => {
         this.is_running = true
         this.simulatorButtonText = 'Stop'
+
+        // Link C++ functions
+        this.api_toggleAutopilot = this.FlightSimulator.cwrap(
+          'set_autopilot',
+          null,
+          ['bool']
+        )
+
+        this.api_setHeadingHold = this.FlightSimulator.cwrap(
+          'set_target_heading',
+          null,
+          ['number']
+        )
         // eslint-disable-next-line no-console
         console.log('Loaded!')
         const main = this.FlightSimulator.cwrap('main')
