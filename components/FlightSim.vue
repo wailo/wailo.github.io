@@ -37,7 +37,7 @@
         <div>
           <b-button
             v-on:click="toggle_autopilot"
-            :variant="APEnabled ? 'success' : 'outline-danger'"
+            :variant="api_ap_enabled ? 'success' : 'outline-danger'"
             >Toggle autopilot</b-button
           >
           <b-button
@@ -45,16 +45,12 @@
             :variant="headingHoldEnabled ? 'success' : 'outline-danger'"
             >Toggle Heading Hold</b-button
           >
-          <b-button :variant="APEnabled ? 'warning' : 'outline-warning'">
-            Autopilot
-          </b-button>
-
           <label for="range-2">Target Heading: {{ target_heading }}</label>
           <b-form-input
             id="range-2"
-            :disabled="!APEnabled"
+            :disabled="!api_ap_enabled"
             v-model="target_heading"
-            v-on:update="toggle_heading_hold"
+            v-on:update="set_heading_hold_value"
             type="range"
             min="0"
             max="359"
@@ -94,7 +90,7 @@ export default {
       is_running: false,
       simulatorButtonText: 'Start simulation',
       is_development: process.env.NODE_ENV === 'development',
-      APEnabled: false,
+      api_ap_enabled: false,
       headingHoldEnabled: false,
       target_heading: 45,
       api_toggleAutopilot: null,
@@ -120,8 +116,7 @@ export default {
   mounted() {},
   methods: {
     toggle_autopilot() {
-      this.api_toggleAutopilot(!this.APEnabled)
-      this.APEnabled = !this.APEnabled
+      this.api_toggleAutopilot(!this.api_ap_enabled)
     },
     toggle_heading_hold() {
       this.api_toggleHeadingHold(!this.headingHoldEnabled)
@@ -139,13 +134,14 @@ export default {
       this.api_setHeadingHoldValue(heading)
     },
     requestFullScreen() {
-      this.FlightSimulator.requestFullscreen(true, true)
+      this.FlightSimulator.requestFullscreen(false, false)
     },
     startSimulator() {
       const statusElement = document.getElementById('status')
       const progressElement = document.getElementById('progress')
 
       this.FlightSimulator = FlightSimulator({
+        vue: this,
         setStatus(text) {
           progressElement.value = null
           progressElement.max = null
@@ -195,22 +191,19 @@ export default {
           ['bool']
         )
 
-        this.api_setHeadingHoldValue = this.FlightSimulator.cwrap(
-          'set_target_heading',
-          null,
-          ['number']
-        )
+        // Follow this steps to access memory from c++ without copying
+        // First export a getter function in c++ that return a pointer to the value
+        // THen the value can be accessed using
+        // this.FlightSimulator.HEAP32[addr >> 2]
 
-        // At this stage, the module is loaded.
-        const main = this.FlightSimulator.cwrap('main')
+        this.api_setHeadingHoldValue = this.FlightSimulator._set_target_heading
+        const main = this.FlightSimulator._main
         main()
       })
 
       // this.$nextTick(() => {})
     },
-    beforeCreate() {
-      window.addEventListener('deviceorientation', this.handleOrientation, true)
-    }
+    beforeCreate() {}
   }
 }
 </script>
