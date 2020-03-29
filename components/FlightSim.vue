@@ -8,11 +8,12 @@
         >{{ simulatorButtonText }}</b-button
       ></span
     >
-    <div>
-      <div id="status" v-show="FlightSimulator" class="emscripten">
-        Downloading...
-      </div>
-      <span id="controls" v-show="is_running">
+
+    <div id="status" v-show="FlightSimulator" class="emscripten">
+      Downloading...
+    </div>
+    <div v-show="is_running">
+      <span id="controls">
         <span>
           <b-button id="popover-target-1">
             Instructions
