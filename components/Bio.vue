@@ -11,25 +11,16 @@
             I like to work with low-latency systems, communication protocols and
             software/hardware integratrion.
           </p>
-          <div>
-            <h5>Everyday</h5>
-            <b-button disabled variant="dark">C++</b-button>
-            <b-button disabled variant="dark">Python</b-button>
-            <b-button disabled variant="dark">sql</b-button>
-            <b-button disabled variant="dark">mongodb</b-button>
 
-            <h5>
-              <p>Learning</p>
-              <b-button disabled variant="dark">Javascript</b-button>
-              <b-button disabled variant="dark">Node.js</b-button>
-              <b-button disabled variant="dark">WebAssembly</b-button>
-            </h5>
-            <h5>Toolset</h5>
-            <b-button disabled variant="dark">Emacs</b-button>
-            <b-button disabled variant="dark">Linux</b-button>
-            <b-button disabled variant="dark">cmake</b-button>
-            <b-button disabled variant="dark">git</b-button>
-            <b-button disabled variant="dark">docker</b-button>
+          <div v-for="(tools, title) in skills" v-bind:key="title">
+            <h5>{{ title }}</h5>
+            <b-button
+              v-for="skill in tools"
+              v-bind:key="skill"
+              disabled
+              variant="dark"
+              >{{ skill }}</b-button
+            >
           </div>
         </b-tab>
         <b-tab title="GitHub Portfolio">
@@ -69,6 +60,11 @@ export default {
   data() {
     return {
       repos: null,
+      skills: {
+        Everyday: ['C++', 'Python', 'sql', 'mongodb'],
+        Learning: ['Javascript', 'Node.js', 'WebAssembly'],
+        Toolset: ['Emacs', 'Linux', 'cmake', 'git', 'docker']
+      },
       timelineItems: [
         {
           title: '2019',
