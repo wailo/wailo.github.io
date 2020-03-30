@@ -10,32 +10,20 @@
             <h2 class="badge badge-pill badge-success">Software Developer</h2>
 
             <div class="links">
-              <b-button
-                href="https://github.com/wailo"
-                target="_blank"
-                class="border border-light"
-                variant="outline-light"
-              >
-                GitHub
-              </b-button>
-              <b-button
-                href="https://www.linkedin.com/in/wailyahia"
-                target="_blank"
-                class="border border-light"
-                variant="outline-light"
-                >LinkedIn</b-button
-              >
-
-              <b-button
-                href="https://youtube.com/wailo"
-                target="_blank"
-                class="border border-light"
-                variant="outline-light"
-                >YouTube</b-button
-              >
-            </div>
-          </div></b-col
-        >
+              <template v-for="link in links">
+                <b-button
+                  v-bind:key="link.name"
+                  :href="link.link"
+                  target="_blank"
+                  class="border border-light"
+                  variant="outline-light"
+                >
+                  {{ link.name }}
+                </b-button>
+                <div v-bind:key="link.name" class="divider" />
+              </template>
+            </div></div
+        ></b-col>
       </b-row>
     </b-container>
   </div>
@@ -48,6 +36,15 @@ export default {
   components: {
     Photo,
     Bio
+  },
+  data() {
+    return {
+      links: [
+        { name: 'GitHub', link: 'https://github.com/wailo' },
+        { name: 'LinkedIn', link: 'https://www.linkedin.com/in/wailyahia' },
+        { name: 'YouTube', link: 'https://youtube.com/wailo' }
+      ]
+    }
   }
 }
 </script>
@@ -93,5 +90,11 @@ export default {
 }
 pre {
   border-color: transparent;
+}
+
+.divider {
+  width: 1px;
+  height: auto;
+  display: inline-block;
 }
 </style>
