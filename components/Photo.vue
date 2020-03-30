@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div align="center">
     <pre class="ascii">{{ originalPhoto }}</pre>
   </div>
 </template>
@@ -21,24 +21,7 @@ export default {
 }
 </script>
 
-<style scoped>
-.NuxtLogo {
-  animation: 1s appear;
-}
-
-@keyframes appear {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-.photo {
-  color: chartreuse;
-  font-size: 4pt;
-}
+<style>
 .ascii {
   display: inline-block;
   font-family: monospace;
@@ -49,5 +32,6 @@ export default {
   /* color: white; */
   /* color: rgba(182, 182, 182, 1.068); */
   text-align: initial;
+  font-size: 10px;
 }
 </style>

@@ -4,7 +4,8 @@
       <b-button
         v-show="!is_running"
         v-on:click="startSimulator"
-        variant="danger"
+        variant="outline-danger"
+        style="width: 100%; height: 100%; border-color:#FF0000"
         >{{ simulatorButtonText }}</b-button
       ></span
     >

@@ -1,35 +1,43 @@
 <template>
   <div class="text-left">
     <div>
-      <b-tabs content-class="mt-3">
+      <b-tabs card>
         <b-tab title="About" active>
-          <p>
-            I am an independent contractor with 9 years of C++ software
-            development, specialized in simulation and finance domains.
-          </p>
-          <p>
-            I like to work with low-latency systems, communication protocols and
-            software/hardware integratrion.
-          </p>
-
-          <div v-for="(tools, title) in skills" v-bind:key="title">
-            <h5>{{ title }}</h5>
-            <b-button
-              v-for="skill in tools"
-              v-bind:key="skill"
-              disabled
-              variant="dark"
-              >{{ skill }}</b-button
-            >
-          </div>
+          <b-row>
+            <b-col>
+              <p>
+                I am an independent contractor with 9 years of C++ software
+                development, specialized in simulation and finance domains.
+              </p>
+              <p>
+                I like to work with low-latency systems, communication protocols
+                and software/hardware integratrion.
+              </p>
+              <hr />
+              <div v-for="(tools, title) in skills" v-bind:key="title">
+                <h5>{{ title }}</h5>
+                <b-button
+                  v-for="skill in tools"
+                  v-bind:key="skill"
+                  disabled
+                  variant="dark"
+                  >{{ skill }}</b-button
+                >
+              </div>
+            </b-col>
+            <b-col>
+              <Photo />
+            </b-col>
+          </b-row>
         </b-tab>
-        <b-tab title="GitHub Portfolio">
+        <b-tab title="GitHub">
           <b-list-group>
             <template v-for="r in repos">
               <b-list-group-item
                 v-bind:key="r.id"
                 :href="r.html_url"
                 class="flex-column align-items-start"
+                variant="dark"
               >
                 <div class="d-flex w-100 justify-content-between">
                   <h5 class="mb-1">{{ r.name }}</h5>
@@ -50,10 +58,12 @@
 </template>
 
 <script>
+import Photo from '~/components/Photo.vue'
 import TravelMap from '~/components/Map.vue'
 import FlightSim from '~/components/FlightSim.vue'
 export default {
   components: {
+    Photo,
     TravelMap,
     FlightSim
   },
@@ -61,9 +71,9 @@ export default {
     return {
       repos: null,
       skills: {
-        Everyday: ['C++', 'Python', 'sql', 'mongodb'],
-        Learning: ['Javascript', 'Node.js', 'WebAssembly'],
-        Toolset: ['Emacs', 'Linux', 'cmake', 'git', 'docker']
+        'Everyday:': ['C++', 'Python', 'sql', 'mongodb'],
+        'Learning:': ['Javascript', 'Node.js', 'WebAssembly'],
+        'Toolset:': ['Linux', 'Emacs', 'cmake', 'git', 'docker']
       },
       timelineItems: [
         {

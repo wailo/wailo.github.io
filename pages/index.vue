@@ -1,63 +1,67 @@
 <template>
-  <div class="container">
-    <b-container fluid class="bv-example-row">
-      <b-row>
-        <b-col><Bio /></b-col>
-        <b-col>
-          <div>
-            <Photo />
-            <h1>Wa.il</h1>
-            <h2 class="badge badge-pill badge-success">Software Developer</h2>
+  <b-card class="container" no-body text-variant="white">
+    <b-card-body>
+      <Bio />
+    </b-card-body>
+    <b-card-footer footer-border-variant="dark">
+      <h1>Wa.il</h1>
+      <h2 class="badge badge-pill badge-success">Software Developer</h2>
 
-            <div class="links">
-              <template v-for="link in links">
-                <b-button
-                  v-bind:key="link.name"
-                  :href="link.link"
-                  target="_blank"
-                  class="border border-light"
-                  variant="outline-light"
-                >
-                  {{ link.name }}
-                </b-button>
-                <div v-bind:key="link.name" class="divider" />
-              </template>
-            </div></div
-        ></b-col>
-      </b-row>
-    </b-container>
-  </div>
+      <div class="links">
+        <template v-for="link in links">
+          <b-button
+            v-bind:key="link.name"
+            :href="link.link"
+            target="_blank"
+            class="border border-light"
+            variant="outline-light"
+          >
+            {{ link.name }}
+          </b-button>
+          <div v-bind:key="link.name" class="divider" />
+        </template>
+      </div>
+    </b-card-footer>
+  </b-card>
 </template>
 
 <script>
-import Photo from '~/components/Photo.vue'
 import Bio from '~/components/Bio.vue'
 export default {
   components: {
-    Photo,
     Bio
   },
   data() {
     return {
+      mobile: window.innerWidth <= 700,
       links: [
         { name: 'GitHub', link: 'https://github.com/wailo' },
         { name: 'LinkedIn', link: 'https://www.linkedin.com/in/wailyahia' },
         { name: 'YouTube', link: 'https://youtube.com/wailo' }
       ]
     }
+  },
+  created() {
+    addEventListener('resize', () => {
+      // eslint-disable-next-line no-console
+      console.log(innerWidth)
+      this.mobile = innerWidth <= 700
+    })
   }
 }
 </script>
 
 <style>
 @import '@/assets/styles/hacker_dark.css';
+
 .container {
   margin: 0 auto;
   min-height: 100vh;
   display: flex;
-  justify-content: center;
-  align-items: center;
+  /* justify-content: center; */
+  /* align-items: center; */
   text-align: center;
+  background-color: rgba(0, 0, 0, 0);
 }
 
 .title {
