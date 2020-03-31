@@ -30,7 +30,7 @@
             </b-col>
           </b-row>
         </b-tab>
-        <b-tab title="GitHub">
+        <b-tab title="GitHub Projects">
           <b-list-group>
             <template v-for="r in repos">
               <b-list-group-item

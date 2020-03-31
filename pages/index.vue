@@ -18,7 +18,7 @@
           >
             {{ link.name }}
           </b-button>
-          <div v-bind:key="link.name" class="divider" />
+          <div class="divider" />
         </template>
       </div>
     </b-card-footer>
@@ -33,20 +33,12 @@ export default {
   },
   data() {
     return {
-      mobile: window.innerWidth <= 700,
       links: [
         { name: 'GitHub', link: 'https://github.com/wailo' },
         { name: 'LinkedIn', link: 'https://www.linkedin.com/in/wailyahia' },
         { name: 'YouTube', link: 'https://youtube.com/wailo' }
       ]
     }
-  },
-  created() {
-    addEventListener('resize', () => {
-      // eslint-disable-next-line no-console
-      console.log(innerWidth)
-      this.mobile = innerWidth <= 700
-    })
   }
 }
 </script>

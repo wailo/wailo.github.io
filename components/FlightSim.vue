@@ -25,9 +25,13 @@
             triggers="hover"
             placement="bottom"
           >
-            <template v-slot:title>Commands</template>
+            <template v-slot:title>Commands (For desktop use only)</template>
             <ul style="list-style-type:none;margin: 0; padding: 0">
-              <li v-for="command in instructions.commands" :key="command.key">
+              <li
+                v-for="command in instructions.commands"
+                :key="command.key"
+                style="margin: 3px 0 0 0;"
+              >
                 <kbd>{{ command.key }}</kbd> {{ command.command }}
               </li>
             </ul>
@@ -38,19 +42,28 @@
           >
         </span>
 
-        <div>
+        <span>
           <b-button
+            ref="autopilot"
             v-on:click="toggle_autopilot"
             :variant="api_ap_enabled ? 'success' : 'outline-danger'"
-            >Toggle autopilot</b-button
+            >{{
+              api_ap_enabled ? 'Autopilot Engaged' : 'Engage Autopilot'
+            }}</b-button
           >
+
           <b-button
+            ref="heading_hold"
             v-on:click="toggle_heading_hold"
             :variant="headingHoldEnabled ? 'success' : 'outline-danger'"
-            >Toggle Heading Hold</b-button
+            :class="headingHoldEnabled ? 'flash-button' : ''"
+            >{{
+              headingHoldEnabled
+                ? 'Heading Hold Engaged [' + target_heading + ']'
+                : 'Engage Heading Hold'
+            }}</b-button
           >
-          <label for="range-2">Target Heading: {{ target_heading }}</label>
-          <b-form-input
+          <b-input
             id="range-2"
             :disabled="!api_ap_enabled"
             v-model="target_heading"
@@ -59,8 +72,8 @@
             min="0"
             max="359"
             step="1.0"
-          ></b-form-input>
-        </div>
+          ></b-input>
+        </span>
       </span>
 
       <div class="emscripten">
@@ -201,6 +214,11 @@ export default {
         // this.FlightSimulator.HEAP32[addr >> 2]
 
         this.api_setHeadingHoldValue = this.FlightSimulator._set_target_heading
+
+        // Enable heading hold when the sim start
+        setTimeout(() => {
+          this.$refs.heading_hold.click()
+        }, 1000)
         const main = this.FlightSimulator._main
         main()
       })
@@ -229,7 +247,7 @@ div.emscripten_border {
 canvas.emscripten {
   border: 0px none;
   background-color: black;
-  width: 100%;
+  width: 80%;
 }
 
 #status {
@@ -268,5 +286,24 @@ canvas.emscripten {
   color: white;
   font-family: 'Lucida Console', Monaco, monospace;
   outline: none;
+}
+
+.flash-button {
+  animation-name: flash;
+  animation-duration: 2s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes flash {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 </style>
