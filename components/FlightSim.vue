@@ -55,10 +55,10 @@
           <b-button
             ref="heading_hold"
             v-on:click="toggle_heading_hold"
-            :variant="headingHoldEnabled ? 'success' : 'outline-danger'"
-            :class="headingHoldEnabled ? 'flash-button' : ''"
+            :variant="api_headingHoldEnabled ? 'success' : 'outline-danger'"
+            :class="api_headingHoldEnabled ? 'flash-button' : ''"
             >{{
-              headingHoldEnabled
+              api_headingHoldEnabled
                 ? 'Heading Hold Engaged [' + target_heading + ']'
                 : 'Engage Heading Hold'
             }}</b-button
@@ -108,11 +108,12 @@ export default {
       simulatorButtonText: 'Start simulation',
       is_development: process.env.NODE_ENV === 'development',
       api_ap_enabled: false,
-      headingHoldEnabled: false,
+      api_headingHoldEnabled: false,
       target_heading: 45,
       api_toggleAutopilot: null,
       api_toggleHeadingHold: null,
       api_setHeadingHoldValue: null,
+      api_iteration_time: 0,
       instructions: {
         commands: [
           { key: 'w', command: ' pitch down' },
@@ -136,8 +137,7 @@ export default {
       this.api_toggleAutopilot(!this.api_ap_enabled)
     },
     toggle_heading_hold() {
-      this.api_toggleHeadingHold(!this.headingHoldEnabled)
-      this.headingHoldEnabled = !this.headingHoldEnabled
+      this.api_toggleHeadingHold(!this.api_headingHoldEnabled)
     },
     aileron_right() {
       const aileronRight = this.FlightSimulator.cwrap('aileron_right')
