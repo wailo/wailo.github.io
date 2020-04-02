@@ -13,18 +13,68 @@
     <div id="status" v-show="FlightSimulator" class="emscripten">
       Downloading...
     </div>
-    <div v-show="is_running">
-      <span id="controls">
-        <span>
-          <b-button id="popover-target-1">
-            Instructions
-          </b-button>
-          <b-popover
-            variant="dark"
-            target="popover-target-1"
-            triggers="hover"
-            placement="bottom"
-          >
+
+    <div v-show="is_running" class="emscripten_border">
+      <div v-show="is_running" class="emscripten">
+        <span id="controls">
+          <span>
+            <b-button v-on:click="requestFullScreen" variant="dark"
+              >Fullscreen</b-button
+            >
+          </span>
+
+          <span>
+            <b-button
+              ref="autopilot"
+              v-on:click="toggle_autopilot"
+              :variant="api_ap_enabled ? 'success' : 'outline-danger'"
+              >{{
+                api_ap_enabled ? 'Autopilot Engaged' : 'Engage Autopilot'
+              }}</b-button
+            >
+
+            <b-button
+              ref="heading_hold"
+              v-on:click="toggle_heading_hold"
+              :variant="api_headingHoldEnabled ? 'success' : 'outline-danger'"
+              :class="api_headingHoldEnabled ? 'flash-button' : ''"
+              >{{
+                api_headingHoldEnabled
+                  ? 'Heading Hold Engaged [' + api_target_heading + ']'
+                  : 'Engage Heading Hold'
+              }}</b-button
+            >
+            <b-input
+              id="range-2"
+              :disabled="!api_ap_enabled"
+              v-model="api_target_heading"
+              v-on:update="set_heading_hold_value"
+              type="range"
+              min="0"
+              max="359"
+              step="1.0"
+            ></b-input>
+          </span>
+        </span>
+
+        <div class="emscripten">
+          <progress id="progress" value="0" max="100" hidden="1"></progress>
+        </div>
+      </div>
+      <canvas
+        id="canvas"
+        class="emscripten"
+        oncontextmenu="event.preventDefault()"
+        tabindex="-1"
+      >
+      </canvas>
+    </div>
+    <textarea id="output" v-show="is_development" rows="3"></textarea>
+
+    <b-container v-if="is_running" fluid>
+      <b-row>
+        <b-col>
+          <b-form-text variant="dark">
             <template v-slot:title>Commands (For desktop use only)</template>
             <ul style="list-style-type:none;margin: 0; padding: 0">
               <li
@@ -35,62 +85,33 @@
                 <kbd>{{ command.key }}</kbd> {{ command.command }}
               </li>
             </ul>
-          </b-popover>
-
-          <b-button v-on:click="requestFullScreen" variant="dark"
-            >Fullscreen</b-button
-          >
-        </span>
-
-        <span>
-          <b-button
-            ref="autopilot"
-            v-on:click="toggle_autopilot"
-            :variant="api_ap_enabled ? 'success' : 'outline-danger'"
-            >{{
-              api_ap_enabled ? 'Autopilot Engaged' : 'Engage Autopilot'
-            }}</b-button
-          >
-
-          <b-button
-            ref="heading_hold"
-            v-on:click="toggle_heading_hold"
-            :variant="api_headingHoldEnabled ? 'success' : 'outline-danger'"
-            :class="api_headingHoldEnabled ? 'flash-button' : ''"
-            >{{
-              api_headingHoldEnabled
-                ? 'Heading Hold Engaged [' + target_heading + ']'
-                : 'Engage Heading Hold'
-            }}</b-button
-          >
-          <b-input
-            id="range-2"
-            :disabled="!api_ap_enabled"
-            v-model="target_heading"
-            v-on:update="set_heading_hold_value"
-            type="range"
-            min="0"
-            max="359"
-            step="1.0"
-          ></b-input>
-        </span>
-      </span>
-
-      <div class="emscripten">
-        <progress id="progress" value="0" max="100" hidden="1"></progress>
-      </div>
-
-      <div width="200" height="200" class="emscripten_border">
-        <canvas
-          id="canvas"
-          class="emscripten"
-          oncontextmenu="event.preventDefault()"
-          tabindex="-1"
+          </b-form-text></b-col
         >
-        </canvas>
-      </div>
-      <textarea id="output" v-show="is_development" rows="8"></textarea>
-    </div>
+        <b-col>
+          <b-button v-b-toggle.collapse-data></b-button>
+
+          <b-collapse id="collapse-data">
+            <ul>
+              <li>
+                fps:
+                {{ Number(1 / api_iteration_time).toFixed(0) }}
+              </li>
+              <li>weight: {{ Number(api_weight).toFixed(2) }}</li>
+              <li>altitude: {{ Number(api_altitude).toFixed(2) }}</li>
+              <li>alpha_tail: {{ Number(api_alpha_tail).toFixed(2) }}%</li>
+              <li>
+                alpha_aileron: {{ Number(api_alpha_aileron).toFixed(2) }}%
+              </li>
+              <li>throttle: {{ Number(api_throttle).toFixed(2) }}%</li>
+              <li>Speed (IAS): {{ Number(api_ias_speed_knots).toFixed(0) }}</li>
+              <li>Heading: {{ Number(api_psi_deg).toFixed(0) }}</li>
+              <li>Bank Angle: {{ Number(api_theta_deg).toFixed(0) }}</li>
+              <li>Pitch Angle: {{ Number(api_attitude_deg).toFixed(0) }}</li>
+            </ul>
+          </b-collapse></b-col
+        >
+      </b-row>
+    </b-container>
   </div>
 </template>
 
@@ -109,23 +130,32 @@ export default {
       is_development: process.env.NODE_ENV === 'development',
       api_ap_enabled: false,
       api_headingHoldEnabled: false,
-      target_heading: 45,
+      api_target_heading: 45,
       api_toggleAutopilot: null,
       api_toggleHeadingHold: null,
       api_setHeadingHoldValue: null,
       api_iteration_time: 0,
+      api_weight: null,
+      api_attitude: null,
+      api_alpha_tail: null,
+      api_alpha_aileron: null,
+      api_throttle: null,
+      api_ias_speed_knots: null,
+      api_psi_deg: null,
+      api_theta_deg: null,
+      api_altitude_deg: null,
       instructions: {
         commands: [
-          { key: 'w', command: ' pitch down' },
-          { key: 's', command: ' pitch up' },
-          { key: 'a', command: ' bank left' },
-          { key: 'd', command: ' bank right' },
-          { key: 'F1', command: 'set throttle to idle' },
-          { key: 'F2', command: 'increment throttle' },
-          { key: 'F3', command: 'decrement throttle' },
-          { key: 'F4', command: 'set throttle to max' },
-          { key: '=', command: 'increment target heading' },
-          { key: '-', command: 'decrement target heading' }
+          { key: 'w', command: ' pitch -' },
+          { key: 's', command: ' pitch +' },
+          { key: 'a', command: ' bank -' },
+          { key: 'd', command: ' bank +' },
+          { key: 'F1', command: 'idle throttle' },
+          { key: 'F2', command: 'throttle +' },
+          { key: 'F3', command: 'throttle -' },
+          { key: 'F4', command: 'max throttle' },
+          { key: '=', command: 'heading hold +' },
+          { key: '-', command: 'heading hold -' }
         ]
       }
     }
@@ -266,7 +296,7 @@ canvas.emscripten {
 
 #controls {
   display: inline-block;
-  float: right;
+
   vertical-align: top;
   margin-top: 30px;
   margin-right: 20px;
@@ -305,5 +335,8 @@ canvas.emscripten {
   100% {
     opacity: 1;
   }
+}
+.collapse.show {
+  visibility: visible;
 }
 </style>
