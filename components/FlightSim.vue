@@ -17,44 +17,52 @@
     <div v-show="is_running" class="emscripten_border">
       <div v-show="is_running" class="emscripten">
         <span id="controls">
-          <span>
-            <b-button v-on:click="requestFullScreen" variant="dark"
-              >Fullscreen</b-button
-            >
-          </span>
+          <b-button
+            v-on:click="requestFullScreen"
+            variant="dark"
+            class="border border-light btn btn-dark"
+            >Fullscreen</b-button
+          >
 
-          <span>
-            <b-button
-              ref="autopilot"
-              v-on:click="toggle_autopilot"
-              :variant="api_ap_enabled ? 'success' : 'outline-danger'"
-              >{{
-                api_ap_enabled ? 'Autopilot Engaged' : 'Engage Autopilot'
-              }}</b-button
-            >
-
+          <b-button
+            ref="autopilot"
+            v-on:click="toggle_autopilot"
+            :variant="api_ap_enabled ? 'outline-warning' : 'outline-light'"
+            class="border border-light"
+            >{{
+              api_ap_enabled ? 'Autopilot Engaged' : 'Engage Autopilot'
+            }}</b-button
+          >
+          <b-button-group class="border border-light">
             <b-button
               ref="heading_hold"
-              v-on:click="toggle_heading_hold"
-              :variant="api_headingHoldEnabled ? 'success' : 'outline-danger'"
               :class="api_headingHoldEnabled ? 'flash-button' : ''"
+              v-on:click="toggle_heading_hold"
+              :variant="
+                api_headingHoldEnabled ? 'outline-warning' : 'outline-light'
+              "
+              class="border border-light"
               >{{
                 api_headingHoldEnabled
                   ? 'Heading Hold Engaged [' + api_target_heading + ']'
                   : 'Engage Heading Hold'
               }}</b-button
             >
-            <b-input
-              id="range-2"
-              :disabled="!api_ap_enabled"
-              v-model="api_target_heading"
-              v-on:update="set_heading_hold_value"
-              type="range"
-              min="0"
-              max="359"
-              step="1.0"
-            ></b-input>
-          </span>
+
+            <b-dropdown v-show="api_headingHoldEnabled">
+              <b-form-input
+                id="sb-inline"
+                :disabled="!api_ap_enabled"
+                v-model="api_target_heading"
+                v-on:update="set_heading_hold_value"
+                type="range"
+                min="0"
+                max="359"
+                step="1.0"
+                variant="dark"
+              ></b-form-input>
+            </b-dropdown>
+          </b-button-group>
         </span>
 
         <div class="emscripten">
@@ -74,42 +82,85 @@
     <b-container v-if="is_running" fluid>
       <b-row>
         <b-col>
-          <b-form-text variant="dark">
-            <template v-slot:title>Commands (For desktop use only)</template>
-            <ul style="list-style-type:none;margin: 0; padding: 0">
-              <li
-                v-for="command in instructions.commands"
-                :key="command.key"
-                style="margin: 3px 0 0 0;"
-              >
-                <kbd>{{ command.key }}</kbd> {{ command.command }}
-              </li>
-            </ul>
-          </b-form-text></b-col
+          <b-card
+            title="Controls"
+            bg-variant="transparent"
+            border-variant="dark"
+          >
+            <b-card-text>
+              <b-form-text variant="dark">
+                <template v-slot:title
+                  >Commands (For desktop use only)</template
+                >
+                <ul style="list-style-type:none;margin: 0; padding: 0">
+                  <li
+                    v-for="command in instructions.commands"
+                    :key="command.key"
+                    style="margin: 3px 0 0 0;"
+                  >
+                    <kbd>{{ command.key }}</kbd>
+
+                    {{ command.command }}
+                  </li>
+                </ul>
+              </b-form-text>
+            </b-card-text></b-card
+          ></b-col
         >
         <b-col>
-          <b-button v-b-toggle.collapse-data></b-button>
-
-          <b-collapse id="collapse-data">
-            <ul>
-              <li>
-                fps:
-                {{ Number(1 / api_iteration_time).toFixed(0) }}
-              </li>
-              <li>weight: {{ Number(api_weight).toFixed(2) }}</li>
-              <li>altitude: {{ Number(api_altitude).toFixed(2) }}</li>
-              <li>alpha_tail: {{ Number(api_alpha_tail).toFixed(2) }}%</li>
-              <li>
-                alpha_aileron: {{ Number(api_alpha_aileron).toFixed(2) }}%
-              </li>
-              <li>throttle: {{ Number(api_throttle).toFixed(2) }}%</li>
-              <li>Speed (IAS): {{ Number(api_ias_speed_knots).toFixed(0) }}</li>
-              <li>Heading: {{ Number(api_psi_deg).toFixed(0) }}</li>
-              <li>Bank Angle: {{ Number(api_theta_deg).toFixed(0) }}</li>
-              <li>Pitch Angle: {{ Number(api_attitude_deg).toFixed(0) }}</li>
-            </ul>
-          </b-collapse></b-col
-        >
+          <b-card
+            title="Simulation Data"
+            bg-variant="transparent"
+            border-variant="dark"
+          >
+            <b-card-text>
+              <div id="app">
+                <b-button
+                  v-b-toggle.collapse-data
+                  @click="isDataDisplayed = true"
+                  v-show="!isDataDisplayed"
+                  class="border border-light"
+                  variant="outline-light"
+                >
+                  +
+                </b-button>
+                <b-button
+                  v-b-toggle.collapse-data
+                  @click="isDataDisplayed = false"
+                  v-show="isDataDisplayed"
+                  class="border border-light btn-light"
+                  variant="outline-light"
+                >
+                  -
+                </b-button>
+              </div>
+              <b-collapse id="collapse-data">
+                <ul>
+                  <li>
+                    fps:
+                    {{ Number(1 / api_iteration_time).toFixed(0) }}
+                  </li>
+                  <li>Weight: {{ Number(api_weight).toFixed(2) }}</li>
+                  <li>Altitude: {{ Number(api_altitude).toFixed(2) }}</li>
+                  <li>
+                    Elevator angle: {{ Number(api_alpha_tail).toFixed(2) }}%
+                  </li>
+                  <li>
+                    Aileron angle: {{ Number(api_alpha_aileron).toFixed(2) }}%
+                  </li>
+                  <li>Throttle: {{ Number(api_throttle).toFixed(2) }}%</li>
+                  <li>
+                    Speed (IAS) knots:
+                    {{ Number(api_ias_speed_knots).toFixed(0) }}
+                  </li>
+                  <li>Heading: {{ Number(api_psi_deg).toFixed(0) }}</li>
+                  <li>Bank: {{ Number(api_theta_deg).toFixed(0) }}</li>
+                  <li>Pitch: {{ Number(api_attitude_deg).toFixed(0) }}</li>
+                </ul>
+              </b-collapse></b-card-text
+            ></b-card
+          >
+        </b-col>
       </b-row>
     </b-container>
   </div>
@@ -136,14 +187,15 @@ export default {
       api_setHeadingHoldValue: null,
       api_iteration_time: 0,
       api_weight: null,
-      api_attitude: null,
+      api_altitude: null,
       api_alpha_tail: null,
       api_alpha_aileron: null,
       api_throttle: null,
       api_ias_speed_knots: null,
       api_psi_deg: null,
       api_theta_deg: null,
-      api_altitude_deg: null,
+      api_attitude_deg: null,
+      isDataDisplayed: false,
       instructions: {
         commands: [
           { key: 'w', command: ' pitch -' },
@@ -155,7 +207,8 @@ export default {
           { key: 'F3', command: 'throttle -' },
           { key: 'F4', command: 'max throttle' },
           { key: '=', command: 'heading hold +' },
-          { key: '-', command: 'heading hold -' }
+          { key: '-', command: 'heading hold -' },
+          { key: 'f', command: 'reset controls to zero' }
         ]
       }
     }
@@ -330,7 +383,7 @@ canvas.emscripten {
     opacity: 1;
   }
   50% {
-    opacity: 0;
+    opacity: 0.5;
   }
   100% {
     opacity: 1;
