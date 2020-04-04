@@ -99,8 +99,14 @@
                     style="margin: 3px 0 0 0;"
                   >
                     <kbd>{{ command.key }}</kbd>
-
-                    {{ command.command }}
+                    <span>{{ command.command }}</span>
+                    <span
+                      v-show="command.isActive && !command.isActive()"
+                      class="flash-button"
+                    >
+                      <b-icon icon="info-circle" variant="success"></b-icon>
+                      {{ command.msg }}
+                    </span>
                   </li>
                 </ul>
               </b-form-text>
@@ -108,22 +114,21 @@
           ></b-col
         >
         <b-col>
-          <b-card
-            title="Simulation Data"
-            bg-variant="transparent"
-            border-variant="dark"
-          >
+          <b-card bg-variant="transparent" border-variant="dark">
+            <b-card-title>
+              Simulation Data
+              <b-button
+                v-b-toggle.collapse-data
+                @click="isDataDisplayed = true"
+                v-show="!isDataDisplayed"
+                class="border border-light"
+                variant="outline-light"
+              >
+                +
+              </b-button>
+            </b-card-title>
             <b-card-text>
               <div id="app">
-                <b-button
-                  v-b-toggle.collapse-data
-                  @click="isDataDisplayed = true"
-                  v-show="!isDataDisplayed"
-                  class="border border-light"
-                  variant="outline-light"
-                >
-                  +
-                </b-button>
                 <b-button
                   v-b-toggle.collapse-data
                   @click="isDataDisplayed = false"
@@ -167,12 +172,16 @@
 </template>
 
 <script>
+import Vue from 'vue'
+import { BootstrapVueIcons } from 'bootstrap-vue'
+import 'bootstrap-vue/dist/bootstrap-vue-icons.min.css'
 import FlightSimulator from '~/static/flightSimulator.js'
+
+Vue.use(BootstrapVueIcons)
 
 export default {
   name: 'FlightSim',
 
-  props: {},
   data() {
     return {
       FlightSimulator: null,
@@ -200,8 +209,22 @@ export default {
         commands: [
           { key: 'w', command: ' pitch -' },
           { key: 's', command: ' pitch +' },
-          { key: 'a', command: ' bank -' },
-          { key: 'd', command: ' bank +' },
+          {
+            key: 'a',
+            command: ' roll -',
+            isActive: () => {
+              return !this.api_headingHoldEnabled
+            },
+            msg: 'Inactive: Heading Hold Enganged'
+          },
+          {
+            key: 'd',
+            command: ' roll +',
+            isActive: () => {
+              return !this.api_headingHoldEnabled
+            },
+            msg: 'Inactive: Heading Hold Enganged'
+          },
           { key: 'F1', command: 'idle throttle' },
           { key: 'F2', command: 'throttle +' },
           { key: 'F3', command: 'throttle -' },
@@ -330,7 +353,7 @@ div.emscripten_border {
 canvas.emscripten {
   border: 0px none;
   background-color: black;
-  width: 80%;
+  width: 50%;
 }
 
 #status {
@@ -356,8 +379,8 @@ canvas.emscripten {
 }
 
 #output {
-  width: 100%;
-  height: 200px;
+  /* width: 100%; */
+  /* height: 200px; */
   margin: 0 auto;
   margin-top: 10px;
   border-left: 0px;
