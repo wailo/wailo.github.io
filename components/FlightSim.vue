@@ -239,6 +239,15 @@ export default {
 
   mounted() {},
   methods: {
+    notifyUser(title, msg) {
+      this.$bvToast.toast(msg, {
+        title,
+        autoHideDelay: 1000,
+        appendToast: false,
+        variant: 'dark',
+        'body-class': 'strong'
+      })
+    },
     toggle_autopilot() {
       this.api_toggleAutopilot(!this.api_ap_enabled)
     },
