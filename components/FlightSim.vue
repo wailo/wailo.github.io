@@ -206,10 +206,10 @@ export default {
       isDataDisplayed: false,
       instructions: {
         commands: [
-          { key: 'w', command: ' pitch -' },
-          { key: 's', command: ' pitch +' },
+          { key: ['w', '↑'], command: ' pitch -' },
+          { key: ['s', '↓'], command: ' pitch +' },
           {
-            key: 'a',
+            key: ['a', '←'],
             command: ' roll -',
             isActive: () => {
               return !this.api_headingHoldEnabled
@@ -217,20 +217,20 @@ export default {
             msg: 'Inactive: Heading Hold Enganged'
           },
           {
-            key: 'd',
+            key: ['d', '→'],
             command: ' roll +',
             isActive: () => {
               return !this.api_headingHoldEnabled
             },
             msg: 'Inactive: Heading Hold Enganged'
           },
-          { key: 'F1', command: 'idle throttle' },
-          { key: 'F2', command: 'throttle +' },
-          { key: 'F3', command: 'throttle -' },
-          { key: 'F4', command: 'max throttle' },
-          { key: '=', command: 'heading hold +' },
-          { key: '-', command: 'heading hold -' },
-          { key: 'f', command: 'reset controls to zero' }
+          { key: ['F1'], command: 'idle throttle' },
+          { key: ['F2'], command: 'throttle +' },
+          { key: ['F3'], command: 'throttle -' },
+          { key: ['F4'], command: 'max throttle' },
+          { key: ['='], command: 'heading hold +' },
+          { key: ['-'], command: 'heading hold -' },
+          { key: ['f'], command: 'reset controls to zero' }
         ]
       }
     }
