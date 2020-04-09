@@ -1,8 +1,28 @@
 <template>
   <div class="text-left">
-    <div>
-      <b-tabs card>
-        <b-tab title="About" active>
+    <div class="tabs">
+      <b-nav tabs>
+        <b-nav-item :active="$route.hash === '#' || $route.hash === ''" to="#">
+          About
+        </b-nav-item>
+        <b-nav-item :active="$route.hash === '#github'" to="#github">
+          GitHub Projects
+        </b-nav-item>
+        <!-- <b-nav-item :active="$route.hash === '#map'" to="#map">
+          Travel Map
+        </b-nav-item> -->
+        <b-nav-item :active="$route.hash === '#sim'" to="#sim">
+          Flight Simulator
+        </b-nav-item>
+      </b-nav>
+      <div class="tab-content">
+        <div
+          :class="[
+            'tab-pane',
+            { active: $route.hash === '#' || $route.hash === '' }
+          ]"
+          class="p-2"
+        >
           <b-row>
             <b-col>
               <p>
@@ -29,8 +49,12 @@
               <Photo />
             </b-col>
           </b-row>
-        </b-tab>
-        <b-tab title="GitHub Projects">
+          <p>Tab One (default) with no hash</p>
+        </div>
+        <div
+          :class="['tab-pane', { active: $route.hash === '#github' }]"
+          class="p-2"
+        >
           <b-list-group>
             <template v-for="r in repos">
               <b-list-group-item
@@ -47,24 +71,32 @@
               </b-list-group-item>
             </template>
           </b-list-group>
-        </b-tab>
-        <b-tab title="Travel Map" lazy>
+        </div>
+        <!-- <div
+          :class="['tab-pane', { active: $route.hash === '#map' }]"
+          class="p-2"
+        >
           <TravelMap />
-        </b-tab>
-        <b-tab title="Flight Simulator" lazy> <FlightSim /> </b-tab>
-      </b-tabs>
+        </div> -->
+        <div
+          :class="['tab-pane', { active: $route.hash === '#sim' }]"
+          class="p-2"
+        >
+          <FlightSim />
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
 import Photo from '~/components/Photo.vue'
-import TravelMap from '~/components/Map.vue'
+// import TravelMap from '~/components/Map.vue'
 import FlightSim from '~/components/FlightSim.vue'
 export default {
   components: {
     Photo,
-    TravelMap,
+    // TravelMap,
     FlightSim
   },
   data() {

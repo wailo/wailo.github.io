@@ -95,10 +95,9 @@
                 <ul style="list-style-type:none;margin: 0; padding: 0">
                   <li
                     v-for="command in instructions.commands"
-                    :key="command.key"
                     style="margin: 3px 0 0 0;"
                   >
-                    <kbd>{{ command.key }}</kbd>
+                    <kbd v-for="k in command.key">{{ k }}</kbd>
                     <span>{{ command.command }}</span>
                     <span
                       v-show="command.isActive && !command.isActive()"
