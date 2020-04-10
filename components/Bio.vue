@@ -49,7 +49,6 @@
               <Photo />
             </b-col>
           </b-row>
-          <p>Tab One (default) with no hash</p>
         </div>
         <div
           :class="['tab-pane', { active: $route.hash === '#github' }]"
