@@ -225,8 +225,8 @@ export default {
             msg: 'Inactive: Heading Hold Enganged'
           },
           { key: ['F1'], command: 'idle throttle' },
-          { key: ['F2'], command: 'throttle +' },
-          { key: ['F3'], command: 'throttle -' },
+          { key: ['F2'], command: 'throttle -' },
+          { key: ['F3'], command: 'throttle +' },
           { key: ['F4'], command: 'max throttle' },
           { key: ['='], command: 'heading hold +' },
           { key: ['-'], command: 'heading hold -' },
