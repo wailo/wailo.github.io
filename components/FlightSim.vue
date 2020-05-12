@@ -15,67 +15,121 @@
     </div>
 
     <div v-show="is_running" class="emscripten_border">
-      <div v-show="is_running" class="emscripten">
-        <span id="controls">
-          <b-button
-            v-on:click="requestFullScreen"
-            variant="dark"
-            class="border border-light btn btn-dark"
-            >Fullscreen</b-button
+      <b-row>
+        <b-col cols="3">
+          <div v-show="is_running" class="emscripten">
+            <div class="btn-group">
+              <b-button
+                v-on:click="requestFullScreen"
+                class="btn-block"
+                variant="default"
+                >Fullscreen</b-button
+              >
+              <b-button
+                ref="autopilot"
+                v-on:click="toggle_autopilot"
+                :variant="api_ap_enabled ? 'light' : 'default'"
+                class="btn-block"
+                >Autopilot</b-button
+              >
+              <b-button-group class="btn-block" style="display: flex">
+                <b-button
+                  ref="heading_hold"
+                  :class="api_headingHoldEnabled ? 'flash-button' : ''"
+                  v-on:click="toggle_heading_hold"
+                  :variant="api_headingHoldEnabled ? 'light' : 'default'"
+                  >{{
+                    api_headingHoldEnabled
+                      ? 'Heading Hold [' + api_target_heading + ']'
+                      : 'Heading Hold'
+                  }}</b-button
+                >
+
+                <b-dropdown v-show="api_headingHoldEnabled">
+                  <b-form-input
+                    id="sb-inline"
+                    :disabled="!api_ap_enabled"
+                    v-model="api_target_heading"
+                    v-on:update="set_heading_hold_value"
+                    type="range"
+                    min="0"
+                    max="359"
+                    step="1.0"
+                    variant="default"
+                  ></b-form-input>
+                </b-dropdown>
+              </b-button-group>
+
+              <b-button-group class="btn-block" style="display: flex">
+                <b-button
+                  ref="altitude_hold"
+                  :class="api_altitudeHoldEnabled ? 'flash-button' : ''"
+                  v-on:click="toggle_altitude_hold"
+                  :variant="api_altitudeHoldEnabled ? 'light' : 'default'"
+                  >{{
+                    api_altitudeHoldEnabled
+                      ? 'Altitude Hold [' + api_target_altitude + ']'
+                      : 'Altitude Hold'
+                  }}</b-button
+                >
+
+                <b-dropdown v-show="api_altitudeHoldEnabled">
+                  <b-form-input
+                    id="sb-inline"
+                    :disabled="!api_ap_enabled"
+                    v-model="api_target_altitude"
+                    v-on:update="set_altitude_hold_value"
+                    type="range"
+                    min="0"
+                    max="50000"
+                    step="1.0"
+                    variant="default"
+                  ></b-form-input>
+                </b-dropdown>
+              </b-button-group>
+
+              <b-button-group class="btn-block" style="display: flex">
+                <b-button
+                  ref="speed_hold"
+                  :class="api_speedHoldEnabled ? 'flash-button' : ''"
+                  v-on:click="toggle_speed_hold"
+                  :variant="api_speedHoldEnabled ? 'light' : 'default'"
+                  >{{
+                    api_speedHoldEnabled
+                      ? 'Speed Hold [' + api_target_speed + ']'
+                      : 'Speed Hold'
+                  }}</b-button
+                >
+                <b-dropdown v-show="api_speedHoldEnabled">
+                  <b-form-input
+                    id="sb-inline"
+                    :disabled="!api_ap_enabled"
+                    v-model="api_target_speed"
+                    v-on:update="set_speed_hold_value"
+                    type="range"
+                    min="0"
+                    max="350"
+                    step="1.0"
+                    variant="default"
+                  ></b-form-input>
+                </b-dropdown>
+              </b-button-group>
+            </div>
+
+            <div class="emscripten">
+              <progress id="progress" value="0" max="100" hidden="1"></progress>
+            </div>
+          </div> </b-col
+        ><b-col cols="6">
+          <canvas
+            id="canvas"
+            class="emscripten"
+            oncontextmenu="event.preventDefault()"
+            tabindex="-1"
           >
-
-          <b-button
-            ref="autopilot"
-            v-on:click="toggle_autopilot"
-            :variant="api_ap_enabled ? 'outline-warning' : 'outline-light'"
-            class="border border-light"
-            >{{
-              api_ap_enabled ? 'Autopilot Engaged' : 'Engage Autopilot'
-            }}</b-button
-          >
-          <b-button-group class="border border-light">
-            <b-button
-              ref="heading_hold"
-              :class="api_headingHoldEnabled ? 'flash-button' : ''"
-              v-on:click="toggle_heading_hold"
-              :variant="
-                api_headingHoldEnabled ? 'outline-warning' : 'outline-light'
-              "
-              class="border border-light"
-              >{{
-                api_headingHoldEnabled
-                  ? 'Heading Hold Engaged [' + api_target_heading + ']'
-                  : 'Engage Heading Hold'
-              }}</b-button
-            >
-
-            <b-dropdown v-show="api_headingHoldEnabled">
-              <b-form-input
-                id="sb-inline"
-                :disabled="!api_ap_enabled"
-                v-model="api_target_heading"
-                v-on:update="set_heading_hold_value"
-                type="range"
-                min="0"
-                max="359"
-                step="1.0"
-                variant="dark"
-              ></b-form-input>
-            </b-dropdown>
-          </b-button-group>
-        </span>
-
-        <div class="emscripten">
-          <progress id="progress" value="0" max="100" hidden="1"></progress>
-        </div>
-      </div>
-      <canvas
-        id="canvas"
-        class="emscripten"
-        oncontextmenu="event.preventDefault()"
-        tabindex="-1"
-      >
-      </canvas>
+          </canvas>
+        </b-col>
+      </b-row>
     </div>
     <textarea id="output" v-show="is_development" rows="3"></textarea>
 
@@ -188,11 +242,19 @@ export default {
       simulatorButtonText: 'Start simulation',
       is_development: process.env.NODE_ENV === 'development',
       api_ap_enabled: false,
+      api_toggleAutopilot: null,
       api_headingHoldEnabled: false,
       api_target_heading: 45,
-      api_toggleAutopilot: null,
       api_toggleHeadingHold: null,
       api_setHeadingHoldValue: null,
+      api_altitudeHoldEnabled: false,
+      api_target_altitude: 25000,
+      api_toggleAltitudeHold: null,
+      api_setAltitudeHoldValue: null,
+      api_speedHoldEnabled: false,
+      api_target_speed: 180,
+      api_toggleSpeedHold: null,
+      api_setSpeedHoldValue: null,
       api_iteration_time: 0,
       api_weight: null,
       api_altitude: null,
@@ -253,6 +315,12 @@ export default {
     toggle_heading_hold() {
       this.api_toggleHeadingHold(!this.api_headingHoldEnabled)
     },
+    toggle_altitude_hold() {
+      this.api_toggleAltitudeHold(!this.api_altitudeHoldEnabled)
+    },
+    toggle_speed_hold() {
+      this.api_toggleSpeedHold(!this.api_speedHoldEnabled)
+    },
     aileron_right() {
       const aileronRight = this.FlightSimulator.cwrap('aileron_right')
       aileronRight()
@@ -263,6 +331,12 @@ export default {
     },
     set_heading_hold_value(heading) {
       this.api_setHeadingHoldValue(heading)
+    },
+    set_altitude_hold_value(heading) {
+      this.api_setAltitudeHoldValue(heading)
+    },
+    set_speed_hold_value(heading) {
+      this.api_setSpeedHoldValue(heading)
     },
     requestFullScreen() {
       this.FlightSimulator.requestFullscreen(false, false)
@@ -322,12 +396,26 @@ export default {
           ['bool']
         )
 
+        this.api_toggleAltitudeHold = this.FlightSimulator.cwrap(
+          'set_altitude_hold',
+          null,
+          ['bool']
+        )
+
+        this.api_toggleSpeedHold = this.FlightSimulator.cwrap(
+          'set_speed_hold',
+          null,
+          ['bool']
+        )
+
         // Follow this steps to access memory from c++ without copying
         // First export a getter function in c++ that return a pointer to the value
         // THen the value can be accessed using
         // this.FlightSimulator.HEAP32[addr >> 2]
 
         this.api_setHeadingHoldValue = this.FlightSimulator._set_target_heading
+        this.api_setAltitudeHoldValue = this.FlightSimulator._set_target_altitude
+        this.api_setSpeedHoldValue = this.FlightSimulator._set_target_speed
 
         // Enable heading hold when the sim start
         setTimeout(() => {
@@ -361,7 +449,7 @@ div.emscripten_border {
 canvas.emscripten {
   border: 0px none;
   background-color: black;
-  width: 50%;
+  width: 100%;
 }
 
 #status {
@@ -378,12 +466,9 @@ canvas.emscripten {
   width: 300px;
 }
 
-#controls {
-  display: inline-block;
-
-  vertical-align: top;
-  margin-top: 30px;
-  margin-right: 20px;
+.btn:focus {
+  outline: none;
+  box-shadow: none;
 }
 
 #output {
