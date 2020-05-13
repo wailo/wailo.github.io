@@ -268,8 +268,22 @@ export default {
       isDataDisplayed: false,
       instructions: {
         commands: [
-          { key: ['w', '↑'], command: ' pitch -' },
-          { key: ['s', '↓'], command: ' pitch +' },
+          {
+            key: ['w', '↑'],
+            command: ' pitch -',
+            isActive: () => {
+              return !this.api_altitudeHoldEnabled
+            },
+            msg: 'Inactive: Altitude Hold Enganged'
+          },
+          {
+            key: ['s', '↓'],
+            command: ' pitch +',
+            isActive: () => {
+              return !this.api_altitudeHoldEnabled
+            },
+            msg: 'Inactive: Altitude Hold Enganged'
+          },
           {
             key: ['a', '←'],
             command: ' roll -',
@@ -286,10 +300,38 @@ export default {
             },
             msg: 'Inactive: Heading Hold Enganged'
           },
-          { key: ['F1'], command: 'idle throttle' },
-          { key: ['F2'], command: 'throttle -' },
-          { key: ['F3'], command: 'throttle +' },
-          { key: ['F4'], command: 'max throttle' },
+          {
+            key: ['F1'],
+            command: 'idle throttle',
+            isActive: () => {
+              return !this.api_speedHoldEnabled
+            },
+            msg: 'Inactive: Speed Hold Enganged'
+          },
+          {
+            key: ['F2'],
+            command: 'throttle -',
+            isActive: () => {
+              return !this.api_speedHoldEnabled
+            },
+            msg: 'Inactive: Speed Hold Enganged'
+          },
+          {
+            key: ['F3'],
+            command: 'throttle +',
+            isActive: () => {
+              return !this.api_speedHoldEnabled
+            },
+            msg: 'Inactive: Speed Hold Enganged'
+          },
+          {
+            key: ['F4'],
+            command: 'max throttle',
+            isActive: () => {
+              return !this.api_speedHoldEnabled
+            },
+            msg: 'Inactive: Speed Hold Enganged'
+          },
           { key: ['='], command: 'heading hold +' },
           { key: ['-'], command: 'heading hold -' },
           { key: ['f'], command: 'reset controls to zero' }
