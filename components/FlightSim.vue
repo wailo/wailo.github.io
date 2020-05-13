@@ -459,10 +459,7 @@ export default {
         this.api_setAltitudeHoldValue = this.FlightSimulator._set_target_altitude
         this.api_setSpeedHoldValue = this.FlightSimulator._set_target_speed
 
-        // Enable heading hold when the sim start
-        setTimeout(() => {
-          this.$refs.heading_hold.click()
-        }, 1000)
+        // Main function
         const main = this.FlightSimulator._main
         main()
       })
