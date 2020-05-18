@@ -117,22 +117,23 @@
               <b-container fluid>
                 <b-row v-for="parameter in parameters" :key="parameter.title">
                   <b-col>
-                    <nobr
-                      ><p
-                        v-html="parameter.title + ' [' + parameter.value + ']'"
-                        style="font-size:0.8vw;"
-                      ></p
-                    ></nobr>
+                    <nobr v-html="parameter.title"></nobr>
                   </b-col>
-                  <b-col cols="3">
-                    <b-form-input
-                      :min="parameter.min"
-                      :max="parameter.max"
-                      :step="parameter.step"
-                      v-on:update="parameter.setter"
-                      v-model="parameter.value"
-                      type="range"
-                    ></b-form-input>
+                  <b-col cols="4">
+                    <b-dropdown
+                      :text="parameter.value.toString()"
+                      style="padding-left:2px; padding-bottom:2px;"
+                      block
+                    >
+                      <b-form-input
+                        :min="parameter.min"
+                        :max="parameter.max"
+                        :step="parameter.step"
+                        v-on:update="parameter.setter"
+                        v-model="parameter.value"
+                        type="range"
+                      ></b-form-input>
+                    </b-dropdown>
                   </b-col>
                 </b-row>
               </b-container>
