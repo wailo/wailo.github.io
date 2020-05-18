@@ -16,39 +16,40 @@
 
     <div v-show="is_running" class="emscripten_border">
       <b-row>
-        <b-col cols="3">
-          <div v-show="is_running" class="emscripten">
-            <div class="btn-group">
+        <b-col cols="4">
+          <div v-show="is_running">
+            <div fluid>
+              <h4>Display</h4>
               <b-button
                 v-on:click="requestFullScreen"
                 class="btn-block"
                 variant="default"
                 >Fullscreen</b-button
               >
+              <h4>Autopilot Controls</h4>
               <b-button
                 ref="autopilot"
                 v-on:click="toggle_autopilot"
-                :variant="api_ap_enabled ? 'light' : 'default'"
+                :class="api_ap_enabled ? 'pressed' : ''"
+                variant="default"
                 class="btn-block"
                 >Autopilot</b-button
               >
               <b-button-group class="btn-block" style="display: flex">
                 <b-button
                   ref="heading_hold"
-                  :class="api_headingHoldEnabled ? 'flash-button' : ''"
+                  :class="api_headingHoldEnabled ? 'pressed' : ''"
                   v-on:click="toggle_heading_hold"
-                  :variant="api_headingHoldEnabled ? 'light' : 'default'"
-                  >{{
-                    api_headingHoldEnabled
-                      ? 'Heading Hold [' + api_target_heading + ']'
-                      : 'Heading Hold'
-                  }}</b-button
+                  variant="default"
+                  >Heading Hold</b-button
                 >
 
-                <b-dropdown v-show="api_headingHoldEnabled">
+                <b-dropdown
+                  :text="api_target_heading.toString() + '°'"
+                  :disabled="!api_headingHoldEnabled"
+                >
                   <b-form-input
                     id="sb-inline"
-                    :disabled="!api_ap_enabled"
                     v-model="api_target_heading"
                     v-on:update="set_heading_hold_value"
                     type="range"
@@ -63,20 +64,18 @@
               <b-button-group class="btn-block" style="display: flex">
                 <b-button
                   ref="altitude_hold"
-                  :class="api_altitudeHoldEnabled ? 'flash-button' : ''"
+                  :class="api_altitudeHoldEnabled ? 'pressed' : ''"
                   v-on:click="toggle_altitude_hold"
-                  :variant="api_altitudeHoldEnabled ? 'light' : 'default'"
-                  >{{
-                    api_altitudeHoldEnabled
-                      ? 'Altitude Hold [' + api_target_altitude + ']'
-                      : 'Altitude Hold'
-                  }}</b-button
+                  variant="default"
+                  >Altitude Hold</b-button
                 >
 
-                <b-dropdown v-show="api_altitudeHoldEnabled">
+                <b-dropdown
+                  :text="api_target_altitude.toString() + 'ft'"
+                  :disabled="!api_altitudeHoldEnabled"
+                >
                   <b-form-input
                     id="sb-inline"
-                    :disabled="!api_ap_enabled"
                     v-model="api_target_altitude"
                     v-on:update="set_altitude_hold_value"
                     type="range"
@@ -91,19 +90,17 @@
               <b-button-group class="btn-block" style="display: flex">
                 <b-button
                   ref="speed_hold"
-                  :class="api_speedHoldEnabled ? 'flash-button' : ''"
+                  :class="api_speedHoldEnabled ? 'pressed' : ''"
                   v-on:click="toggle_speed_hold"
-                  :variant="api_speedHoldEnabled ? 'light' : 'default'"
-                  >{{
-                    api_speedHoldEnabled
-                      ? 'Speed Hold [' + api_target_speed + ']'
-                      : 'Speed Hold'
-                  }}</b-button
+                  variant="default"
+                  >Speed Hold</b-button
                 >
-                <b-dropdown v-show="api_speedHoldEnabled">
+                <b-dropdown
+                  :disabled="!api_speedHoldEnabled"
+                  :text="api_target_speed.toString() + 'kt'"
+                >
                   <b-form-input
                     id="sb-inline"
-                    :disabled="!api_ap_enabled"
                     v-model="api_target_speed"
                     v-on:update="set_speed_hold_value"
                     type="range"
@@ -115,12 +112,37 @@
                 </b-dropdown>
               </b-button-group>
             </div>
+            <template v-for="(parameters, title) in simulation_parameters">
+              <h4>{{ title }}</h4>
+              <b-container fluid>
+                <b-row v-for="parameter in parameters" :key="parameter.title">
+                  <b-col>
+                    <nobr
+                      ><p
+                        v-html="parameter.title + ' [' + parameter.value + ']'"
+                        style="font-size:0.8vw;"
+                      ></p
+                    ></nobr>
+                  </b-col>
+                  <b-col cols="3">
+                    <b-form-input
+                      :min="parameter.min"
+                      :max="parameter.max"
+                      :step="parameter.step"
+                      v-on:update="parameter.setter"
+                      v-model="parameter.value"
+                      type="range"
+                    ></b-form-input>
+                  </b-col>
+                </b-row>
+              </b-container>
+            </template>
 
             <div class="emscripten">
               <progress id="progress" value="0" max="100" hidden="1"></progress>
             </div>
           </div> </b-col
-        ><b-col cols="6">
+        ><b-col>
           <canvas
             id="canvas"
             class="emscripten"
@@ -336,6 +358,46 @@ export default {
           { key: ['-'], command: 'heading hold -' },
           { key: ['f'], command: 'reset controls to zero' }
         ]
+      },
+      simulation_parameters: {
+        Geometry: [
+          {
+            title: 'Wing Area Ft&sup2;',
+            value: 530,
+            setter: this.set_wing_area_value,
+            min: 10,
+            max: 1000,
+            step: 1
+          }
+        ],
+        Performance: [
+          {
+            title: 'Thrust to Weight Ratio',
+            value: 0.3,
+            setter: this.set_thrust_to_weight_ratio_value,
+            min: 0.1,
+            max: 5,
+            step: 0.1
+          }
+        ],
+        Aerodynamics: [
+          {
+            title: 'Lift Cofficient Slope',
+            value: 3.53,
+            setter: this.set_cl_slope_value,
+            min: 0.1,
+            max: 5,
+            step: 0.1
+          },
+          {
+            title: 'Drag Cofficient',
+            value: 0.02,
+            setter: this.set_cd_value,
+            min: 0.01,
+            max: 1.0,
+            step: 0.01
+          }
+        ]
       }
     }
   },
@@ -374,11 +436,23 @@ export default {
     set_heading_hold_value(heading) {
       this.api_setHeadingHoldValue(heading)
     },
-    set_altitude_hold_value(heading) {
-      this.api_setAltitudeHoldValue(heading)
+    set_altitude_hold_value(altitude) {
+      this.api_setAltitudeHoldValue(altitude)
     },
-    set_speed_hold_value(heading) {
-      this.api_setSpeedHoldValue(heading)
+    set_speed_hold_value(speed) {
+      this.api_setSpeedHoldValue(speed)
+    },
+    set_wing_area_value(wingArea) {
+      this.api_setWingAreaValue(wingArea)
+    },
+    set_thrust_to_weight_ratio_value(thrustToWeightRatio) {
+      this.api_setThrustToWeightRatio(thrustToWeightRatio)
+    },
+    set_cl_slope_value(clSlope) {
+      this.api_setClSlopeValue(clSlope)
+    },
+    set_cd_value(cd) {
+      this.api_setCdValue(cd)
     },
     requestFullScreen() {
       this.FlightSimulator.requestFullscreen(false, false)
@@ -459,6 +533,11 @@ export default {
         this.api_setAltitudeHoldValue = this.FlightSimulator._set_target_altitude
         this.api_setSpeedHoldValue = this.FlightSimulator._set_target_speed
 
+        this.api_setWingAreaValue = this.FlightSimulator._set_wing_area
+        this.api_setThrustToWeightRatio = this.FlightSimulator._set_thrust_to_weight
+        this.api_setClSlopeValue = this.FlightSimulator._set_dcl
+        this.api_setCdValue = this.FlightSimulator._set_cdo
+
         // Main function
         const main = this.FlightSimulator._main
         main()
@@ -508,6 +587,17 @@ canvas.emscripten {
 .btn:focus {
   outline: none;
   box-shadow: none;
+}
+
+.btn-default.pressed {
+  border-color: orange;
+}
+
+.btn {
+  font-size: 1vw;
+}
+.btn-group {
+  padding-left: 2px;
 }
 
 #output {
