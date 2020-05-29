@@ -35,95 +35,52 @@
                 class="btn-block"
                 >Autopilot</b-button
               >
-              <b-button-group class="btn-block" style="display: flex">
-                <b-button
-                  ref="heading_hold"
-                  :class="api_headingHoldEnabled ? 'pressed' : ''"
-                  v-on:click="toggle_heading_hold"
-                  variant="default"
-                  >Heading Hold</b-button
+              <template v-for="parameters in autopilot_controls">
+                <b-button-group
+                  v-bind:key="parameters.button_title"
+                  class="btn-block"
+                  style="display: flex"
                 >
-
-                <b-dropdown
-                  :text="api_target_heading.toString() + '°'"
-                  :disabled="!api_headingHoldEnabled"
-                >
-                  <b-form-input
-                    id="sb-inline"
-                    v-model="api_target_heading"
-                    v-on:update="set_heading_hold_value"
-                    type="range"
-                    min="0"
-                    max="359"
-                    step="1.0"
+                  <b-button
+                    :class="parameters.status() ? 'pressed' : ''"
+                    v-on:click="parameters.toggle"
                     variant="default"
-                  ></b-form-input>
-                </b-dropdown>
-              </b-button-group>
-
-              <b-button-group class="btn-block" style="display: flex">
-                <b-button
-                  ref="altitude_hold"
-                  :class="api_altitudeHoldEnabled ? 'pressed' : ''"
-                  v-on:click="toggle_altitude_hold"
-                  variant="default"
-                  >Altitude Hold</b-button
-                >
-
-                <b-dropdown
-                  :text="api_target_altitude.toString() + 'ft'"
-                  :disabled="!api_altitudeHoldEnabled"
-                >
-                  <b-form-input
-                    id="sb-inline"
-                    v-model="api_target_altitude"
-                    v-on:update="set_altitude_hold_value"
-                    type="range"
-                    min="0"
-                    max="50000"
-                    step="1.0"
-                    variant="default"
-                  ></b-form-input>
-                </b-dropdown>
-              </b-button-group>
-
-              <b-button-group class="btn-block" style="display: flex">
-                <b-button
-                  ref="speed_hold"
-                  :class="api_speedHoldEnabled ? 'pressed' : ''"
-                  v-on:click="toggle_speed_hold"
-                  variant="default"
-                  >Speed Hold</b-button
-                >
-                <b-dropdown
-                  :disabled="!api_speedHoldEnabled"
-                  :text="api_target_speed.toString() + 'kt'"
-                >
-                  <b-form-input
-                    id="sb-inline"
-                    v-model="api_target_speed"
-                    v-on:update="set_speed_hold_value"
-                    type="range"
-                    min="0"
-                    max="350"
-                    step="1.0"
-                    variant="default"
-                  ></b-form-input>
-                </b-dropdown>
-              </b-button-group>
+                    >{{ parameters.button_title }}</b-button
+                  >
+                  <b-dropdown
+                    :text="parameters.setter_model + parameters.unit"
+                    :disabled="!parameters.status"
+                  >
+                    <b-form-input
+                      id="sb-inline"
+                      v-model="parameters.setter_model"
+                      v-on:update="parameters.setter"
+                      :min="parameters.min"
+                      :max="parameters.max"
+                      :step="parameters.step"
+                      type="range"
+                      variant="default"
+                    ></b-form-input>
+                  </b-dropdown>
+                </b-button-group>
+              </template>
             </div>
             <template v-for="(parameters, title) in simulation_parameters">
               <h4>{{ title }}</h4>
               <b-container fluid>
-                <b-row v-for="parameter in parameters" :key="parameter.title">
+                <b-row
+                  v-for="parameter in parameters"
+                  :key="parameter.title"
+                  class="flex-nowrap"
+                >
                   <b-col>
                     <nobr v-html="parameter.title"></nobr>
                   </b-col>
                   <b-col cols="4">
                     <b-dropdown
                       :text="parameter.value.toString()"
-                      style="padding-left:2px; padding-bottom:2px;"
                       block
+                      style="padding-left:2px; padding-bottom:2px;"
                     >
                       <b-form-input
                         :min="parameter.min"
@@ -259,6 +216,15 @@ export default {
   name: 'FlightSim',
 
   data() {
+    // eslint-disable-next-line camelcase, prefer-const
+    let api_target_heading = 45
+
+    // eslint-disable-next-line camelcase, prefer-const
+    let api_target_altitude = 20000
+
+    // eslint-disable-next-line camelcase, prefer-const
+    let api_target_speed = 180
+
     return {
       FlightSimulator: null,
       is_running: false,
@@ -267,15 +233,15 @@ export default {
       api_ap_enabled: false,
       api_toggleAutopilot: null,
       api_headingHoldEnabled: false,
-      api_target_heading: 45,
+      // api_target_heading: 45,
       api_toggleHeadingHold: null,
       api_setHeadingHoldValue: null,
       api_altitudeHoldEnabled: false,
-      api_target_altitude: 25000,
+      // api_target_altitude: 25000,
       api_toggleAltitudeHold: null,
       api_setAltitudeHoldValue: null,
       api_speedHoldEnabled: false,
-      api_target_speed: 180,
+      // api_target_speed: 180,
       api_toggleSpeedHold: null,
       api_setSpeedHoldValue: null,
       api_iteration_time: 0,
@@ -360,6 +326,47 @@ export default {
           { key: ['f'], command: 'reset controls to zero' }
         ]
       },
+      autopilot_controls: [
+        {
+          button_title: 'Heaading Hold',
+          toggle: this.toggle_heading_hold,
+          status: () => {
+            return this.api_headingHoldEnabled
+          },
+          setter: this.set_heading_hold_value,
+          setter_model: api_target_heading,
+          unit: '°',
+          min: 0,
+          max: 359,
+          step: 1.0
+        },
+        {
+          button_title: 'Altitude Hold',
+          toggle: this.toggle_altitude_hold,
+          status: () => {
+            return this.api_altitudeHoldEnabled
+          },
+          setter: this.set_altitude_hold_value,
+          setter_model: api_target_altitude,
+          unit: 'ft',
+          min: 0,
+          max: 50000,
+          step: 1.0
+        },
+        {
+          button_title: 'Speed Hold',
+          toggle: this.toggle_speed_hold,
+          status: () => {
+            return this.api_speedHoldEnabled
+          },
+          setter: this.set_speed_hold_value,
+          setter_model: api_target_speed,
+          unit: 'kt',
+          min: 0,
+          max: 350,
+          step: 1
+        }
+      ],
       simulation_parameters: {
         Geometry: [
           {
@@ -594,9 +601,6 @@ canvas.emscripten {
   border-color: orange;
 }
 
-.btn {
-  font-size: 1vw;
-}
 .btn-group {
   padding-left: 2px;
 }
@@ -637,5 +641,9 @@ canvas.emscripten {
 }
 .collapse.show {
   visibility: visible;
+}
+
+.text-responsive {
+  font-size: 1vw;
 }
 </style>
