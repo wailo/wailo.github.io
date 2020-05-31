@@ -220,7 +220,7 @@ export default {
     let api_target_heading = 45
 
     // eslint-disable-next-line camelcase, prefer-const
-    let api_target_altitude = 20000
+    let api_target_altitude = 25000
 
     // eslint-disable-next-line camelcase, prefer-const
     let api_target_speed = 180
