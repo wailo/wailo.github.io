@@ -16,7 +16,7 @@
 
     <div v-show="is_running" class="emscripten_border">
       <b-row>
-        <b-col cols="4">
+        <b-col cols="5">
           <div v-show="is_running">
             <div fluid>
               <h4>Display</h4>
@@ -35,35 +35,50 @@
                 class="btn-block"
                 >Autopilot</b-button
               >
-              <template v-for="parameters in autopilot_controls">
-                <b-button-group
-                  v-bind:key="parameters.button_title"
-                  class="btn-block"
-                  style="display: flex"
+              <b-container fluid>
+                <b-row
+                  :key="parameters.button_title"
+                  v-for="parameters in autopilot_controls"
+                  container
                 >
-                  <b-button
-                    :class="parameters.status() ? 'pressed' : ''"
-                    v-on:click="parameters.toggle"
-                    variant="default"
-                    >{{ parameters.button_title }}</b-button
-                  >
-                  <b-dropdown
-                    :text="parameters.setter_model + parameters.unit"
-                    :disabled="!parameters.status"
-                  >
-                    <b-form-input
-                      id="sb-inline"
-                      v-model="parameters.setter_model"
-                      v-on:update="parameters.setter"
-                      :min="parameters.min"
-                      :max="parameters.max"
-                      :step="parameters.step"
-                      type="range"
+                  <b-col>
+                    <b-button
+                      :class="
+                        parameters.status()
+                          ? 'pressed text-responsive'
+                          : 'text-responsive'
+                      "
+                      v-on:click="parameters.toggle"
+                      block
                       variant="default"
-                    ></b-form-input>
-                  </b-dropdown>
-                </b-button-group>
-              </template>
+                      >{{ parameters.button_title }}</b-button
+                    >
+                  </b-col>
+                  <b-col cols="4">
+                    <b-dropdown
+                      :disabled="!parameters.status"
+                      block
+                      style="padding-left:2px; padding-bottom:2px;"
+                    >
+                      <template v-slot:button-content>
+                        <span class="text-responsive">
+                          {{ parameters.setter_model + parameters.unit }}
+                        </span>
+                      </template>
+                      <b-form-input
+                        id="sb-inline"
+                        v-model="parameters.setter_model"
+                        v-on:update="parameters.setter"
+                        :min="parameters.min"
+                        :max="parameters.max"
+                        :step="parameters.step"
+                        type="range"
+                        variant="default"
+                      ></b-form-input>
+                    </b-dropdown>
+                  </b-col>
+                </b-row>
+              </b-container>
             </div>
             <template v-for="(parameters, title) in simulation_parameters">
               <h4>{{ title }}</h4>
@@ -74,14 +89,21 @@
                   class="flex-nowrap"
                 >
                   <b-col>
-                    <nobr v-html="parameter.title"></nobr>
+                    <nobr
+                      v-html="parameter.title"
+                      class="text-responsive"
+                    ></nobr>
                   </b-col>
                   <b-col cols="4">
                     <b-dropdown
-                      :text="parameter.value.toString()"
                       block
                       style="padding-left:2px; padding-bottom:2px;"
                     >
+                      <template v-slot:button-content>
+                        <span class="text-responsive">
+                          {{ parameter.value }}
+                        </span>
+                      </template>
                       <b-form-input
                         :min="parameter.min"
                         :max="parameter.max"
@@ -599,6 +621,9 @@ canvas.emscripten {
 
 .btn-default.pressed {
   border-color: orange;
+}
+.btn-default {
+  border-color: grey;
 }
 
 .btn-group {
