@@ -1,14 +1,51 @@
 <template>
   <div>
-    <span>
-      <b-button
-        v-show="!is_running"
-        v-on:click="startSimulator"
-        variant="outline-danger"
-        style="width: 100%; height: 100%; border-color:#FF0000"
-        >{{ simulatorButtonText }}</b-button
-      ></span
-    >
+    <div v-show="!is_running">
+      <b-card bg-variant="transparent" border-variant="dark">
+        <b-card-text>
+          <b-form-text variant="default">
+            <p>
+              A simulation of a generic airplane using graphical representation
+              of the main six flight instruments and basic Autopilot
+              functionality.
+            </p>
+            <ul>
+              <li>Core simulation logic is written in C++</li>
+              <li>
+                Simulation visuals are developed with
+                <b-link target="_blank" href="https://www.opengl.org"
+                  >OpenGL</b-link
+                >
+              </li>
+              <li>
+                Ported to WebAssembly with
+                <b-link target="_blank" href="https://emscripten.org"
+                  >Emscripten</b-link
+                >
+              </li>
+              <li>
+                User interface is developed with
+                <b-link target="_blank" href="https://vuejs.org">
+                  Vue.js</b-link
+                >
+                and
+                <b-link target="_blank" href="https://getbootstrap.com"
+                  >Bootstrap</b-link
+                >
+              </li>
+            </ul>
+          </b-form-text>
+          <span>
+            <b-button
+              v-on:click="startSimulator"
+              variant="outline-danger"
+              style="width: 100%; height: 100%; border-color:#FF0000"
+              >{{ simulatorButtonText }}</b-button
+            ></span
+          >
+        </b-card-text></b-card
+      >
+    </div>
 
     <div id="status" v-show="FlightSimulator" class="emscripten">
       Downloading...
@@ -139,7 +176,7 @@
       <b-row>
         <b-col>
           <b-card
-            title="Controls"
+            title="Keyboard Controls"
             bg-variant="transparent"
             border-variant="dark"
           >
@@ -343,9 +380,10 @@ export default {
             },
             msg: 'Inactive: Speed Hold Enganged'
           },
-          { key: ['='], command: 'heading hold +' },
-          { key: ['-'], command: 'heading hold -' },
-          { key: ['f'], command: 'reset controls to zero' }
+          {
+            key: ['f'],
+            command: 'reset all surface controls to neutral position'
+          }
         ]
       },
       autopilot_controls: [
