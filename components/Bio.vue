@@ -59,6 +59,7 @@
               <b-list-group-item
                 v-bind:key="r.id"
                 :href="r.html_url"
+                target="_blank"
                 class="flex-column align-items-start"
                 variant="dark"
               >
