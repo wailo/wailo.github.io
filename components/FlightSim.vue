@@ -56,13 +56,44 @@
         <b-col cols="5">
           <div v-show="is_running">
             <div fluid>
-              <h4>Display</h4>
+              <h4>Simulation</h4>
               <b-button
                 v-on:click="requestFullScreen"
                 class="btn-block"
                 variant="default"
                 >Fullscreen</b-button
               >
+              <b-button
+                :class="
+                  simulation_pause
+                    ? 'pressed text-responsive'
+                    : 'text-responsive'
+                "
+                v-on:click="
+                  simulation_pause = !simulation_pause
+                  set_simulation_pause(simulation_pause)
+                "
+                block
+                variant="default"
+                >Pause</b-button
+              >
+              <b-dropdown block style="padding-left:2px; padding-bottom:2px;">
+                <template v-slot:button-content>
+                  <span class="text-responsive">
+                    {{ 'Simulation Speed ' + simulation_speed + 'x' }}
+                  </span>
+                </template>
+                <b-form-input
+                  id="sb-inline"
+                  v-model="simulation_speed"
+                  v-on:update="set_simulation_speed(simulation_speed)"
+                  :min="0.5"
+                  :max="4"
+                  :step="0.5"
+                  type="range"
+                  variant="default"
+                ></b-form-input>
+              </b-dropdown>
               <h4>Autopilot Controls</h4>
               <b-button
                 ref="autopilot"
@@ -314,6 +345,8 @@ export default {
       api_theta_deg: null,
       api_attitude_deg: null,
       isDataDisplayed: false,
+      simulation_pause: false,
+      simulation_speed: 1.0,
       instructions: {
         commands: [
           {
@@ -522,6 +555,12 @@ export default {
     set_cd_value(cd) {
       this.api_setCdValue(cd)
     },
+    set_simulation_speed(simulationSpeed) {
+      this.api_setSimulationSpeed(simulationSpeed)
+    },
+    set_simulation_pause(state) {
+      this.api_setSimulationPause(state)
+    },
     requestFullScreen() {
       this.FlightSimulator.requestFullscreen(false, false)
     },
@@ -606,6 +645,8 @@ export default {
         this.api_setClSlopeValue = this.FlightSimulator._set_dcl
         this.api_setCdValue = this.FlightSimulator._set_cdo
 
+        this.api_setSimulationSpeed = this.FlightSimulator._set_simulation_speed
+        this.api_setSimulationPause = this.FlightSimulator._set_simulation_pause
         // Main function
         const main = this.FlightSimulator._main
         main()
