@@ -88,7 +88,7 @@
                   v-model="simulation_speed"
                   v-on:update="set_simulation_speed(simulation_speed)"
                   :min="0.5"
-                  :max="4"
+                  :max="32"
                   :step="0.5"
                   type="range"
                   variant="default"
