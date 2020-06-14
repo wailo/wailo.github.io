@@ -57,16 +57,13 @@
           <div v-show="is_running">
             <div fluid>
               <h4>Simulation</h4>
-              <b-button
-                v-on:click="requestFullScreen"
-                class="btn-block"
-                variant="default"
+              <b-button v-on:click="requestFullScreen" block variant="default"
                 >Fullscreen</b-button
               >
               <b-button
                 :class="
                   simulation_pause
-                    ? 'pressed text-responsive'
+                    ? 'pressed text-responsive flash-button'
                     : 'text-responsive'
                 "
                 v-on:click="
@@ -91,7 +88,6 @@
                   :max="32"
                   :step="0.5"
                   type="range"
-                  variant="default"
                 ></b-form-input>
               </b-dropdown>
               <h4>Autopilot Controls</h4>
@@ -223,11 +219,8 @@
                   >
                     <kbd v-for="k in command.key">{{ k }}</kbd>
                     <span>{{ command.command }}</span>
-                    <span
-                      v-show="command.isActive && !command.isActive()"
-                      class="flash-button"
-                    >
-                      <b-icon icon="info-circle" variant="success"></b-icon>
+                    <span v-show="command.isActive && !command.isActive()">
+                      <b-icon icon="info-circle" variant="light"></b-icon>
                       {{ command.msg }}
                     </span>
                   </li>
@@ -650,6 +643,14 @@ export default {
         // Main function
         const main = this.FlightSimulator._main
         main()
+      })
+
+      // Pause the simulation when tab loses focus
+      document.addEventListener('visibilitychange', () => {
+        if (!this.simulation_pause) {
+          this.set_simulation_pause(!document.hidden)
+          this.simulation_pause = !document.hidden
+        }
       })
 
       // this.$nextTick(() => {})
