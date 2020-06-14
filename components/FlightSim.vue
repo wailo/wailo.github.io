@@ -498,10 +498,11 @@ export default {
 
   mounted() {},
   methods: {
-    notifyUser(title, msg) {
+    notifyUser(title, msg, duration = 1000) {
       this.$bvToast.toast(msg, {
         title,
-        autoHideDelay: 1000,
+        noAutoHide: duration === -1,
+        autoHideDelay: duration,
         appendToast: false,
         variant: 'dark',
         'body-class': 'strong'
