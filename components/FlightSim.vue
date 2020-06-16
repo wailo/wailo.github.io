@@ -58,8 +58,9 @@
             <div fluid>
               <h4>Simulation</h4>
               <b-button v-on:click="requestFullScreen" block variant="default"
-                >Fullscreen</b-button
-              >
+                >Fullscreen
+                <b-icon icon="arrows-fullscreen" variant="default"></b-icon
+              ></b-button>
               <b-button
                 :class="
                   simulation_pause
@@ -72,31 +73,33 @@
                 "
                 block
                 variant="default"
-                >Pause</b-button
-              >
-              <b-dropdown block style="padding-left:2px; padding-bottom:2px;">
-                <template v-slot:button-content>
-                  <span class="text-responsive">
-                    {{ 'Simulation Speed ' + simulation_speed + 'x' }}
-                  </span>
-                </template>
-                <b-form-input
-                  id="sb-inline"
-                  v-model="simulation_speed"
-                  v-on:update="set_simulation_speed(simulation_speed)"
-                  :min="0.5"
-                  :max="32"
-                  :step="0.5"
-                  type="range"
-                ></b-form-input>
-              </b-dropdown>
+                >{{ simulation_pause ? 'Resume' : 'Pause' }}
+                <b-icon
+                  :icon="simulation_pause ? 'play-fill' : 'pause-fill'"
+                  variant="default"
+                ></b-icon
+              ></b-button>
+
+              <label class="pull-right text-responsive">{{
+                'Simulation Speed ' + simulation_speed + 'x'
+              }}</label>
+              <b-form-input
+                id="sb-inline"
+                v-model="simulation_speed"
+                v-on:update="set_simulation_speed(simulation_speed)"
+                :min="0.5"
+                :max="16"
+                :step="0.5"
+                type="range"
+              ></b-form-input>
+
               <h4>Autopilot Controls</h4>
               <b-button
                 ref="autopilot"
                 v-on:click="toggle_autopilot"
-                :class="api_ap_enabled ? 'pressed' : ''"
+                :class="'btn-block ' + (api_ap_enabled ? 'pressed' : '')"
                 variant="default"
-                class="btn-block"
+                style="margin-bottom: 2px;"
                 >Autopilot</b-button
               >
               <b-container fluid>
@@ -108,38 +111,34 @@
                   <b-col>
                     <b-button
                       :class="
-                        parameters.status()
-                          ? 'pressed text-responsive'
-                          : 'text-responsive'
+                        'text-left text-responsive ' +
+                          (parameters.status() ? 'pressed ' : '')
                       "
                       v-on:click="parameters.toggle"
                       block
                       variant="default"
-                      >{{ parameters.button_title }}</b-button
+                      ><b-icon
+                        :icon="
+                          parameters.status() ? 'octagon-fill' : 'slash-circle'
+                        "
+                        variant="default"
+                      ></b-icon>
+                      {{ parameters.button_title }}</b-button
                     >
                   </b-col>
-                  <b-col cols="4">
-                    <b-dropdown
-                      :disabled="!parameters.status"
-                      block
-                      style="padding-left:2px; padding-bottom:2px;"
-                    >
-                      <template v-slot:button-content>
-                        <span class="text-responsive">
-                          {{ parameters.setter_model + parameters.unit }}
-                        </span>
-                      </template>
-                      <b-form-input
-                        id="sb-inline"
-                        v-model="parameters.setter_model"
-                        v-on:update="parameters.setter"
-                        :min="parameters.min"
-                        :max="parameters.max"
-                        :step="parameters.step"
-                        type="range"
-                        variant="default"
-                      ></b-form-input>
-                    </b-dropdown>
+                  <b-col>
+                    <label class="pull-right text-responsive">{{
+                      parameters.setter_model + parameters.unit
+                    }}</label>
+                    <b-form-input
+                      v-model="parameters.setter_model"
+                      v-on:update="parameters.setter"
+                      :min="parameters.min"
+                      :max="parameters.max"
+                      :step="parameters.step"
+                      class="danger"
+                      type="range"
+                    ></b-form-input>
                   </b-col>
                 </b-row>
               </b-container>
@@ -159,24 +158,17 @@
                     ></nobr>
                   </b-col>
                   <b-col cols="4">
-                    <b-dropdown
-                      block
-                      style="padding-left:2px; padding-bottom:2px;"
-                    >
-                      <template v-slot:button-content>
-                        <span class="text-responsive">
-                          {{ parameter.value }}
-                        </span>
-                      </template>
-                      <b-form-input
-                        :min="parameter.min"
-                        :max="parameter.max"
-                        :step="parameter.step"
-                        v-on:update="parameter.setter"
-                        v-model="parameter.value"
-                        type="range"
-                      ></b-form-input>
-                    </b-dropdown>
+                    <label class="pull-right text-responsive">{{
+                      parameter.value
+                    }}</label>
+                    <b-form-input
+                      :min="parameter.min"
+                      :max="parameter.max"
+                      :step="parameter.step"
+                      v-on:update="parameter.setter"
+                      v-model="parameter.value"
+                      type="range"
+                    ></b-form-input>
                   </b-col>
                 </b-row>
               </b-container>
@@ -414,7 +406,7 @@ export default {
       },
       autopilot_controls: [
         {
-          button_title: 'Heaading Hold',
+          button_title: 'Heading Hold',
           toggle: this.toggle_heading_hold,
           status: () => {
             return this.api_headingHoldEnabled
@@ -598,7 +590,6 @@ export default {
         canvas: (() => document.getElementById('canvas'))()
       }).then(() => {
         this.is_running = true
-        this.simulatorButtonText = 'Stop'
 
         // Link C++ functions
         this.api_toggleAutopilot = this.FlightSimulator.cwrap(
