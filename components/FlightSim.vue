@@ -57,7 +57,11 @@
           <div v-show="is_running">
             <div fluid>
               <h4>Simulation</h4>
-              <b-button v-on:click="requestFullScreen" block variant="default"
+              <b-button
+                v-on:click="requestFullScreen"
+                class="text-responsive"
+                block
+                variant="default"
                 >Fullscreen
                 <b-icon icon="arrows-fullscreen" variant="default"></b-icon
               ></b-button>
