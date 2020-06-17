@@ -213,7 +213,9 @@
                     v-for="command in instructions.commands"
                     style="margin: 3px 0 0 0;"
                   >
-                    <kbd v-for="k in command.key">{{ k }}</kbd>
+                    <kbd v-for="k in command.key" style="margin-right:2px">{{
+                      k
+                    }}</kbd>
                     <span>{{ command.command }}</span>
                     <span v-show="command.isActive && !command.isActive()">
                       <b-icon icon="info-circle" variant="light"></b-icon>
@@ -405,6 +407,10 @@ export default {
           {
             key: ['f'],
             command: 'reset all surface controls to neutral position'
+          },
+          {
+            key: ['h'],
+            command: 'Reset flight model'
           }
         ]
       },
