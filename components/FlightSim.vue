@@ -131,18 +131,26 @@
                     >
                   </b-col>
                   <b-col>
-                    <label class="pull-right text-responsive">{{
+                    <!-- <label class="pull-right text-responsive">{{
                       parameters.setter_model + parameters.unit
-                    }}</label>
-                    <b-form-input
+                    }}</label> -->
+                    <knob
                       v-model="parameters.setter_model"
-                      v-on:update="parameters.setter"
+                      v-on:change="
+                        (value) => {
+                          parameters.setter(value)
+                        }
+                      "
+                      v-on:input="
+                        (value) => {
+                          parameters.setter_model = value
+                        }
+                      "
                       :min="parameters.min"
                       :max="parameters.max"
                       :step="parameters.step"
-                      class="danger"
-                      type="range"
-                    ></b-form-input>
+                      :label="`${parameters.setter_model}${parameters.unit}`"
+                    ></knob>
                   </b-col>
                 </b-row>
               </b-container>
@@ -290,11 +298,15 @@ import Vue from 'vue'
 import { BootstrapVueIcons } from 'bootstrap-vue'
 import 'bootstrap-vue/dist/bootstrap-vue-icons.min.css'
 import FlightSimulator from '~/static/flightSimulator.js'
+import Knob from '~/components/Knob.vue'
 
 Vue.use(BootstrapVueIcons)
 
 export default {
   name: 'FlightSim',
+  components: {
+    Knob
+  },
 
   data() {
     // eslint-disable-next-line camelcase, prefer-const
@@ -410,7 +422,7 @@ export default {
           },
           {
             key: ['h'],
-            command: 'Reset flight model'
+            command: 'reset flight model'
           }
         ]
       },
