@@ -29,7 +29,7 @@ export default {
     max: { type: Number, default: 100 },
     initial: { type: Number, default: 50 },
     label: { type: String, default: 'knob' },
-    step: { type: Number, default: 1 }
+    step: { type: Number, default: 1 },
   },
   data() {
     return {
@@ -43,8 +43,8 @@ export default {
         fgcolor: '#fff',
         bgcolor: '#000',
         knobMode: 'linear',
-        sliderMode: 'relative'
-      }
+        sliderMode: 'relative',
+      },
     }
   },
   computed: {
@@ -55,9 +55,9 @@ export default {
         '--sliderWidth': `${this.opsliderWidth}px`,
         '--sliderHeight': `${this.op.sliderHeight}px`,
         '--switchWidth': `${this.op.switchWidth}px`,
-        '--switchHeight': `${this.op.switchHeigh}px`
+        '--switchHeight': `${this.op.switchHeigh}px`,
       }
-    }
+    },
   },
   mounted() {
     //     const styles = this.$el.createElement('style')
@@ -124,41 +124,49 @@ export default {
   },
   methods: {
     makeKnobFrames(fr, fg, bg) {
-      let r = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="64" height="${fr *
-        64}" viewBox="0 0 64 ${fr * 64}" preserveAspectRatio="none">
+      let r = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="64" height="${
+        fr * 64
+      }" viewBox="0 0 64 ${fr * 64}" preserveAspectRatio="none">
 <defs><g id="K"><circle cx="32" cy="32" r="30" fill="${bg}" fill-opacity="0.0" stroke-width="2" stroke="${fg}"/>
 <line x1="32" y1="28" x2="32" y2="7" stroke-linecap="round" stroke-width="6" stroke="${fg}"/></g></defs>
 <use xlink:href="#K" transform="rotate(-135,32,32)"/>`
       for (let i = 1; i < fr; ++i)
-        r += `<use xlink:href="#K" transform="translate(0,${64 *
-          i}) rotate(${-135 + (270 * i) / fr},32,32)"/>`
+        r += `<use xlink:href="#K" transform="translate(0,${64 * i}) rotate(${
+          -135 + (270 * i) / fr
+        },32,32)"/>`
       return r + '</svg>'
     },
     makeHSliderFrames(fr, fg, bg, w, h) {
-      let r = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${w}" height="${fr *
-        h}" viewBox="0 0 ${w} ${fr * h}" preserveAspectRatio="none">
-<defs><g id="B"><rect x="0" y="0" width="${w}" height="${h}" rx="${h /
-        2}" ry="${h / 2}" fill="${bg}"/></g>
-<g id="K"><circle x="${w / 2}" y="0" r="${(h / 2) *
-        0.9}" fill="${fg}"/></g></defs>`
+      let r = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${w}" height="${
+        fr * h
+      }" viewBox="0 0 ${w} ${fr * h}" preserveAspectRatio="none">
+<defs><g id="B"><rect x="0" y="0" width="${w}" height="${h}" rx="${
+        h / 2
+      }" ry="${h / 2}" fill="${bg}"/></g>
+<g id="K"><circle x="${w / 2}" y="0" r="${
+        (h / 2) * 0.9
+      }" fill="${fg}"/></g></defs>`
       for (let i = 0; i < fr; ++i) {
         r += `<use xlink:href="#B" transform="translate(0,${h * i})"/>`
-        r += `<use xlink:href="#K" transform="translate(${h / 2 +
-          ((w - h) * i) / 100},${h / 2 + h * i})"/>`
+        r += `<use xlink:href="#K" transform="translate(${
+          h / 2 + ((w - h) * i) / 100
+        },${h / 2 + h * i})"/>`
       }
       return r + '</svg>'
     },
     makeVSliderFrames(fr, fg, bg, w, h) {
-      let r = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${w}" height="${fr *
-        h}" viewBox="0 0 ${w} ${fr * h}" preserveAspectRatio="none">
-<defs><rect id="B" x="0" y="0" width="${w}" height="${h}" rx="${w /
-        2}" ry="${w / 2}" fill="${bg}"/>
+      let r = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${w}" height="${
+        fr * h
+      }" viewBox="0 0 ${w} ${fr * h}" preserveAspectRatio="none">
+<defs><rect id="B" x="0" y="0" width="${w}" height="${h}" rx="${w / 2}" ry="${
+        w / 2
+      }" fill="${bg}"/>
 <circle id="K" x="0" y="0" r="${(w / 2) * 0.9}" fill="${fg}"/></defs>`
       for (let i = 0; i < fr; ++i) {
         r += `<use xlink:href="#B" transform="translate(0,${h * i})"/>`
-        r += `<use xlink:href="#K" transform="translate(${w / 2} ${h * (i + 1) -
-          w / 2 -
-          (i * (h - w)) / 100})"/>`
+        r += `<use xlink:href="#K" transform="translate(${w / 2} ${
+          h * (i + 1) - w / 2 - (i * (h - w)) / 100
+        })"/>`
       }
       return r + '</svg>'
     },
@@ -258,7 +266,7 @@ export default {
         ik.valrange = {
           min: +el.min,
           max: el.max === '' ? 100 : +el.max,
-          step: el.step === '' ? 1 : +el.step
+          step: el.step === '' ? 1 : +el.step,
         }
         el.redraw(true)
       }
@@ -279,7 +287,7 @@ export default {
 
           const event = new CustomEvent('input', {
             detail: el.value,
-            bubbles: true
+            bubbles: true,
           })
           // Dispatch the event.
           el.dispatchEvent(event)
@@ -314,7 +322,7 @@ export default {
           x: ev.clientX,
           y: ev.clientY,
           a: Math.atan2(ev.clientX - cx, cy - ev.clientY),
-          v: +el.value
+          v: +el.value,
         }
         document.addEventListener('mousemove', ik.pointermove)
         document.addEventListener('mouseup', ik.pointerup)
@@ -384,7 +392,7 @@ export default {
 
         const event = new CustomEvent('change', {
           detail: el.value,
-          bubbles: true
+          bubbles: true,
         })
         // Dispatch the event.
         el.dispatchEvent(event)
@@ -466,8 +474,8 @@ export default {
           this.initSwitches(elem)
           break
       }
-    }
-  }
+    },
+  },
 }
 </script>
 

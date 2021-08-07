@@ -39,7 +39,7 @@
             <b-button
               v-on:click="startSimulator"
               variant="outline-danger"
-              style="width: 100%; height: 100%; border-color:#FF0000"
+              style="width: 100%; height: 100%; border-color: #ff0000;"
               >{{ simulatorButtonText }}</b-button
             ></span
           >
@@ -116,7 +116,7 @@
                     <b-button
                       :class="
                         'text-left text-responsive ' +
-                          (parameters.status() ? 'pressed ' : '')
+                        (parameters.status() ? 'pressed ' : '')
                       "
                       v-on:click="parameters.toggle"
                       block
@@ -216,12 +216,12 @@
                 <template v-slot:title
                   >Commands (For desktop use only)</template
                 >
-                <ul style="list-style-type:none;margin: 0; padding: 0">
+                <ul style="list-style-type: none; margin: 0; padding: 0;">
                   <li
                     v-for="command in instructions.commands"
                     style="margin: 3px 0 0 0;"
                   >
-                    <kbd v-for="k in command.key" style="margin-right:2px">{{
+                    <kbd v-for="k in command.key" style="margin-right: 2px;">{{
                       k
                     }}</kbd>
                     <span>{{ command.command }}</span>
@@ -305,7 +305,7 @@ Vue.use(BootstrapVueIcons)
 export default {
   name: 'FlightSim',
   components: {
-    Knob
+    Knob,
   },
 
   data() {
@@ -358,7 +358,7 @@ export default {
             isActive: () => {
               return !this.api_altitudeHoldEnabled
             },
-            msg: 'Inactive: Altitude Hold Enganged'
+            msg: 'Inactive: Altitude Hold Enganged',
           },
           {
             key: ['s', '↓'],
@@ -366,7 +366,7 @@ export default {
             isActive: () => {
               return !this.api_altitudeHoldEnabled
             },
-            msg: 'Inactive: Altitude Hold Enganged'
+            msg: 'Inactive: Altitude Hold Enganged',
           },
           {
             key: ['a', '←'],
@@ -374,7 +374,7 @@ export default {
             isActive: () => {
               return !this.api_headingHoldEnabled
             },
-            msg: 'Inactive: Heading Hold Enganged'
+            msg: 'Inactive: Heading Hold Enganged',
           },
           {
             key: ['d', '→'],
@@ -382,7 +382,7 @@ export default {
             isActive: () => {
               return !this.api_headingHoldEnabled
             },
-            msg: 'Inactive: Heading Hold Enganged'
+            msg: 'Inactive: Heading Hold Enganged',
           },
           {
             key: ['F1'],
@@ -390,7 +390,7 @@ export default {
             isActive: () => {
               return !this.api_speedHoldEnabled
             },
-            msg: 'Inactive: Speed Hold Enganged'
+            msg: 'Inactive: Speed Hold Enganged',
           },
           {
             key: ['F2'],
@@ -398,7 +398,7 @@ export default {
             isActive: () => {
               return !this.api_speedHoldEnabled
             },
-            msg: 'Inactive: Speed Hold Enganged'
+            msg: 'Inactive: Speed Hold Enganged',
           },
           {
             key: ['F3'],
@@ -406,7 +406,7 @@ export default {
             isActive: () => {
               return !this.api_speedHoldEnabled
             },
-            msg: 'Inactive: Speed Hold Enganged'
+            msg: 'Inactive: Speed Hold Enganged',
           },
           {
             key: ['F4'],
@@ -414,17 +414,17 @@ export default {
             isActive: () => {
               return !this.api_speedHoldEnabled
             },
-            msg: 'Inactive: Speed Hold Enganged'
+            msg: 'Inactive: Speed Hold Enganged',
           },
           {
             key: ['f'],
-            command: 'reset all surface controls to neutral position'
+            command: 'reset all surface controls to neutral position',
           },
           {
             key: ['h'],
-            command: 'reset flight model'
-          }
-        ]
+            command: 'reset flight model',
+          },
+        ],
       },
       autopilot_controls: [
         {
@@ -438,7 +438,7 @@ export default {
           unit: '°',
           min: 0,
           max: 359,
-          step: 1.0
+          step: 1.0,
         },
         {
           button_title: 'Altitude Hold',
@@ -451,7 +451,7 @@ export default {
           unit: 'ft',
           min: 0,
           max: 50000,
-          step: 1.0
+          step: 1.0,
         },
         {
           button_title: 'Speed Hold',
@@ -464,8 +464,8 @@ export default {
           unit: 'kt',
           min: 0,
           max: 350,
-          step: 1
-        }
+          step: 1,
+        },
       ],
       simulation_parameters: {
         Geometry: [
@@ -475,8 +475,8 @@ export default {
             setter: this.set_wing_area_value,
             min: 10,
             max: 1000,
-            step: 1
-          }
+            step: 1,
+          },
         ],
         Performance: [
           {
@@ -485,8 +485,8 @@ export default {
             setter: this.set_thrust_to_weight_ratio_value,
             min: 0.1,
             max: 5,
-            step: 0.1
-          }
+            step: 0.1,
+          },
         ],
         Aerodynamics: [
           {
@@ -495,7 +495,7 @@ export default {
             setter: this.set_cl_slope_value,
             min: 0.1,
             max: 5,
-            step: 0.1
+            step: 0.1,
           },
           {
             title: 'Drag Cofficient',
@@ -503,10 +503,10 @@ export default {
             setter: this.set_cd_value,
             min: 0.01,
             max: 1.0,
-            step: 0.01
-          }
-        ]
-      }
+            step: 0.01,
+          },
+        ],
+      },
     }
   },
 
@@ -519,7 +519,7 @@ export default {
         autoHideDelay: duration,
         appendToast: false,
         variant: 'dark',
-        'body-class': 'strong'
+        'body-class': 'strong',
       })
     },
     toggle_autopilot() {
@@ -591,10 +591,10 @@ export default {
           // Return the path to .wasm and data file
           return path
         },
-        print: (function() {
+        print: (function () {
           const element = document.getElementById('output')
           if (element) element.value = '' // clear browser cache
-          return function(text) {
+          return function (text) {
             if (arguments.length > 1)
               text = Array.prototype.slice.call(arguments).join(' ')
 
@@ -609,7 +609,7 @@ export default {
             text = Array.prototype.slice.call(arguments).join(' ')
         },
 
-        canvas: (() => document.getElementById('canvas'))()
+        canvas: (() => document.getElementById('canvas'))(),
       }).then(() => {
         this.is_running = true
 
@@ -640,7 +640,7 @@ export default {
 
         // Follow this steps to access memory from c++ without copying
         // First export a getter function in c++ that return a pointer to the value
-        // THen the value can be accessed using
+        // Then the value can be accessed using
         // this.FlightSimulator.HEAP32[addr >> 2]
 
         this.api_setHeadingHoldValue = this.FlightSimulator._set_target_heading
@@ -669,8 +669,8 @@ export default {
 
       // this.$nextTick(() => {})
     },
-    beforeCreate() {}
-  }
+    beforeCreate() {},
+  },
 }
 </script>
 

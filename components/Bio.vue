@@ -19,7 +19,7 @@
         <div
           :class="[
             'tab-pane',
-            { active: $route.hash === '#' || $route.hash === '' }
+            { active: $route.hash === '#' || $route.hash === '' },
           ]"
           class="p-2"
         >
@@ -97,7 +97,7 @@ export default {
   components: {
     Photo,
     // TravelMap,
-    FlightSim
+    FlightSim,
   },
   data() {
     return {
@@ -105,42 +105,42 @@ export default {
       skills: {
         'Everyday:': ['C++', 'Python', 'sql', 'mongodb'],
         'Learning:': ['Javascript', 'Node.js', 'WebAssembly'],
-        'Toolset:': ['Linux', 'Emacs', 'cmake', 'git', 'docker']
+        'Toolset:': ['Linux', 'Emacs', 'cmake', 'git', 'docker'],
       },
       timelineItems: [
         {
           title: '2019',
-          description: 'Started software consultancy Wa.IL'
+          description: 'Started software consultancy Wa.IL',
         },
         {
           title: '2017',
           description:
-            'Moved to the finance industry, working on low-latency infrastructure'
+            'Moved to the finance industry, working on low-latency infrastructure',
         },
         {
           title: '2013',
           description:
-            'Started working as software engineer in flight simulation'
+            'Started working as software engineer in flight simulation',
         },
         {
           title: '2011',
           description:
-            'Started working as Reseach and Development Software Engineer in air traffic managment simulation'
+            'Started working as Reseach and Development Software Engineer in air traffic managment simulation',
         },
         {
           title: '2010',
           description:
-            'Completed master degree in numerical simuation in aerospace'
+            'Completed master degree in numerical simuation in aerospace',
         },
         {
           title: '2006',
-          description: 'Completed bachelor degree in aerospace design'
-        }
-      ]
+          description: 'Completed bachelor degree in aerospace design',
+        },
+      ],
     }
   },
   mounted() {
-    this.$nextTick(function() {
+    this.$nextTick(function () {
       const vm = this
       this.getJSON(
         'https://api.github.com/users/wailo/repos',
@@ -161,7 +161,7 @@ export default {
       const xhr = new XMLHttpRequest()
       xhr.open('GET', url, true)
       xhr.responseType = 'json'
-      xhr.onload = function() {
+      xhr.onload = function () {
         const status = xhr.status
         if (status === 200) {
           callback(null, xhr.response)
@@ -170,8 +170,8 @@ export default {
         }
       }
       xhr.send()
-    }
-  }
+    },
+  },
 }
 </script>
 

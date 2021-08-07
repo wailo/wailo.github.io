@@ -29,17 +29,17 @@
 import Bio from '~/components/Bio.vue'
 export default {
   components: {
-    Bio
+    Bio,
   },
   data() {
     return {
       links: [
         { name: 'GitHub', link: 'https://github.com/wailo' },
         { name: 'LinkedIn', link: 'https://www.linkedin.com/in/wailyahia' },
-        { name: 'YouTube', link: 'https://youtube.com/wailo' }
-      ]
+        { name: 'YouTube', link: 'https://youtube.com/wailo' },
+      ],
     }
-  }
+  },
 }
 </script>
 
