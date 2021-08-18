@@ -103,8 +103,8 @@ export default {
     return {
       repos: null,
       skills: {
-        'Everyday:': ['C++', 'Python', 'sql', 'mongodb'],
-        'Learning:': ['Javascript', 'Node.js', 'WebAssembly'],
+        'Everyday:': ['C++', 'Python', 'sql', 'mongodb', 'Javascript'],
+        'Learning:': ['WebAssembly', 'Rust'],
         'Toolset:': ['Linux', 'Emacs', 'cmake', 'git', 'docker'],
       },
       timelineItems: [
