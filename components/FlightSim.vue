@@ -53,7 +53,7 @@
 
     <div v-show="is_running" class="emscripten_border">
       <b-row>
-        <b-col cols="5">
+        <b-col sm="12" xl="6" order="2">
           <div v-show="is_running">
             <div fluid>
               <h4>Simulation</h4>
@@ -190,7 +190,7 @@
               <progress id="progress" value="0" max="100" hidden="1"></progress>
             </div>
           </div> </b-col
-        ><b-col>
+        ><b-col sm="12" xl="6" order="1" order-xl="2">
           <canvas
             id="canvas"
             class="emscripten"
