@@ -1,5 +1,5 @@
 <template>
-  <div align="centre">
+  <div id="knob">
     <input
       ref="knob"
       v-on:input="
@@ -12,13 +12,23 @@
           $emit('change', e.target.value)
         }
       "
+      v-on:toggle="
+        (e) => {
+          $emit('toggle', e.target.toggle)
+        }
+      "
+      v-on:inputEnd="
+        (e) => {
+          $emit('inputEnd', e.target.value)
+        }
+      "
       :min="min"
       :max="max"
       :step="step"
       class="input-knob"
       type="range"
     />
-    <label>{{ label }}</label>
+    <label id="knob-label">{{ label }}</label>
   </div>
 </template>
 <script>
@@ -207,6 +217,7 @@ export default {
         el.redraw()
         return
       }
+      el.toggle = false
       const ik = (el.inputKnobs = {})
       el.refresh = () => {
         d = +el.getAttribute('data-diameter')
@@ -409,9 +420,30 @@ export default {
         el.setValue(+el.value + delta)
         ev.preventDefault()
         ev.stopPropagation()
+
+        // Logic to emit end of input/scroll
+        let scroll = 0
+        clearTimeout(scroll)
+        scroll = setTimeout(function () {
+          const event = new CustomEvent('inputEnd', {
+            detail: el.value,
+            bubbles: true,
+          })
+          // Dispatch the event.
+          el.dispatchEvent(event)
+        }, 500)
       }
       ik.toggle = (ev) => {
-        this.op.fgcolor = this.op.fgcolor === '#F00' ? '#FFF' : '#F00'
+        el.toggle = !el.toggle
+        this.op.fgcolor = el.toggle ? '#F00' : '#FFF'
+
+        const event = new CustomEvent('toggle', {
+          detail: el.toggle,
+          bubbles: true,
+        })
+        // Dispatch the event.
+        el.dispatchEvent(event)
+
         el.refresh()
       }
       el.redraw = (f) => {
@@ -480,6 +512,13 @@ export default {
 </script>
 
 <style scoped>
+#knob {
+  text-align: center;
+}
+input[type='range'] {
+  display: block;
+  margin: 0 auto;
+}
 input[type='range'].input-knob {
   width: var(--knobWidth);
   height: var(--knobHeight);

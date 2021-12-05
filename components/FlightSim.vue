@@ -7,7 +7,9 @@
             <p>
               A simulation of a generic airplane using graphical representation
               of the main six flight instruments and basic Autopilot
-              functionality.
+              functionality. Also, augmentation of physical, aerodynamics and
+              atmosphere properties is supported to help understanding flight
+              mechanics
             </p>
             <ul>
               <li>Core simulation logic is written in C++</li>
@@ -53,84 +55,52 @@
 
     <div v-show="is_running" class="emscripten_border">
       <b-row>
-        <b-col sm="12" xl="6" order="2">
+        <b-col sm="12" xl="4" order="2">
           <div v-show="is_running">
             <div fluid>
-              <h4>Simulation</h4>
-              <b-button
-                v-on:click="requestFullScreen"
-                class="text-responsive"
-                block
-                variant="default"
-                >Fullscreen
-                <b-icon icon="arrows-fullscreen" variant="default"></b-icon
-              ></b-button>
-              <b-button
-                :class="
-                  simulation_pause
-                    ? 'pressed text-responsive flash-button'
-                    : 'text-responsive'
-                "
-                v-on:click="
-                  simulation_pause = !simulation_pause
-                  set_simulation_pause(simulation_pause)
-                "
-                block
-                variant="default"
-                >{{ simulation_pause ? 'Resume' : 'Pause' }}
-                <b-icon
-                  :icon="simulation_pause ? 'play-fill' : 'pause-fill'"
+              <legend>Simulation</legend>
+              <fieldset class="control-group">
+                <b-button v-on:click="requestFullScreen" block variant="default"
+                  >Fullscreen
+                  <b-icon icon="arrows-fullscreen" variant="default"></b-icon
+                ></b-button>
+                <b-button
+                  :class="simulation_pause ? 'pressed flash-button' : ''"
+                  v-on:click="
+                    simulation_pause = !simulation_pause
+                    set_simulation_pause(simulation_pause)
+                  "
+                  block
                   variant="default"
-                ></b-icon
-              ></b-button>
+                  >{{ simulation_pause ? 'Resume' : 'Pause' }}
+                  <b-icon
+                    :icon="simulation_pause ? 'play-fill' : 'pause-fill'"
+                    variant="default"
+                  ></b-icon
+                ></b-button>
+              </fieldset>
+              <legend>Autopilot Controls</legend>
+              <fieldset class="control-group" border-variant="dark">
+                <b-button
+                  ref="autopilot"
+                  v-on:click="toggle_autopilot"
+                  :class="'btn-block ' + (api_ap_enabled ? 'pressed' : '')"
+                  variant="default"
+                  >Autopilot</b-button
+                >
 
-              <label class="pull-right text-responsive">{{
-                'Simulation Speed ' + simulation_speed + 'x'
-              }}</label>
-              <b-form-input
-                id="sb-inline"
-                v-model="simulation_speed"
-                v-on:update="set_simulation_speed(simulation_speed)"
-                :min="0.5"
-                :max="16"
-                :step="0.5"
-                type="range"
-              ></b-form-input>
-
-              <h4>Autopilot Controls</h4>
-              <b-button
-                ref="autopilot"
-                v-on:click="toggle_autopilot"
-                :class="'btn-block ' + (api_ap_enabled ? 'pressed' : '')"
-                variant="default"
-                style="margin-bottom: 2px;"
-                >Autopilot</b-button
-              >
-              <b-container fluid>
                 <b-row
                   :key="parameters.button_title"
                   v-for="parameters in autopilot_controls"
                   container
                 >
-                  <b-col>
-                    <b-button
-                      :class="
-                        'text-left text-responsive ' +
-                        (parameters.status() ? 'pressed ' : '')
-                      "
-                      v-on:click="parameters.toggle"
-                      block
+                  <b-col cols="8">
+                    <nobr
+                      v-html="parameters.button_title"
                       variant="default"
-                      ><b-icon
-                        :icon="
-                          parameters.status() ? 'octagon-fill' : 'slash-circle'
-                        "
-                        variant="default"
-                      ></b-icon>
-                      {{ parameters.button_title }}</b-button
-                    >
+                    ></nobr>
                   </b-col>
-                  <b-col>
+                  <b-col cols="4">
                     <!-- <label class="pull-right text-responsive">{{
                       parameters.setter_model + parameters.unit
                     }}</label> -->
@@ -141,11 +111,13 @@
                           parameters.setter(value)
                         }
                       "
-                      v-on:input="
+                      v-on:inputEnd="
                         (value) => {
                           parameters.setter_model = value
+                          parameters.setter(value)
                         }
                       "
+                      v-on:toggle="parameters.toggle"
                       :min="parameters.min"
                       :max="parameters.max"
                       :step="parameters.step"
@@ -153,24 +125,21 @@
                     ></knob>
                   </b-col>
                 </b-row>
-              </b-container>
+              </fieldset>
             </div>
             <template v-for="(parameters, title) in simulation_parameters">
-              <h4>{{ title }}</h4>
-              <b-container fluid>
+              <legend>{{ title }}</legend>
+              <fieldset class="control-group" fluid>
                 <b-row
                   v-for="parameter in parameters"
                   :key="parameter.title"
                   class="flex-nowrap"
                 >
                   <b-col>
-                    <nobr
-                      v-html="parameter.title"
-                      class="text-responsive"
-                    ></nobr>
+                    <nobr v-html="parameter.title"></nobr>
                   </b-col>
                   <b-col cols="4">
-                    <label class="pull-right text-responsive">{{
+                    <label style="display: table-cell;" class="float-right">{{
                       parameter.value
                     }}</label>
                     <b-form-input
@@ -180,24 +149,59 @@
                       v-on:update="parameter.setter"
                       v-model="parameter.value"
                       type="range"
+                      style="display: table-cell; width: 50%;"
                     ></b-form-input>
                   </b-col>
                 </b-row>
-              </b-container>
+              </fieldset>
             </template>
 
             <div class="emscripten">
               <progress id="progress" value="0" max="100" hidden="1"></progress>
             </div>
           </div> </b-col
-        ><b-col sm="12" xl="6" order="1" order-xl="2">
-          <canvas
-            id="canvas"
-            class="emscripten"
-            oncontextmenu="event.preventDefault()"
-            tabindex="-1"
-          >
-          </canvas>
+        ><b-col sm="12" xl="8" order="1" order-xl="2">
+          <b-row>
+            <canvas
+              id="canvas"
+              class="emscripten"
+              oncontextmenu="event.preventDefault()"
+              tabindex="-1"
+            >
+            </canvas>
+          </b-row>
+          <b-row style="display: block;"
+            ><b-card
+              title="Keyboard Controls"
+              bg-variant="transparent"
+              border-variant="dark"
+            >
+              <b-card-text>
+                <b-form-text variant="dark">
+                  <template v-slot:title
+                    >Commands (For desktop use only)</template
+                  >
+                  <ul style="list-style-type: none; margin: 0; padding: 0;">
+                    <li
+                      v-for="command in instructions.commands"
+                      style="margin: 3px 0 0 0;"
+                    >
+                      <kbd
+                        v-for="k in command.key"
+                        style="margin-right: 2px;"
+                        >{{ k }}</kbd
+                      >
+                      <span>{{ command.command }}</span>
+                      <span v-show="command.isActive && !command.isActive()">
+                        <b-icon icon="info-circle" variant="light"></b-icon>
+                        {{ command.msg }}
+                      </span>
+                    </li>
+                  </ul>
+                </b-form-text>
+              </b-card-text></b-card
+            >
+          </b-row>
         </b-col>
       </b-row>
     </div>
@@ -205,36 +209,6 @@
 
     <b-container v-if="is_running" fluid>
       <b-row>
-        <b-col>
-          <b-card
-            title="Keyboard Controls"
-            bg-variant="transparent"
-            border-variant="dark"
-          >
-            <b-card-text>
-              <b-form-text variant="dark">
-                <template v-slot:title
-                  >Commands (For desktop use only)</template
-                >
-                <ul style="list-style-type: none; margin: 0; padding: 0;">
-                  <li
-                    v-for="command in instructions.commands"
-                    style="margin: 3px 0 0 0;"
-                  >
-                    <kbd v-for="k in command.key" style="margin-right: 2px;">{{
-                      k
-                    }}</kbd>
-                    <span>{{ command.command }}</span>
-                    <span v-show="command.isActive && !command.isActive()">
-                      <b-icon icon="info-circle" variant="light"></b-icon>
-                      {{ command.msg }}
-                    </span>
-                  </li>
-                </ul>
-              </b-form-text>
-            </b-card-text></b-card
-          ></b-col
-        >
         <b-col>
           <b-card bg-variant="transparent" border-variant="dark">
             <b-card-title>
@@ -468,6 +442,17 @@ export default {
         },
       ],
       simulation_parameters: {
+        Simulation: [
+          {
+            title: 'Simulation Speed',
+            value: 1,
+            setter: this.set_simulation_speed,
+            unit: 'x',
+            min: 0.5,
+            max: 16,
+            step: 0.5,
+          },
+        ],
         Geometry: [
           {
             title: 'Wing Area Ft&sup2;',
@@ -685,7 +670,7 @@ div.emscripten {
   text-align: center;
 }
 div.emscripten_border {
-  border: 1px solid black;
+  padding: 2px;
 }
 /* the canvas *must not* have any border or padding, or mouse coords will be wrong */
 canvas.emscripten {
@@ -693,7 +678,6 @@ canvas.emscripten {
   background-color: black;
   width: 100%;
 }
-
 #status {
   display: inline-block;
   vertical-align: top;
@@ -702,28 +686,30 @@ canvas.emscripten {
   font-weight: bold;
   color: rgb(120, 120, 120);
 }
-
 #progress {
   height: 20px;
   width: 300px;
 }
-
 .btn:focus {
   outline: none;
   box-shadow: none;
 }
-
 .btn-default.pressed {
   border-color: orange;
 }
 .btn-default {
   border-color: grey;
 }
-
 .btn-group {
   padding-left: 2px;
 }
-
+.control-group {
+  padding: 2px;
+  margin: 10px;
+}
+div .control-group .row {
+  align-items: center;
+}
 #output {
   /* width: 100%; */
   /* height: 200px; */
@@ -739,7 +725,6 @@ canvas.emscripten {
   font-family: 'Lucida Console', Monaco, monospace;
   outline: none;
 }
-
 .flash-button {
   animation-name: flash;
   animation-duration: 2s;
@@ -760,9 +745,5 @@ canvas.emscripten {
 }
 .collapse.show {
   visibility: visible;
-}
-
-.text-responsive {
-  font-size: 1vw;
 }
 </style>
