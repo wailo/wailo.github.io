@@ -10,14 +10,14 @@ import { photo } from '~/components/ascii.js'
 export default {
   data: () => {
     return {
-      originalPhoto: photo
+      originalPhoto: photo,
     }
   },
   mounted() {
     this.updatedPhoto = this.originalPhoto
-    this.$nextTick(function() {})
+    this.$nextTick(function () {})
   },
-  methods: {}
+  methods: {},
 }
 </script>
 
