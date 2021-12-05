@@ -5,8 +5,6 @@
     </b-card-body>
     <b-card-footer footer-border-variant="dark">
       <h1>Wa.il</h1>
-      <h2 class="badge badge-pill badge-success">Software Developer</h2>
-
       <div class="links">
         <template v-for="link in links">
           <b-button
