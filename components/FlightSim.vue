@@ -113,7 +113,6 @@
                       "
                       v-on:inputEnd="
                         (value) => {
-                          parameters.setter_model = value
                           parameters.setter(value)
                         }
                       "
@@ -140,7 +139,9 @@
                   </b-col>
                   <b-col cols="4">
                     <label style="display: table-cell;" class="float-right">{{
-                      parameter.value
+                      `${parameter.value}${
+                        parameter.unit ? parameter.unit : ''
+                      }`
                     }}</label>
                     <b-form-input
                       :min="parameter.min"
