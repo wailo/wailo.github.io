@@ -53,167 +53,120 @@
       Downloading...
     </div>
 
-    <div v-show="is_running" class="emscripten_border">
-      <b-row>
-        <b-col sm="12" xl="4" order="2">
-          <div v-show="is_running">
-            <div fluid>
-              <legend>Simulation</legend>
-              <fieldset class="control-group">
-                <b-button v-on:click="requestFullScreen" block variant="default"
-                  >Fullscreen
-                  <b-icon icon="arrows-fullscreen" variant="default"></b-icon
-                ></b-button>
-                <b-button
-                  :class="simulation_pause ? 'pressed flash-button' : ''"
-                  v-on:click="
-                    simulation_pause = !simulation_pause
-                    set_simulation_pause(simulation_pause)
+    <b-row v-show="is_running" class="emscripten_border">
+      <!-- Controls Panel -->
+      <b-col v-show="is_running" sm="12" xl="4" order="2">
+        <div>
+          <legend>Simulation</legend>
+          <fieldset class="control-group">
+            <b-button v-on:click="requestFullScreen" block variant="default"
+              >Fullscreen
+              <b-icon icon="arrows-fullscreen" variant="default"></b-icon
+            ></b-button>
+            <b-button
+              :class="simulation_pause ? 'pressed flash-button' : ''"
+              v-on:click="
+                simulation_pause = !simulation_pause
+                set_simulation_pause(simulation_pause)
+              "
+              block
+              variant="default"
+              >{{ simulation_pause ? 'Resume' : 'Pause' }}
+              <b-icon
+                :icon="simulation_pause ? 'play-fill' : 'pause-fill'"
+                variant="default"
+              ></b-icon
+            ></b-button>
+          </fieldset>
+          <legend>Autopilot Controls</legend>
+          <fieldset class="control-group" border-variant="dark">
+            <b-button
+              ref="autopilot"
+              v-on:click="toggle_autopilot"
+              :class="'btn-block ' + (api_ap_enabled ? 'pressed' : '')"
+              variant="default"
+              >Autopilot</b-button
+            >
+
+            <b-row
+              :key="parameters.button_title"
+              v-for="parameters in autopilot_controls"
+              container
+            >
+              <b-col cols="8">
+                <nobr v-html="parameters.button_title" variant="default"></nobr>
+              </b-col>
+              <b-col cols="4">
+                <knob
+                  v-model="parameters.setter_model"
+                  v-on:change="
+                    (value) => {
+                      parameters.setter(value)
+                    }
                   "
-                  block
-                  variant="default"
-                  >{{ simulation_pause ? 'Resume' : 'Pause' }}
-                  <b-icon
-                    :icon="simulation_pause ? 'play-fill' : 'pause-fill'"
-                    variant="default"
-                  ></b-icon
-                ></b-button>
-              </fieldset>
-              <legend>Autopilot Controls</legend>
-              <fieldset class="control-group" border-variant="dark">
-                <b-button
-                  ref="autopilot"
-                  v-on:click="toggle_autopilot"
-                  :class="'btn-block ' + (api_ap_enabled ? 'pressed' : '')"
-                  variant="default"
-                  >Autopilot</b-button
-                >
-
-                <b-row
-                  :key="parameters.button_title"
-                  v-for="parameters in autopilot_controls"
-                  container
-                >
-                  <b-col cols="8">
-                    <nobr
-                      v-html="parameters.button_title"
-                      variant="default"
-                    ></nobr>
-                  </b-col>
-                  <b-col cols="4">
-                    <!-- <label class="pull-right text-responsive">{{
-                      parameters.setter_model + parameters.unit
-                    }}</label> -->
-                    <knob
-                      v-model="parameters.setter_model"
-                      v-on:change="
-                        (value) => {
-                          parameters.setter(value)
-                        }
-                      "
-                      v-on:inputEnd="
-                        (value) => {
-                          parameters.setter(value)
-                        }
-                      "
-                      v-on:toggle="parameters.toggle"
-                      :min="parameters.min"
-                      :max="parameters.max"
-                      :step="parameters.step"
-                      :label="`${parameters.setter_model}${parameters.unit}`"
-                    ></knob>
-                  </b-col>
-                </b-row>
-              </fieldset>
-            </div>
-            <template v-for="(parameters, title) in simulation_parameters">
-              <legend>{{ title }}</legend>
-              <fieldset class="control-group" fluid>
-                <b-row
-                  v-for="parameter in parameters"
-                  :key="parameter.title"
-                  class="flex-nowrap"
-                >
-                  <b-col>
-                    <nobr v-html="parameter.title"></nobr>
-                  </b-col>
-                  <b-col cols="4">
-                    <label style="display: table-cell;" class="float-right">{{
-                      `${parameter.value}${
-                        parameter.unit ? parameter.unit : ''
-                      }`
-                    }}</label>
-                    <b-form-input
-                      :min="parameter.min"
-                      :max="parameter.max"
-                      :step="parameter.step"
-                      v-on:update="parameter.setter"
-                      v-model="parameter.value"
-                      type="range"
-                      style="display: table-cell; width: 50%;"
-                    ></b-form-input>
-                  </b-col>
-                </b-row>
-              </fieldset>
-            </template>
-
-            <div class="emscripten">
-              <progress id="progress" value="0" max="100" hidden="1"></progress>
-            </div>
-          </div> </b-col
-        ><b-col sm="12" xl="8" order="1" order-xl="2">
-          <b-row>
-            <canvas
-              id="canvas"
-              class="emscripten"
-              oncontextmenu="event.preventDefault()"
-              tabindex="-1"
+                  v-on:inputEnd="
+                    (value) => {
+                      parameters.setter(value)
+                    }
+                  "
+                  v-on:toggle="parameters.toggle"
+                  :min="parameters.min"
+                  :max="parameters.max"
+                  :step="parameters.step"
+                  :label="`${parameters.setter_model}${parameters.unit}`"
+                ></knob>
+              </b-col>
+            </b-row>
+          </fieldset>
+        </div>
+        <template v-for="(parameters, title) in simulation_parameters">
+          <legend>{{ title }}</legend>
+          <fieldset class="control-group" fluid>
+            <b-row
+              v-for="parameter in parameters"
+              :key="parameter.title"
+              class="flex-nowrap"
             >
-            </canvas>
-          </b-row>
-          <b-row style="display: block;"
-            ><b-card
-              title="Keyboard Controls"
-              bg-variant="transparent"
-              border-variant="dark"
-            >
-              <b-card-text>
-                <b-form-text variant="dark">
-                  <template v-slot:title
-                    >Commands (For desktop use only)</template
-                  >
-                  <ul style="list-style-type: none; margin: 0; padding: 0;">
-                    <li
-                      v-for="command in instructions.commands"
-                      style="margin: 3px 0 0 0;"
-                    >
-                      <kbd
-                        v-for="k in command.key"
-                        style="margin-right: 2px;"
-                        >{{ k }}</kbd
-                      >
-                      <span>{{ command.command }}</span>
-                      <span v-show="command.isActive && !command.isActive()">
-                        <b-icon icon="info-circle" variant="light"></b-icon>
-                        {{ command.msg }}
-                      </span>
-                    </li>
-                  </ul>
-                </b-form-text>
-              </b-card-text></b-card
-            >
-          </b-row>
-        </b-col>
-      </b-row>
-    </div>
-    <textarea id="output" v-show="is_development" rows="3"></textarea>
+              <b-col>
+                <nobr v-html="parameter.title"></nobr>
+              </b-col>
+              <b-col cols="4">
+                <label style="display: table-cell;" class="float-right">{{
+                  `${parameter.value}${parameter.unit ? parameter.unit : ''}`
+                }}</label>
+                <b-form-input
+                  :min="parameter.min"
+                  :max="parameter.max"
+                  :step="parameter.step"
+                  v-on:update="parameter.setter"
+                  v-model="parameter.value"
+                  type="range"
+                  style="display: table-cell; width: 50%;"
+                ></b-form-input>
+              </b-col>
+            </b-row>
+          </fieldset>
+        </template>
 
-    <b-container v-if="is_running" fluid>
-      <b-row>
-        <b-col>
+        <div class="emscripten">
+          <progress id="progress" value="0" max="100" hidden="1"></progress>
+        </div> </b-col
+      ><b-col sm="12" xl="8" order="1" order-xl="2">
+        <!-- Simulation Screen -->
+        <b-row>
+          <canvas
+            id="canvas"
+            class="emscripten"
+            oncontextmenu="event.preventDefault()"
+            tabindex="-1"
+          >
+          </canvas>
+        </b-row>
+        <!-- Keyboard Controls -->
+        <b-row style="display: block;">
           <b-card bg-variant="transparent" border-variant="dark">
             <b-card-title>
-              Simulation Data
+              Real time data
               <b-button
                 v-b-toggle.collapse-data
                 @click="isDataDisplayed = true"
@@ -262,7 +215,44 @@
               </b-collapse></b-card-text
             ></b-card
           >
-        </b-col>
+
+          <b-card
+            title="Keyboard Controls"
+            bg-variant="transparent"
+            border-variant="dark"
+          >
+            <b-card-text>
+              <b-form-text variant="dark">
+                <template v-slot:title
+                  >Commands (For desktop use only)</template
+                >
+                <ul style="list-style-type: none; margin: 0; padding: 0;">
+                  <li
+                    v-for="command in instructions.commands"
+                    style="margin: 3px 0 0 0;"
+                  >
+                    <kbd v-for="k in command.key" style="margin-right: 2px;">{{
+                      k
+                    }}</kbd>
+                    <span>{{ command.command }}</span>
+                    <span v-show="command.isActive && !command.isActive()">
+                      <b-icon icon="info-circle" variant="light"></b-icon>
+                      {{ command.msg }}
+                    </span>
+                  </li>
+                </ul>
+              </b-form-text>
+            </b-card-text></b-card
+          >
+        </b-row>
+      </b-col>
+    </b-row>
+
+    <textarea id="output" v-show="is_development" rows="3"></textarea>
+
+    <b-container v-if="is_running" fluid>
+      <b-row>
+        <b-col> </b-col>
       </b-row>
     </b-container>
   </div>
