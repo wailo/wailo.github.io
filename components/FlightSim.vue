@@ -166,29 +166,17 @@
         <b-row style="display: block;">
           <b-card bg-variant="transparent" border-variant="dark">
             <b-card-title>
-              Real time data
+              Real Time Data
               <b-button
                 v-b-toggle.collapse-data
-                @click="isDataDisplayed = true"
-                v-show="!isDataDisplayed"
+                @click="isRealTimeDataDisplayed = !isRealTimeDataDisplayed"
                 class="border border-light"
                 variant="outline-light"
               >
-                +
+                {{ isRealTimeDataDisplayed ? '-' : '+' }}
               </b-button>
             </b-card-title>
             <b-card-text>
-              <div id="app">
-                <b-button
-                  v-b-toggle.collapse-data
-                  @click="isDataDisplayed = false"
-                  v-show="isDataDisplayed"
-                  class="border border-light btn-light"
-                  variant="outline-light"
-                >
-                  -
-                </b-button>
-              </div>
               <b-collapse id="collapse-data">
                 <ul>
                   <li>
@@ -216,31 +204,44 @@
             ></b-card
           >
 
-          <b-card
-            title="Keyboard Controls"
-            bg-variant="transparent"
-            border-variant="dark"
-          >
+          <b-card bg-variant="transparent" border-variant="dark">
+            <b-card-title>
+              Keyboard Controls
+              <b-button
+                v-b-toggle.collapse-keyboard-controls
+                @click="
+                  isKeyboardControlsDisplayed = !isKeyboardControlsDisplayed
+                "
+                class="border border-light"
+                variant="outline-light"
+              >
+                {{ isKeyboardControlsDisplayed ? '-' : '+' }}
+              </b-button>
+            </b-card-title>
             <b-card-text>
               <b-form-text variant="dark">
                 <template v-slot:title
                   >Commands (For desktop use only)</template
                 >
-                <ul style="list-style-type: none; margin: 0; padding: 0;">
-                  <li
-                    v-for="command in instructions.commands"
-                    style="margin: 3px 0 0 0;"
-                  >
-                    <kbd v-for="k in command.key" style="margin-right: 2px;">{{
-                      k
-                    }}</kbd>
-                    <span>{{ command.command }}</span>
-                    <span v-show="command.isActive && !command.isActive()">
-                      <b-icon icon="info-circle" variant="light"></b-icon>
-                      {{ command.msg }}
-                    </span>
-                  </li>
-                </ul>
+                <b-collapse id="collapse-keyboard-controls">
+                  <ul style="list-style-type: none; margin: 0; padding: 0;">
+                    <li
+                      v-for="command in instructions.commands"
+                      style="margin: 3px 0 0 0;"
+                    >
+                      <kbd
+                        v-for="k in command.key"
+                        style="margin-right: 2px;"
+                        >{{ k }}</kbd
+                      >
+                      <span>{{ command.command }}</span>
+                      <span v-show="command.isActive && !command.isActive()">
+                        <b-icon icon="info-circle" variant="light"></b-icon>
+                        {{ command.msg }}
+                      </span>
+                    </li>
+                  </ul>
+                </b-collapse>
               </b-form-text>
             </b-card-text></b-card
           >
@@ -312,7 +313,8 @@ export default {
       api_psi_deg: null,
       api_theta_deg: null,
       api_attitude_deg: null,
-      isDataDisplayed: false,
+      isRealTimeDataDisplayed: false,
+      isKeyboardControlsDisplayed: false,
       simulation_pause: false,
       simulation_speed: 1.0,
       instructions: {
