@@ -37,7 +37,7 @@ export default {
   props: {
     min: { type: Number, default: 0 },
     max: { type: Number, default: 100 },
-    initial: { type: Number, default: 50 },
+    initial: { type: Number, default: 0 },
     label: { type: String, default: 'knob' },
     step: { type: Number, default: 1 },
   },
@@ -279,6 +279,7 @@ export default {
           max: el.max === '' ? 100 : +el.max,
           step: el.step === '' ? 1 : +el.step,
         }
+        el.setValue(this.initial)
         el.redraw(true)
       }
       el.setValue = (v) => {
