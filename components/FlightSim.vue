@@ -110,6 +110,7 @@
                     }
                   "
                   v-on:toggle="parameters.toggle"
+                  :initial="parameters.setter_model"
                   :min="parameters.min"
                   :max="parameters.max"
                   :step="parameters.step"
