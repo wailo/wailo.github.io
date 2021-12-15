@@ -56,70 +56,69 @@
     <b-row v-show="is_running" class="emscripten_border">
       <!-- Controls Panel -->
       <b-col v-show="is_running" sm="12" xl="4" order="2">
-        <div>
-          <legend>Simulation</legend>
-          <fieldset class="control-group">
-            <b-button v-on:click="requestFullScreen" block variant="default"
-              >Fullscreen
-              <b-icon icon="arrows-fullscreen" variant="default"></b-icon
-            ></b-button>
-            <b-button
-              :class="simulation_pause ? 'pressed flash-button' : ''"
-              v-on:click="
-                simulation_pause = !simulation_pause
-                set_simulation_pause(simulation_pause)
-              "
-              block
+        <legend>Simulation</legend>
+        <fieldset class="control-group">
+          <b-button v-on:click="requestFullScreen" block variant="default"
+            >Fullscreen
+            <b-icon icon="arrows-fullscreen" variant="default"></b-icon
+          ></b-button>
+          <b-button
+            :class="simulation_pause ? 'pressed flash-button' : ''"
+            v-on:click="
+              simulation_pause = !simulation_pause
+              set_simulation_pause(simulation_pause)
+            "
+            block
+            variant="default"
+            >{{ simulation_pause ? 'Resume' : 'Pause' }}
+            <b-icon
+              :icon="simulation_pause ? 'play-fill' : 'pause-fill'"
               variant="default"
-              >{{ simulation_pause ? 'Resume' : 'Pause' }}
-              <b-icon
-                :icon="simulation_pause ? 'play-fill' : 'pause-fill'"
-                variant="default"
-              ></b-icon
-            ></b-button>
-          </fieldset>
-          <legend>Autopilot Controls</legend>
-          <fieldset class="control-group" border-variant="dark">
-            <b-button
-              ref="autopilot"
-              v-on:click="toggle_autopilot"
-              :class="'btn-block ' + (api_ap_enabled ? 'pressed' : '')"
-              variant="default"
-              >Autopilot</b-button
-            >
+            ></b-icon
+          ></b-button>
+        </fieldset>
+        <legend>Autopilot Controls</legend>
+        <fieldset class="control-group" border-variant="dark">
+          <b-button
+            ref="autopilot"
+            v-on:click="toggle_autopilot"
+            :class="'btn-block ' + (api_ap_enabled ? 'pressed' : '')"
+            variant="default"
+            >Autopilot</b-button
+          >
 
-            <b-row
-              :key="parameters.button_title"
-              v-for="parameters in autopilot_controls"
-              container
-            >
-              <b-col cols="8">
-                <nobr v-html="parameters.button_title" variant="default"></nobr>
-              </b-col>
-              <b-col cols="4">
-                <knob
-                  v-model="parameters.setter_model"
-                  v-on:change="
-                    (value) => {
-                      parameters.setter(value)
-                    }
-                  "
-                  v-on:inputEnd="
-                    (value) => {
-                      parameters.setter(value)
-                    }
-                  "
-                  v-on:toggle="parameters.toggle"
-                  :initial="parameters.setter_model"
-                  :min="parameters.min"
-                  :max="parameters.max"
-                  :step="parameters.step"
-                  :label="`${parameters.setter_model}${parameters.unit}`"
-                ></knob>
-              </b-col>
-            </b-row>
-          </fieldset>
-        </div>
+          <b-row
+            :key="parameters.button_title"
+            v-for="parameters in autopilot_controls"
+            container
+          >
+            <b-col cols="8">
+              <nobr v-html="parameters.button_title" variant="default"></nobr>
+            </b-col>
+            <b-col cols="4">
+              <knob
+                v-model="parameters.setter_model"
+                v-on:change="
+                  (value) => {
+                    parameters.setter(value)
+                  }
+                "
+                v-on:inputEnd="
+                  (value) => {
+                    parameters.setter(value)
+                  }
+                "
+                v-on:toggle="parameters.toggle"
+                :initial="Number(parameters.setter_model)"
+                :min="parameters.min"
+                :max="parameters.max"
+                :step="parameters.step"
+                :label="`${parameters.setter_model}${parameters.unit}`"
+              ></knob>
+            </b-col>
+          </b-row>
+        </fieldset>
+
         <template v-for="(parameters, title) in simulation_parameters">
           <legend>{{ title }}</legend>
           <fieldset class="control-group" fluid>
@@ -250,7 +249,7 @@
       </b-col>
     </b-row>
 
-    <textarea id="output" v-show="is_development" rows="3"></textarea>
+    <textarea id="output" v-if="is_development" rows="3"></textarea>
 
     <b-container v-if="is_running" fluid>
       <b-row>

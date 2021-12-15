@@ -1,89 +1,87 @@
 <template>
   <div class="text-left">
-    <div class="tabs">
-      <b-nav tabs>
-        <b-nav-item :active="$route.hash === '#' || $route.hash === ''" to="#">
-          About
-        </b-nav-item>
-        <b-nav-item :active="$route.hash === '#github'" to="#github">
-          GitHub Projects
-        </b-nav-item>
-        <!-- <b-nav-item :active="$route.hash === '#map'" to="#map">
+    <b-nav tabs>
+      <b-nav-item :active="$route.hash === '#' || $route.hash === ''" to="#">
+        About
+      </b-nav-item>
+      <b-nav-item :active="$route.hash === '#github'" to="#github">
+        GitHub Projects
+      </b-nav-item>
+      <!-- <b-nav-item :active="$route.hash === '#map'" to="#map">
           Travel Map
         </b-nav-item> -->
-        <b-nav-item :active="$route.hash === '#sim'" to="#sim">
-          Flight Simulator
-        </b-nav-item>
-      </b-nav>
-      <div class="tab-content">
-        <div
-          :class="[
-            'tab-pane',
-            { active: $route.hash === '#' || $route.hash === '' },
-          ]"
-          class="p-2"
-        >
-          <b-row>
-            <b-col>
-              <p>
-                I am an independent contractor with 9 years of C++ software
-                development, specialized in simulation and finance domains.
-              </p>
-              <p>
-                I like to work with low-latency systems, communication protocols
-                and software/hardware integratrion.
-              </p>
-              <hr />
-              <div v-for="(tools, title) in skills" v-bind:key="title">
-                <h5>{{ title }}</h5>
-                <b-button
-                  v-for="skill in tools"
-                  v-bind:key="skill"
-                  disabled
-                  variant="dark"
-                  >{{ skill }}</b-button
-                >
-              </div>
-            </b-col>
-            <b-col>
-              <Photo />
-            </b-col>
-          </b-row>
-        </div>
-        <div
-          :class="['tab-pane', { active: $route.hash === '#github' }]"
-          class="p-2"
-        >
-          <b-list-group>
-            <template v-for="r in repos">
-              <b-list-group-item
-                v-bind:key="r.id"
-                :href="r.html_url"
-                target="_blank"
-                class="flex-column align-items-start"
+      <b-nav-item :active="$route.hash === '#sim'" to="#sim">
+        Flight Simulator
+      </b-nav-item>
+    </b-nav>
+    <div class="tab-content">
+      <div
+        :class="[
+          'tab-pane',
+          { active: $route.hash === '#' || $route.hash === '' },
+        ]"
+        class="p-2"
+      >
+        <b-row>
+          <b-col>
+            <p>
+              I am an independent contractor with 9 years of C++ software
+              development, specialized in simulation and finance domains.
+            </p>
+            <p>
+              I like to work with low-latency systems, communication protocols
+              and software/hardware integratrion.
+            </p>
+            <hr />
+            <div v-for="(tools, title) in skills" v-bind:key="title">
+              <h5>{{ title }}</h5>
+              <b-button
+                v-for="skill in tools"
+                v-bind:key="skill"
+                disabled
                 variant="dark"
+                >{{ skill }}</b-button
               >
-                <div class="d-flex w-100 justify-content-between">
-                  <h5 class="mb-1">{{ r.name }}</h5>
-                  <small>{{ r.language }}</small>
-                </div>
-                <p class="mb-1">{{ r.description }}</p>
-              </b-list-group-item>
-            </template>
-          </b-list-group>
-        </div>
-        <!-- <div
+            </div>
+          </b-col>
+          <b-col>
+            <Photo />
+          </b-col>
+        </b-row>
+      </div>
+      <div
+        :class="['tab-pane', { active: $route.hash === '#github' }]"
+        class="p-2"
+      >
+        <b-list-group>
+          <template v-for="r in repos">
+            <b-list-group-item
+              v-bind:key="r.id"
+              :href="r.html_url"
+              target="_blank"
+              class="flex-column align-items-start"
+              variant="dark"
+            >
+              <div class="d-flex w-100 justify-content-between">
+                <h5 class="mb-1">{{ r.name }}</h5>
+                <small>{{ r.language }}</small>
+              </div>
+              <p class="mb-1">{{ r.description }}</p>
+            </b-list-group-item>
+          </template>
+        </b-list-group>
+      </div>
+      <!-- <div
           :class="['tab-pane', { active: $route.hash === '#map' }]"
           class="p-2"
         >
           <TravelMap />
         </div> -->
-        <div
-          :class="['tab-pane', { active: $route.hash === '#sim' }]"
-          class="p-2"
-        >
-          <FlightSim />
-        </div>
+      <div
+        :class="['tab-pane', { active: $route.hash === '#sim' }]"
+        class="p-2"
+      >
+        <FlightSim />
       </div>
     </div>
   </div>
