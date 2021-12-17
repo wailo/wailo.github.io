@@ -15,9 +15,7 @@
               <li>Core simulation logic is written in C++</li>
               <li>
                 Simulation visuals are developed with
-                <b-link target="_blank" href="https://www.opengl.org"
-                  >OpenGL</b-link
-                >
+                <b-link href="https://www.opengl.org">OpenGL</b-link>
               </li>
               <li>
                 Ported to WebAssembly with
@@ -53,129 +51,132 @@
       Downloading...
     </div>
 
-    <b-row v-show="is_running" class="emscripten_border">
+    <b-row
+      v-show="is_running"
+      style="max-height: 488px;"
+      class="emscripten_border"
+    >
       <!-- Controls Panel -->
-      <b-col v-show="is_running" sm="12" xl="4" order="2">
-        <legend>Simulation</legend>
-        <fieldset class="control-group">
-          <b-button v-on:click="requestFullScreen" block variant="default"
-            >Fullscreen
-            <b-icon icon="arrows-fullscreen" variant="default"></b-icon
-          ></b-button>
-          <b-button
-            :class="simulation_pause ? 'pressed flash-button' : ''"
-            v-on:click="
-              simulation_pause = !simulation_pause
-              set_simulation_pause(simulation_pause)
-            "
-            block
-            variant="default"
-            >{{ simulation_pause ? 'Resume' : 'Pause' }}
-            <b-icon
-              :icon="simulation_pause ? 'play-fill' : 'pause-fill'"
-              variant="default"
-            ></b-icon
-          ></b-button>
-        </fieldset>
-        <legend>Autopilot Controls</legend>
-        <fieldset class="control-group" border-variant="dark">
-          <b-button
-            ref="autopilot"
-            v-on:click="toggle_autopilot"
-            :class="'btn-block ' + (api_ap_enabled ? 'pressed' : '')"
-            variant="default"
-            >Autopilot</b-button
-          >
-
-          <b-row
-            :key="parameters.button_title"
-            v-for="parameters in autopilot_controls"
-            container
-          >
-            <b-col cols="8">
-              <nobr v-html="parameters.button_title" variant="default"></nobr>
-            </b-col>
-            <b-col cols="4">
-              <knob
-                v-model="parameters.setter_model"
-                v-on:change="
-                  (value) => {
-                    parameters.setter(value)
-                  }
+      <b-col
+        v-show="is_running"
+        style="max-height: inherit; overflow-y: scroll;"
+        sm="12"
+        xl="4"
+        order="2"
+      >
+        <b-list-group>
+          <b-list-group-item class="flex-column align-items-start">
+            <legend>Simulation</legend>
+            <fieldset class="control-group">
+              <b-button v-on:click="requestFullScreen" block variant="default"
+                >Fullscreen
+                <b-icon icon="arrows-fullscreen" variant="default"></b-icon
+              ></b-button>
+              <b-button
+                :class="simulation_pause ? 'pressed flash-button' : ''"
+                v-on:click="
+                  simulation_pause = !simulation_pause
+                  set_simulation_pause(simulation_pause)
                 "
-                v-on:inputEnd="
-                  (value) => {
-                    parameters.setter(value)
-                  }
-                "
-                v-on:toggle="parameters.toggle"
-                :initial="Number(parameters.setter_model)"
-                :min="parameters.min"
-                :max="parameters.max"
-                :step="parameters.step"
-                :label="`${parameters.setter_model}${parameters.unit}`"
-              ></knob>
-            </b-col>
-          </b-row>
-        </fieldset>
+                block
+                variant="default"
+                >{{ simulation_pause ? 'Resume' : 'Pause' }}
+                <b-icon
+                  :icon="simulation_pause ? 'play-fill' : 'pause-fill'"
+                  variant="default"
+                ></b-icon
+              ></b-button>
+            </fieldset>
+          </b-list-group-item>
+          <b-list-group-item class="flex-column align-items-start">
+            <legend>Autopilot Controls</legend>
+            <fieldset class="control-group" border-variant="dark">
+              <b-button
+                ref="autopilot"
+                v-on:click="toggle_autopilot"
+                :class="'btn-block ' + (api_ap_enabled ? 'pressed' : '')"
+                variant="default"
+                >Autopilot</b-button
+              >
 
-        <template v-for="(parameters, title) in simulation_parameters">
-          <legend>{{ title }}</legend>
-          <fieldset class="control-group" fluid>
-            <b-row
+              <b-row
+                :key="parameters.button_title"
+                v-for="parameters in autopilot_controls"
+                container
+              >
+                <b-col cols="8">
+                  <nobr v-html="parameters.button_title"></nobr>
+                </b-col>
+                <b-col cols="4">
+                  <knob
+                    v-model="parameters.setter_model"
+                    v-on:change="
+                      (value) => {
+                        parameters.setter(value)
+                      }
+                    "
+                    v-on:inputEnd="
+                      (value) => {
+                        parameters.setter(value)
+                      }
+                    "
+                    v-on:toggle="parameters.toggle"
+                    :initial="Number(parameters.setter_model)"
+                    :min="parameters.min"
+                    :max="parameters.max"
+                    :step="parameters.step"
+                    :label="`${parameters.setter_model}${parameters.unit}`"
+                  ></knob>
+                </b-col>
+              </b-row>
+            </fieldset>
+          </b-list-group-item>
+
+          <template v-for="(parameters, title) in simulation_parameters">
+            <legend>{{ title }}</legend>
+            <b-list-group-item
               v-for="parameter in parameters"
               :key="parameter.title"
-              class="flex-nowrap"
+              class="flex-column align-items-start"
             >
-              <b-col>
-                <nobr v-html="parameter.title"></nobr>
-              </b-col>
-              <b-col cols="4">
-                <label style="display: table-cell;" class="float-right">{{
-                  `${parameter.value}${parameter.unit ? parameter.unit : ''}`
-                }}</label>
-                <b-form-input
-                  :min="parameter.min"
-                  :max="parameter.max"
-                  :step="parameter.step"
-                  v-on:update="parameter.setter"
-                  v-model="parameter.value"
-                  type="range"
-                  style="display: table-cell; width: 50%;"
-                ></b-form-input>
-              </b-col>
-            </b-row>
-          </fieldset>
-        </template>
+              <fieldset class="control-group" fluid>
+                <b-row class="flex-nowrap">
+                  <b-col>
+                    <nobr v-html="parameter.title"></nobr>
+                  </b-col>
+                  <b-col cols="4">
+                    <label style="display: table-cell;" class="float-right">{{
+                      `${parameter.value}${
+                        parameter.unit ? parameter.unit : ''
+                      }`
+                    }}</label>
+                    <b-form-input
+                      :min="parameter.min"
+                      :max="parameter.max"
+                      :step="parameter.step"
+                      v-on:update="parameter.setter"
+                      v-model="parameter.value"
+                      type="range"
+                      style="display: table-cell; width: 50%;"
+                    ></b-form-input>
+                  </b-col>
+                </b-row>
+              </fieldset>
+            </b-list-group-item>
+          </template>
 
-        <div class="emscripten">
-          <progress id="progress" value="0" max="100" hidden="1"></progress>
-        </div> </b-col
-      ><b-col sm="12" xl="8" order="1" order-xl="2">
-        <!-- Simulation Screen -->
-        <b-row>
-          <canvas
-            id="canvas"
-            class="emscripten"
-            oncontextmenu="event.preventDefault()"
-            tabindex="-1"
-          >
-          </canvas>
-        </b-row>
-        <!-- Keyboard Controls -->
-        <b-row style="display: block;">
-          <b-card bg-variant="transparent" border-variant="dark">
-            <b-card-title>
+          <fieldset class="control-group" fluid>
+            <legend>
               Real Time Data
-              <b-button
-                v-b-toggle.collapse-data
-                @click="isRealTimeDataDisplayed = !isRealTimeDataDisplayed"
-                class="border border-light"
-                variant="outline-light"
-              >
-                {{ isRealTimeDataDisplayed ? '-' : '+' }}
-              </b-button>
-            </b-card-title>
+            </legend>
+            <b-button
+              v-b-toggle.collapse-data
+              @click="isRealTimeDataDisplayed = !isRealTimeDataDisplayed"
+              variant="outline-light"
+              class="border border-light"
+            >
+              {{ isRealTimeDataDisplayed ? 'Hide' : 'Show' }}
+            </b-button>
             <b-card-text>
               <b-collapse id="collapse-data">
                 <ul>
@@ -201,23 +202,23 @@
                   <li>Pitch: {{ Number(api_attitude_deg).toFixed(0) }}</li>
                 </ul>
               </b-collapse></b-card-text
-            ></b-card
-          >
+            >
+          </fieldset>
 
-          <b-card bg-variant="transparent" border-variant="dark">
-            <b-card-title>
+          <fieldset class="control-group" fluid>
+            <legend>
               Keyboard Controls
-              <b-button
-                v-b-toggle.collapse-keyboard-controls
-                @click="
-                  isKeyboardControlsDisplayed = !isKeyboardControlsDisplayed
-                "
-                class="border border-light"
-                variant="outline-light"
-              >
-                {{ isKeyboardControlsDisplayed ? '-' : '+' }}
-              </b-button>
-            </b-card-title>
+            </legend>
+            <b-button
+              v-b-toggle.collapse-keyboard-controls
+              @click="
+                isKeyboardControlsDisplayed = !isKeyboardControlsDisplayed
+              "
+              class="border border-light"
+              variant="outline-light"
+            >
+              {{ isKeyboardControlsDisplayed ? 'Hide' : 'Show' }}
+            </b-button>
             <b-card-text>
               <b-form-text variant="dark">
                 <template v-slot:title
@@ -243,9 +244,29 @@
                   </ul>
                 </b-collapse>
               </b-form-text>
-            </b-card-text></b-card
-          >
-        </b-row>
+            </b-card-text>
+          </fieldset>
+        </b-list-group>
+
+        <div class="emscripten">
+          <progress id="progress" value="0" max="100" hidden="1"></progress>
+        </div> </b-col
+      ><b-col
+        style="max-height: inherit; overflow: none;"
+        sm="12"
+        xl="8"
+        order="1"
+        order-xl="2"
+      >
+        <!-- Simulation Screen -->
+
+        <canvas
+          id="canvas"
+          class="emscripten"
+          oncontextmenu="event.preventDefault()"
+          tabindex="-1"
+        >
+        </canvas>
       </b-col>
     </b-row>
 
@@ -664,6 +685,8 @@ div.emscripten {
 }
 div.emscripten_border {
   padding: 2px;
+  max-height: 488px;
+  /* overflow: scroll; */
 }
 /* the canvas *must not* have any border or padding, or mouse coords will be wrong */
 canvas.emscripten {
@@ -702,6 +725,9 @@ canvas.emscripten {
 }
 div .control-group .row {
   align-items: center;
+}
+.list-group-item {
+  background-color: rgba(0, 0, 0, 0);
 }
 #output {
   /* width: 100%; */

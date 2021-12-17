@@ -1,8 +1,14 @@
 <template>
-  <b-card class="container" no-body text-variant="white">
-    <b-card-body>
-      <Bio />
+  <b-card
+    class="container"
+    no-body
+    text-variant="white"
+    style="max-height: 100vh;"
+  >
+    <b-card-body style="max-height: 100%; overflow: auto;">
+      <Bio style="max-height: inherit;" />
     </b-card-body>
+
     <b-card-footer footer-border-variant="dark">
       <h1>Wa.il</h1>
       <div class="links">
