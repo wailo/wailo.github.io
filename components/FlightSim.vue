@@ -569,13 +569,13 @@ export default {
       this.api_setSimulationPause(state)
     },
     requestFullScreen() {
-      this.FlightSimulator.requestFullscreen(false, false)
+      this.FlightSimulator.requestFullscreen(false, true)
     },
     startSimulator() {
       const statusElement = document.getElementById('status')
       const progressElement = document.getElementById('progress')
 
-      this.FlightSimulator = FlightSimulator({
+      FlightSimulator({
         vue: this,
         setStatus(text) {
           progressElement.value = null
@@ -608,10 +608,13 @@ export default {
             text = Array.prototype.slice.call(arguments).join(' ')
         },
 
-        canvas: (() => document.getElementById('canvas'))(),
-      }).then(() => {
+        canvas: (() => {
+          const canvas = document.getElementById('canvas')
+          return canvas
+        })(),
+      }).then((FlightSimulatorModule) => {
+        this.FlightSimulator = FlightSimulatorModule
         this.is_running = true
-
         // Link C++ functions
         this.api_toggleAutopilot = this.FlightSimulator.cwrap(
           'set_autopilot',
@@ -685,7 +688,7 @@ div.emscripten {
 }
 div.emscripten_border {
   padding: 2px;
-  max-height: 488px;
+  /* max-height: 488px; */
   /* overflow: scroll; */
 }
 /* the canvas *must not* have any border or padding, or mouse coords will be wrong */
