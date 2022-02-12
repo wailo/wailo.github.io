@@ -737,7 +737,6 @@ canvas.emscripten {
 }
 .control-group {
   padding: 2px;
-  margin: 10px;
 }
 div .control-group .row {
   align-items: center;
