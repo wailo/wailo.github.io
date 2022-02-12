@@ -463,8 +463,17 @@ export default {
             setter: this.set_simulation_speed,
             unit: 'x',
             min: 0.5,
-            max: 16,
+            max: 32,
             step: 0.5,
+          },
+          {
+            title: 'Frame Rate (FPS)',
+            value: 60,
+            setter: this.set_frames_rate,
+            // unit: 'fps',
+            min: 1,
+            max: 120,
+            step: 10,
           },
         ],
         Geometry: [
@@ -565,6 +574,9 @@ export default {
     set_simulation_speed(simulationSpeed) {
       this.api_setSimulationSpeed(simulationSpeed)
     },
+    set_frames_rate(frameRate) {
+      this.api_setFramesRate(frameRate)
+    },
     set_simulation_pause(state) {
       this.api_setSimulationPause(state)
     },
@@ -655,6 +667,7 @@ export default {
         this.api_setCdValue = this.FlightSimulator._set_cdo
 
         this.api_setSimulationSpeed = this.FlightSimulator._set_simulation_speed
+        this.api_setFramesRate = this.FlightSimulator._set_frames_rate
         this.api_setSimulationPause = this.FlightSimulator._set_simulation_pause
         // Main function
         const main = this.FlightSimulator._main
