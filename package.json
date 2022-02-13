@@ -11,8 +11,7 @@
     "generate": "nuxt generate",
     "lint": "eslint --ext .js,.vue --ignore-path .gitignore .",
     "deploy": "push-dir --dir=dist --branch=master --cleanup",
-    "build:emscripten": "./node_modules/Compact-Flight-Simulator/build_wasm.sh && cp -a  node_modules/Compact-Flight-Simulator/build_wasm/bin/flightSimulator* static/",
-    "preinstall": "build:emscripten"
+    "build:emscripten": "./node_modules/Compact-Flight-Simulator/build_wasm.sh && cp -a  node_modules/Compact-Flight-Simulator/build_wasm/bin/flightSimulator* static/"
   },
   "lint-staged": {
     "*.{js,vue}": "eslint"
