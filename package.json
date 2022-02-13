@@ -22,7 +22,7 @@
     }
   },
   "dependencies": {
-    "Compact-Flight-Simulator": "git+https://$GITHUB_ACCESS_TOKEN:x-oauth-basic@github.com/wailo/Compact-Flight-Simulator.git",
+    "Compact-Flight-Simulator": "git+https://$GITHUB_ACCESS_TOKEN@github.com/wailo/Compact-Flight-Simulator.git",
     "@nuxtjs/axios": "^5.3.6",
     "@nuxtjs/dotenv": "^1.4.0",
     "@nuxtjs/pwa": "^3.0.0-0",
