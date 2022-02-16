@@ -177,7 +177,7 @@
             >
               {{ isRealTimeDataDisplayed ? 'Hide' : 'Show' }}
             </b-button>
-            <b-card-text>
+            <b-card-text v-if="isRealTimeDataDisplayed">
               <b-collapse id="collapse-data">
                 <ul>
                   <li>
@@ -201,8 +201,8 @@
                   <li>Bank: {{ Number(api_theta_deg).toFixed(0) }}</li>
                   <li>Pitch: {{ Number(api_attitude_deg).toFixed(0) }}</li>
                 </ul>
-              </b-collapse></b-card-text
-            >
+              </b-collapse>
+            </b-card-text>
           </fieldset>
 
           <fieldset class="control-group" fluid>
