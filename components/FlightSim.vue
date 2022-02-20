@@ -94,7 +94,7 @@
               <b-button
                 ref="autopilot"
                 v-on:click="toggle_autopilot"
-                :class="'btn-block ' + (api_ap_enabled ? 'pressed' : '')"
+                :class="'btn-block ' + (api_autopilot ? 'pressed' : '')"
                 variant="default"
                 >Autopilot</b-button
               >
@@ -109,6 +109,8 @@
                 </b-col>
                 <b-col cols="4">
                   <knob
+                    :key="parameters.status()"
+                    :fgcolor="parameters.status() === 1 ? '#F00' : '#FFF'"
                     v-model="parameters.setter_model"
                     v-on:change="
                       (value) => {
@@ -310,18 +312,15 @@ export default {
       is_running: false,
       simulatorButtonText: 'Start simulation',
       is_development: process.env.NODE_ENV === 'development',
-      api_ap_enabled: false,
+      api_autopilot: null,
+      api_heading_hold: 0,
+      api_altitude_hold: 0,
+      api_speed_hold: 0,
       api_toggleAutopilot: null,
-      api_headingHoldEnabled: false,
-      // api_target_heading: 45,
       api_toggleHeadingHold: null,
       api_setHeadingHoldValue: null,
-      api_altitudeHoldEnabled: false,
-      // api_target_altitude: 25000,
       api_toggleAltitudeHold: null,
       api_setAltitudeHoldValue: null,
-      api_speedHoldEnabled: false,
-      // api_target_speed: 180,
       api_toggleSpeedHold: null,
       api_setSpeedHoldValue: null,
       api_iteration_time: 0,
@@ -334,6 +333,10 @@ export default {
       api_psi_deg: null,
       api_theta_deg: null,
       api_attitude_deg: null,
+      // TODO: Implement API
+      // api_target_altitude: 25000,
+      // api_target_heading: 45,
+      // api_target_speed: 180,
       isRealTimeDataDisplayed: false,
       isKeyboardControlsDisplayed: false,
       simulation_pause: false,
@@ -344,7 +347,7 @@ export default {
             key: ['w', '↑'],
             command: ' pitch -',
             isActive: () => {
-              return !this.api_altitudeHoldEnabled
+              return !this.api_altitude_hold
             },
             msg: 'Inactive: Altitude Hold Enganged',
           },
@@ -352,7 +355,7 @@ export default {
             key: ['s', '↓'],
             command: ' pitch +',
             isActive: () => {
-              return !this.api_altitudeHoldEnabled
+              return !this.api_altitude_hold
             },
             msg: 'Inactive: Altitude Hold Enganged',
           },
@@ -360,7 +363,7 @@ export default {
             key: ['a', '←'],
             command: ' roll -',
             isActive: () => {
-              return !this.api_headingHoldEnabled
+              return !this.api_heading_hold
             },
             msg: 'Inactive: Heading Hold Enganged',
           },
@@ -368,7 +371,7 @@ export default {
             key: ['d', '→'],
             command: ' roll +',
             isActive: () => {
-              return !this.api_headingHoldEnabled
+              return !this.api_heading_hold
             },
             msg: 'Inactive: Heading Hold Enganged',
           },
@@ -376,7 +379,7 @@ export default {
             key: ['F1'],
             command: 'idle throttle',
             isActive: () => {
-              return !this.api_speedHoldEnabled
+              return !this.api_speed_hold
             },
             msg: 'Inactive: Speed Hold Enganged',
           },
@@ -384,7 +387,7 @@ export default {
             key: ['F2'],
             command: 'throttle -',
             isActive: () => {
-              return !this.api_speedHoldEnabled
+              return !this.api_speed_hold
             },
             msg: 'Inactive: Speed Hold Enganged',
           },
@@ -392,7 +395,7 @@ export default {
             key: ['F3'],
             command: 'throttle +',
             isActive: () => {
-              return !this.api_speedHoldEnabled
+              return !this.api_speed_hold
             },
             msg: 'Inactive: Speed Hold Enganged',
           },
@@ -400,7 +403,7 @@ export default {
             key: ['F4'],
             command: 'max throttle',
             isActive: () => {
-              return !this.api_speedHoldEnabled
+              return !this.api_speed_hold
             },
             msg: 'Inactive: Speed Hold Enganged',
           },
@@ -418,9 +421,7 @@ export default {
         {
           button_title: 'Heading Hold',
           toggle: this.toggle_heading_hold,
-          status: () => {
-            return this.api_headingHoldEnabled
-          },
+          status: () => this.api_heading_hold,
           setter: this.set_heading_hold_value,
           setter_model: api_target_heading,
           unit: '°',
@@ -431,9 +432,7 @@ export default {
         {
           button_title: 'Altitude Hold',
           toggle: this.toggle_altitude_hold,
-          status: () => {
-            return this.api_altitudeHoldEnabled
-          },
+          status: () => this.api_altitude_hold,
           setter: this.set_altitude_hold_value,
           setter_model: api_target_altitude,
           unit: 'ft',
@@ -444,9 +443,7 @@ export default {
         {
           button_title: 'Speed Hold',
           toggle: this.toggle_speed_hold,
-          status: () => {
-            return this.api_speedHoldEnabled
-          },
+          status: () => this.api_speed_hold,
           setter: this.set_speed_hold_value,
           setter_model: api_target_speed,
           unit: 'kt',
@@ -531,16 +528,16 @@ export default {
       })
     },
     toggle_autopilot() {
-      this.api_toggleAutopilot(!this.api_ap_enabled)
+      this.api_toggleAutopilot(!this.api_autopilot)
     },
     toggle_heading_hold() {
-      this.api_toggleHeadingHold(!this.api_headingHoldEnabled)
+      this.api_toggleHeadingHold(!this.api_heading_hold)
     },
     toggle_altitude_hold() {
-      this.api_toggleAltitudeHold(!this.api_altitudeHoldEnabled)
+      this.api_toggleAltitudeHold(!this.api_altitude_hold)
     },
     toggle_speed_hold() {
-      this.api_toggleSpeedHold(!this.api_speedHoldEnabled)
+      this.api_toggleSpeedHold(!this.api_speed_hold)
     },
     aileron_right() {
       const aileronRight = this.FlightSimulator.cwrap('aileron_right')
@@ -657,18 +654,54 @@ export default {
         // Then the value can be accessed using
         // this.FlightSimulator.HEAP32[addr >> 2]
 
+        // Setters
         this.api_setHeadingHoldValue = this.FlightSimulator._set_target_heading
         this.api_setAltitudeHoldValue = this.FlightSimulator._set_target_altitude
         this.api_setSpeedHoldValue = this.FlightSimulator._set_target_speed
-
         this.api_setWingAreaValue = this.FlightSimulator._set_wing_area
         this.api_setThrustToWeightRatio = this.FlightSimulator._set_thrust_to_weight
         this.api_setClSlopeValue = this.FlightSimulator._set_dcl
         this.api_setCdValue = this.FlightSimulator._set_cdo
-
         this.api_setSimulationSpeed = this.FlightSimulator._set_simulation_speed
         this.api_setFramesRate = this.FlightSimulator._set_frames_rate
         this.api_setSimulationPause = this.FlightSimulator._set_simulation_pause
+
+        // Getters
+        const HEAPF32 = this.FlightSimulator.HEAPF32
+        const HEAP8 = this.FlightSimulator.HEAP8
+        const ptrApiIterationTime = this.FlightSimulator._api_iteration_time()
+        const ptrApiWeight = this.FlightSimulator._api_weight()
+        const ptrApiAltitude = this.FlightSimulator._api_altitude()
+        const ptrApiAlphaTail = this.FlightSimulator._api_alpha_tail()
+        const ptrApiAlphaAileron = this.FlightSimulator._api_alpha_aileron()
+        const ptrApiThrottle = this.FlightSimulator._api_throttle()
+        const ptrApiIasSpeedKnots = this.FlightSimulator._api_ias_speed_knots()
+        const ptrApiPsiDeg = this.FlightSimulator._api_psi_deg()
+        const ptrApiThetaDeg = this.FlightSimulator._api_theta_deg()
+        const ptrApiAttitudeDeg = this.FlightSimulator._api_attitude_deg()
+        const ptrApiAutopilot = this.FlightSimulator._api_autopilot()
+        const ptrApiHeadingHold = this.FlightSimulator._api_heading_hold()
+        const ptrApiLevelHold = this.FlightSimulator._api_level_hold()
+        const ptrApiSpeedHold = this.FlightSimulator._api_speed_hold()
+        const ptrApiAltitudeHold = this.FlightSimulator._api_altitude_hold()
+
+        setInterval(() => {
+          this.api_iteration_time = HEAPF32[ptrApiIterationTime >> 2]
+          this.api_weight = HEAPF32[ptrApiWeight >> 2]
+          this.api_altitude = HEAPF32[ptrApiAltitude >> 2]
+          this.api_alpha_tail = HEAPF32[ptrApiAlphaTail >> 2]
+          this.api_alpha_aileron = HEAPF32[ptrApiAlphaAileron >> 2]
+          this.api_throttle = HEAPF32[ptrApiThrottle >> 2]
+          this.api_ias_speed_knots = HEAPF32[ptrApiIasSpeedKnots >> 2]
+          this.api_psi_deg = HEAPF32[ptrApiPsiDeg >> 2]
+          this.api_theta_deg = HEAPF32[ptrApiThetaDeg >> 2]
+          this.api_attitude_deg = HEAPF32[ptrApiAttitudeDeg >> 2]
+          this.api_autopilot = HEAP8[ptrApiAutopilot]
+          this.api_heading_hold = HEAP8[ptrApiHeadingHold]
+          this.api_level_hold = HEAP8[ptrApiLevelHold]
+          this.api_speed_hold = HEAP8[ptrApiSpeedHold]
+          this.api_altitude_hold = HEAP8[ptrApiAltitudeHold]
+        }, 200) // Execute every milliseconds
         // Main function
         const main = this.FlightSimulator._main
         main()

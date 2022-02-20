@@ -25,6 +25,7 @@
       :min="min"
       :max="max"
       :step="step"
+      :fgcolor="fgcolor"
       class="input-knob"
       type="range"
     />
@@ -40,6 +41,7 @@ export default {
     initial: { type: Number, default: 0 },
     label: { type: String, default: 'knob' },
     step: { type: Number, default: 1 },
+    fgcolor: { type: String, default: '#FFF' },
   },
   data() {
     return {
@@ -50,8 +52,6 @@ export default {
         sliderHeight: 20,
         switchWidth: 24,
         switchHeight: 24,
-        fgcolor: '#fff',
-        bgcolor: '#000',
         knobMode: 'linear',
         sliderMode: 'relative',
       },
@@ -211,23 +211,20 @@ export default {
     //       }
     //       el.refresh()
     //     },
-    initKnobs(el) {
+    initKnobs(el, vue) {
       let w, h, d, fg, bg
       if (el.inputKnobs) {
         el.redraw()
         return
       }
-      el.toggle = false
       const ik = (el.inputKnobs = {})
-      el.refresh = () => {
+      el.refresh = (vue) => {
         d = +el.getAttribute('data-diameter')
 
-        w = parseFloat(el.getAttribute('data-width') || d || this.op.knobWidth)
-        h = parseFloat(
-          el.getAttribute('data-height') || d || this.op.knobHeight
-        )
-        bg = el.getAttribute('data-bgcolor') || this.op.bgcolor
-        fg = el.getAttribute('data-fgcolor') || this.op.fgcolor
+        w = parseFloat(el.getAttribute('data-width') || d || vue.op.knobWidth)
+        h = parseFloat(el.getAttribute('data-height') || d || vue.op.knobHeight)
+        bg = el.getAttribute('data-bgcolor')
+        fg = el.getAttribute('data-fgcolor') || vue.fgcolor
         ik.sensex = ik.sensey = 200
         if (el.className.includes('input-knob')) ik.itype = 'k'
         else if (w >= h) {
@@ -435,17 +432,12 @@ export default {
         }, 500)
       }
       ik.toggle = (ev) => {
-        el.toggle = !el.toggle
-        this.op.fgcolor = el.toggle ? '#F00' : '#FFF'
-
         const event = new CustomEvent('toggle', {
           detail: el.toggle,
           bubbles: true,
         })
         // Dispatch the event.
         el.dispatchEvent(event)
-
-        el.refresh()
       }
       el.redraw = (f) => {
         if (f || ik.valueold !== el.value) {
@@ -470,7 +462,7 @@ export default {
           ik.valueold = el.value
         }
       }
-      el.refresh()
+      el.refresh(this)
       el.redraw(true)
       el.addEventListener('keydown', ik.keydown)
       el.addEventListener('mousedown', ik.pointerdown)
@@ -493,14 +485,14 @@ export default {
 
       for (let i = 0; que.length > 0 && i < 8; ++i) {
         const q = que.shift()
-        q[0](q[1])
+        q[0](q[1], this)
       }
     },
 
     refreshelem(elem, type) {
       switch (type) {
         case 'k':
-          this.initKnobs(elem)
+          this.initKnobs(elem, this)
           break
         case 'h':
         case 'v':
