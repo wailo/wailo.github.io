@@ -73,18 +73,26 @@
                 <b-icon icon="arrows-fullscreen" variant="default"></b-icon
               ></b-button>
               <b-button
-                :class="simulation_pause ? 'pressed flash-button' : ''"
+                :class="api_simulation_pause ? 'pressed flash-button' : ''"
                 v-on:click="
-                  simulation_pause = !simulation_pause
-                  set_simulation_pause(simulation_pause)
+                  api_simulation_pause = !api_simulation_pause
+                  set_simulation_pause(api_simulation_pause)
                 "
                 block
                 variant="default"
-                >{{ simulation_pause ? 'Resume' : 'Pause' }}
+                >{{ api_simulation_pause ? 'Resume' : 'Pause' }}
                 <b-icon
-                  :icon="simulation_pause ? 'play-fill' : 'pause-fill'"
+                  :icon="api_simulation_pause ? 'play-fill' : 'pause-fill'"
                   variant="default"
                 ></b-icon
+              ></b-button>
+
+              <b-button
+                v-on:click="set_simulation_reset()"
+                block
+                variant="default"
+                >Reset Simulation
+                <b-icon icon="x-circle" variant="default"></b-icon
               ></b-button>
             </fieldset>
           </b-list-group-item>
@@ -298,15 +306,6 @@ export default {
   },
 
   data() {
-    // eslint-disable-next-line camelcase, prefer-const
-    let api_target_heading = 45
-
-    // eslint-disable-next-line camelcase, prefer-const
-    let api_target_altitude = 25000
-
-    // eslint-disable-next-line camelcase, prefer-const
-    let api_target_speed = 180
-
     return {
       FlightSimulator: null,
       is_running: false,
@@ -333,15 +332,119 @@ export default {
       api_psi_deg: null,
       api_theta_deg: null,
       api_attitude_deg: null,
+      api_simulation_pause: null,
+      api_simulation_speed: null,
       // TODO: Implement API
-      // api_target_altitude: 25000,
-      // api_target_heading: 45,
-      // api_target_speed: 180,
+      api_target_altitude: 25000,
+      api_target_heading: 45,
+      api_target_speed: 180,
       isRealTimeDataDisplayed: false,
       isKeyboardControlsDisplayed: false,
-      simulation_pause: false,
-      simulation_speed: 1.0,
-      instructions: {
+    }
+  },
+  computed: {
+    autopilot_controls() {
+      return [
+        {
+          button_title: 'Heading Hold',
+          toggle: this.toggle_heading_hold,
+          status: () => this.api_heading_hold,
+          setter: this.set_heading_hold_value,
+          setter_model: this.api_target_heading,
+          unit: '°',
+          min: 0,
+          max: 359,
+          step: 1.0,
+        },
+        {
+          button_title: 'Altitude Hold',
+          toggle: this.toggle_altitude_hold,
+          status: () => this.api_altitude_hold,
+          setter: this.set_altitude_hold_value,
+          setter_model: this.api_target_altitude,
+          unit: 'ft',
+          min: 0,
+          max: 50000,
+          step: 1.0,
+        },
+        {
+          button_title: 'Speed Hold',
+          toggle: this.toggle_speed_hold,
+          status: () => this.api_speed_hold,
+          setter: this.set_speed_hold_value,
+          setter_model: this.api_target_speed,
+          unit: 'kt',
+          min: 0,
+          max: 350,
+          step: 1,
+        },
+      ]
+    },
+
+    simulation_parameters() {
+      return {
+        Simulation: [
+          {
+            title: 'Simulation Speed',
+            value: this.api_simulation_speed,
+            setter: this.set_simulation_speed,
+            unit: 'x',
+            min: 0.5,
+            max: 32,
+            step: 0.5,
+          },
+          {
+            title: 'Frame Rate (FPS)',
+            value: 60,
+            setter: this.set_frames_rate,
+            // unit: 'fps',
+            min: 1,
+            max: 120,
+            step: 10,
+          },
+        ],
+        Geometry: [
+          {
+            title: 'Wing Area Ft&sup2;',
+            value: 530,
+            setter: this.set_wing_area_value,
+            min: 10,
+            max: 1000,
+            step: 1,
+          },
+        ],
+        Performance: [
+          {
+            title: 'Thrust to Weight Ratio',
+            value: 0.3,
+            setter: this.set_thrust_to_weight_ratio_value,
+            min: 0.1,
+            max: 5,
+            step: 0.1,
+          },
+        ],
+        Aerodynamics: [
+          {
+            title: 'Lift Cofficient Slope',
+            value: 3.53,
+            setter: this.set_cl_slope_value,
+            min: 0.1,
+            max: 5,
+            step: 0.1,
+          },
+          {
+            title: 'Drag Cofficient',
+            value: 0.02,
+            setter: this.set_cd_value,
+            min: 0.01,
+            max: 1.0,
+            step: 0.01,
+          },
+        ],
+      }
+    },
+    instructions() {
+      const obj = {
         commands: [
           {
             key: ['w', '↑'],
@@ -416,105 +519,11 @@ export default {
             command: 'reset flight model',
           },
         ],
-      },
-      autopilot_controls: [
-        {
-          button_title: 'Heading Hold',
-          toggle: this.toggle_heading_hold,
-          status: () => this.api_heading_hold,
-          setter: this.set_heading_hold_value,
-          setter_model: api_target_heading,
-          unit: '°',
-          min: 0,
-          max: 359,
-          step: 1.0,
-        },
-        {
-          button_title: 'Altitude Hold',
-          toggle: this.toggle_altitude_hold,
-          status: () => this.api_altitude_hold,
-          setter: this.set_altitude_hold_value,
-          setter_model: api_target_altitude,
-          unit: 'ft',
-          min: 0,
-          max: 50000,
-          step: 1.0,
-        },
-        {
-          button_title: 'Speed Hold',
-          toggle: this.toggle_speed_hold,
-          status: () => this.api_speed_hold,
-          setter: this.set_speed_hold_value,
-          setter_model: api_target_speed,
-          unit: 'kt',
-          min: 0,
-          max: 350,
-          step: 1,
-        },
-      ],
-      simulation_parameters: {
-        Simulation: [
-          {
-            title: 'Simulation Speed',
-            value: 1,
-            setter: this.set_simulation_speed,
-            unit: 'x',
-            min: 0.5,
-            max: 32,
-            step: 0.5,
-          },
-          {
-            title: 'Frame Rate (FPS)',
-            value: 60,
-            setter: this.set_frames_rate,
-            // unit: 'fps',
-            min: 1,
-            max: 120,
-            step: 10,
-          },
-        ],
-        Geometry: [
-          {
-            title: 'Wing Area Ft&sup2;',
-            value: 530,
-            setter: this.set_wing_area_value,
-            min: 10,
-            max: 1000,
-            step: 1,
-          },
-        ],
-        Performance: [
-          {
-            title: 'Thrust to Weight Ratio',
-            value: 0.3,
-            setter: this.set_thrust_to_weight_ratio_value,
-            min: 0.1,
-            max: 5,
-            step: 0.1,
-          },
-        ],
-        Aerodynamics: [
-          {
-            title: 'Lift Cofficient Slope',
-            value: 3.53,
-            setter: this.set_cl_slope_value,
-            min: 0.1,
-            max: 5,
-            step: 0.1,
-          },
-          {
-            title: 'Drag Cofficient',
-            value: 0.02,
-            setter: this.set_cd_value,
-            min: 0.01,
-            max: 1.0,
-            step: 0.01,
-          },
-        ],
-      },
-    }
-  },
+      }
 
+      return obj
+    },
+  },
   mounted() {},
   methods: {
     notifyUser(title, msg, duration = 1000) {
@@ -576,6 +585,9 @@ export default {
     },
     set_simulation_pause(state) {
       this.api_setSimulationPause(state)
+    },
+    set_simulation_reset() {
+      this.api_setSimulationReset()
     },
     requestFullScreen() {
       this.FlightSimulator.requestFullscreen(false, true)
@@ -665,28 +677,54 @@ export default {
         this.api_setSimulationSpeed = this.FlightSimulator._set_simulation_speed
         this.api_setFramesRate = this.FlightSimulator._set_frames_rate
         this.api_setSimulationPause = this.FlightSimulator._set_simulation_pause
+        this.api_setSimulationReset = this.FlightSimulator._set_simulation_reset
 
         // Getters
-        const HEAPF32 = this.FlightSimulator.HEAPF32
-        const HEAP8 = this.FlightSimulator.HEAP8
-        const ptrApiIterationTime = this.FlightSimulator._api_iteration_time()
-        const ptrApiWeight = this.FlightSimulator._api_weight()
-        const ptrApiAltitude = this.FlightSimulator._api_altitude()
-        const ptrApiAlphaTail = this.FlightSimulator._api_alpha_tail()
-        const ptrApiAlphaAileron = this.FlightSimulator._api_alpha_aileron()
-        const ptrApiThrottle = this.FlightSimulator._api_throttle()
-        const ptrApiIasSpeedKnots = this.FlightSimulator._api_ias_speed_knots()
-        const ptrApiPsiDeg = this.FlightSimulator._api_psi_deg()
-        const ptrApiThetaDeg = this.FlightSimulator._api_theta_deg()
-        const ptrApiAttitudeDeg = this.FlightSimulator._api_attitude_deg()
-        const ptrApiAutopilot = this.FlightSimulator._api_autopilot()
-        const ptrApiHeadingHold = this.FlightSimulator._api_heading_hold()
-        const ptrApiLevelHold = this.FlightSimulator._api_level_hold()
-        const ptrApiSpeedHold = this.FlightSimulator._api_speed_hold()
-        const ptrApiAltitudeHold = this.FlightSimulator._api_altitude_hold()
+        let HEAPF32 = null
+        let HEAP8 = null
+        let ptrApiIterationTime = null
+        let ptrApiWeight = null
+        let ptrApiAltitude = null
+        let ptrApiAlphaTail = null
+        let ptrApiAlphaAileron = null
+        let ptrApiThrottle = null
+        let ptrApiIasSpeedKnots = null
+        let ptrApiPsiDeg = null
+        let ptrApiThetaDeg = null
+        let ptrApiAttitudeDeg = null
+        let ptrApiAutopilot = null
+        let ptrApiHeadingHold = null
+        let ptrApiLevelHold = null
+        let ptrApiSpeedHold = null
+        let ptrApiAltitudeHold = null
+        let ptrApiSimulationPause = null
+        let ptrApiSimulationSpeed = null
 
-        setInterval(() => {
+        const updateSimData = () => {
+          if (ptrApiWeight !== this.FlightSimulator._api_weight()) {
+            HEAPF32 = this.FlightSimulator.HEAPF32
+            HEAP8 = this.FlightSimulator.HEAP8
+            ptrApiIterationTime = this.FlightSimulator._api_iteration_time()
+            ptrApiWeight = this.FlightSimulator._api_weight()
+            ptrApiAltitude = this.FlightSimulator._api_altitude()
+            ptrApiAlphaTail = this.FlightSimulator._api_alpha_tail()
+            ptrApiAlphaAileron = this.FlightSimulator._api_alpha_aileron()
+            ptrApiThrottle = this.FlightSimulator._api_throttle()
+            ptrApiIasSpeedKnots = this.FlightSimulator._api_ias_speed_knots()
+            ptrApiPsiDeg = this.FlightSimulator._api_psi_deg()
+            ptrApiThetaDeg = this.FlightSimulator._api_theta_deg()
+            ptrApiAttitudeDeg = this.FlightSimulator._api_attitude_deg()
+            ptrApiAutopilot = this.FlightSimulator._api_autopilot()
+            ptrApiHeadingHold = this.FlightSimulator._api_heading_hold()
+            ptrApiLevelHold = this.FlightSimulator._api_level_hold()
+            ptrApiSpeedHold = this.FlightSimulator._api_speed_hold()
+            ptrApiAltitudeHold = this.FlightSimulator._api_altitude_hold()
+            ptrApiSimulationPause = this.FlightSimulator._api_simulation_pause()
+            ptrApiSimulationSpeed = this.FlightSimulator._api_simulation_speed()
+          }
+
           this.api_iteration_time = HEAPF32[ptrApiIterationTime >> 2]
+          this.api_simulation_speed = HEAPF32[ptrApiSimulationSpeed >> 2]
           this.api_weight = HEAPF32[ptrApiWeight >> 2]
           this.api_altitude = HEAPF32[ptrApiAltitude >> 2]
           this.api_alpha_tail = HEAPF32[ptrApiAlphaTail >> 2]
@@ -696,12 +734,17 @@ export default {
           this.api_psi_deg = HEAPF32[ptrApiPsiDeg >> 2]
           this.api_theta_deg = HEAPF32[ptrApiThetaDeg >> 2]
           this.api_attitude_deg = HEAPF32[ptrApiAttitudeDeg >> 2]
+          this.api_simulation_pause = HEAP8[ptrApiSimulationPause]
           this.api_autopilot = HEAP8[ptrApiAutopilot]
           this.api_heading_hold = HEAP8[ptrApiHeadingHold]
           this.api_level_hold = HEAP8[ptrApiLevelHold]
           this.api_speed_hold = HEAP8[ptrApiSpeedHold]
           this.api_altitude_hold = HEAP8[ptrApiAltitudeHold]
-        }, 200) // Execute every milliseconds
+          // Execute every milliseconds
+          setTimeout(updateSimData, 200)
+        }
+
+        updateSimData()
         // Main function
         const main = this.FlightSimulator._main
         main()
@@ -709,9 +752,8 @@ export default {
 
       // Pause the simulation when tab loses focus
       document.addEventListener('visibilitychange', () => {
-        if (!this.simulation_pause) {
+        if (!this.api_simulation_pause) {
           this.set_simulation_pause(!document.hidden)
-          this.simulation_pause = !document.hidden
         }
       })
 
@@ -791,6 +833,7 @@ div .control-group .row {
   color: white;
   font-family: 'Lucida Console', Monaco, monospace;
   outline: none;
+  width: 100%;
 }
 .flash-button {
   animation-name: flash;
