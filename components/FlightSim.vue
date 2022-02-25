@@ -322,6 +322,9 @@ export default {
       api_setAltitudeHoldValue: null,
       api_toggleSpeedHold: null,
       api_setSpeedHoldValue: null,
+      api_target_altitude: null,
+      api_target_heading: null,
+      api_target_speed: null,
       api_iteration_time: 0,
       api_weight: null,
       api_altitude: null,
@@ -334,10 +337,6 @@ export default {
       api_attitude_deg: null,
       api_simulation_pause: null,
       api_simulation_speed: null,
-      // TODO: Implement API
-      api_target_altitude: 25000,
-      api_target_heading: 45,
-      api_target_speed: 180,
       isRealTimeDataDisplayed: false,
       isKeyboardControlsDisplayed: false,
     }
@@ -697,6 +696,10 @@ export default {
         let ptrApiLevelHold = null
         let ptrApiSpeedHold = null
         let ptrApiAltitudeHold = null
+        let ptrApiTargetHeading = null
+        let ptrApiTargetAltitude = null
+        let ptrApiTargetSpeed = null
+
         let ptrApiSimulationPause = null
         let ptrApiSimulationSpeed = null
 
@@ -719,6 +722,9 @@ export default {
             ptrApiLevelHold = this.FlightSimulator._api_level_hold()
             ptrApiSpeedHold = this.FlightSimulator._api_speed_hold()
             ptrApiAltitudeHold = this.FlightSimulator._api_altitude_hold()
+            ptrApiTargetHeading = this.FlightSimulator._api_target_heading()
+            ptrApiTargetAltitude = this.FlightSimulator._api_target_altitude()
+            ptrApiTargetSpeed = this.FlightSimulator._api_target_speed()
             ptrApiSimulationPause = this.FlightSimulator._api_simulation_pause()
             ptrApiSimulationSpeed = this.FlightSimulator._api_simulation_speed()
           }
@@ -740,6 +746,10 @@ export default {
           this.api_level_hold = HEAP8[ptrApiLevelHold]
           this.api_speed_hold = HEAP8[ptrApiSpeedHold]
           this.api_altitude_hold = HEAP8[ptrApiAltitudeHold]
+          this.api_target_heading = HEAPF32[ptrApiTargetHeading >> 2]
+          this.api_target_altitude = HEAPF32[ptrApiTargetAltitude >> 2]
+          this.api_target_speed = HEAPF32[ptrApiTargetSpeed >> 2]
+
           // Execute every milliseconds
           setTimeout(updateSimData, 200)
         }
