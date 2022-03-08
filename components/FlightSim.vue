@@ -76,7 +76,7 @@
                 :class="api_simulation_pause ? 'pressed flash-button' : ''"
                 v-on:click="
                   api_simulation_pause = !api_simulation_pause
-                  set_simulation_pause(api_simulation_pause)
+                  api_setSimulationPause(api_simulation_pause)
                 "
                 block
                 variant="default"
@@ -88,7 +88,7 @@
               ></b-button>
 
               <b-button
-                v-on:click="set_simulation_reset()"
+                v-on:click="api_setSimulationReset()"
                 block
                 variant="default"
                 >Reset Simulation
@@ -101,7 +101,7 @@
             <fieldset class="control-group" border-variant="dark">
               <b-button
                 ref="autopilot"
-                v-on:click="toggle_autopilot"
+                v-on:click="api_toggleAutopilot(!api_autopilot)"
                 :class="'btn-block ' + (api_autopilot ? 'pressed' : '')"
                 variant="default"
                 >Autopilot</b-button
@@ -130,7 +130,7 @@
                         parameters.setter(value)
                       }
                     "
-                    v-on:toggle="parameters.toggle"
+                    v-on:toggle="parameters.toggle(!parameters.status())"
                     :initial="Number(parameters.setter_model)"
                     :min="parameters.min"
                     :max="parameters.max"
@@ -346,9 +346,9 @@ export default {
       return [
         {
           button_title: 'Heading Hold',
-          toggle: this.toggle_heading_hold,
+          toggle: this.api_toggleHeadingHold,
           status: () => this.api_heading_hold,
-          setter: this.set_heading_hold_value,
+          setter: this.api_setHeadingHoldValue,
           setter_model: this.api_target_heading,
           unit: '°',
           min: 0,
@@ -357,9 +357,9 @@ export default {
         },
         {
           button_title: 'Altitude Hold',
-          toggle: this.toggle_altitude_hold,
+          toggle: this.api_toggleAltitudeHold,
           status: () => this.api_altitude_hold,
-          setter: this.set_altitude_hold_value,
+          setter: this.api_setAltitudeHoldValue,
           setter_model: this.api_target_altitude,
           unit: 'ft',
           min: 0,
@@ -368,9 +368,9 @@ export default {
         },
         {
           button_title: 'Speed Hold',
-          toggle: this.toggle_speed_hold,
+          toggle: this.api_toggleSpeedHold,
           status: () => this.api_speed_hold,
-          setter: this.set_speed_hold_value,
+          setter: this.api_setSpeedHoldValue,
           setter_model: this.api_target_speed,
           unit: 'kt',
           min: 0,
@@ -386,7 +386,7 @@ export default {
           {
             title: 'Simulation Speed',
             value: this.api_simulation_speed,
-            setter: this.set_simulation_speed,
+            setter: this.api_setSimulationSpeed,
             unit: 'x',
             min: 0.5,
             max: 32,
@@ -395,7 +395,7 @@ export default {
           {
             title: 'Frame Rate (FPS)',
             value: 60,
-            setter: this.set_frames_rate,
+            setter: this.api_setFramesRate,
             // unit: 'fps',
             min: 1,
             max: 120,
@@ -406,7 +406,7 @@ export default {
           {
             title: 'Wing Area Ft&sup2;',
             value: 530,
-            setter: this.set_wing_area_value,
+            setter: this.api_setWingAreaValue,
             min: 10,
             max: 1000,
             step: 1,
@@ -416,7 +416,7 @@ export default {
           {
             title: 'Thrust to Weight Ratio',
             value: 0.3,
-            setter: this.set_thrust_to_weight_ratio_value,
+            setter: this.api_setThrustToWeightRatio,
             min: 0.1,
             max: 5,
             step: 0.1,
@@ -426,7 +426,7 @@ export default {
           {
             title: 'Lift Cofficient Slope',
             value: 3.53,
-            setter: this.set_cl_slope_value,
+            setter: this.api_setClSlopeValue,
             min: 0.1,
             max: 5,
             step: 0.1,
@@ -434,7 +434,7 @@ export default {
           {
             title: 'Drag Cofficient',
             value: 0.02,
-            setter: this.set_cd_value,
+            setter: this.api_setCdValue,
             min: 0.01,
             max: 1.0,
             step: 0.01,
@@ -534,59 +534,6 @@ export default {
         variant: 'dark',
         'body-class': 'strong',
       })
-    },
-    toggle_autopilot() {
-      this.api_toggleAutopilot(!this.api_autopilot)
-    },
-    toggle_heading_hold() {
-      this.api_toggleHeadingHold(!this.api_heading_hold)
-    },
-    toggle_altitude_hold() {
-      this.api_toggleAltitudeHold(!this.api_altitude_hold)
-    },
-    toggle_speed_hold() {
-      this.api_toggleSpeedHold(!this.api_speed_hold)
-    },
-    aileron_right() {
-      const aileronRight = this.FlightSimulator.cwrap('aileron_right')
-      aileronRight()
-    },
-    aileron_left() {
-      const aileronLeft = this.FlightSimulator.cwrap('aileron_left')
-      aileronLeft()
-    },
-    set_heading_hold_value(heading) {
-      this.api_setHeadingHoldValue(heading)
-    },
-    set_altitude_hold_value(altitude) {
-      this.api_setAltitudeHoldValue(altitude)
-    },
-    set_speed_hold_value(speed) {
-      this.api_setSpeedHoldValue(speed)
-    },
-    set_wing_area_value(wingArea) {
-      this.api_setWingAreaValue(wingArea)
-    },
-    set_thrust_to_weight_ratio_value(thrustToWeightRatio) {
-      this.api_setThrustToWeightRatio(thrustToWeightRatio)
-    },
-    set_cl_slope_value(clSlope) {
-      this.api_setClSlopeValue(clSlope)
-    },
-    set_cd_value(cd) {
-      this.api_setCdValue(cd)
-    },
-    set_simulation_speed(simulationSpeed) {
-      this.api_setSimulationSpeed(simulationSpeed)
-    },
-    set_frames_rate(frameRate) {
-      this.api_setFramesRate(frameRate)
-    },
-    set_simulation_pause(state) {
-      this.api_setSimulationPause(state)
-    },
-    set_simulation_reset() {
-      this.api_setSimulationReset()
     },
     requestFullScreen() {
       this.FlightSimulator.requestFullscreen(false, true)
@@ -763,7 +710,7 @@ export default {
       // Pause the simulation when tab loses focus
       document.addEventListener('visibilitychange', () => {
         if (!this.api_simulation_pause) {
-          this.set_simulation_pause(!document.hidden)
+          this.api_setSimulationPause(!document.hidden)
         }
       })
 
