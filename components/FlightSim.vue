@@ -582,37 +582,13 @@ export default {
       }).then((FlightSimulatorModule) => {
         this.FlightSimulator = FlightSimulatorModule
         this.is_running = true
+
         // Link C++ functions
-        this.api_toggleAutopilot = this.FlightSimulator.cwrap(
-          'set_autopilot',
-          null,
-          ['bool']
-        )
-
-        this.api_toggleHeadingHold = this.FlightSimulator.cwrap(
-          'set_heading_hold',
-          null,
-          ['bool']
-        )
-
-        this.api_toggleAltitudeHold = this.FlightSimulator.cwrap(
-          'set_altitude_hold',
-          null,
-          ['bool']
-        )
-
-        this.api_toggleSpeedHold = this.FlightSimulator.cwrap(
-          'set_speed_hold',
-          null,
-          ['bool']
-        )
-
-        // Follow this steps to access memory from c++ without copying
-        // First export a getter function in c++ that return a pointer to the value
-        // Then the value can be accessed using
-        // this.FlightSimulator.HEAP32[addr >> 2]
-
         // Setters
+        this.api_toggleAutopilot = this.FlightSimulator._set_autopilot
+        this.api_toggleHeadingHold = this.FlightSimulator._set_heading_hold
+        this.api_toggleAltitudeHold = this.FlightSimulator._set_altitude_hold
+        this.api_toggleSpeedHold = this.FlightSimulator._set_speed_hold
         this.api_setHeadingHoldValue = this.FlightSimulator._set_target_heading
         this.api_setAltitudeHoldValue = this.FlightSimulator._set_target_altitude
         this.api_setSpeedHoldValue = this.FlightSimulator._set_target_speed
