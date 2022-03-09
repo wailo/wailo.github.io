@@ -5,7 +5,7 @@
     text-variant="white"
     style="max-height: 100vh;"
   >
-    <b-card-body style="max-height: 100%; overflow: auto;">
+    <b-card-body style="max-height: 100%;">
       <Bio style="max-height: inherit;" />
     </b-card-body>
 

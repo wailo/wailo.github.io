@@ -117,8 +117,8 @@
                 </b-col>
                 <b-col cols="4">
                   <knob
-                    :key="parameters.status()"
-                    :fgcolor="parameters.status() === 1 ? '#F00' : '#FFF'"
+                    :key="parameters.status"
+                    :fgcolor="parameters.status === 1 ? '#F00' : '#FFF'"
                     v-model="parameters.setter_model"
                     v-on:change="
                       (value) => {
@@ -130,7 +130,7 @@
                         parameters.setter(value)
                       }
                     "
-                    v-on:toggle="parameters.toggle(!parameters.status())"
+                    v-on:toggle="parameters.toggle(!parameters.status)"
                     :initial="Number(parameters.setter_model)"
                     :min="parameters.min"
                     :max="parameters.max"
@@ -142,10 +142,10 @@
             </fieldset>
           </b-list-group-item>
 
-          <template v-for="(parameters, title) in simulation_parameters">
+          <template v-for="(simulation_group, title) in simulation_parameters">
             <legend>{{ title }}</legend>
             <b-list-group-item
-              v-for="parameter in parameters"
+              v-for="parameter in simulation_group"
               :key="parameter.title"
               class="flex-column align-items-start"
             >
@@ -325,7 +325,7 @@ export default {
       api_setAtmosphereSeaLevelTemperature: null,
       api_setAtmosphereSeaLevelDensity: null,
       api_target_altitude: null,
-      api_target_heading: null,
+      api_target_heading_deg: null,
       api_target_speed: null,
       api_iteration_time: 0,
       api_weight: null,
@@ -351,9 +351,9 @@ export default {
         {
           button_title: 'Heading Hold',
           toggle: this.api_toggleHeadingHold,
-          status: () => this.api_heading_hold,
+          status: this.api_heading_hold,
           setter: this.api_setHeadingHoldValue,
-          setter_model: this.api_target_heading,
+          setter_model: this.api_target_heading_deg,
           unit: '°',
           min: 0,
           max: 359,
@@ -362,7 +362,7 @@ export default {
         {
           button_title: 'Altitude Hold',
           toggle: this.api_toggleAltitudeHold,
-          status: () => this.api_altitude_hold,
+          status: this.api_altitude_hold,
           setter: this.api_setAltitudeHoldValue,
           setter_model: this.api_target_altitude,
           unit: 'ft',
@@ -373,7 +373,7 @@ export default {
         {
           button_title: 'Speed Hold',
           toggle: this.api_toggleSpeedHold,
-          status: () => this.api_speed_hold,
+          status: this.api_speed_hold,
           setter: this.api_setSpeedHoldValue,
           setter_model: this.api_target_speed,
           unit: 'kt',
@@ -546,7 +546,9 @@ export default {
       return obj
     },
   },
-  mounted() {},
+  mounted() {
+    this.startSimulator()
+  },
   methods: {
     notifyUser(title, msg, duration = 1000) {
       this.$bvToast.toast(msg, {
@@ -612,7 +614,7 @@ export default {
         this.api_toggleHeadingHold = this.FlightSimulator._set_heading_hold
         this.api_toggleAltitudeHold = this.FlightSimulator._set_altitude_hold
         this.api_toggleSpeedHold = this.FlightSimulator._set_speed_hold
-        this.api_setHeadingHoldValue = this.FlightSimulator._set_target_heading
+        this.api_setHeadingHoldValue = this.FlightSimulator._set_target_heading_deg
         this.api_setAltitudeHoldValue = this.FlightSimulator._set_target_altitude
         this.api_setSpeedHoldValue = this.FlightSimulator._set_target_speed
         this.api_setWingAreaValue = this.FlightSimulator._set_wing_area
@@ -644,7 +646,7 @@ export default {
         let ptrApiLevelHold = null
         let ptrApiSpeedHold = null
         let ptrApiAltitudeHold = null
-        let ptrApiTargetHeading = null
+        let ptrApiTargetHeadingDeg = null
         let ptrApiTargetAltitude = null
         let ptrApiTargetSpeed = null
         let ptrApiAtmosphereSeaLevelTemperature = null
@@ -671,7 +673,7 @@ export default {
             ptrApiLevelHold = this.FlightSimulator._api_level_hold()
             ptrApiSpeedHold = this.FlightSimulator._api_speed_hold()
             ptrApiAltitudeHold = this.FlightSimulator._api_altitude_hold()
-            ptrApiTargetHeading = this.FlightSimulator._api_target_heading()
+            ptrApiTargetHeadingDeg = this.FlightSimulator._api_target_heading_deg()
             ptrApiTargetAltitude = this.FlightSimulator._api_target_altitude()
             ptrApiTargetSpeed = this.FlightSimulator._api_target_speed()
             ptrApiAtmosphereSeaLevelTemperature = this.FlightSimulator._api_atmosphere_sea_level_temperature()
@@ -697,7 +699,7 @@ export default {
           this.api_level_hold = HEAP8[ptrApiLevelHold]
           this.api_speed_hold = HEAP8[ptrApiSpeedHold]
           this.api_altitude_hold = HEAP8[ptrApiAltitudeHold]
-          this.api_target_heading = HEAPF32[ptrApiTargetHeading >> 2]
+          this.api_target_heading_deg = HEAPF32[ptrApiTargetHeadingDeg >> 2]
           this.api_target_altitude = HEAPF32[ptrApiTargetAltitude >> 2]
           this.api_target_speed = HEAPF32[ptrApiTargetSpeed >> 2]
           this.api_atmosphere_sea_level_temperature =
