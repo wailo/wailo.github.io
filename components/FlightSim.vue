@@ -322,6 +322,8 @@ export default {
       api_setAltitudeHoldValue: null,
       api_toggleSpeedHold: null,
       api_setSpeedHoldValue: null,
+      api_setAtmosphereSeaLevelTemperature: null,
+      api_setAtmosphereSeaLevelDensity: null,
       api_target_altitude: null,
       api_target_heading: null,
       api_target_speed: null,
@@ -337,6 +339,8 @@ export default {
       api_attitude_deg: null,
       api_simulation_pause: null,
       api_simulation_speed: null,
+      api_atmosphere_sea_level_temperature: null,
+      api_atmosphere_sea_level_density: null,
       isRealTimeDataDisplayed: false,
       isKeyboardControlsDisplayed: false,
     }
@@ -438,6 +442,25 @@ export default {
             min: 0.01,
             max: 1.0,
             step: 0.01,
+          },
+        ],
+        Atmosphere: [
+          {
+            title: 'Sea Level Temperature',
+            unit: ' Rankin',
+            value: this.api_atmosphere_sea_level_temperature,
+            setter: this.api_setAtmosphereSeaLevelTemperature,
+            min: 311,
+            max: 672,
+            step: 1.0,
+          },
+          {
+            title: 'Sea Level Density',
+            value: this.api_atmosphere_sea_level_density,
+            setter: this.api_setAtmosphereSeaLevelDensity,
+            min: 0.001756,
+            max: 0.002939,
+            step: 0.0001,
           },
         ],
       }
@@ -596,6 +619,8 @@ export default {
         this.api_setThrustToWeightRatio = this.FlightSimulator._set_thrust_to_weight
         this.api_setClSlopeValue = this.FlightSimulator._set_dcl
         this.api_setCdValue = this.FlightSimulator._set_cdo
+        this.api_setAtmosphereSeaLevelTemperature = this.FlightSimulator._set_atmosphere_sea_level_temperature
+        this.api_setAtmosphereSeaLevelDensity = this.FlightSimulator._set_atmosphere_sea_level_density
         this.api_setSimulationSpeed = this.FlightSimulator._set_simulation_speed
         this.api_setFramesRate = this.FlightSimulator._set_frames_rate
         this.api_setSimulationPause = this.FlightSimulator._set_simulation_pause
@@ -622,7 +647,8 @@ export default {
         let ptrApiTargetHeading = null
         let ptrApiTargetAltitude = null
         let ptrApiTargetSpeed = null
-
+        let ptrApiAtmosphereSeaLevelTemperature = null
+        let ptrApiAtmosphereSeaLevelDensity = null
         let ptrApiSimulationPause = null
         let ptrApiSimulationSpeed = null
 
@@ -648,6 +674,8 @@ export default {
             ptrApiTargetHeading = this.FlightSimulator._api_target_heading()
             ptrApiTargetAltitude = this.FlightSimulator._api_target_altitude()
             ptrApiTargetSpeed = this.FlightSimulator._api_target_speed()
+            ptrApiAtmosphereSeaLevelTemperature = this.FlightSimulator._api_atmosphere_sea_level_temperature()
+            ptrApiAtmosphereSeaLevelDensity = this.FlightSimulator._api_atmosphere_sea_level_density()
             ptrApiSimulationPause = this.FlightSimulator._api_simulation_pause()
             ptrApiSimulationSpeed = this.FlightSimulator._api_simulation_speed()
           }
@@ -672,6 +700,10 @@ export default {
           this.api_target_heading = HEAPF32[ptrApiTargetHeading >> 2]
           this.api_target_altitude = HEAPF32[ptrApiTargetAltitude >> 2]
           this.api_target_speed = HEAPF32[ptrApiTargetSpeed >> 2]
+          this.api_atmosphere_sea_level_temperature =
+            HEAPF32[ptrApiAtmosphereSeaLevelTemperature >> 2]
+          this.api_atmosphere_sea_level_density =
+            HEAPF32[ptrApiAtmosphereSeaLevelDensity >> 2]
 
           // Execute every milliseconds
           setTimeout(updateSimData, 200)

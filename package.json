@@ -12,7 +12,7 @@
     "lint": "eslint --ext .js,.vue --ignore-path .gitignore .",
     "deploy": "push-dir --dir=dist --branch=master --cleanup",
     "build:emscripten": "./node_modules/Compact-Flight-Simulator/build_wasm.sh && cp -a node_modules/Compact-Flight-Simulator/build_wasm/bin/flightSimulator* static/",
-    "preinstall": "(rm -rf node_modules/Compact-Flight-Simulator || true ) && git clone --recursive https://$GITHUB_ACCESS_TOKEN@github.com/wailo/Compact-Flight-Simulator.git node_modules/Compact-Flight-Simulator && git -C node_modules/Compact-Flight-Simulator checkout 6d135c0 && yarn run build:emscripten"
+    "preinstall": "(rm -rf node_modules/Compact-Flight-Simulator || true ) && git clone --recursive https://$GITHUB_ACCESS_TOKEN@github.com/wailo/Compact-Flight-Simulator.git node_modules/Compact-Flight-Simulator && git -C node_modules/Compact-Flight-Simulator checkout b371cf1 && yarn run build:emscripten"
   },
   "lint-staged": {
     "*.{js,vue}": "eslint"
