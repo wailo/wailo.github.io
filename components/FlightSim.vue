@@ -393,7 +393,7 @@ export default {
             setter: this.api_setSimulationSpeed,
             unit: 'x',
             min: 0.5,
-            max: 32,
+            max: 16,
             step: 0.5,
           },
           {
