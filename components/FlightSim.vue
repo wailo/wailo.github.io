@@ -703,9 +703,10 @@ export default {
           this.api_target_altitude = HEAPF32[ptrApiTargetAltitude >> 2]
           this.api_target_speed = HEAPF32[ptrApiTargetSpeed >> 2]
           this.api_atmosphere_sea_level_temperature =
-            HEAPF32[ptrApiAtmosphereSeaLevelTemperature >> 2]
-          this.api_atmosphere_sea_level_density =
+            HEAPF32[ptrApiAtmosphereSeaLevelTemperature >> 2] | 0
+          this.api_atmosphere_sea_level_density = Number(
             HEAPF32[ptrApiAtmosphereSeaLevelDensity >> 2]
+          ).toFixed(4)
 
           // Execute every milliseconds
           setTimeout(updateSimData, 200)
