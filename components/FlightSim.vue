@@ -65,8 +65,8 @@
         order="2"
       >
         <b-list-group>
+          <legend>Simulation</legend>
           <b-list-group-item class="flex-column align-items-start">
-            <legend>Simulation</legend>
             <fieldset class="control-group">
               <b-button v-on:click="requestFullScreen" block variant="default"
                 >Fullscreen
@@ -96,8 +96,8 @@
               ></b-button>
             </fieldset>
           </b-list-group-item>
+          <legend>Autopilot Controls</legend>
           <b-list-group-item class="flex-column align-items-start">
-            <legend>Autopilot Controls</legend>
             <fieldset class="control-group" border-variant="dark">
               <b-button
                 ref="autopilot"
