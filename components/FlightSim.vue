@@ -192,24 +192,24 @@
                 <ul>
                   <li>
                     fps:
-                    {{ Number(1 / api_iteration_time).toFixed(0) }}
+                    {{ ~~(1 / api_iteration_time) }}
                   </li>
-                  <li>Weight: {{ Number(api_weight).toFixed(2) }}</li>
-                  <li>Altitude: {{ Number(api_altitude).toFixed(2) }}</li>
+                  <li>Weight: {{ ~~api_weight }}</li>
+                  <li>Altitude: {{ ~~api_altitude }}</li>
                   <li>
                     Elevator angle: {{ Number(api_alpha_tail).toFixed(2) }}%
                   </li>
                   <li>
                     Aileron angle: {{ Number(api_alpha_aileron).toFixed(2) }}%
                   </li>
-                  <li>Throttle: {{ Number(api_throttle).toFixed(2) }}%</li>
+                  <li>Throttle: {{ ~~(api_throttle * 100) }}%</li>
                   <li>
                     Speed (IAS) knots:
-                    {{ Number(api_ias_speed_knots).toFixed(0) }}
+                    {{ ~~api_ias_speed_knots }}
                   </li>
-                  <li>Heading: {{ Number(api_psi_deg).toFixed(0) }}</li>
-                  <li>Bank: {{ Number(api_theta_deg).toFixed(0) }}</li>
-                  <li>Pitch: {{ Number(api_attitude_deg).toFixed(0) }}</li>
+                  <li>Heading: {{ ~~api_psi_deg }}°</li>
+                  <li>Bank: {{ ~~api_theta_deg }}°</li>
+                  <li>Pitch: {{ ~~api_attitude_deg }}°</li>
                 </ul>
               </b-collapse>
             </b-card-text>
