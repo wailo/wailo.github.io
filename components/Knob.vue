@@ -7,6 +7,11 @@
           $emit('input', e.target.value)
         }
       "
+      v-on:wheel="
+        (e) => {
+          $emit('change', e.target.value)
+        }
+      "
       v-on:change="
         (e) => {
           $emit('change', e.target.value)

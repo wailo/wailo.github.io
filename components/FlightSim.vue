@@ -131,7 +131,6 @@
                       }
                     "
                     v-on:toggle="parameters.toggle(!parameters.status)"
-                    :initial="Number(parameters.setter_model)"
                     :min="parameters.min"
                     :max="parameters.max"
                     :step="parameters.step"
