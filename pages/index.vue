@@ -6,7 +6,7 @@
     style="max-height: 100vh;"
   >
     <b-card-body style="max-height: 100%;">
-      <Bio style="max-height: inherit;" />
+      <BioComponent style="max-height: inherit;" />
     </b-card-body>
 
     <b-card-footer footer-border-variant="dark">
@@ -14,7 +14,7 @@
       <div class="links">
         <template v-for="link in links">
           <b-button
-            v-bind:key="link.name"
+            :key="link.name"
             :href="link.link"
             target="_blank"
             class="border border-light"
@@ -22,7 +22,7 @@
           >
             {{ link.name }}
           </b-button>
-          <div class="divider" />
+          <div :key="link.name" class="divider" />
         </template>
       </div>
     </b-card-footer>
@@ -30,10 +30,11 @@
 </template>
 
 <script>
-import Bio from '~/components/Bio.vue'
+import BioComponent from '~/components/Bio.vue'
 export default {
+  name: 'IndexComponent',
   components: {
-    Bio,
+    BioComponent,
   },
   data() {
     return {

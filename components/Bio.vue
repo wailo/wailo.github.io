@@ -33,11 +33,11 @@
               and software/hardware integratrion.
             </p>
             <hr />
-            <div v-for="(tools, title) in skills" v-bind:key="title">
+            <div v-for="(tools, title) in skills" :key="title">
               <h5>{{ title }}</h5>
               <b-button
                 v-for="skill in tools"
-                v-bind:key="skill"
+                :key="skill"
                 disabled
                 variant="dark"
                 >{{ skill }}</b-button
@@ -45,7 +45,7 @@
             </div>
           </b-col>
           <b-col>
-            <Photo />
+            <PhotoComponent />
           </b-col>
         </b-row>
       </div>
@@ -56,7 +56,7 @@
         <b-list-group>
           <template v-for="r in repos">
             <b-list-group-item
-              v-bind:key="r.id"
+              :key="r.id"
               :href="r.html_url"
               target="_blank"
               class="flex-column align-items-start"
@@ -88,12 +88,13 @@
 </template>
 
 <script>
-import Photo from '~/components/Photo.vue'
+import PhotoComponent from '~/components/Photo.vue'
 // import TravelMap from '~/components/Map.vue'
 import FlightSim from '~/components/FlightSim.vue'
 export default {
+  name: 'BioComponent',
   components: {
-    Photo,
+    PhotoComponent,
     // TravelMap,
     FlightSim,
   },

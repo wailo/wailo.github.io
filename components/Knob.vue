@@ -2,44 +2,44 @@
   <div id="knob">
     <input
       ref="knob"
-      v-on:input="
-        (e) => {
-          $emit('input', e.target.value)
-        }
-      "
-      v-on:wheel="
-        (e) => {
-          $emit('change', e.target.value)
-        }
-      "
-      v-on:change="
-        (e) => {
-          $emit('change', e.target.value)
-        }
-      "
-      v-on:toggle="
-        (e) => {
-          $emit('toggle', e.target.toggle)
-        }
-      "
-      v-on:inputEnd="
-        (e) => {
-          $emit('inputEnd', e.target.value)
-        }
-      "
+      class="input-knob"
+      type="range"
       :min="min"
       :max="max"
       :step="step"
       :fgcolor="fgcolor"
-      class="input-knob"
-      type="range"
+      @input="
+        (e) => {
+          $emit('input', e.target.value)
+        }
+      "
+      @wheel="
+        (e) => {
+          $emit('change', e.target.value)
+        }
+      "
+      @change="
+        (e) => {
+          $emit('change', e.target.value)
+        }
+      "
+      @toggle="
+        (e) => {
+          $emit('toggle', e.target.toggle)
+        }
+      "
+      @inputEnd="
+        (e) => {
+          $emit('inputEnd', e.target.value)
+        }
+      "
     />
     <label id="knob-label">{{ label }}</label>
   </div>
 </template>
 <script>
 export default {
-  name: 'Knob',
+  name: 'KnobComponent',
   props: {
     min: { type: Number, default: 0 },
     max: { type: Number, default: 100 },
@@ -124,7 +124,6 @@ export default {
     //   background-position:0% 100%;
     // }`
     // this.$el.head.appendChild(styles)
-
     this.refreshelem(this.$refs.knob, 'k')
     // this.refreshque()
     // setInterval(() => {
@@ -356,15 +355,17 @@ export default {
         const dy = ev.clientY - ik.dragfrom.y
         let da = Math.atan2(ev.clientX - cx, cy - ev.clientY)
         switch (ik.itype) {
-          case 'k':
+          case 'k': {
+            let dv = 0
             switch (this.op.knobMode) {
-              case 'linear':
-                let dv =
+              case 'linear': {
+                dv =
                   (dx / ik.sensex - dy / ik.sensey) *
                   (ik.valrange.max - ik.valrange.min)
                 if (ev.shiftKey) dv *= 0.2
                 el.setValue(ik.dragfrom.v + dv)
                 break
+              }
               case 'circularabs':
                 if (!ev.shiftKey) {
                   const dv =
@@ -381,16 +382,20 @@ export default {
                 dv = (da / Math.PI / 1.5) * (ik.valrange.max - ik.valrange.min)
                 if (ev.shiftKey) dv *= 0.2
                 el.setValue(ik.dragfrom.v + dv)
+
+                break
             }
             break
+          }
           case 'h':
-          case 'v':
+          case 'v': {
             let dv =
               (dx / ik.sensex - dy / ik.sensey) *
               (ik.valrange.max - ik.valrange.min)
             if (ev.shiftKey) dv *= 0.2
             el.setValue(ik.dragfrom.v + dv)
             break
+          }
         }
       }
       ik.pointerup = () => {

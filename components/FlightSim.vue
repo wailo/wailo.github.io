@@ -37,9 +37,9 @@
           </b-form-text>
           <span>
             <b-button
-              v-on:click="startSimulator"
               variant="outline-danger"
               style="width: 100%; height: 100%; border-color: #ff0000;"
+              @click="startSimulator"
               >{{ simulatorButtonText }}</b-button
             ></span
           >
@@ -47,7 +47,7 @@
       >
     </div>
 
-    <div id="status" v-show="FlightSimulator" class="emscripten">
+    <div v-show="FlightSimulator" id="status" class="emscripten">
       Downloading...
     </div>
 
@@ -68,18 +68,18 @@
           <legend>Simulation</legend>
           <b-list-group-item class="flex-column align-items-start">
             <fieldset class="control-group">
-              <b-button v-on:click="requestFullScreen" block variant="default"
+              <b-button block variant="default" @click="requestFullScreen"
                 >Fullscreen
                 <b-icon icon="arrows-fullscreen" variant="default"></b-icon
               ></b-button>
               <b-button
                 :class="api_simulation_pause ? 'pressed flash-button' : ''"
-                v-on:click="
+                block
+                variant="default"
+                @click="
                   api_simulation_pause = !api_simulation_pause
                   api_setSimulationPause(api_simulation_pause)
                 "
-                block
-                variant="default"
                 >{{ api_simulation_pause ? 'Resume' : 'Pause' }}
                 <b-icon
                   :icon="api_simulation_pause ? 'play-fill' : 'pause-fill'"
@@ -88,9 +88,9 @@
               ></b-button>
 
               <b-button
-                v-on:click="api_setSimulationReset()"
                 block
                 variant="default"
+                @click="api_setSimulationReset()"
                 >Reset Simulation
                 <b-icon icon="x-circle" variant="default"></b-icon
               ></b-button>
@@ -101,48 +101,48 @@
             <fieldset class="control-group" border-variant="dark">
               <b-button
                 ref="autopilot"
-                v-on:click="api_toggleAutopilot(!api_autopilot)"
                 :class="'btn-block ' + (api_autopilot ? 'pressed' : '')"
                 variant="default"
+                @click="api_toggleAutopilot(!api_autopilot)"
                 >Autopilot</b-button
               >
 
               <b-row
-                :key="parameters.button_title"
                 v-for="parameters in autopilot_controls"
+                :key="parameters.button_title"
                 container
               >
                 <b-col cols="8">
-                  <nobr v-html="parameters.button_title"></nobr>
+                  <nobr>{{ parameters.button_title }}</nobr>
                 </b-col>
                 <b-col cols="4">
-                  <knob
+                  <KnobComponent
                     :key="parameters.status"
-                    :fgcolor="parameters.status === 1 ? '#F00' : '#FFF'"
                     v-model="parameters.setter_model"
-                    v-on:change="
-                      (value) => {
-                        parameters.setter(value)
-                      }
-                    "
-                    v-on:inputEnd="
-                      (value) => {
-                        parameters.setter(value)
-                      }
-                    "
-                    v-on:toggle="parameters.toggle(!parameters.status)"
+                    :fgcolor="parameters.status === 1 ? '#F00' : '#FFF'"
                     :min="parameters.min"
                     :max="parameters.max"
                     :step="parameters.step"
                     :label="`${parameters.setter_model}${parameters.unit}`"
-                  ></knob>
+                    @change="
+                      (value) => {
+                        parameters.setter(value)
+                      }
+                    "
+                    @inputEnd="
+                      (value) => {
+                        parameters.setter(value)
+                      }
+                    "
+                    @toggle="parameters.toggle(!parameters.status)"
+                  ></KnobComponent>
                 </b-col>
               </b-row>
             </fieldset>
           </b-list-group-item>
 
           <template v-for="(simulation_group, title) in simulation_parameters">
-            <legend>{{ title }}</legend>
+            <legend :key="title">{{ title }}</legend>
             <b-list-group-item
               v-for="parameter in simulation_group"
               :key="parameter.title"
@@ -151,7 +151,7 @@
               <fieldset class="control-group" fluid>
                 <b-row class="flex-nowrap">
                   <b-col>
-                    <nobr v-html="parameter.title"></nobr>
+                    <nobr>{{ parameter.title }}</nobr>
                   </b-col>
                   <b-col cols="4">
                     <label style="display: table-cell;" class="float-right">{{
@@ -160,13 +160,13 @@
                       }`
                     }}</label>
                     <b-form-input
+                      v-model="parameter.value"
                       :min="parameter.min"
                       :max="parameter.max"
                       :step="parameter.step"
-                      v-on:update="parameter.setter"
-                      v-model="parameter.value"
                       type="range"
                       style="display: table-cell; width: 50%;"
+                      @update="parameter.setter"
                     ></b-form-input>
                   </b-col>
                 </b-row>
@@ -180,9 +180,9 @@
             </legend>
             <b-button
               v-b-toggle.collapse-data
-              @click="isRealTimeDataDisplayed = !isRealTimeDataDisplayed"
               variant="outline-light"
               class="border border-light"
+              @click="isRealTimeDataDisplayed = !isRealTimeDataDisplayed"
             >
               {{ isRealTimeDataDisplayed ? 'Hide' : 'Show' }}
             </b-button>
@@ -220,27 +220,27 @@
             </legend>
             <b-button
               v-b-toggle.collapse-keyboard-controls
+              class="border border-light"
+              variant="outline-light"
               @click="
                 isKeyboardControlsDisplayed = !isKeyboardControlsDisplayed
               "
-              class="border border-light"
-              variant="outline-light"
             >
               {{ isKeyboardControlsDisplayed ? 'Hide' : 'Show' }}
             </b-button>
             <b-card-text>
               <b-form-text variant="dark">
-                <template v-slot:title
-                  >Commands (For desktop use only)</template
-                >
+                <template #title>Commands (For desktop use only)</template>
                 <b-collapse id="collapse-keyboard-controls">
                   <ul style="list-style-type: none; margin: 0; padding: 0;">
                     <li
                       v-for="command in instructions.commands"
+                      :key="command.command"
                       style="margin: 3px 0 0 0;"
                     >
                       <kbd
                         v-for="k in command.key"
+                        :key="k"
                         style="margin-right: 2px;"
                         >{{ k }}</kbd
                       >
@@ -279,7 +279,7 @@
       </b-col>
     </b-row>
 
-    <textarea id="output" v-if="is_development" rows="3"></textarea>
+    <textarea v-if="is_development" id="output" rows="3"></textarea>
 
     <b-container v-if="is_running" fluid>
       <b-row>
@@ -294,14 +294,14 @@ import Vue from 'vue'
 import { BootstrapVueIcons } from 'bootstrap-vue'
 import 'bootstrap-vue/dist/bootstrap-vue-icons.min.css'
 import FlightSimulator from '~/static/flightSimulator.js'
-import Knob from '~/components/Knob.vue'
+import KnobComponent from '~/components/Knob.vue'
 
 Vue.use(BootstrapVueIcons)
 
 export default {
   name: 'FlightSim',
   components: {
-    Knob,
+    KnobComponent,
   },
 
   data() {

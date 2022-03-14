@@ -30,7 +30,7 @@ export default {
   /*
    ** Plugins to load before mounting the App
    */
-  plugins: [{ src: '~plugins/vue-leaflet.js', ssr: false }],
+  plugins: [],
   /*
    ** Nuxt.js dev-modules
    */

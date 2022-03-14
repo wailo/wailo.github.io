@@ -8,6 +8,7 @@
 import { photo } from '~/components/ascii.js'
 
 export default {
+  name: 'PhotoComponent',
   data: () => {
     return {
       originalPhoto: photo,
