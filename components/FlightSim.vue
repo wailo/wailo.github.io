@@ -38,7 +38,7 @@
           <span>
             <b-button
               variant="outline-danger"
-              style="width: 100%; height: 100%; border-color: #ff0000;"
+              style="width: 100%; height: 100%; border-color: #ff0000"
               @click="startSimulator"
               >{{ simulatorButtonText }}</b-button
             ></span
@@ -53,215 +53,203 @@
 
     <b-row
       v-show="is_running"
-      style="max-height: 488px;"
+      style="max-height: 488px"
       class="emscripten_border"
     >
       <!-- Controls Panel -->
       <b-col
         v-show="is_running"
-        style="max-height: inherit; overflow-y: scroll;"
+        style="max-height: inherit; overflow-y: scroll"
         sm="12"
         xl="4"
         order="2"
       >
-        <b-list-group>
-          <legend>Simulation</legend>
-          <b-list-group-item class="flex-column align-items-start">
-            <fieldset class="control-group">
-              <b-button block variant="default" @click="requestFullScreen"
-                >Fullscreen
-                <b-icon icon="arrows-fullscreen" variant="default"></b-icon
-              ></b-button>
+        <b-card
+          header="Pilot Controls"
+          header-border-variant="light"
+          header-bg-variant="dark"
+          no-body
+          bg-variant="transparent"
+          border-variant="dark"
+          text-variant="white"
+        >
+          <b-tabs card small fill no-key-nav>
+            <b-tab title="Autpilot">
               <b-button
-                :class="api_simulation_pause ? 'pressed flash-button' : ''"
-                block
-                variant="default"
-                @click="
-                  api_simulation_pause = !api_simulation_pause
-                  api_setSimulationPause(api_simulation_pause)
-                "
-                >{{ api_simulation_pause ? 'Resume' : 'Pause' }}
-                <b-icon
-                  :icon="api_simulation_pause ? 'play-fill' : 'pause-fill'"
-                  variant="default"
-                ></b-icon
-              ></b-button>
-
-              <b-button
-                block
-                variant="default"
-                @click="api_setSimulationReset()"
-                >Reset Simulation
-                <b-icon icon="x-circle" variant="default"></b-icon
-              ></b-button>
-            </fieldset>
-          </b-list-group-item>
-          <legend>Autopilot Controls</legend>
-          <b-list-group-item class="flex-column align-items-start">
-            <fieldset class="control-group" border-variant="dark">
-              <b-button
-                ref="autopilot"
                 :class="'btn-block ' + (api_autopilot ? 'pressed' : '')"
                 variant="default"
                 @click="api_toggleAutopilot(!api_autopilot)"
                 >Autopilot</b-button
               >
 
-              <b-row
+              <div
                 v-for="parameters in autopilot_controls"
                 :key="parameters.button_title"
                 container
               >
-                <b-col cols="8">
-                  <nobr>{{ parameters.button_title }}</nobr>
-                </b-col>
-                <b-col cols="4">
-                  <KnobComponent
-                    :key="parameters.status"
-                    v-model="parameters.setter_model"
-                    :fgcolor="parameters.status === 1 ? '#F00' : '#FFF'"
-                    :min="parameters.min"
-                    :max="parameters.max"
-                    :step="parameters.step"
-                    :label="`${parameters.setter_model}${parameters.unit}`"
-                    @change="
-                      (value) => {
-                        parameters.setter(value)
-                      }
-                    "
-                    @inputEnd="
-                      (value) => {
-                        parameters.setter(value)
-                      }
-                    "
-                    @toggle="parameters.toggle(!parameters.status)"
-                  ></KnobComponent>
-                </b-col>
-              </b-row>
-            </fieldset>
-          </b-list-group-item>
+                <div class="input-group">
+                  <b-input-group>
+                    <b-input-group-prepend>
+                      <b-button
+                        :variant="
+                          parameters.status
+                            ? 'outline-success'
+                            : 'outline-danger'
+                        "
+                        @click="parameters.toggle(!parameters.status)"
+                        >{{ parameters.button_title }}</b-button
+                      >
+                    </b-input-group-prepend>
 
-          <template v-for="(simulation_group, title) in simulation_parameters">
-            <legend :key="title">{{ title }}</legend>
-            <b-list-group-item
-              v-for="parameter in simulation_group"
-              :key="parameter.title"
-              class="flex-column align-items-start"
-            >
-              <fieldset class="control-group" fluid>
-                <b-row class="flex-nowrap">
-                  <b-col>
-                    <nobr>{{ parameter.title }}</nobr>
-                  </b-col>
-                  <b-col cols="4">
-                    <label style="display: table-cell;" class="float-right">{{
-                      `${parameter.value}${
-                        parameter.unit ? parameter.unit : ''
-                      }`
-                    }}</label>
                     <b-form-input
-                      v-model="parameter.value"
-                      :min="parameter.min"
-                      :max="parameter.max"
-                      :step="parameter.step"
-                      type="range"
-                      style="display: table-cell; width: 50%;"
-                      @update="parameter.setter"
+                      type="number"
+                      :min="parameters.min"
+                      :max="parameters.max"
+                      :step="parameters.step"
+                      :value="parameters.setter_model"
+                      @change="
+                        (value) => {
+                          parameters.setter(value)
+                        }
+                      "
                     ></b-form-input>
-                  </b-col>
-                </b-row>
-              </fieldset>
-            </b-list-group-item>
-          </template>
 
-          <fieldset class="control-group" fluid>
-            <legend>
-              Real Time Data
-            </legend>
-            <b-button
-              v-b-toggle.collapse-data
-              variant="outline-light"
-              class="border border-light"
-              @click="isRealTimeDataDisplayed = !isRealTimeDataDisplayed"
-            >
-              {{ isRealTimeDataDisplayed ? 'Hide' : 'Show' }}
-            </b-button>
-            <b-card-text v-if="isRealTimeDataDisplayed">
-              <b-collapse id="collapse-data">
-                <ul>
-                  <li>
-                    fps:
-                    {{ ~~(1 / api_iteration_time) }}
-                  </li>
-                  <li>Weight: {{ ~~api_weight }}</li>
-                  <li>Altitude: {{ ~~api_altitude }}</li>
-                  <li>
-                    Elevator angle: {{ Number(api_alpha_tail).toFixed(2) }}%
-                  </li>
-                  <li>
-                    Aileron angle: {{ Number(api_alpha_aileron).toFixed(2) }}%
-                  </li>
-                  <li>Throttle: {{ ~~(api_throttle * 100) }}%</li>
-                  <li>
-                    Speed (IAS) knots:
-                    {{ ~~api_ias_speed_knots }}
-                  </li>
-                  <li>Heading: {{ ~~api_psi_deg }}°</li>
-                  <li>Bank: {{ ~~api_theta_deg }}°</li>
-                  <li>Pitch: {{ ~~api_attitude_deg }}°</li>
-                </ul>
-              </b-collapse>
-            </b-card-text>
-          </fieldset>
-
-          <fieldset class="control-group" fluid>
-            <legend>
-              Keyboard Controls
-            </legend>
-            <b-button
-              v-b-toggle.collapse-keyboard-controls
-              class="border border-light"
-              variant="outline-light"
-              @click="
-                isKeyboardControlsDisplayed = !isKeyboardControlsDisplayed
-              "
-            >
-              {{ isKeyboardControlsDisplayed ? 'Hide' : 'Show' }}
-            </b-button>
-            <b-card-text>
+                    <b-input-group-append>
+                      <b-input-group-text>
+                        {{ parameters.unit }}
+                      </b-input-group-text>
+                    </b-input-group-append>
+                  </b-input-group>
+                </div>
+              </div>
+            </b-tab>
+            <b-tab title="Keyboard Controls">
               <b-form-text variant="dark">
                 <template #title>Commands (For desktop use only)</template>
-                <b-collapse id="collapse-keyboard-controls">
-                  <ul style="list-style-type: none; margin: 0; padding: 0;">
-                    <li
-                      v-for="command in instructions.commands"
-                      :key="command.command"
-                      style="margin: 3px 0 0 0;"
+
+                <ul style="list-style-type: none; margin: 0; padding: 0">
+                  <li
+                    v-for="command in instructions.commands"
+                    :key="command.command"
+                    style="margin: 3px 0 0 0"
+                  >
+                    <kbd
+                      v-for="k in command.key"
+                      :key="k"
+                      style="margin-right: 2px"
+                      >{{ k }}</kbd
                     >
-                      <kbd
-                        v-for="k in command.key"
-                        :key="k"
-                        style="margin-right: 2px;"
-                        >{{ k }}</kbd
-                      >
-                      <span>{{ command.command }}</span>
-                      <span v-show="command.isActive && !command.isActive()">
-                        <b-icon icon="info-circle" variant="light"></b-icon>
-                        {{ command.msg }}
-                      </span>
-                    </li>
-                  </ul>
-                </b-collapse>
+                    <span>{{ command.command }}</span>
+                    <!-- <span v-show="command.isActive && !command.isActive()">
+                      <b-icon icon="info-circle" variant="light"></b-icon>
+                      {{ command.msg }}
+                    </span> -->
+                  </li>
+                </ul>
               </b-form-text>
-            </b-card-text>
-          </fieldset>
-        </b-list-group>
+            </b-tab>
+          </b-tabs>
+        </b-card>
+
+        <b-card
+          header="Instructor Operating Station"
+          header-border-variant="light"
+          header-bg-variant="dark"
+          no-body
+          bg-variant="transparent"
+          border-variant="dark"
+          text-variant="white"
+        >
+          <b-tabs card small fill no-key-nav>
+            <template
+              v-for="(simulation_group, title) in simulation_parameters"
+            >
+              <b-tab :key="title" :title="title">
+                <template v-for="parameter in simulation_group">
+                  <b-form-group
+                    :key="parameter.title"
+                    :label="`${parameter.title} ${
+                      parameter.unit ? '(' + parameter.unit + ')' : ''
+                    }`"
+                    :label-for="parameter.title"
+                    label-size="sm"
+                    label-cols="6"
+                    label-align="right"
+                  >
+                    <b-button
+                      v-if="parameter.icon"
+                      :key="parameter.setter"
+                      variant="default"
+                      block
+                      @click="parameter.setter(!parameter.value)"
+                    >
+                      <b-icon
+                        :icon="parameter.icon()"
+                        variant="default"
+                      ></b-icon
+                    ></b-button>
+
+                    <div v-else class="input-group">
+                      <b-input-group>
+                        <b-form-input
+                          :id="parameter.title"
+                          v-model="parameter.value"
+                          variant="default"
+                          type="number"
+                          number
+                          :min="parameter.min"
+                          :max="parameter.max"
+                          :step="parameter.step"
+                          @update="parameter.setter"
+                        ></b-form-input>
+                      </b-input-group>
+                    </div>
+                  </b-form-group>
+                </template>
+              </b-tab>
+            </template>
+          </b-tabs>
+        </b-card>
+
+        <legend>Real Time Data</legend>
+        <b-button
+          v-b-toggle.collapse-data
+          variant="outline-light"
+          class="border border-light"
+          @click="isRealTimeDataDisplayed = !isRealTimeDataDisplayed"
+        >
+          {{ isRealTimeDataDisplayed ? 'Hide' : 'Show' }}
+        </b-button>
+        <b-card-text v-if="isRealTimeDataDisplayed">
+          <b-collapse id="collapse-data">
+            <ul>
+              <li>
+                fps:
+                {{ ~~(1 / api_iteration_time) }}
+              </li>
+              <li>Weight: {{ ~~api_weight }}</li>
+              <li>Altitude: {{ ~~api_altitude }}</li>
+              <li>Elevator angle: {{ Number(api_alpha_tail).toFixed(2) }}%</li>
+              <li>
+                Aileron angle: {{ Number(api_alpha_aileron).toFixed(2) }}%
+              </li>
+              <li>Throttle: {{ ~~(api_throttle * 100) }}%</li>
+              <li>
+                Speed (IAS) knots:
+                {{ ~~api_ias_speed_knots }}
+              </li>
+              <li>Heading: {{ ~~api_psi_deg }}°</li>
+              <li>Bank: {{ ~~api_theta_deg }}°</li>
+              <li>Pitch: {{ ~~api_attitude_deg }}°</li>
+            </ul>
+          </b-collapse>
+        </b-card-text>
 
         <div class="emscripten">
           <progress id="progress" value="0" max="100" hidden="1"></progress>
         </div> </b-col
       ><b-col
-        style="max-height: inherit; overflow: none;"
+        style="max-height: inherit; overflow: none"
         sm="12"
         xl="8"
         order="1"
@@ -294,15 +282,12 @@ import Vue from 'vue'
 import { BootstrapVueIcons } from 'bootstrap-vue'
 import 'bootstrap-vue/dist/bootstrap-vue-icons.min.css'
 import FlightSimulator from '~/static/flightSimulator.js'
-import KnobComponent from '~/components/Knob.vue'
 
 Vue.use(BootstrapVueIcons)
 
 export default {
   name: 'FlightSim',
-  components: {
-    KnobComponent,
-  },
+  components: {},
 
   data() {
     return {
@@ -341,14 +326,13 @@ export default {
       api_atmosphere_sea_level_temperature: null,
       api_atmosphere_sea_level_density: null,
       isRealTimeDataDisplayed: false,
-      isKeyboardControlsDisplayed: false,
     }
   },
   computed: {
     autopilot_controls() {
       return [
         {
-          button_title: 'Heading Hold',
+          button_title: 'HDG Hold',
           toggle: this.api_toggleHeadingHold,
           status: this.api_heading_hold,
           setter: this.api_setHeadingHoldValue,
@@ -359,7 +343,7 @@ export default {
           step: 1.0,
         },
         {
-          button_title: 'Altitude Hold',
+          button_title: 'ALT Hold',
           toggle: this.api_toggleAltitudeHold,
           status: this.api_altitude_hold,
           setter: this.api_setAltitudeHoldValue,
@@ -367,10 +351,10 @@ export default {
           unit: 'ft',
           min: 0,
           max: 50000,
-          step: 1.0,
+          step: 100.0,
         },
         {
-          button_title: 'Speed Hold',
+          button_title: 'SPD Hold',
           toggle: this.api_toggleSpeedHold,
           status: this.api_speed_hold,
           setter: this.api_setSpeedHoldValue,
@@ -387,6 +371,26 @@ export default {
       return {
         Simulation: [
           {
+            title: 'Fullscreen',
+            value: null,
+            setter: this.requestFullScreen,
+            icon: () => 'arrows-fullscreen',
+          },
+          {
+            title: this.api_simulation_pause ? 'Resume' : 'Pause',
+            value: this.api_simulation_pause,
+            setter: this.api_setSimulationPause,
+            icon: () => {
+              return this.api_simulation_pause ? 'play-fill' : 'pause-fill'
+            },
+          },
+          {
+            title: 'Reset',
+            value: null,
+            setter: this.api_setSimulationReset,
+            icon: () => 'x-circle',
+          },
+          {
             title: 'Simulation Speed',
             value: this.api_simulation_speed,
             setter: this.api_setSimulationSpeed,
@@ -396,26 +400,16 @@ export default {
             step: 0.5,
           },
           {
-            title: 'Frame Rate (FPS)',
+            title: 'Frame Rate',
             value: 60,
             setter: this.api_setFramesRate,
-            // unit: 'fps',
+            unit: 'fps',
             min: 1,
             max: 120,
             step: 10,
           },
         ],
-        Geometry: [
-          {
-            title: 'Wing Area Ft&sup2;',
-            value: 530,
-            setter: this.api_setWingAreaValue,
-            min: 10,
-            max: 1000,
-            step: 1,
-          },
-        ],
-        Performance: [
+        Aircraft: [
           {
             title: 'Thrust to Weight Ratio',
             value: 0.3,
@@ -423,6 +417,15 @@ export default {
             min: 0.1,
             max: 5,
             step: 0.1,
+          },
+          {
+            title: 'Wing Area',
+            value: 530,
+            setter: this.api_setWingAreaValue,
+            unit: 'Ft²',
+            min: 10,
+            max: 1000,
+            step: 1,
           },
         ],
         Aerodynamics: [
@@ -446,7 +449,7 @@ export default {
         Atmosphere: [
           {
             title: 'Sea Level Temperature',
-            unit: ' Rankin',
+            unit: 'R',
             value: this.api_atmosphere_sea_level_temperature,
             setter: this.api_setAtmosphereSeaLevelTemperature,
             min: 311,
@@ -459,7 +462,7 @@ export default {
             setter: this.api_setAtmosphereSeaLevelDensity,
             min: 0.001756,
             max: 0.002939,
-            step: 0.0001,
+            step: 0.000001,
           },
         ],
       }
@@ -533,11 +536,11 @@ export default {
           },
           {
             key: ['f'],
-            command: 'reset all surface controls to neutral position',
+            command: 'reset surface controls positions',
           },
           {
             key: ['h'],
-            command: 'reset flight model',
+            command: 'reset simulation',
           },
         ],
       }
@@ -613,15 +616,20 @@ export default {
         this.api_toggleHeadingHold = this.FlightSimulator._set_heading_hold
         this.api_toggleAltitudeHold = this.FlightSimulator._set_altitude_hold
         this.api_toggleSpeedHold = this.FlightSimulator._set_speed_hold
-        this.api_setHeadingHoldValue = this.FlightSimulator._set_target_heading_deg
-        this.api_setAltitudeHoldValue = this.FlightSimulator._set_target_altitude
+        this.api_setHeadingHoldValue =
+          this.FlightSimulator._set_target_heading_deg
+        this.api_setAltitudeHoldValue =
+          this.FlightSimulator._set_target_altitude
         this.api_setSpeedHoldValue = this.FlightSimulator._set_target_speed
         this.api_setWingAreaValue = this.FlightSimulator._set_wing_area
-        this.api_setThrustToWeightRatio = this.FlightSimulator._set_thrust_to_weight
+        this.api_setThrustToWeightRatio =
+          this.FlightSimulator._set_thrust_to_weight
         this.api_setClSlopeValue = this.FlightSimulator._set_dcl
         this.api_setCdValue = this.FlightSimulator._set_cdo
-        this.api_setAtmosphereSeaLevelTemperature = this.FlightSimulator._set_atmosphere_sea_level_temperature
-        this.api_setAtmosphereSeaLevelDensity = this.FlightSimulator._set_atmosphere_sea_level_density
+        this.api_setAtmosphereSeaLevelTemperature =
+          this.FlightSimulator._set_atmosphere_sea_level_temperature
+        this.api_setAtmosphereSeaLevelDensity =
+          this.FlightSimulator._set_atmosphere_sea_level_density
         this.api_setSimulationSpeed = this.FlightSimulator._set_simulation_speed
         this.api_setFramesRate = this.FlightSimulator._set_frames_rate
         this.api_setSimulationPause = this.FlightSimulator._set_simulation_pause
@@ -672,11 +680,14 @@ export default {
             ptrApiLevelHold = this.FlightSimulator._api_level_hold()
             ptrApiSpeedHold = this.FlightSimulator._api_speed_hold()
             ptrApiAltitudeHold = this.FlightSimulator._api_altitude_hold()
-            ptrApiTargetHeadingDeg = this.FlightSimulator._api_target_heading_deg()
+            ptrApiTargetHeadingDeg =
+              this.FlightSimulator._api_target_heading_deg()
             ptrApiTargetAltitude = this.FlightSimulator._api_target_altitude()
             ptrApiTargetSpeed = this.FlightSimulator._api_target_speed()
-            ptrApiAtmosphereSeaLevelTemperature = this.FlightSimulator._api_atmosphere_sea_level_temperature()
-            ptrApiAtmosphereSeaLevelDensity = this.FlightSimulator._api_atmosphere_sea_level_density()
+            ptrApiAtmosphereSeaLevelTemperature =
+              this.FlightSimulator._api_atmosphere_sea_level_temperature()
+            ptrApiAtmosphereSeaLevelDensity =
+              this.FlightSimulator._api_atmosphere_sea_level_density()
             ptrApiSimulationPause = this.FlightSimulator._api_simulation_pause()
             ptrApiSimulationSpeed = this.FlightSimulator._api_simulation_speed()
           }
@@ -780,11 +791,13 @@ canvas.emscripten {
 .control-group {
   padding: 2px;
 }
-div .control-group .row {
-  align-items: center;
-}
-.list-group-item {
-  background-color: rgba(0, 0, 0, 0);
+.input-group {
+  position: relative;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  width: 100%;
+  overflow: inherit;
 }
 #output {
   /* width: 100%; */
@@ -802,6 +815,7 @@ div .control-group .row {
   outline: none;
   width: 100%;
 }
+
 .flash-button {
   animation-name: flash;
   animation-duration: 2s;
