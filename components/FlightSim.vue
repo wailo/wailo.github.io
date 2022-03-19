@@ -178,7 +178,6 @@
                   >
                     <b-button
                       v-if="parameter.icon"
-                      :key="parameter.setter"
                       variant="default"
                       block
                       @click="parameter.setter(!parameter.value)"
@@ -229,14 +228,32 @@
               </li>
               <li>Weight: {{ ~~api_weight }}</li>
               <li>Altitude: {{ ~~api_altitude }}</li>
+              <li>Temperature (R): {{ ~~api_atmosphere_temperature }}</li>
+              <li>Density: {{ Number(api_atmosphere_density).toFixed(6) }}</li>
+              <li>Total Drag (lbs): {{ ~~api_total_drag }}</li>
+              <li>Lift Coefficient {{ Number(api_cl).toFixed(4) }}</li>
+              <li>Drag Coefficient: {{ Number(api_cdi).toFixed(4) }}</li>
               <li>Elevator angle: {{ Number(api_alpha_tail).toFixed(2) }}%</li>
               <li>
                 Aileron angle: {{ Number(api_alpha_aileron).toFixed(2) }}%
               </li>
               <li>Throttle: {{ ~~(api_throttle * 100) }}%</li>
               <li>
-                Speed (IAS) knots:
+                Indicated Airspeed knots:
                 {{ ~~api_ias_speed_knots }}
+              </li>
+              <li>
+                True Airspeed knots:
+                {{ ~~api_true_speed_knots }}
+              </li>
+              <li>
+                Mach speed:
+                {{ Number(api_mach).toFixed(2) }}
+              </li>
+
+              <li>
+                Stall Airspeed knots:
+                {{ ~~api_vstall_speed_knots }}
               </li>
               <li>Heading: {{ ~~api_psi_deg }}°</li>
               <li>Bank: {{ ~~api_theta_deg }}°</li>
@@ -325,6 +342,18 @@ export default {
       api_simulation_speed: null,
       api_atmosphere_sea_level_temperature: null,
       api_atmosphere_sea_level_density: null,
+      api_thrust_to_weight: null,
+      api_cl0: null,
+      api_cdo: null,
+      api_wing_area: null,
+      api_true_speed_knots: null,
+      api_mach: null,
+      api_vstall_speed_knots: null,
+      api_atmosphere_temperature: null,
+      api_atmosphere_density: null,
+      api_total_drag: null,
+      api_cl: null,
+      api_cdi: null,
       isRealTimeDataDisplayed: false,
     }
   },
@@ -412,7 +441,7 @@ export default {
         Aircraft: [
           {
             title: 'Thrust to Weight Ratio',
-            value: 0.3,
+            value: this.api_thrust_to_weight,
             setter: this.api_setThrustToWeightRatio,
             min: 0.1,
             max: 5,
@@ -420,7 +449,7 @@ export default {
           },
           {
             title: 'Wing Area',
-            value: 530,
+            value: this.api_wing_area,
             setter: this.api_setWingAreaValue,
             unit: 'Ft²',
             min: 10,
@@ -431,7 +460,7 @@ export default {
         Aerodynamics: [
           {
             title: 'Lift Cofficient Slope',
-            value: 3.53,
+            value: this.api_cl0,
             setter: this.api_setClSlopeValue,
             min: 0.1,
             max: 5,
@@ -439,7 +468,7 @@ export default {
           },
           {
             title: 'Drag Cofficient',
-            value: 0.02,
+            value: this.api_cdo,
             setter: this.api_setCdValue,
             min: 0.01,
             max: 1.0,
@@ -458,6 +487,7 @@ export default {
           },
           {
             title: 'Sea Level Density',
+            unit: 'Slug/ft³',
             value: this.api_atmosphere_sea_level_density,
             setter: this.api_setAtmosphereSeaLevelDensity,
             min: 0.001756,
@@ -660,6 +690,18 @@ export default {
         let ptrApiAtmosphereSeaLevelDensity = null
         let ptrApiSimulationPause = null
         let ptrApiSimulationSpeed = null
+        let ptrApiThrustToWeight = null
+        let ptrApiCl0 = null
+        let ptrApiCdo = null
+        let ptrApiWingArea = null
+        let ptrApiTrueSpeedKnots = null
+        let ptrApiVstallSpeedKnots = null
+        let ptrApiAtmosphereTemperature = null
+        let ptrApiAtmosphereDensity = null
+        let ptrApiMach = null
+        let PtrApiTotalDrag = null
+        let ptrApiCl = null
+        let ptrApiCdi = null
 
         const updateSimData = () => {
           if (ptrApiWeight !== this.FlightSimulator._api_weight()) {
@@ -690,6 +732,21 @@ export default {
               this.FlightSimulator._api_atmosphere_sea_level_density()
             ptrApiSimulationPause = this.FlightSimulator._api_simulation_pause()
             ptrApiSimulationSpeed = this.FlightSimulator._api_simulation_speed()
+            ptrApiThrustToWeight = this.FlightSimulator._api_thrust_to_weight()
+            ptrApiCl0 = this.FlightSimulator._api_cl0()
+            ptrApiCdo = this.FlightSimulator._api_cdo()
+            ptrApiWingArea = this.FlightSimulator._api_wing_area()
+            ptrApiTrueSpeedKnots = this.FlightSimulator._api_true_speed_knots()
+            ptrApiMach = this.FlightSimulator._api_mach()
+            ptrApiVstallSpeedKnots =
+              this.FlightSimulator._api_vstall_speed_knots()
+            ptrApiAtmosphereTemperature =
+              this.FlightSimulator._api_atmosphere_temperature()
+            ptrApiAtmosphereDensity =
+              this.FlightSimulator._api_atmosphere_density()
+            PtrApiTotalDrag = this.FlightSimulator._api_total_drag()
+            ptrApiCl = this.FlightSimulator._api_cl()
+            ptrApiCdi = this.FlightSimulator._api_cdi()
           }
 
           this.api_iteration_time = HEAPF32[ptrApiIterationTime >> 2]
@@ -717,6 +774,20 @@ export default {
           this.api_atmosphere_sea_level_density = Number(
             HEAPF32[ptrApiAtmosphereSeaLevelDensity >> 2]
           ).toFixed(4)
+
+          this.api_thrust_to_weight = HEAPF32[ptrApiThrustToWeight >> 2]
+          this.api_cl0 = HEAPF32[ptrApiCl0 >> 2]
+          this.api_cdo = HEAPF32[ptrApiCdo >> 2]
+          this.api_wing_area = HEAPF32[ptrApiWingArea >> 2]
+          this.api_true_speed_knots = HEAPF32[ptrApiTrueSpeedKnots >> 2]
+          this.api_mach = HEAPF32[ptrApiMach >> 2]
+          this.api_vstall_speed_knots = HEAPF32[ptrApiVstallSpeedKnots >> 2]
+          this.api_atmosphere_temperature =
+            HEAPF32[ptrApiAtmosphereTemperature >> 2]
+          this.api_atmosphere_density = HEAPF32[ptrApiAtmosphereDensity >> 2]
+          this.api_total_drag = HEAPF32[PtrApiTotalDrag >> 2]
+          this.api_cl = HEAPF32[ptrApiCl >> 2]
+          this.api_cdi = HEAPF32[ptrApiCdi >> 2]
 
           // Execute every milliseconds
           setTimeout(updateSimData, 200)
