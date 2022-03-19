@@ -222,42 +222,10 @@
         <b-card-text v-if="isRealTimeDataDisplayed">
           <b-collapse id="collapse-data">
             <ul>
-              <li>
-                fps:
-                {{ ~~(1 / api_iteration_time) }}
+              <li v-for="simData in SimulatorData" :key="simData.title">
+                {{ simData.title }}: {{ simData.value()
+                }}{{ simData.unit || '' }}
               </li>
-              <li>Weight: {{ ~~api_weight }}</li>
-              <li>Altitude: {{ ~~api_altitude }}</li>
-              <li>Temperature (R): {{ ~~api_atmosphere_temperature }}</li>
-              <li>Density: {{ Number(api_atmosphere_density).toFixed(6) }}</li>
-              <li>Total Drag (lbs): {{ ~~api_total_drag }}</li>
-              <li>Lift Coefficient {{ Number(api_cl).toFixed(4) }}</li>
-              <li>Drag Coefficient: {{ Number(api_cdi).toFixed(4) }}</li>
-              <li>Elevator angle: {{ Number(api_alpha_tail).toFixed(2) }}%</li>
-              <li>
-                Aileron angle: {{ Number(api_alpha_aileron).toFixed(2) }}%
-              </li>
-              <li>Throttle: {{ ~~(api_throttle * 100) }}%</li>
-              <li>
-                Indicated Airspeed knots:
-                {{ ~~api_ias_speed_knots }}
-              </li>
-              <li>
-                True Airspeed knots:
-                {{ ~~api_true_speed_knots }}
-              </li>
-              <li>
-                Mach speed:
-                {{ Number(api_mach).toFixed(2) }}
-              </li>
-
-              <li>
-                Stall Airspeed knots:
-                {{ ~~api_vstall_speed_knots }}
-              </li>
-              <li>Heading: {{ ~~api_psi_deg }}°</li>
-              <li>Bank: {{ ~~api_theta_deg }}°</li>
-              <li>Pitch: {{ ~~api_attitude_deg }}°</li>
             </ul>
           </b-collapse>
         </b-card-text>
@@ -498,7 +466,7 @@ export default {
       }
     },
     instructions() {
-      const obj = {
+      return {
         commands: [
           {
             key: ['w', '↑'],
@@ -574,8 +542,61 @@ export default {
           },
         ],
       }
-
-      return obj
+    },
+    SimulatorData() {
+      return [
+        { title: 'fps', value: () => ~~(1 / this.api_iteration_time) },
+        { title: 'Weight', value: () => ~~this.api_weight },
+        { title: 'Altitude', value: () => ~~this.api_altitude },
+        {
+          title: 'Temperature (R)',
+          value: () => ~~this.api_atmosphere_temperature,
+        },
+        {
+          title: 'Density',
+          value: () => Number(this.api_atmosphere_density).toFixed(6),
+        },
+        { title: 'Total Drag (lbs)', value: () => ~~this.api_total_drag },
+        {
+          title: 'Lift Coefficient',
+          value: () => Number(this.api_cl).toFixed(4),
+        },
+        {
+          title: 'Drag Coefficient',
+          value: () => Number(this.api_cdi).toFixed(4),
+        },
+        {
+          title: 'Elevator angle',
+          value: () => Number(this.api_alpha_tail).toFixed(2),
+          unit: '%',
+        },
+        {
+          title: 'Aileron angle',
+          value: () => Number(this.api_alpha_aileron).toFixed(2),
+          unit: '%',
+        },
+        {
+          title: 'Throttle',
+          value: () => ~~(this.api_throttle * 100),
+          unit: '%',
+        },
+        {
+          title: 'Indicated Airspeed knots',
+          value: () => ~~this.api_ias_speed_knots,
+        },
+        {
+          title: 'True Airspeed knots',
+          value: () => ~~this.api_true_speed_knots,
+        },
+        { title: 'Mach speed', value: () => Number(this.api_mach).toFixed(2) },
+        {
+          title: 'Stall Airspeed knots',
+          value: () => ~~this.api_vstall_speed_knots,
+        },
+        { title: 'Heading', value: () => ~~this.api_psi_deg, unit: '°' },
+        { title: 'Bank', value: () => ~~this.api_theta_deg, unit: '°' },
+        { title: 'Pitch', value: () => ~~this.api_attitude_deg, unit: '°' },
+      ]
     },
   },
   mounted() {
@@ -799,10 +820,11 @@ export default {
         main()
       })
 
+      // FIXME: Pauses when fullscreen is toggled in Safari
       // Pause the simulation when tab loses focus
       document.addEventListener('visibilitychange', () => {
         if (!this.api_simulation_pause) {
-          this.api_setSimulationPause(!document.hidden)
+          // this.api_setSimulationPause(!document.hidden)
         }
       })
 
