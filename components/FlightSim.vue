@@ -253,12 +253,6 @@
     </b-row>
 
     <textarea v-if="is_development" id="output" rows="3"></textarea>
-
-    <b-container v-if="is_running" fluid>
-      <b-row>
-        <b-col> </b-col>
-      </b-row>
-    </b-container>
   </div>
 </template>
 
