@@ -285,6 +285,7 @@ export default {
       api_iteration_time: 0,
       api_weight: null,
       api_altitude: null,
+      api_vertical_speed: null,
       api_alpha_tail: null,
       api_alpha_aileron: null,
       api_throttle: null,
@@ -535,6 +536,10 @@ export default {
         { title: 'Weight', value: () => ~~this.api_weight },
         { title: 'Altitude', value: () => ~~this.api_altitude },
         {
+          title: 'Vertical Speed (fpm)',
+          value: () => ~~(this.api_vertical_speed * 60),
+        },
+        {
           title: 'Temperature (R)',
           value: () => ~~this.api_atmosphere_temperature,
         },
@@ -678,6 +683,7 @@ export default {
         let ptrApiIterationTime = null
         let ptrApiWeight = null
         let ptrApiAltitude = null
+        let ptrApiVerticalSpeed = null
         let ptrApiAlphaTail = null
         let ptrApiAlphaAileron = null
         let ptrApiThrottle = null
@@ -719,6 +725,7 @@ export default {
             ptrApiIterationTime = this.FlightSimulator._api_iteration_time()
             ptrApiWeight = this.FlightSimulator._api_weight()
             ptrApiAltitude = this.FlightSimulator._api_altitude()
+            ptrApiVerticalSpeed = this.FlightSimulator._api_vertical_speed()
             ptrApiAlphaTail = this.FlightSimulator._api_alpha_tail()
             ptrApiAlphaAileron = this.FlightSimulator._api_alpha_aileron()
             ptrApiThrottle = this.FlightSimulator._api_throttle()
@@ -762,6 +769,7 @@ export default {
           this.api_simulation_speed = HEAPF32[ptrApiSimulationSpeed >> 2]
           this.api_weight = HEAPF32[ptrApiWeight >> 2]
           this.api_altitude = HEAPF32[ptrApiAltitude >> 2]
+          this.api_vertical_speed = HEAPF32[ptrApiVerticalSpeed >> 2]
           this.api_alpha_tail = HEAPF32[ptrApiAlphaTail >> 2]
           this.api_alpha_aileron = HEAPF32[ptrApiAlphaAileron >> 2]
           this.api_throttle = HEAPF32[ptrApiThrottle >> 2]
@@ -834,13 +842,12 @@ div.emscripten {
   text-align: center;
 }
 div.emscripten_border {
-  padding: 2px;
+  padding: 0px;
   /* max-height: 488px; */
   /* overflow: scroll; */
 }
 /* the canvas *must not* have any border or padding, or mouse coords will be wrong */
 canvas.emscripten {
-  border: 0px none;
   background-color: black;
   width: 100%;
 }
