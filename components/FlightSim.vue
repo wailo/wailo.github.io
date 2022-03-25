@@ -62,7 +62,7 @@
               <b-button
                 :class="'btn-block ' + (api_autopilot ? 'pressed' : '')"
                 variant="default"
-                @click="api_toggleAutopilot(!api_autopilot)"
+                @click="api_setAutopilot(!api_autopilot)"
                 >Autopilot</b-button
               >
 
@@ -270,12 +270,12 @@ export default {
       api_heading_hold: 0,
       api_altitude_hold: 0,
       api_speed_hold: 0,
-      api_toggleAutopilot: null,
-      api_toggleHeadingHold: null,
+      api_setAutopilot: null,
+      api_setHeadingHold: null,
       api_setHeadingHoldValue: null,
-      api_toggleAltitudeHold: null,
+      api_setAltitudeHold: null,
       api_setAltitudeHoldValue: null,
-      api_toggleSpeedHold: null,
+      api_setSpeedHold: null,
       api_setSpeedHoldValue: null,
       api_setAtmosphereSeaLevelTemperature: null,
       api_setAtmosphereSeaLevelDensity: null,
@@ -317,7 +317,7 @@ export default {
       return [
         {
           button_title: 'HDG Hold',
-          toggle: this.api_toggleHeadingHold,
+          toggle: this.api_setHeadingHold,
           status: this.api_heading_hold,
           setter: this.api_setHeadingHoldValue,
           setter_model: this.api_target_heading_deg,
@@ -328,7 +328,7 @@ export default {
         },
         {
           button_title: 'ALT Hold',
-          toggle: this.api_toggleAltitudeHold,
+          toggle: this.api_setAltitudeHold,
           status: this.api_altitude_hold,
           setter: this.api_setAltitudeHoldValue,
           setter_model: this.api_target_altitude,
@@ -339,7 +339,7 @@ export default {
         },
         {
           button_title: 'SPD Hold',
-          toggle: this.api_toggleSpeedHold,
+          toggle: this.api_setSpeedHold,
           status: this.api_speed_hold,
           setter: this.api_setSpeedHoldValue,
           setter_model: this.api_target_speed,
@@ -654,10 +654,10 @@ export default {
 
         // Link C++ functions
         // Setters
-        this.api_toggleAutopilot = this.FlightSimulator._set_autopilot
-        this.api_toggleHeadingHold = this.FlightSimulator._set_heading_hold
-        this.api_toggleAltitudeHold = this.FlightSimulator._set_altitude_hold
-        this.api_toggleSpeedHold = this.FlightSimulator._set_speed_hold
+        this.api_setAutopilot = this.FlightSimulator._set_autopilot
+        this.api_setHeadingHold = this.FlightSimulator._set_heading_hold
+        this.api_setAltitudeHold = this.FlightSimulator._set_altitude_hold
+        this.api_setSpeedHold = this.FlightSimulator._set_speed_hold
         this.api_setHeadingHoldValue =
           this.FlightSimulator._set_target_heading_deg
         this.api_setAltitudeHoldValue =
