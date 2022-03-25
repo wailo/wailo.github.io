@@ -210,25 +210,33 @@
           </b-tabs>
         </b-card>
 
-        <legend>Real Time Data</legend>
-        <b-button
-          v-b-toggle.collapse-data
-          variant="outline-light"
-          class="border border-light"
-          @click="isRealTimeDataDisplayed = !isRealTimeDataDisplayed"
+        <b-card
+          header="Real Time Data"
+          header-border-variant="light"
+          header-bg-variant="dark"
+          no-body
+          bg-variant="transparent"
+          border-variant="dark"
+          text-variant="white"
         >
-          {{ isRealTimeDataDisplayed ? 'Hide' : 'Show' }}
-        </b-button>
-        <b-card-text v-if="isRealTimeDataDisplayed">
-          <b-collapse id="collapse-data">
-            <ul>
-              <li v-for="simData in SimulatorData" :key="simData.title">
-                {{ simData.title }}: {{ simData.value()
-                }}{{ simData.unit || '' }}
-              </li>
-            </ul>
-          </b-collapse>
-        </b-card-text>
+          <b-button
+            variant="outline-light"
+            class="border border-light"
+            @click="isRealTimeDataDisplayed = !isRealTimeDataDisplayed"
+          >
+            {{ isRealTimeDataDisplayed ? 'Hide' : 'Show' }}
+          </b-button>
+          <b-card-text v-if="isRealTimeDataDisplayed" ref="real_time_data">
+            <b-collapse id="collapse-data" v-model="isRealTimeDataDisplayed">
+              <ul>
+                <li v-for="simData in SimulatorData" :key="simData.title">
+                  {{ simData.title }}: {{ simData.value()
+                  }}{{ simData.unit || '' }}
+                </li>
+              </ul>
+            </b-collapse>
+          </b-card-text>
+        </b-card>
 
         <div class="emscripten">
           <progress id="progress" value="0" max="100" hidden="1"></progress>
@@ -719,6 +727,8 @@ export default {
         let ptrApiCdi = null
 
         const updateSimData = () => {
+          // A hacky way to detect if reset was called
+          // By checking if the pointer address has changed
           if (ptrApiWeight !== this.FlightSimulator._api_weight()) {
             HEAPF32 = this.FlightSimulator.HEAPF32
             HEAP8 = this.FlightSimulator.HEAP8
