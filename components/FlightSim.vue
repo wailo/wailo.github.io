@@ -17,22 +17,6 @@
                 Simulation visuals are developed with
                 <b-link href="https://www.opengl.org">OpenGL</b-link>
               </li>
-              <li>
-                Ported to WebAssembly with
-                <b-link target="_blank" href="https://emscripten.org"
-                  >Emscripten</b-link
-                >
-              </li>
-              <li>
-                User interface is developed with
-                <b-link target="_blank" href="https://vuejs.org">
-                  Vue.js</b-link
-                >
-                and
-                <b-link target="_blank" href="https://getbootstrap.com"
-                  >Bootstrap</b-link
-                >
-              </li>
             </ul>
           </b-form-text>
           <span>
