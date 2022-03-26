@@ -212,6 +212,7 @@
               <b-table
                 table-variant="transparent"
                 head-variant="dark"
+                borderless
                 hover
                 small
                 sticky-header
@@ -219,7 +220,7 @@
                 :items="SimulatorData"
               >
                 <template #cell()="data">
-                  <p class="text-light">{{ data.value }}</p>
+                  <p small class="text-light">{{ data.value }}</p>
                 </template>
                 <template #cell(title)="data">
                   <p class="text-light">
@@ -453,7 +454,7 @@ export default {
           {
             title: 'Sea Level Density',
             unit: 'Slug/ft³',
-            value: this.api_atmosphere_sea_level_density,
+            value: Number(this.api_atmosphere_sea_level_density).toFixed(4),
             setter: this.api_setAtmosphereSeaLevelDensity,
             min: 0.001756,
             max: 0.002939,
@@ -808,9 +809,8 @@ export default {
           this.api_target_speed = HEAPF32[ptrApiTargetSpeed >> 2]
           this.api_atmosphere_sea_level_temperature =
             HEAPF32[ptrApiAtmosphereSeaLevelTemperature >> 2] | 0
-          this.api_atmosphere_sea_level_density = Number(
+          this.api_atmosphere_sea_level_density =
             HEAPF32[ptrApiAtmosphereSeaLevelDensity >> 2]
-          ).toFixed(4)
 
           this.api_thrust_to_weight = HEAPF32[ptrApiThrustToWeight >> 2]
           this.api_cl0 = HEAPF32[ptrApiCl0 >> 2]
@@ -836,7 +836,7 @@ export default {
         main()
       })
 
-      // FIXME: Pauses when fullscreen is toggled in Safari
+      // FIXME: Pauses when fullscreen is set in Safari
       // Pause the simulation when tab loses focus
       document.addEventListener('visibilitychange', () => {
         if (!this.api_simulation_pause) {
