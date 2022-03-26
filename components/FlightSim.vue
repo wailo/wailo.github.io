@@ -166,10 +166,7 @@
                       block
                       @click="parameter.setter(!parameter.value)"
                     >
-                      <b-icon
-                        :icon="parameter.icon()"
-                        variant="default"
-                      ></b-icon
+                      <b-icon :icon="parameter.icon" variant="default"></b-icon
                     ></b-button>
 
                     <div v-else class="input-group">
@@ -212,12 +209,26 @@
           </b-button>
           <b-card-text v-if="isRealTimeDataDisplayed" ref="real_time_data">
             <b-collapse id="collapse-data" v-model="isRealTimeDataDisplayed">
-              <ul>
-                <li v-for="simData in SimulatorData" :key="simData.title">
-                  {{ simData.title }}: {{ simData.value()
-                  }}{{ simData.unit || '' }}
-                </li>
-              </ul>
+              <b-table
+                table-variant="transparent"
+                head-variant="dark"
+                hover
+                small
+                sticky-header
+                :fields="['title', 'value']"
+                :items="SimulatorData"
+              >
+                <template #cell()="data">
+                  <p class="text-light">{{ data.value }}</p>
+                </template>
+                <template #cell(title)="data">
+                  <p class="text-light">
+                    {{ `${data.item.title} ${data.item.unit || ''}` }}
+                  </p>
+                </template>
+                <!-- {{ simData.title }}: {{ simData.value()
+                  }}{{ simData.unit || '' }} -->
+              </b-table>
             </b-collapse>
           </b-card-text>
         </b-card>
@@ -355,25 +366,24 @@ export default {
       return {
         Simulation: [
           {
-            title: 'Fullscreen',
-            value: null,
-            setter: this.requestFullScreen,
-            icon: () => 'arrows-fullscreen',
-          },
-          {
             title: this.api_simulation_pause ? 'Resume' : 'Pause',
             value: this.api_simulation_pause,
             setter: this.api_setSimulationPause,
-            icon: () => {
-              return this.api_simulation_pause ? 'play-fill' : 'pause-fill'
-            },
+            icon: this.api_simulation_pause ? 'play-fill' : 'pause-fill',
           },
           {
             title: 'Reset',
             value: null,
             setter: this.api_setSimulationReset,
-            icon: () => 'x-circle',
+            icon: 'x-circle',
           },
+          {
+            title: 'Fullscreen',
+            value: null,
+            setter: this.requestFullScreen,
+            icon: 'arrows-fullscreen',
+          },
+
           {
             title: 'Simulation Speed',
             value: this.api_simulation_speed,
@@ -532,61 +542,71 @@ export default {
     },
     SimulatorData() {
       return [
-        { title: 'fps', value: () => ~~(1 / this.api_iteration_time) },
-        { title: 'Weight', value: () => ~~this.api_weight },
-        { title: 'Altitude', value: () => ~~this.api_altitude },
+        { title: 'FPS', value: ~~(1 / this.api_iteration_time) },
+        { title: 'Weight', value: ~~this.api_weight, unit: 'lbs' },
+        { title: 'Altitude', value: ~~this.api_altitude, unit: 'ft' },
         {
-          title: 'Vertical Speed (fpm)',
-          value: () => ~~(this.api_vertical_speed * 60),
+          title: 'Vertical Speed',
+          value: ~~(this.api_vertical_speed * 60),
+          unit: 'fpm',
         },
         {
-          title: 'Temperature (R)',
-          value: () => ~~this.api_atmosphere_temperature,
+          title: 'Temperature',
+          value: ~~this.api_atmosphere_temperature,
+          unit: 'R',
         },
         {
           title: 'Density',
-          value: () => Number(this.api_atmosphere_density).toFixed(6),
+          value: Number(this.api_atmosphere_density).toFixed(6),
+          unit: 'Slug/ft³',
         },
-        { title: 'Total Drag (lbs)', value: () => ~~this.api_total_drag },
+        { title: 'Total Drag', value: ~~this.api_total_drag, unit: 'lbs' },
         {
           title: 'Lift Coefficient',
-          value: () => Number(this.api_cl).toFixed(4),
+          value: Number(this.api_cl).toFixed(4),
         },
         {
           title: 'Drag Coefficient',
-          value: () => Number(this.api_cdi).toFixed(4),
+          value: Number(this.api_cdi).toFixed(4),
         },
         {
           title: 'Elevator angle',
-          value: () => Number(this.api_alpha_tail).toFixed(2),
+          value: Number(this.api_alpha_tail).toFixed(2),
           unit: '%',
         },
         {
           title: 'Aileron angle',
-          value: () => Number(this.api_alpha_aileron).toFixed(2),
+          value: Number(this.api_alpha_aileron).toFixed(2),
           unit: '%',
         },
         {
           title: 'Throttle',
-          value: () => ~~(this.api_throttle * 100),
+          value: ~~(this.api_throttle * 100),
           unit: '%',
         },
         {
-          title: 'Indicated Airspeed knots',
-          value: () => ~~this.api_ias_speed_knots,
+          title: 'Indicated Airspeed',
+          value: ~~this.api_ias_speed_knots,
+          unit: 'kts',
         },
         {
-          title: 'True Airspeed knots',
-          value: () => ~~this.api_true_speed_knots,
+          title: 'True Airspeed',
+          value: ~~this.api_true_speed_knots,
+          unit: 'kts',
         },
-        { title: 'Mach speed', value: () => Number(this.api_mach).toFixed(2) },
         {
-          title: 'Stall Airspeed knots',
-          value: () => ~~this.api_vstall_speed_knots,
+          title: 'Mach speed',
+          value: Number(this.api_mach).toFixed(2),
+          unit: 'M',
         },
-        { title: 'Heading', value: () => ~~this.api_psi_deg, unit: '°' },
-        { title: 'Bank', value: () => ~~this.api_theta_deg, unit: '°' },
-        { title: 'Pitch', value: () => ~~this.api_attitude_deg, unit: '°' },
+        {
+          title: 'Stall Airspeed',
+          value: ~~this.api_vstall_speed_knots,
+          unit: 'kts',
+        },
+        { title: 'Heading', value: ~~this.api_psi_deg, unit: '°' },
+        { title: 'Bank', value: ~~this.api_theta_deg, unit: '°' },
+        { title: 'Pitch', value: ~~this.api_attitude_deg, unit: '°' },
       ]
     },
   },
