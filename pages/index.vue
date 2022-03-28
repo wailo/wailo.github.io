@@ -3,27 +3,26 @@
     class="container"
     no-body
     text-variant="white"
-    style="max-height: 100vh;"
+    style="max-height: 100vh"
   >
-    <b-card-body style="max-height: 100%;">
-      <BioComponent style="max-height: inherit;" />
+    <b-card-body style="max-height: 100%">
+      <BioComponent style="max-height: inherit" />
     </b-card-body>
 
     <b-card-footer footer-border-variant="dark">
       <h1>Wa.il</h1>
-      <div class="links">
-        <template v-for="link in links">
-          <b-button
-            :key="link.name"
-            :href="link.link"
-            target="_blank"
-            class="border border-light"
-            variant="outline-light"
-          >
-            {{ link.name }}
-          </b-button>
-          <div :key="link.name" class="divider" />
-        </template>
+      <div style="padding-top: 15px">
+        <b-button
+          v-for="link in links"
+          :key="link.name"
+          :href="link.link"
+          target="_blank"
+          class="border border-light"
+          variant="outline-light"
+          style="margin: 0px 0px 0px 15px"
+        >
+          {{ link.name }}
+        </b-button>
       </div>
     </b-card-footer>
   </b-card>
@@ -59,43 +58,5 @@ export default {
   /* align-items: center; */
   text-align: center;
   background-color: rgba(0, 0, 0, 0);
-}
-
-.title {
-  font-family: 'Quicksand', 'Source Sans Pro', -apple-system, BlinkMacSystemFont,
-    'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  display: block;
-  font-weight: 300;
-  font-size: 100px;
-  /* color: #35495e; */
-  letter-spacing: 1px;
-}
-
-.subtitle {
-  font-weight: 300;
-  font-size: 42px;
-  /* color: #526488; */
-  word-spacing: 5px;
-  padding-bottom: 15px;
-}
-
-.links {
-  padding-top: 15px;
-}
-
-.btn-light {
-  @apply --btn-light;
-  color: black;
-  background-color: white;
-  border-color: black;
-}
-pre {
-  border-color: transparent;
-}
-
-.divider {
-  width: 1px;
-  height: auto;
-  display: inline-block;
 }
 </style>
