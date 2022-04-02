@@ -42,7 +42,6 @@
     >
       <!-- Controls Panel -->
       <b-col
-        v-show="is_running"
         style="max-height: inherit; overflow-y: scroll"
         sm="12"
         xl="4"
@@ -280,19 +279,27 @@ export default {
       is_development: process.env.NODE_ENV === 'development',
       api_autopilot: null,
       api_heading_hold: 0,
+      api_bank_hold: 0,
       api_altitude_hold: 0,
+      api_vertical_speed_hold: 0,
       api_speed_hold: 0,
       api_setAutopilot: null,
       api_setHeadingHold: null,
       api_setHeadingHoldValue: null,
+      api_setBankHold: null,
+      api_setBankHoldValue: null,
       api_setAltitudeHold: null,
       api_setAltitudeHoldValue: null,
+      api_setVerticalSpeedHold: null,
+      api_setVerticalSpeedValue: null,
       api_setSpeedHold: null,
       api_setSpeedHoldValue: null,
       api_setAtmosphereSeaLevelTemperature: null,
       api_setAtmosphereSeaLevelDensity: null,
       api_target_altitude: null,
+      api_target_vertical_speed: null,
       api_target_heading_deg: null,
+      api_target_bank_deg: null,
       api_target_speed: null,
       api_iteration_time: 0,
       api_weight: null,
@@ -339,6 +346,17 @@ export default {
           step: 1.0,
         },
         {
+          button_title: 'Roll Hold',
+          toggle: this.api_setBankHold,
+          status: this.api_bank_hold,
+          setter: this.api_setBankHoldValue,
+          setter_model: this.api_target_bank_deg,
+          unit: '°',
+          min: -30,
+          max: 30,
+          step: 1.0,
+        },
+        {
           button_title: 'ALT Hold',
           toggle: this.api_setAltitudeHold,
           status: this.api_altitude_hold,
@@ -348,6 +366,17 @@ export default {
           min: 0,
           max: 50000,
           step: 100.0,
+        },
+        {
+          button_title: 'Vertical Speed Hold',
+          toggle: this.api_setVerticalSpeedHold,
+          status: this.api_vertical_speed_hold,
+          setter: this.api_setVerticalSpeedValue,
+          setter_model: this.api_target_vertical_speed,
+          unit: 'fpm',
+          min: -6000,
+          max: 6000,
+          step: 100,
         },
         {
           button_title: 'SPD Hold',
@@ -611,9 +640,7 @@ export default {
       ]
     },
   },
-  mounted() {
-    this.startSimulator()
-  },
+  mounted() {},
   methods: {
     notifyUser(title, msg, duration = 1000) {
       this.$bvToast.toast(msg, {
@@ -677,12 +704,18 @@ export default {
         // Setters
         this.api_setAutopilot = this.FlightSimulator._set_autopilot
         this.api_setHeadingHold = this.FlightSimulator._set_heading_hold
+        this.api_setBankHold = this.FlightSimulator._set_bank_hold
         this.api_setAltitudeHold = this.FlightSimulator._set_altitude_hold
+        this.api_setVerticalSpeedHold =
+          this.FlightSimulator._set_vertical_speed_hold
         this.api_setSpeedHold = this.FlightSimulator._set_speed_hold
         this.api_setHeadingHoldValue =
           this.FlightSimulator._set_target_heading_deg
+        this.api_setBankHoldValue = this.FlightSimulator._set_target_bank_deg
         this.api_setAltitudeHoldValue =
           this.FlightSimulator._set_target_altitude
+        this.api_setVerticalSpeedValue =
+          this.FlightSimulator._set_target_vertical_speed
         this.api_setSpeedHoldValue = this.FlightSimulator._set_target_speed
         this.api_setWingAreaValue = this.FlightSimulator._set_wing_area
         this.api_setThrustToWeightRatio =
@@ -714,11 +747,15 @@ export default {
         let ptrApiAttitudeDeg = null
         let ptrApiAutopilot = null
         let ptrApiHeadingHold = null
+        let ptrApiBankHold = null
         let ptrApiLevelHold = null
         let ptrApiSpeedHold = null
         let ptrApiAltitudeHold = null
+        let ptrApiVerticalSpeedHold = null
         let ptrApiTargetHeadingDeg = null
+        let ptrApiTargetBankDeg = null
         let ptrApiTargetAltitude = null
+        let ptrApiTargetVerticalSpeed = null
         let ptrApiTargetSpeed = null
         let ptrApiAtmosphereSeaLevelTemperature = null
         let ptrApiAtmosphereSeaLevelDensity = null
@@ -756,12 +793,18 @@ export default {
             ptrApiAttitudeDeg = this.FlightSimulator._api_attitude_deg()
             ptrApiAutopilot = this.FlightSimulator._api_autopilot()
             ptrApiHeadingHold = this.FlightSimulator._api_heading_hold()
+            ptrApiBankHold = this.FlightSimulator._api_bank_hold()
             ptrApiLevelHold = this.FlightSimulator._api_level_hold()
             ptrApiSpeedHold = this.FlightSimulator._api_speed_hold()
             ptrApiAltitudeHold = this.FlightSimulator._api_altitude_hold()
+            ptrApiVerticalSpeedHold =
+              this.FlightSimulator._api_vertical_speed_hold()
             ptrApiTargetHeadingDeg =
               this.FlightSimulator._api_target_heading_deg()
+            ptrApiTargetBankDeg = this.FlightSimulator._api_target_bank_deg()
             ptrApiTargetAltitude = this.FlightSimulator._api_target_altitude()
+            ptrApiTargetVerticalSpeed =
+              this.FlightSimulator._api_target_vertical_speed()
             ptrApiTargetSpeed = this.FlightSimulator._api_target_speed()
             ptrApiAtmosphereSeaLevelTemperature =
               this.FlightSimulator._api_atmosphere_sea_level_temperature()
@@ -801,11 +844,17 @@ export default {
           this.api_simulation_pause = HEAP8[ptrApiSimulationPause]
           this.api_autopilot = HEAP8[ptrApiAutopilot]
           this.api_heading_hold = HEAP8[ptrApiHeadingHold]
+          this.api_bank_hold = HEAP8[ptrApiBankHold]
           this.api_level_hold = HEAP8[ptrApiLevelHold]
           this.api_speed_hold = HEAP8[ptrApiSpeedHold]
           this.api_altitude_hold = HEAP8[ptrApiAltitudeHold]
+          this.api_vertical_speed_hold = HEAP8[ptrApiVerticalSpeedHold]
           this.api_target_heading_deg = HEAPF32[ptrApiTargetHeadingDeg >> 2]
+          this.api_target_bank_deg = HEAPF32[ptrApiTargetBankDeg >> 2]
           this.api_target_altitude = HEAPF32[ptrApiTargetAltitude >> 2]
+          this.api_target_vertical_speed =
+            HEAPF32[ptrApiTargetVerticalSpeed >> 2]
+
           this.api_target_speed = HEAPF32[ptrApiTargetSpeed >> 2]
           this.api_atmosphere_sea_level_temperature =
             HEAPF32[ptrApiAtmosphereSeaLevelTemperature >> 2] | 0
