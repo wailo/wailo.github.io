@@ -37,7 +37,7 @@
 
     <b-row
       v-show="is_running"
-      style="max-height: 488px"
+      style="max-height: 80vh"
       class="emscripten_border"
     >
       <!-- Controls Panel -->
@@ -856,7 +856,7 @@ export default {
   padding-right: 0;
   margin-left: auto;
   margin-right: auto;
-  display: block;
+  height: 100%;
 }
 div.emscripten {
   text-align: center;
@@ -870,6 +870,8 @@ div.emscripten_border {
 canvas.emscripten {
   background-color: black;
   width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 #status {
   display: inline-block;

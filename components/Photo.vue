@@ -34,5 +34,6 @@ export default {
   /* color: rgba(182, 182, 182, 1.068); */
   text-align: initial;
   font-size: 10px;
+  border: 0px solid rgba(0, 0, 0, 0);
 }
 </style>

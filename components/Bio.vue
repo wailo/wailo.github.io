@@ -1,65 +1,45 @@
 <template>
-  <div class="text-left">
-    <b-nav tabs>
-      <b-nav-item :active="$route.hash === '#' || $route.hash === ''" to="#">
-        About
-      </b-nav-item>
-      <b-nav-item :active="$route.hash === '#github'" to="#github">
-        GitHub Projects
-      </b-nav-item>
-      <!-- <b-nav-item :active="$route.hash === '#map'" to="#map">
-          Travel Map
-        </b-nav-item> -->
-      <b-nav-item :active="$route.hash === '#sim'" to="#sim">
-        Flight Simulator
-      </b-nav-item>
-    </b-nav>
-    <div class="tab-content">
-      <div
-        :class="[
-          'tab-pane',
-          { active: $route.hash === '#' || $route.hash === '' },
-        ]"
-        class="p-2"
+  <div style="padding: 15px">
+    <b-row>
+      <b-col
+        cols="7"
+        style="
+          display: flex;
+          flex-direction: column;
+          height: 80vh;
+          overflow: auto;
+        "
       >
-        <b-row>
-          <b-col>
-            <p>
-              I am an independent contractor with 9 years of C++ software
-              development, specialized in simulation and finance domains.
-            </p>
-            <p>
-              I like to work with low-latency systems, communication protocols
-              and software/hardware integratrion.
-            </p>
-            <hr />
-            <div v-for="(tools, title) in skills" :key="title">
-              <h5>{{ title }}</h5>
-              <b-button
-                v-for="skill in tools"
-                :key="skill"
-                disabled
-                variant="dark"
-                >{{ skill }}</b-button
-              >
-            </div>
-          </b-col>
-          <b-col>
-            <PhotoComponent />
-          </b-col>
-        </b-row>
-      </div>
-      <div
-        :class="['tab-pane', { active: $route.hash === '#github' }]"
-        class="p-2"
-      >
-        <b-list-group>
+        <p>
+          I am an independent contractor with 12 years of C++ software
+          development, specialized in simulation and finance domains.
+        </p>
+        <p>
+          I like to work with low-latency systems, communication protocols and
+          software/hardware integratrion.
+        </p>
+
+        <hr />
+        <div v-for="(tools, title) in skills" :key="title">
+          <h5>{{ title }}</h5>
+          <b-button
+            v-for="skill in tools"
+            :key="skill"
+            disabled
+            variant="outline-light"
+            >{{ skill }}</b-button
+          >
+        </div>
+        <hr />
+        <h5>Github Projects:</h5>
+        <b-list-group style="flex: 1; overflow: auto; height: 100%">
           <template v-for="r in repos">
             <b-list-group-item
               :key="r.id"
               :href="r.html_url"
               target="_blank"
-              class="flex-column align-items-start"
+              class="align-items-start"
+              style="background-color: transparent; color: #c4c4c4"
               variant="dark"
             >
               <div class="d-flex w-100 justify-content-between">
@@ -70,18 +50,26 @@
             </b-list-group-item>
           </template>
         </b-list-group>
-      </div>
-      <!-- <div
-          :class="['tab-pane', { active: $route.hash === '#map' }]"
-          class="p-2"
+      </b-col>
+      <b-col>
+        <PhotoComponent />
+      </b-col>
+    </b-row>
+
+    <div style="text-align: center" footer-border-variant="dark">
+      <h1>Wa.il</h1>
+      <div style="padding-top: 15px">
+        <b-button
+          v-for="link in links"
+          :key="link.name"
+          :href="link.link"
+          target="_blank"
+          class="border border-light"
+          variant="outline-light"
+          style="margin: 0px 0px 0px 15px"
         >
-          <TravelMap />
-        </div> -->
-      <div
-        :class="['tab-pane', { active: $route.hash === '#sim' }]"
-        class="p-2"
-      >
-        <FlightSim />
+          {{ link.name }}
+        </b-button>
       </div>
     </div>
   </div>
@@ -89,22 +77,35 @@
 
 <script>
 import PhotoComponent from '~/components/Photo.vue'
-// import TravelMap from '~/components/Map.vue'
-import FlightSim from '~/components/FlightSim.vue'
+
 export default {
   name: 'BioComponent',
   components: {
     PhotoComponent,
-    // TravelMap,
-    FlightSim,
   },
   data() {
     return {
+      links: [
+        { name: 'GitHub', link: 'https://github.com/wailo' },
+        { name: 'LinkedIn', link: 'https://www.linkedin.com/in/wailyahia' },
+        { name: 'YouTube', link: 'https://youtube.com/wailo' },
+      ],
       repos: null,
       skills: {
-        'Everyday:': ['C++', 'Python', 'sql', 'mongodb', 'Javascript'],
-        'Learning:': ['WebAssembly', 'Rust'],
-        'Toolset:': ['Linux', 'Emacs', 'cmake', 'git', 'docker'],
+        'Toolset:': [
+          'C++',
+          'Python',
+          'Sql',
+          'Mongodb',
+          'Javascript',
+          'WebAssembly',
+          'Rust',
+          'Linux',
+          'Emacs',
+          'Cmake',
+          'Git',
+          'Docker',
+        ],
       },
       timelineItems: [
         {
@@ -142,7 +143,7 @@ export default {
     this.$nextTick(function () {
       const vm = this
       this.getJSON(
-        'https://api.github.com/users/wailo/repos',
+        'https://api.github.com/users/wailo/repos?sort=pushed',
         (err, response) => {
           if (err) {
             // alert('Something went wrong: ' + err)
@@ -183,8 +184,5 @@ export default {
 #description {
   display: inline-block;
   width: 300px;
-}
-.list-group-item {
-  background-color: rgba(0, 0, 0, 0);
 }
 </style>
