@@ -35,17 +35,25 @@
       Downloading...
     </div>
 
-    <b-row
+    <splitpanes
       v-show="is_running"
-      style="max-height: 80vh"
-      class="emscripten_border"
+      :style="
+        'max-height: 80vh;' +
+        ($mq === 'sm' ? 'flex-direction: column-reverse;' : '')
+      "
+      class="emscripten_border default-theme"
+      :horizontal="$mq === 'sm'"
     >
       <!-- Controls Panel -->
-      <b-col
-        style="max-height: inherit; overflow-y: scroll"
-        sm="12"
-        xl="4"
-        order="2"
+      <pane
+        size="30"
+        min-size="20"
+        max-size="80"
+        style="
+          max-height: inherit;
+          overflow-y: scroll;
+          background-color: rgba(0, 0, 0, 0);
+        "
       >
         <b-card
           header="Pilot Controls"
@@ -235,14 +243,8 @@
 
         <div class="emscripten">
           <progress id="progress" value="0" max="100" hidden="1"></progress>
-        </div> </b-col
-      ><b-col
-        style="max-height: inherit; overflow: none"
-        sm="12"
-        xl="8"
-        order="1"
-        order-xl="2"
-      >
+        </div> </pane
+      ><pane class="default-theme" style="max-height: inherit; overflow: none">
         <!-- Simulation Screen -->
 
         <canvas
@@ -252,8 +254,8 @@
           tabindex="-1"
         >
         </canvas>
-      </b-col>
-    </b-row>
+      </pane>
+    </splitpanes>
 
     <textarea v-if="is_development" id="output" rows="3"></textarea>
   </div>
@@ -261,15 +263,19 @@
 
 <script>
 import Vue from 'vue'
+import VueMq from 'vue-mq'
 import { BootstrapVueIcons } from 'bootstrap-vue'
+import { Splitpanes, Pane } from 'splitpanes'
+import 'splitpanes/dist/splitpanes.css'
 import 'bootstrap-vue/dist/bootstrap-vue-icons.min.css'
 import FlightSimulator from '~/static/flightSimulator.js'
 
 Vue.use(BootstrapVueIcons)
+Vue.use(VueMq)
 
 export default {
   name: 'FlightSim',
-  components: {},
+  components: { Splitpanes, Pane },
 
   data() {
     return {
