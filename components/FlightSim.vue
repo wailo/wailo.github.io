@@ -307,7 +307,6 @@ export default {
       api_target_heading_deg: null,
       api_target_bank_deg: null,
       api_target_speed: null,
-      api_iteration_time: 0,
       api_weight: null,
       api_altitude: null,
       api_vertical_speed: null,
@@ -578,7 +577,6 @@ export default {
     },
     SimulatorData() {
       return [
-        { title: 'FPS', value: ~~(1 / this.api_iteration_time) },
         { title: 'Weight', value: ~~this.api_weight, unit: 'lbs' },
         { title: 'Altitude', value: ~~this.api_altitude, unit: 'ft' },
         {
@@ -740,7 +738,6 @@ export default {
         // Getters
         let HEAPF32 = null
         let HEAP8 = null
-        let ptrApiIterationTime = null
         let ptrApiWeight = null
         let ptrApiAltitude = null
         let ptrApiVerticalSpeed = null
@@ -786,7 +783,6 @@ export default {
           if (ptrApiWeight !== this.FlightSimulator._api_weight()) {
             HEAPF32 = this.FlightSimulator.HEAPF32
             HEAP8 = this.FlightSimulator.HEAP8
-            ptrApiIterationTime = this.FlightSimulator._api_iteration_time()
             ptrApiWeight = this.FlightSimulator._api_weight()
             ptrApiAltitude = this.FlightSimulator._api_altitude()
             ptrApiVerticalSpeed = this.FlightSimulator._api_vertical_speed()
@@ -835,7 +831,6 @@ export default {
             ptrApiCdi = this.FlightSimulator._api_cdi()
           }
 
-          this.api_iteration_time = HEAPF32[ptrApiIterationTime >> 2]
           this.api_simulation_speed = HEAPF32[ptrApiSimulationSpeed >> 2]
           this.api_weight = HEAPF32[ptrApiWeight >> 2]
           this.api_altitude = HEAPF32[ptrApiAltitude >> 2]
