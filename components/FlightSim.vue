@@ -465,7 +465,7 @@ export default {
             setter: this.api_setClSlopeValue,
             min: 0.1,
             max: 5,
-            step: 0.1,
+            step: 0.01,
           },
           {
             title: 'Drag Cofficient',
@@ -819,7 +819,7 @@ export default {
             ptrApiSimulationPause = this.FlightSimulator._api_simulation_pause()
             ptrApiSimulationSpeed = this.FlightSimulator._api_simulation_speed()
             ptrApiThrustToWeight = this.FlightSimulator._api_thrust_to_weight()
-            ptrApiCl0 = this.FlightSimulator._api_cl0()
+            ptrApiCl0 = this.FlightSimulator._api_dcl()
             ptrApiCdo = this.FlightSimulator._api_cdo()
             ptrApiWingArea = this.FlightSimulator._api_wing_area()
             ptrApiTrueSpeedKnots = this.FlightSimulator._api_true_speed_knots()
