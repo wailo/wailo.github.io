@@ -46,7 +46,7 @@
     >
       <!-- Controls Panel -->
       <pane
-        size="30"
+        size="40"
         min-size="20"
         max-size="80"
         style="
@@ -254,10 +254,9 @@
           tabindex="-1"
         >
         </canvas>
+        <textarea v-if="is_development" id="output" rows="3"></textarea>
       </pane>
     </splitpanes>
-
-    <textarea v-if="is_development" id="output" rows="3"></textarea>
   </div>
 </template>
 
@@ -268,7 +267,7 @@ import { BootstrapVueIcons } from 'bootstrap-vue'
 import { Splitpanes, Pane } from 'splitpanes'
 import 'splitpanes/dist/splitpanes.css'
 import 'bootstrap-vue/dist/bootstrap-vue-icons.min.css'
-import FlightSimulator from '~/static/flightSimulator.js'
+import FlightSimulator from '~/static/flightsimulator_exec.js'
 
 Vue.use(BootstrapVueIcons)
 Vue.use(VueMq)
