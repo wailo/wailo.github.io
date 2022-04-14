@@ -306,6 +306,8 @@ export default {
       api_target_heading_deg: null,
       api_target_bank_deg: null,
       api_target_speed: null,
+      api_fps: null,
+      api_ups: null,
       api_weight: null,
       api_altitude: null,
       api_vertical_speed: null,
@@ -428,12 +430,12 @@ export default {
             step: 0.5,
           },
           {
-            title: 'Frame Rate',
+            title: 'Update Rate',
             value: 60,
-            setter: this.api_setFramesRate,
+            setter: this.api_setUpdateRate,
             unit: 'fps',
             min: 1,
-            max: 120,
+            max: 1000,
             step: 10,
           },
         ],
@@ -576,6 +578,8 @@ export default {
     },
     SimulatorData() {
       return [
+        { title: 'Frame rate', value: this.api_fps, unit: 'Hz' },
+        { title: 'Update rate', value: this.api_ups, unit: 'Hz' },
         { title: 'Weight', value: ~~this.api_weight, unit: 'lbs' },
         { title: 'Altitude', value: ~~this.api_altitude, unit: 'ft' },
         {
@@ -730,13 +734,16 @@ export default {
         this.api_setAtmosphereSeaLevelDensity =
           this.FlightSimulator._set_atmosphere_sea_level_density
         this.api_setSimulationSpeed = this.FlightSimulator._set_simulation_speed
-        this.api_setFramesRate = this.FlightSimulator._set_frames_rate
+        this.api_setUpdateRate = this.FlightSimulator._set_update_rate
         this.api_setSimulationPause = this.FlightSimulator._set_simulation_pause
         this.api_setSimulationReset = this.FlightSimulator._set_simulation_reset
 
         // Getters
         let HEAPF32 = null
+        let HEAP32 = null
         let HEAP8 = null
+        let ptrApiFps = null
+        let ptrApiUps = null
         let ptrApiWeight = null
         let ptrApiAltitude = null
         let ptrApiVerticalSpeed = null
@@ -781,7 +788,10 @@ export default {
           // By checking if the pointer address has changed
           if (ptrApiWeight !== this.FlightSimulator._api_weight()) {
             HEAPF32 = this.FlightSimulator.HEAPF32
+            HEAP32 = this.FlightSimulator.HEAP32
             HEAP8 = this.FlightSimulator.HEAP8
+            ptrApiFps = this.FlightSimulator._api_fps()
+            ptrApiUps = this.FlightSimulator._api_ups()
             ptrApiWeight = this.FlightSimulator._api_weight()
             ptrApiAltitude = this.FlightSimulator._api_altitude()
             ptrApiVerticalSpeed = this.FlightSimulator._api_vertical_speed()
@@ -830,6 +840,8 @@ export default {
             ptrApiCdi = this.FlightSimulator._api_cdi()
           }
 
+          this.api_fps = HEAP32[ptrApiFps >> 2]
+          this.api_ups = HEAP32[ptrApiUps >> 2]
           this.api_simulation_speed = HEAPF32[ptrApiSimulationSpeed >> 2]
           this.api_weight = HEAPF32[ptrApiWeight >> 2]
           this.api_altitude = HEAPF32[ptrApiAltitude >> 2]
