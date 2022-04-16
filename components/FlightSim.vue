@@ -892,6 +892,52 @@ export default {
         }
 
         updateSimData()
+
+        // This is a workaround for emscripten default event handling.
+        // It interferes with interacting with other UI elements
+        function isTextInput(ele) {
+          if (ele.tagName !== 'INPUT') {
+            return false
+          }
+          return [
+            'text',
+            'password',
+            'number',
+            'email',
+            'tel',
+            'url',
+            'search',
+            'date',
+            'datetime',
+            'datetime-local',
+            'time',
+            'month',
+            'week',
+          ].includes(ele.type)
+        }
+
+        const GLFW = this.FlightSimulator.GLFW
+        const canvas = this.FlightSimulator.canvas
+        window.removeEventListener('keydown', GLFW.onKeydown, true)
+        window.removeEventListener('keypress', GLFW.onKeyPress, true)
+        window.removeEventListener('keyup', GLFW.onKeyup, true)
+        window.removeEventListener('blur', GLFW.onBlur, true)
+
+        canvas.addEventListener('keydown', GLFW.onKeydown, true)
+        canvas.addEventListener('keypress', GLFW.onKeyPress, true)
+        canvas.addEventListener('keyup', GLFW.onKeyup, true)
+        window.addEventListener(
+          'blur',
+          (event) => {
+            setTimeout(() => {
+              // When defocuses (blur), revert back to canvas to enable keyboard controls
+              if (isTextInput(document.activeElement)) return
+              canvas.focus()
+            }, 100)
+          },
+          true
+        )
+
         // Main function
         const main = this.FlightSimulator._main
         main()
