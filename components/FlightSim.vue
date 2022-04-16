@@ -641,9 +641,21 @@ export default {
           value: ~~this.api_vstall_speed_knots,
           unit: 'kts',
         },
-        { title: 'Heading', value: ~~this.api_psi_deg, unit: '°' },
-        { title: 'Bank', value: ~~this.api_theta_deg, unit: '°' },
-        { title: 'Pitch', value: ~~this.api_attitude_deg, unit: '°' },
+        {
+          title: 'Heading',
+          value: Number(this.api_psi_deg).toFixed(2),
+          unit: '°',
+        },
+        {
+          title: 'Bank',
+          value: Number(this.api_theta_deg).toFixed(2),
+          unit: '°',
+        },
+        {
+          title: 'Pitch',
+          value: Number(this.api_attitude_deg).toFixed(2),
+          unit: '°',
+        },
       ]
     },
   },
