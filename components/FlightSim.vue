@@ -31,9 +31,7 @@
       >
     </div>
 
-    <div v-show="FlightSimulator" id="status" class="emscripten">
-      Downloading...
-    </div>
+    <div v-show="FlightSimulator === null" id="status" class="emscripten" />
 
     <splitpanes
       v-show="is_running"
@@ -250,11 +248,7 @@
               </b-table>
             </b-collapse>
           </b-card-text>
-        </b-card>
-
-        <div class="emscripten">
-          <progress id="progress" value="0" max="100" hidden="1"></progress>
-        </div> </pane
+        </b-card> </pane
       ><pane class="default-theme" style="max-height: inherit; overflow: none">
         <!-- Simulation Screen -->
 
@@ -692,15 +686,11 @@ export default {
     },
     startSimulator() {
       const statusElement = document.getElementById('status')
-      const progressElement = document.getElementById('progress')
 
       FlightSimulator({
         vue: this,
-        setStatus(text) {
-          progressElement.value = null
-          progressElement.max = null
-          progressElement.hidden = true
 
+        setStatus(text) {
           statusElement.innerHTML = text
         },
 
