@@ -195,6 +195,17 @@
                 </template>
               </b-tab>
             </template>
+            <b-tab visible title="Scripting">
+              <ScriptEditor
+                :context="this"
+                :complete-callback="
+                  () => notifyUser('Done', 'Finished running the script', 3000)
+                "
+                :error-callback="
+                  (e) => notifyUser('Script Error', e.message, 3000)
+                "
+              />
+            </b-tab>
           </b-tabs>
         </b-card>
 
@@ -267,6 +278,7 @@ import { BootstrapVueIcons } from 'bootstrap-vue'
 import { Splitpanes, Pane } from 'splitpanes'
 import 'splitpanes/dist/splitpanes.css'
 import 'bootstrap-vue/dist/bootstrap-vue-icons.min.css'
+import ScriptEditor from '~/components/ScriptEditor.vue'
 import FlightSimulator from '~/static/flightsimulator_exec.js'
 
 Vue.use(BootstrapVueIcons)
@@ -274,7 +286,7 @@ Vue.use(VueMq)
 
 export default {
   name: 'FlightSim',
-  components: { Splitpanes, Pane },
+  components: { Splitpanes, Pane, ScriptEditor },
 
   data() {
     return {
@@ -301,6 +313,10 @@ export default {
       api_setSpeedHoldValue: null,
       api_setAtmosphereSeaLevelTemperature: null,
       api_setAtmosphereSeaLevelDensity: null,
+      api_setUpdateRate: null,
+      api_setSimulationPause: null,
+      api_setSimulationReset: null,
+      api_setSimulationSpeed: null,
       api_target_altitude: null,
       api_target_vertical_speed: null,
       api_target_heading_deg: null,
@@ -908,10 +924,12 @@ export default {
         // This is a workaround for emscripten default event handling.
         // It interferes with interacting with other UI elements
         function isTextInput(ele) {
-          if (ele.tagName !== 'INPUT') {
+          if (!['INPUT', 'TEXTAREA'].includes(ele.tagName)) {
             return false
           }
+
           return [
+            'textarea',
             'text',
             'password',
             'number',

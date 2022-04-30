@@ -45,7 +45,8 @@
     "lint-staged": "^8.2.1",
     "prettier": "^2.0.5",
     "push-dir": "^0.4.1",
-    "stylelint": "^10.1.0"
+    "stylelint": "^10.1.0",
+    "vue2-ace-editor": "^0.0.15"
   },
   "eslintConfig": {
     "ignorePatterns": [
