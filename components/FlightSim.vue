@@ -727,34 +727,38 @@ export default {
 
         // Link C++ functions
         // Setters
-        this.api_setAutopilot = this.FlightSimulator._set_autopilot
-        this.api_setHeadingHold = this.FlightSimulator._set_heading_hold
-        this.api_setBankHold = this.FlightSimulator._set_bank_hold
-        this.api_setAltitudeHold = this.FlightSimulator._set_altitude_hold
+        this.api_setAutopilot = this.FlightSimulator._api_set_autopilot
+        this.api_setHeadingHold = this.FlightSimulator._api_set_heading_hold
+        this.api_setBankHold = this.FlightSimulator._api_set_bank_hold
+        this.api_setAltitudeHold = this.FlightSimulator._api_set_altitude_hold
         this.api_setVerticalSpeedHold =
-          this.FlightSimulator._set_vertical_speed_hold
-        this.api_setSpeedHold = this.FlightSimulator._set_speed_hold
+          this.FlightSimulator._api_set_vertical_speed_hold
+        this.api_setSpeedHold = this.FlightSimulator._api_set_speed_hold
         this.api_setHeadingHoldValue =
-          this.FlightSimulator._set_target_heading_deg
-        this.api_setBankHoldValue = this.FlightSimulator._set_target_bank_deg
+          this.FlightSimulator._api_set_target_heading_deg
+        this.api_setBankHoldValue =
+          this.FlightSimulator._api_set_target_bank_deg
         this.api_setAltitudeHoldValue =
-          this.FlightSimulator._set_target_altitude
+          this.FlightSimulator._api_set_target_altitude
         this.api_setVerticalSpeedValue =
-          this.FlightSimulator._set_target_vertical_speed
-        this.api_setSpeedHoldValue = this.FlightSimulator._set_target_speed
-        this.api_setWingAreaValue = this.FlightSimulator._set_wing_area
+          this.FlightSimulator._api_set_target_vertical_speed
+        this.api_setSpeedHoldValue = this.FlightSimulator._api_set_target_speed
+        this.api_setWingAreaValue = this.FlightSimulator._api_set_wing_area
         this.api_setThrustToWeightRatio =
-          this.FlightSimulator._set_thrust_to_weight
-        this.api_setClSlopeValue = this.FlightSimulator._set_dcl
-        this.api_setCdValue = this.FlightSimulator._set_cdo
+          this.FlightSimulator._api_set_thrust_to_weight
+        this.api_setClSlopeValue = this.FlightSimulator._api_set_dcl
+        this.api_setCdValue = this.FlightSimulator._api_set_cdo
         this.api_setAtmosphereSeaLevelTemperature =
-          this.FlightSimulator._set_atmosphere_sea_level_temperature
+          this.FlightSimulator._api_set_atmosphere_sea_level_temperature
         this.api_setAtmosphereSeaLevelDensity =
-          this.FlightSimulator._set_atmosphere_sea_level_density
-        this.api_setSimulationSpeed = this.FlightSimulator._set_simulation_speed
-        this.api_setUpdateRate = this.FlightSimulator._set_update_rate
-        this.api_setSimulationPause = this.FlightSimulator._set_simulation_pause
-        this.api_setSimulationReset = this.FlightSimulator._set_simulation_reset
+          this.FlightSimulator._api_set_atmosphere_sea_level_density
+        this.api_setSimulationSpeed =
+          this.FlightSimulator._api_set_simulation_speed
+        this.api_setUpdateRate = this.FlightSimulator._api_set_update_rate
+        this.api_setSimulationPause =
+          this.FlightSimulator._api_set_simulation_pause
+        this.api_setSimulationReset =
+          this.FlightSimulator._api_set_simulation_reset
 
         // Getters
         let HEAPF32 = null
