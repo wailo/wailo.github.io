@@ -311,6 +311,10 @@ export default {
       api_setSimulationPause: null,
       api_setSimulationReset: null,
       api_setSimulationSpeed: null,
+      api_incrementAileron: null,
+      api_decrementAileron: null,
+      api_incrementElevator: null,
+      api_decrementElevator: null,
       api_target_altitude: null,
       api_target_vertical_speed: null,
       api_target_heading_deg: null,
@@ -759,6 +763,12 @@ export default {
           this.FlightSimulator._api_set_simulation_pause
         this.api_setSimulationReset =
           this.FlightSimulator._api_set_simulation_reset
+        this.api_incrementAileron = this.FlightSimulator._api_increment_aileron
+        this.api_decrementAileron = this.FlightSimulator._api_decrement_aileron
+        this.api_incrementElevator =
+          this.FlightSimulator._api_increment_elevator
+        this.api_decrementElevator =
+          this.FlightSimulator._api_decrement_elevator
 
         // Getters
         let HEAPF32 = null

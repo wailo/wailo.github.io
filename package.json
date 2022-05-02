@@ -4,7 +4,7 @@
   "description": "",
   "author": "wy",
   "private": true,
-  "CompactFlightSimulatorCommit": "5137b2a",
+  "CompactFlightSimulatorCommit": "34730eb",
   "scripts": {
     "dev": "nuxt",
     "build": "yarn run build:emscripten && nuxt build",
