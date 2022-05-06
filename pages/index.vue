@@ -25,6 +25,9 @@
         <FlightSim />
       </div>
     </div>
+    <footer style="text-align: center">
+      <small>&copy; Copyright {{ new Date().getFullYear() }}, Wa.il </small>
+    </footer>
   </div>
 
   <!-- <template>
