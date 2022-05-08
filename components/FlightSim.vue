@@ -193,14 +193,23 @@
                 </template>
               </b-tab>
             </template>
-            <b-tab visible title="Scripting">
+            <b-tab title="Scripting">
               <ScriptEditor
+                ref="scriptEditor"
                 :context="this"
-                :complete-callback="
+                @run="sendScriptToPeer"
+                @finish="
                   () => notifyUser('Done', 'Finished running the script', 3000)
                 "
-                :error-callback="
-                  (e) => notifyUser('Script Error', e.message, 3000)
+                @error="(e) => notifyUser('Script Error', e.message, 3000)"
+              />
+            </b-tab>
+            <b-tab title="webrtc">
+              <WebRTC
+                ref="WebRTC"
+                @dataEvent="peerEvent"
+                @error="
+                  (e) => notifyUser('Peer Connection Error', e.message, 3000)
                 "
               />
             </b-tab>
@@ -273,6 +282,7 @@ import { Splitpanes, Pane } from 'splitpanes'
 import 'splitpanes/dist/splitpanes.css'
 import 'bootstrap-vue/dist/bootstrap-vue-icons.min.css'
 import ScriptEditor from '~/components/ScriptEditor.vue'
+import WebRTC from '~/components/peerJs.vue'
 import FlightSimulator from '~/static/flightsimulator_exec.js'
 
 Vue.use(BootstrapVueIcons)
@@ -280,7 +290,7 @@ Vue.use(VueMq)
 
 export default {
   name: 'FlightSim',
-  components: { Splitpanes, Pane, ScriptEditor },
+  components: { Splitpanes, Pane, ScriptEditor, WebRTC },
 
   data() {
     return {
@@ -424,7 +434,7 @@ export default {
           {
             title: 'Reset',
             value: null,
-            setter: this.api_setSimulationReset,
+            setter: this.reset,
             icon: 'x-circle',
           },
           {
@@ -675,6 +685,16 @@ export default {
   },
   mounted() {},
   methods: {
+    sendScriptToPeer(script) {
+      const payload = this.$refs.WebRTC.createMessageObject('script', script)
+      this.$refs.WebRTC.send(payload)
+    },
+    peerEvent(event) {
+      const data = event.data
+      if (data.topic === 'script') {
+        this.$refs.scriptEditor.codeInterpret(this, data.content)
+      }
+    },
     notifyUser(title, msg, duration = 1000) {
       this.$bvToast.toast(msg, {
         title,
@@ -684,6 +704,10 @@ export default {
         variant: 'dark',
         'body-class': 'strong',
       })
+    },
+    reset() {
+      this.$refs.scriptEditor.reset()
+      this.api_setSimulationReset()
     },
     requestFullScreen() {
       this.FlightSimulator.requestFullscreen(false, true)

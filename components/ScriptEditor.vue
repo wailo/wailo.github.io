@@ -8,7 +8,15 @@
       @init="editorInit"
       @input="null"
     ></editor>
-    <b-button @click="() => codeInterpret(context)">Run Script</b-button>
+    <b-button
+      @click="
+        () => {
+          codeInterpret(context, content)
+          $emit('run', content)
+        }
+      "
+      >Run Script</b-button
+    >
   </div>
 </template>
 
@@ -25,15 +33,8 @@ export default {
       type: Object,
       default: () => ({}),
     },
-    completeCallback: {
-      type: Function,
-      default: null,
-    },
-    errorCallback: {
-      type: Function,
-      default: null,
-    },
   },
+  emits: ['run', 'finish', 'error'],
   data() {
     return {
       content: `this.api_setSimulationReset()
@@ -103,8 +104,15 @@ dampSimulationSpeed()
       }
       editor.completers.push(staticWordCompleter)
     },
-    codeInterpret(context) {
-      if (!this.content) {
+    reset() {
+      if (!window.cache) {
+        return
+      }
+      window.cache.forEach((n) => window.clearTimeout(n))
+      window.cache.length = []
+    },
+    codeInterpret(context, code) {
+      if (!code) {
         return
       }
 
@@ -171,19 +179,15 @@ function api_waitFor(ms) {
 }
 
 clearTimeouts()
-return async function(){${this.content}};`
+return async function(){${code}};`
         )
         userScript()
           .call(context)
           .then((response) => {
-            if (this.completeCallback) {
-              this.completeCallback()
-            }
+            this.$emit('finish')
           })
           .catch((e) => {
-            if (this.errorCallback) {
-              this.errorCallback(e)
-            }
+            this.$emit('error', e)
           })
       } catch (error) {
         this.notifyUser('Script Error', error.message, 3000)

@@ -1,0 +1,44 @@
+version: '3.7'
+
+services:
+  peerServer:
+    image: peerjs/peerjs-server
+    ports:
+      - '9000:9000'
+
+  sim01:
+    build: .
+    image: personal
+    # container_name: flightsim
+    # restart: always
+    ports:
+      - '3001:3000'
+    command: 'sh -c "yarn dev"'
+    volumes:
+      - type: bind
+        source: ./
+        target: /app
+  sim02:
+    build: .
+    image: personal
+    # container_name: flightsim
+    # restart: always
+    ports:
+      - '3002:3000'
+    command: 'sh -c "yarn dev"'
+    volumes:
+      - type: bind
+        source: ./
+        target: /app
+  sim03:
+    build: .
+    image: personal
+    # container_name: flightsim
+    # restart: always
+    ports:
+      - '3003:3000'
+    command: 'sh -c "yarn dev"'
+    volumes:
+      - type: bind
+        source: ./
+        target: /app
