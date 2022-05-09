@@ -19,7 +19,7 @@
         <BioComponent />
       </div>
       <div
-        :class="['tab-pane', { active: $route.hash === '#sim' }]"
+        :class="['tab-pane', { active: $route.hash.startsWith('#sim') }]"
         class="p-2"
       >
         <FlightSim />

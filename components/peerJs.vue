@@ -22,8 +22,8 @@
           block
           @click="createPeer(peerId)"
           >Create room
-        </b-button></b-col
-      >
+        </b-button>
+      </b-col>
       <b-col sm="9">
         <b-form-input
           v-model="peerId"
@@ -32,6 +32,20 @@
           >{{ peerId }}</b-form-input
         >
       </b-col>
+    </b-row>
+    <b-row>
+      <b-col sm="3"> </b-col
+      ><b-col sm="4"
+        ><vue-qr
+          :text="peerId ? `${baseUrl}/#sim?roomId=${peerId}` : null"
+          :size="150"
+        ></vue-qr>
+      </b-col>
+      <b-col sm="5">
+        <b-form-text :v-if="peerId && peerId.length"
+          >{{ peerId ? `${baseUrl}/#sim?roomId=${peerId}` : '' }}
+        </b-form-text></b-col
+      >
     </b-row>
     <b-row>
       <b-col sm="3">
@@ -92,14 +106,18 @@
 
 <script>
 import Peer from 'peerjs'
+import VueQr from 'vue-qr'
 
 export default {
   name: 'WebRTC',
+  components: { VueQr },
   props: {},
   emits: ['dataEvent', 'error'],
   data() {
     return {
       isDevelopment: process.env.NODE_ENV === 'development',
+      baseUrl: window.location.origin,
+      server: process.server,
       peer: null,
       peerId: null,
       displayname: null,
@@ -109,7 +127,17 @@ export default {
       incomingConns: {},
     }
   },
-  mounted() {},
+  mounted() {
+    // Todo, this is a workaround to parse url params
+    // Proper way is to use vue.route
+    const match = /roomId=(.*)/g.exec(this.$route.hash)
+    if (match && match[1]) {
+      const roomId = match[1]
+      if (roomId) {
+        this.connectToPeer(roomId)
+      }
+    }
+  },
   methods: {
     onConnection(conn) {
       // Connection request from remote peer
@@ -155,6 +183,11 @@ export default {
       this.$emit('error', err)
     },
     createPeer(peerId) {
+      if (this.peer) {
+        this.onError({ message: 'Room already created' })
+        return
+      }
+
       this.displayname =
         this.displayname ||
         Math.random().toString(36).substr(2, 5).toUpperCase()
@@ -170,11 +203,15 @@ export default {
       this.peer = new Peer(peerId, hostConfig)
 
       // Peer receive a connection request from the server
-      this.peer.on('connection', this.onConnection)
+      let conn = null
+      this.peer.on('connection', (newConn) => {
+        conn = newConn
+        this.onConnection(conn)
+      })
       // Peer is disconnected from the server, but can recover
       this.peer.on('disconnected', () => this.onDisconnected(this.peer))
       // Peer (me) is destroyed and can't connect to the server
-      this.peer.on('close', this.onClose)
+      this.peer.on('close', () => this.onClose(conn))
       // Wrapped in promise to allow async call waiting until connection is esablish
       return new Promise((resolve, reject) => {
         // Connected to the peerServer
