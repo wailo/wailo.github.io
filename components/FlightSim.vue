@@ -78,8 +78,10 @@
               >
                 <div class="input-group">
                   <b-input-group>
-                    <b-input-group-prepend>
+                    <b-input-group-prepend style="width: 30%">
                       <b-button
+                        block
+                        style="text-align: left"
                         :variant="
                           parameters.status
                             ? 'outline-success'
@@ -91,6 +93,7 @@
                     </b-input-group-prepend>
 
                     <b-form-input
+                      style="width: 50%"
                       type="number"
                       :min="parameters.min"
                       :max="parameters.max"
@@ -103,8 +106,8 @@
                       "
                     ></b-form-input>
 
-                    <b-input-group-append>
-                      <b-input-group-text>
+                    <b-input-group-append style="flex: 0 0 10%">
+                      <b-input-group-text style="width: 100%">
                         {{ parameters.unit }}
                       </b-input-group-text>
                     </b-input-group-append>
@@ -193,7 +196,7 @@
                 </template>
               </b-tab>
             </template>
-            <b-tab title="Scripting">
+            <b-tab title="Script">
               <ScriptEditor
                 ref="scriptEditor"
                 :context="this"
@@ -204,7 +207,7 @@
                 @error="(e) => notifyUser('Script Error', e.message, 3000)"
               />
             </b-tab>
-            <b-tab title="webrtc">
+            <b-tab title="Classroom">
               <WebRTC
                 ref="WebRTC"
                 @dataEvent="peerEvent"
@@ -398,7 +401,7 @@ export default {
           step: 100.0,
         },
         {
-          button_title: 'Vertical Speed Hold',
+          button_title: 'Vert Spd Hold',
           toggle: this.api_setVerticalSpeedHold,
           status: this.api_vertical_speed_hold,
           setter: this.api_setVerticalSpeedValue,
