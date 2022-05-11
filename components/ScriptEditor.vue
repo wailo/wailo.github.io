@@ -190,7 +190,7 @@ return async function(){${code}};`
             this.$emit('error', e)
           })
       } catch (error) {
-        this.notifyUser('Script Error', error.message, 3000)
+        this.$emit('error', error)
       }
     },
   },
