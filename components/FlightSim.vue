@@ -201,9 +201,7 @@
                 ref="scriptEditor"
                 :context="this"
                 @run="sendScriptToPeer"
-                @finish="
-                  () => notifyUser('Done', 'Finished running the script', 3000)
-                "
+                @finish="null"
                 @error="(e) => notifyUser('Script Error', e.message, 3000)"
               />
             </b-tab>
@@ -843,7 +841,7 @@ export default {
         let ptrApiCdi = null
 
         const updateSimData = () => {
-          // A hacky way to detect if reset was called
+          // A hacky way to detect if flightsim reset was called from WASM
           // By checking if the pointer address has changed
           if (ptrApiWeight !== this.FlightSimulator._api_weight()) {
             HEAPF32 = this.FlightSimulator.HEAPF32

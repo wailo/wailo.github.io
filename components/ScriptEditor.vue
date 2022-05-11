@@ -37,23 +37,49 @@ export default {
   emits: ['run', 'finish', 'error'],
   data() {
     return {
-      content: `this.api_setSimulationReset()
-await api_waitFor(400)
-await api_waitForCondition(() => this.api_autopilot)
-this.api_setAltitudeHold(true)
-this.api_setSimulationSpeed(100)
-this.api_setBankHold(true)
+      content: `const pause = async (ms=4000) => await api_waitFor(ms)
+const notify = async (title, content, time) => {this.notifyUser(title, content, time)
+                                                await pause(time+500)}
+
+this.api_setSimulationReset()
+await notify('Lesson 01 - Demo Autopilot', 'In this class, basic autopilot commands will be demonstrated.', 10000)
+await notify('Lesson 01 - Demo Autopilot', 'Ensure that the autopilot panel visible and follow the script', 5000) 
+await notify('Engaging Autopilot', 'Autopilot master switch will be engaged', 5000)
+this.api_setAutopilot(true)
+await pause()
+
+const targetHeading = 120
+this.api_setHeadingHoldValue(targetHeading)
+this.api_setHeadingHold(true)
+await notify('Engaging Heading Hold', \`Heading Hold is engaged, watch the aircraft turning towards the target heading: \${targetHeading}\`, 10000)
+
+const simulationSpeed = 20;
+await notify('Simulation Speed', \`To move on quicker, simulation speed will be increased to \${simulationSpeed}x, this means, for each second in real life, it will be \${simulationSpeed} in the simulator!\`, 8000)
+this.api_setSimulationSpeed(simulationSpeed)
+await api_waitForCondition(() => this.api_psi_deg > 119)
+this.api_setSimulationSpeed(1)
+await notify('Simulation Speed', \`Back to normal simulation speed\`, 5000)
+
+const rollAngle = 30
 this.api_setBankHoldValue(30)
-this.api_setVerticalSpeedHold(true)
-this.api_setVerticalSpeedValue(500)
+this.api_setBankHold(true)
+await notify('Roll angle hold', \`Engaging roll angle hold to \${rollAngle} degrees\`, 5000)
+await pause()
+
+const targetAltitude = 25500;
+await notify('Altitude hold', \`Altitude hold will be engaged to maintain \${targetAltitude}ft \`, 5000)
+this.api_setAltitudeHoldValue(targetAltitude)
+this.api_setAltitudeHold(true)
+await pause()
+
+await notify('Speed Hold', \`As the aircraft is climbing and losing speed, speed hold will be engaged to maintain constant speed \`, 5000)
 this.api_setSpeedHold(true)
-const dampSimulationSpeed = () =>{
-    this.api_setSimulationSpeed(this.api_theta_deg)
-        setTimeout(() => {
-            dampSimulationSpeed()
-        }, 1000);
-}
-dampSimulationSpeed()
+await pause()
+
+notify('Waiting for a condition', \`Waiting for the aircraft altitude to cross 25000ft\`, 5000)
+await api_waitForCondition(() => (this.api_altitude) > 25000)
+
+notify('End of the lesson', \`This concludes our lesson today, thanks for participating\`, 5000)
 `,
     }
   },
