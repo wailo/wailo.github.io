@@ -8,15 +8,30 @@
       @init="editorInit"
       @input="null"
     ></editor>
-    <b-button
-      @click="
-        () => {
-          codeInterpret(context, content)
-          $emit('run', content)
-        }
-      "
-      >Run Script</b-button
-    >
+    <b-button-group>
+      <b-button
+        variant="outline-light"
+        :disabled="isRunning"
+        @click="
+          () => {
+            codeInterpret(context, content)
+            $emit('run', content)
+          }
+        "
+        >Run <b-icon variant="success" icon="play-btn"
+      /></b-button>
+      <b-button
+        variant="outline-light"
+        :disabled="!isRunning"
+        @click="
+          () => {
+            reset()
+            $emit('reset', content)
+          }
+        "
+        >Stop <b-icon variant="danger" icon="stop-btn"
+      /></b-button>
+    </b-button-group>
   </div>
 </template>
 
@@ -34,9 +49,10 @@ export default {
       default: () => ({}),
     },
   },
-  emits: ['run', 'finish', 'error'],
+  emits: ['run', 'finish', 'reset', 'error'],
   data() {
     return {
+      isRunning: false,
       content: `const pause = async (ms=4000) => await api_waitFor(ms)
 const notify = async (title, content, time) => {this.notifyUser(title, content, time)
                                                 await pause(time+500)}
@@ -136,6 +152,7 @@ notify('End of the lesson', \`This concludes our lesson today, thanks for partic
       }
       window.cache.forEach((n) => window.clearTimeout(n))
       window.cache.length = []
+      this.isRunning = false
     },
     codeInterpret(context, code) {
       if (!code) {
@@ -143,6 +160,7 @@ notify('End of the lesson', \`This concludes our lesson today, thanks for partic
       }
 
       try {
+        this.isRunning = true
         if (!window.cache) {
           window.cache = []
         } // will store all timeouts IDs
@@ -207,16 +225,20 @@ function api_waitFor(ms) {
 clearTimeouts()
 return async function(){${code}};`
         )
+
+        // Calling the function
         userScript()
           .call(context)
-          .then((response) => {
+          .then(() => {
             this.$emit('finish')
           })
           .catch((e) => {
             this.$emit('error', e)
           })
+          .finally(() => (this.isRunning = false))
       } catch (error) {
         this.$emit('error', error)
+        this.isRunning = false
       }
     },
   },
