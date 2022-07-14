@@ -1,12 +1,7 @@
 <template>
   <div>
     <b-row>
-      <b-col sm="3">
-        <b-button block disabled variant="default"
-          >Display name</b-button
-        ></b-col
-      >
-      <b-col sm="9">
+      <b-col>
         <b-form-input
           v-model="displayname"
           placeholder="Enter your display name (optional)"
@@ -14,25 +9,49 @@
         ></b-col
       >
     </b-row>
+    <!-- <h4>Join an existing room</h4> -->
     <b-row>
-      <b-col sm="3">
-        <b-button
-          ref="btn-create-room"
-          variant="default"
-          block
-          @click="createPeer(peerId)"
-          >Create room
-        </b-button>
-      </b-col>
-      <b-col sm="9">
-        <b-form-input
-          v-model="peerId"
-          :readonly="online"
-          placeholder="Enter room name (optional)"
-          >{{ peerId }}</b-form-input
-        >
+      <b-col>
+        <b-input-group>
+          <b-form-input
+            v-model="PeerId"
+            :readonly="online"
+            placeholder="Enter room id"
+          ></b-form-input>
+          <b-input-group-append>
+            <b-button
+              id="connect"
+              variant="default"
+              block
+              @click="connectToPeer(PeerId)"
+              >Start
+            </b-button>
+          </b-input-group-append>
+        </b-input-group>
       </b-col>
     </b-row>
+    <!-- <h4>Create a new room</h4>
+    <b-row>
+      <b-col>
+        <b-input-group>
+          <b-form-input
+            v-model="peerId"
+            :readonly="online"
+            placeholder="Enter room name (optional)"
+            >{{ peerId }}</b-form-input
+          >
+          <b-input-group-append>
+            <b-button
+              ref="btn-create-room"
+              variant="default"
+              block
+              @click="createPeer(peerId)"
+              >Create room
+            </b-button>
+          </b-input-group-append>
+        </b-input-group>
+      </b-col>
+    </b-row> -->
     <b-row>
       <b-col sm="3"> </b-col
       ><b-col sm="4"
@@ -46,24 +65,6 @@
           >{{ peerId ? `${baseUrl}/#sim?roomId=${peerId}` : '' }}
         </b-form-text></b-col
       >
-    </b-row>
-    <b-row>
-      <b-col sm="3">
-        <b-button
-          id="connect"
-          variant="default"
-          block
-          @click="connectToPeer(remotePeerId)"
-          >Join room
-        </b-button>
-      </b-col>
-
-      <b-col sm="9">
-        <b-form-input
-          v-model="remotePeerId"
-          placeholder="Enter room id"
-        ></b-form-input>
-      </b-col>
     </b-row>
     <b-row>
       <b-col sm="5">
@@ -122,7 +123,6 @@ export default {
       peerId: null,
       displayname: null,
       online: false,
-      remotePeerId: null,
       outgoingConn: null,
       incomingConns: {},
     }
@@ -174,7 +174,14 @@ export default {
       this.$emit('dataEvent', { conn, data })
     },
     onError(err) {
-      this.trace(`${err} - ${err.type}`)
+      switch (err.type) {
+        case 'peer-unavailable':
+          this.trace(`--- not available ${err} - ${err.type}`)
+          break
+        default:
+          this.trace(`${err} - ${err.type}`)
+      }
+
       // if (err.type === 'unavailable-id') {
       //   // if the user name is taken.
       //   // notify the user...
@@ -184,10 +191,13 @@ export default {
     },
     createPeer(peerId) {
       if (this.peer) {
-        this.onError({ message: 'Room already created' })
-        return
+        if (this.peer.id === peerId) {
+          // this.onError({ message: 'Room already created' })
+          return new Promise((resolve) => resolve())
+        }
       }
 
+      // Auto genrate display name
       this.displayname =
         this.displayname ||
         Math.random().toString(36).substr(2, 5).toUpperCase()
@@ -223,8 +233,14 @@ export default {
         })
         // Error
         this.peer.on('error', (e) => {
-          this.onError(e)
-          reject(e)
+          if (e.type === 'unavailable-id') {
+            this.createPeer()
+            this.connectToPeer(peerId)
+            resolve()
+          } else {
+            this.onError(e)
+            reject(e)
+          }
         })
       })
     },
@@ -234,7 +250,7 @@ export default {
         return
       }
       if (!this.peer) {
-        await this.createPeer()
+        await this.createPeer(id)
       }
       const vm = this
 
@@ -266,6 +282,10 @@ export default {
       Object.entries(this.incomingConns).forEach(([, conn]) => conn.send(data))
     },
     trace(text) {
+      if (this.isDevelopment === false) {
+        return
+      }
+
       if (text[text.length - 1] === '\n') {
         text = text.substring(0, text.length - 1)
       }
