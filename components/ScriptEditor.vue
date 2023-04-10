@@ -76,10 +76,14 @@ await api_waitForCondition(() => this.api_psi_deg > 119)
 this.api_setSimulationSpeed(1)
 await notify('Simulation Speed', \`Back to normal simulation speed\`, 5000)
 
-const rollAngle = 30
-this.api_setBankHoldValue(30)
+let rollAngle = 30
+this.api_setBankHoldValue(rollAngle)
 this.api_setBankHold(true)
 await notify('Roll angle hold', \`Engaging roll angle hold to \${rollAngle} degrees\`, 5000)
+await pause()
+rollAngle = 0
+await notify('Roll angle hold', \`Returning roll angle back to \${rollAngle} degrees\`, 5000)
+this.api_setBankHoldValue(rollAngle)
 await pause()
 
 const targetAltitude = 25500;
