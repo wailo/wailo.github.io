@@ -1,0 +1,46 @@
+name: Node.js CI
+
+on:
+  push:
+    branches:
+      - development
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: ['19']
+
+    steps:
+    - name: Checkout page
+      uses: actions/checkout@v3
+      with:
+        ref: 'development'
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Installing dependencies
+      env:
+        ACCESS_TOKEN: ${{ secrets.GH_SIM_PAT }}
+      run: |
+        npm ci --legacy-peer-deps
+
+    - name: Build
+      run: |
+        npm run build
+
+    - name: Generate
+      run: |
+        npm run generate
+
+    - name: Deploy to GitHub Pages
+      uses: JamesIves/github-pages-deploy-action@v4
+      with:
+        branch: master
+        folder: dist
