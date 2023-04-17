@@ -107,7 +107,15 @@
                     ></b-form-input>
 
                     <b-input-group-append style="flex: 0 0 10%">
-                      <b-input-group-text style="width: 100%">
+                      <b-input-group-text
+                        style="
+                          width: 100%;
+                          background-color: transparent;
+                          border: none;
+                          font-size: inherit;
+                          color: inherit;
+                        "
+                      >
                         {{ parameters.unit }}
                       </b-input-group-text>
                     </b-input-group-append>
