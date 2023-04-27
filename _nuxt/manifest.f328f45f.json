@@ -1,7 +1,6 @@
 {
   "name": "wa.il",
   "short_name": "wa.il",
-  "description": "> personal website",
   "icons": [
     {
       "src": "/_nuxt/icons/icon_64x64.f16e3b.png",
