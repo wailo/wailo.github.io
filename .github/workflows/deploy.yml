@@ -29,7 +29,7 @@ jobs:
       env:
         ACCESS_TOKEN: ${{ secrets.GH_SIM_PAT }}
       run: |
-        npm ci --legacy-peer-deps
+        npm ci
 
     - name: Build
       run: |
