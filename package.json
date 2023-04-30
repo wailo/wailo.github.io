@@ -7,7 +7,7 @@
   "CompactFlightSimulatorCommit": "34730eb",
   "scripts": {
     "dev": "nuxt",
-    "build": "yarn run build:emscripten && nuxt build",
+    "build": "npm run build:emscripten && nuxt build",
     "start": "nuxt start",
     "generate": "nuxt generate",
     "lint": "eslint --ext .js,.vue --ignore-path .gitignore .",
