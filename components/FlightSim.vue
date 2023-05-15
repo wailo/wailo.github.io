@@ -36,7 +36,7 @@
     <splitpanes
       v-show="is_running"
       :style="
-        'max-height: 80vh;' +
+        'max-height: 90vh;' +
         ($mq === 'sm' ? 'flex-direction: column-reverse;' : '')
       "
       class="emscripten_border default-theme"
@@ -53,15 +53,7 @@
           background-color: rgba(0, 0, 0, 0);
         "
       >
-        <b-card
-          header="Pilot Controls"
-          header-border-variant="light"
-          header-bg-variant="dark"
-          no-body
-          bg-variant="transparent"
-          border-variant="dark"
-          text-variant="white"
-        >
+        <b-card header="Pilot Controls" no-body bg-variant="transparent">
           <b-tabs card small fill no-key-nav>
             <b-tab title="Autpilot">
               <b-button
@@ -78,8 +70,13 @@
               >
                 <div class="input-group">
                   <b-input-group>
-                    <b-input-group-prepend style="width: 30%">
-                      <b-button
+                    <!-- <b-input-group-prepend style="width: 30%"> -->
+                    <SvgButton
+                      :label="parameters.button_title"
+                      :is-pressed="parameters.status"
+                      @click="parameters.toggle(!parameters.status)"
+                    />
+                    <!-- <b-button
                         block
                         style="text-align: left"
                         :variant="
@@ -89,11 +86,11 @@
                         "
                         @click="parameters.toggle(!parameters.status)"
                         >{{ parameters.button_title }}</b-button
-                      >
-                    </b-input-group-prepend>
+                      > -->
+                    <!-- </b-input-group-prepend> -->
 
                     <b-form-input
-                      style="width: 50%"
+                      style="width: 50%; height: 100%"
                       type="number"
                       :min="parameters.min"
                       :max="parameters.max"
@@ -153,12 +150,8 @@
 
         <b-card
           header="Instructor Operating Station"
-          header-border-variant="light"
-          header-bg-variant="dark"
           no-body
           bg-variant="transparent"
-          border-variant="dark"
-          text-variant="white"
         >
           <b-tabs card small fill no-key-nav>
             <template
@@ -175,6 +168,7 @@
                     label-size="sm"
                     label-cols="6"
                     label-align="right"
+                    style="margin-bottom: 1px"
                   >
                     <b-button
                       v-if="parameter.icon"
@@ -225,18 +219,9 @@
           </b-tabs>
         </b-card>
 
-        <b-card
-          header="Real Time Data"
-          header-border-variant="light"
-          header-bg-variant="dark"
-          no-body
-          bg-variant="transparent"
-          border-variant="dark"
-          text-variant="white"
-        >
+        <b-card header="Real Time Data" no-body bg-variant="transparent">
           <b-button
-            variant="outline-light"
-            class="border border-light"
+            variant="default"
             @click="isRealTimeDataDisplayed = !isRealTimeDataDisplayed"
           >
             {{ isRealTimeDataDisplayed ? 'Hide' : 'Show' }}
@@ -244,22 +229,21 @@
           <b-card-text v-if="isRealTimeDataDisplayed" ref="real_time_data">
             <b-collapse id="collapse-data" v-model="isRealTimeDataDisplayed">
               <b-table
-                table-variant="transparent"
-                head-variant="dark"
+                table-variant="default"
                 borderless
-                hover
                 small
+                disable
                 sticky-header
                 :fields="['title', 'value']"
                 :items="SimulatorData"
               >
                 <template #cell()="data">
-                  <p small class="text-light">{{ data.value }}</p>
+                  <b-form-text>{{ data.value }}</b-form-text>
                 </template>
                 <template #cell(title)="data">
-                  <p class="text-light">
+                  <b-form-text>
                     {{ `${data.item.title} ${data.item.unit || ''}` }}
-                  </p>
+                  </b-form-text>
                 </template>
                 <!-- {{ simData.title }}: {{ simData.value()
                   }}{{ simData.unit || '' }} -->
@@ -277,7 +261,40 @@
           tabindex="-1"
         >
         </canvas>
-        <textarea v-if="is_development" id="output" rows="3"></textarea>
+
+        <!-- <b-form-textarea
+          ref="promptElement"
+          variant="default"
+          plaintext
+          value="Hello this is a temporary text to be removed!"
+        ></b-form-textarea> -->
+
+        <!-- <typewriter
+          ref="typewriter"
+          style="font-size: 12x; color: black"
+          :type-interval="10"
+          :replace-interval="1000"
+        >
+          <div>Typewriter Vue</div>
+        </typewriter> -->
+
+        <b-form-text
+          style="min-height: 5rem; background: transparent"
+          variant="danger"
+        >
+          <vue-typer
+            ref="typewriter"
+            erase-style="select-back"
+            :repeat="0"
+            :type-delay="20"
+            :erase-delay="10"
+            :text="promptText"
+            :pre-erase-delay="promptTextEraseDelay"
+            :erase-on-complete="true"
+          ></vue-typer>
+        </b-form-text>
+
+        <!-- <textarea v-if="is_development" id="output" rows="3"></textarea> -->
       </pane>
     </splitpanes>
   </div>
@@ -290,6 +307,8 @@ import { BootstrapVueIcons } from 'bootstrap-vue'
 import { Splitpanes, Pane } from 'splitpanes'
 import 'splitpanes/dist/splitpanes.css'
 import 'bootstrap-vue/dist/bootstrap-vue-icons.min.css'
+import { VueTyper } from 'vue-typer'
+import SvgButton from '~/components/fcuButton.vue'
 import ScriptEditor from '~/components/ScriptEditor.vue'
 import WebRTC from '~/components/peerJs.vue'
 import FlightSimulator from '~/static/flightsimulator_exec.js'
@@ -299,7 +318,7 @@ Vue.use(VueMq)
 
 export default {
   name: 'FlightSim',
-  components: { Splitpanes, Pane, ScriptEditor, WebRTC },
+  components: { Splitpanes, Pane, ScriptEditor, WebRTC, SvgButton, VueTyper },
 
   data() {
     return {
@@ -368,6 +387,8 @@ export default {
       api_cl: null,
       api_cdi: null,
       isRealTimeDataDisplayed: false,
+      promptText: '',
+      promptTextEraseDelay: 5000,
     }
   },
   computed: {
@@ -705,14 +726,17 @@ export default {
       }
     },
     notifyUser(title, msg, duration = 1000) {
-      this.$bvToast.toast(msg, {
-        title,
-        noAutoHide: duration === -1,
-        autoHideDelay: duration,
-        appendToast: false,
-        variant: 'dark',
-        'body-class': 'strong',
-      })
+      this.promptTextEraseDelay = duration - 200
+      this.promptText = title + ':  ' + msg
+
+      // this.$bvToast.toast(msg, {
+      //   title,
+      //   noAutoHide: duration === -1,
+      //   autoHideDelay: duration,
+      //   appendToast: false,
+      //   variant: 'dark',
+      //   'body-class': 'strong',
+      // })
     },
     reset() {
       this.$refs.scriptEditor.reset()

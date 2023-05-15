@@ -33,7 +33,8 @@
     "peerjs": "^1.4.5",
     "splitpanes": "^2.4.1",
     "vue-mq": "^1.0.1",
-    "vue-qr": "^4.0.6"
+    "vue-qr": "^4.0.6",
+    "vue-typer": "^1.2.0"
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.17.0",

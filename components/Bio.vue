@@ -10,26 +10,26 @@
           overflow: auto;
         "
       >
-        <p>
-          I am an independent contractor with 12 years of C++ software
-          development, specialized in simulation and finance domains.
+        <p variant="hacker">
+          I am an independent contractor with 13 years of C++ software
+          development, specialized in simulation and finance.
         </p>
         <p>
           I like to work with low-latency systems, communication protocols and
           software/hardware integratrion.
         </p>
 
-        <hr />
+        <!-- <hr />
         <div v-for="(tools, title) in skills" :key="title">
           <h5>{{ title }}</h5>
           <b-button
             v-for="skill in tools"
             :key="skill"
             disabled
-            variant="outline-light"
+            variant="outline-hacker"
             >{{ skill }}</b-button
           >
-        </div>
+        </div> -->
         <hr />
         <h5>Github Projects:</h5>
         <b-list-group style="flex: 1; overflow: auto; height: 100%">
@@ -65,7 +65,7 @@
           :href="link.link"
           target="_blank"
           class="border border-light"
-          variant="outline-light"
+          variant="outline-hacker"
           style="margin: 0px 0px 0px 15px"
         >
           {{ link.name }}
