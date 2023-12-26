@@ -4,7 +4,6 @@
   "description": "",
   "author": "wy",
   "private": true,
-  "CompactFlightSimulatorCommit": "34730eb",
   "scripts": {
     "dev": "nuxt",
     "build": "npm run build:emscripten && nuxt build",
@@ -12,7 +11,7 @@
     "generate": "nuxt generate",
     "lint": "eslint --ext .js,.vue --ignore-path .gitignore .",
     "deploy": "push-dir --dir=dist --branch=master --cleanup",
-    "build:emscripten": "git -C node_modules/Compact-Flight-Simulator checkout ${npm_package_CompactFlightSimulatorCommit} && ./node_modules/Compact-Flight-Simulator/build_wasm.sh && cp -a node_modules/Compact-Flight-Simulator/build_wasm/bin/flightsimulator* static/",
+    "build:emscripten": "git -C node_modules/Compact-Flight-Simulator checkout 34730eb && ./node_modules/Compact-Flight-Simulator/build_wasm.sh && cp -a node_modules/Compact-Flight-Simulator/build_wasm/bin/flightsimulator* static/",
     "preinstall": "git clone --recursive https://oauth2:$ACCESS_TOKEN@github.com/wailo/Compact-Flight-Simulator.git node_modules/Compact-Flight-Simulator"
   },
   "lint-staged": {
