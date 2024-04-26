@@ -251,7 +251,14 @@
             </b-collapse>
           </b-card-text>
         </b-card> </pane
-      ><pane class="default-theme" style="max-height: inherit; overflow: none">
+      ><pane
+        class="default-theme"
+        style="
+          background-color: transparent;
+          max-height: inherit;
+          overflow: none;
+        "
+      >
         <!-- Simulation Screen -->
 
         <canvas
@@ -291,6 +298,7 @@
             :text="promptText"
             :pre-erase-delay="promptTextEraseDelay"
             :erase-on-complete="true"
+            variant="light"
           ></vue-typer>
         </b-form-text>
 
@@ -1129,6 +1137,29 @@ canvas.emscripten {
   animation-duration: 2s;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
+}
+
+.vue-typer {
+  font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+}
+
+::v-deep .typed {
+    color: #dcdcdc !important;
+  }
+
+.vue-typer .custom.char.selected {
+  color: #e91e63;
+}
+
+.vue-typer .custom.caret {
+  animation: rocking 1s ease-in-out 0s infinite;
+}
+.vue-typer .custom.caret.typing {
+  background-color: #009688;
+}
+.vue-typer .custom.caret.selecting {
+  display: inline-block;
+  background-color: #e91e63;
 }
 
 @keyframes flash {
