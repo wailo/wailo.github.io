@@ -340,6 +340,7 @@ export default {
       api_altitude_hold: 0,
       api_vertical_speed_hold: 0,
       api_speed_hold: 0,
+      api_mach_speed_hold: 0,
       api_setAutopilot: null,
       api_setHeadingHold: null,
       api_setHeadingHoldValue: null,
@@ -350,7 +351,9 @@ export default {
       api_setVerticalSpeedHold: null,
       api_setVerticalSpeedValue: null,
       api_setSpeedHold: null,
+      api_setMachSpeedHold: null,
       api_setSpeedHoldValue: null,
+      api_setMachSpeedHoldValue: null,
       api_setAtmosphereSeaLevelTemperature: null,
       api_setAtmosphereSeaLevelDensity: null,
       api_setUpdateRate: null,
@@ -366,6 +369,7 @@ export default {
       api_target_heading_deg: null,
       api_target_bank_deg: null,
       api_target_speed: null,
+      api_target_mach_speed: null,
       api_fps: null,
       api_ups: null,
       api_weight: null,
@@ -375,9 +379,9 @@ export default {
       api_alpha_aileron: null,
       api_throttle: null,
       api_ias_speed_knots: null,
-      api_psi_deg: null,
-      api_theta_deg: null,
-      api_attitude_deg: null,
+      api_heading_deg: null,
+      api_pitch_deg: null,
+      api_bank_deg: null,
       api_simulation_pause: null,
       api_simulation_speed: null,
       api_atmosphere_sea_level_temperature: null,
@@ -420,8 +424,8 @@ export default {
           setter: this.api_setBankHoldValue,
           setter_model: this.api_target_bank_deg,
           unit: '°',
-          min: -30,
-          max: 30,
+          min: -50,
+          max: 50,
           step: 1.0,
         },
         {
@@ -456,6 +460,17 @@ export default {
           min: 0,
           max: 350,
           step: 1,
+        },
+        {
+          button_title: 'MACH Hold',
+          toggle: this.api_setMachSpeedHold,
+          status: this.api_mach_speed_hold,
+          setter: this.api_setMachSpeedHoldValue,
+          setter_model: this.api_target_mach_speed,
+          unit: 'M',
+          min: 0,
+          max: 1.5,
+          step: 0.01,
         },
       ]
     },
@@ -705,23 +720,22 @@ export default {
         },
         {
           title: 'Heading',
-          value: Number(this.api_psi_deg).toFixed(2),
-          unit: '°',
-        },
-        {
-          title: 'Bank',
-          value: Number(this.api_theta_deg).toFixed(2),
+          value: Number(this.api_heading_deg).toFixed(2),
           unit: '°',
         },
         {
           title: 'Pitch',
-          value: Number(this.api_attitude_deg).toFixed(2),
+          value: Number(this.api_pitch_deg).toFixed(2),
+          unit: '°',
+        },
+        {
+          title: 'Bank',
+          value: Number(this.api_bank_deg).toFixed(2),
           unit: '°',
         },
       ]
     },
   },
-  mounted() {},
   methods: {
     sendScriptToPeer(script) {
       const payload = this.$refs.WebRTC.createMessageObject('script', script)
@@ -803,6 +817,7 @@ export default {
         this.api_setVerticalSpeedHold =
           this.FlightSimulator._api_set_vertical_speed_hold
         this.api_setSpeedHold = this.FlightSimulator._api_set_speed_hold
+        this.api_setMachSpeedHold = this.FlightSimulator._api_set_mach_speed_hold
         this.api_setHeadingHoldValue =
           this.FlightSimulator._api_set_target_heading_deg
         this.api_setBankHoldValue =
@@ -812,6 +827,7 @@ export default {
         this.api_setVerticalSpeedValue =
           this.FlightSimulator._api_set_target_vertical_speed
         this.api_setSpeedHoldValue = this.FlightSimulator._api_set_target_speed
+        this.api_setMachSpeedHoldValue = this.FlightSimulator._api_set_target_mach_speed
         this.api_setWingAreaValue = this.FlightSimulator._api_set_wing_area
         this.api_setThrustToWeightRatio =
           this.FlightSimulator._api_set_thrust_to_weight
@@ -848,14 +864,15 @@ export default {
         let ptrApiAlphaAileron = null
         let ptrApiThrottle = null
         let ptrApiIasSpeedKnots = null
-        let ptrApiPsiDeg = null
-        let ptrApiThetaDeg = null
-        let ptrApiAttitudeDeg = null
+        let ptrApiHeadingDeg = null
+        let ptrApiPitchDeg = null
+        let ptrApiBankDeg = null
         let ptrApiAutopilot = null
         let ptrApiHeadingHold = null
         let ptrApiBankHold = null
         let ptrApiLevelHold = null
         let ptrApiSpeedHold = null
+        let ptrApiMachSpeedHold = null
         let ptrApiAltitudeHold = null
         let ptrApiVerticalSpeedHold = null
         let ptrApiTargetHeadingDeg = null
@@ -863,6 +880,7 @@ export default {
         let ptrApiTargetAltitude = null
         let ptrApiTargetVerticalSpeed = null
         let ptrApiTargetSpeed = null
+        let ptrApiTargetMachSpeed = null
         let ptrApiAtmosphereSeaLevelTemperature = null
         let ptrApiAtmosphereSeaLevelDensity = null
         let ptrApiSimulationPause = null
@@ -896,14 +914,15 @@ export default {
             ptrApiAlphaAileron = this.FlightSimulator._api_alpha_aileron()
             ptrApiThrottle = this.FlightSimulator._api_throttle()
             ptrApiIasSpeedKnots = this.FlightSimulator._api_ias_speed_knots()
-            ptrApiPsiDeg = this.FlightSimulator._api_psi_deg()
-            ptrApiThetaDeg = this.FlightSimulator._api_theta_deg()
-            ptrApiAttitudeDeg = this.FlightSimulator._api_attitude_deg()
+            ptrApiHeadingDeg = this.FlightSimulator._api_heading_deg()
+            ptrApiPitchDeg = this.FlightSimulator._api_pitch_deg()
+            ptrApiBankDeg = this.FlightSimulator._api_bank_deg()
             ptrApiAutopilot = this.FlightSimulator._api_autopilot()
             ptrApiHeadingHold = this.FlightSimulator._api_heading_hold()
             ptrApiBankHold = this.FlightSimulator._api_bank_hold()
             ptrApiLevelHold = this.FlightSimulator._api_level_hold()
             ptrApiSpeedHold = this.FlightSimulator._api_speed_hold()
+            ptrApiMachSpeedHold = this.FlightSimulator._api_mach_speed_hold()
             ptrApiAltitudeHold = this.FlightSimulator._api_altitude_hold()
             ptrApiVerticalSpeedHold =
               this.FlightSimulator._api_vertical_speed_hold()
@@ -914,6 +933,7 @@ export default {
             ptrApiTargetVerticalSpeed =
               this.FlightSimulator._api_target_vertical_speed()
             ptrApiTargetSpeed = this.FlightSimulator._api_target_speed()
+            ptrApiTargetMachSpeed = this.FlightSimulator._api_target_mach_speed()
             ptrApiAtmosphereSeaLevelTemperature =
               this.FlightSimulator._api_atmosphere_sea_level_temperature()
             ptrApiAtmosphereSeaLevelDensity =
@@ -947,15 +967,16 @@ export default {
           this.api_alpha_aileron = HEAPF32[ptrApiAlphaAileron >> 2]
           this.api_throttle = HEAPF32[ptrApiThrottle >> 2]
           this.api_ias_speed_knots = HEAPF32[ptrApiIasSpeedKnots >> 2]
-          this.api_psi_deg = HEAPF32[ptrApiPsiDeg >> 2]
-          this.api_theta_deg = HEAPF32[ptrApiThetaDeg >> 2]
-          this.api_attitude_deg = HEAPF32[ptrApiAttitudeDeg >> 2]
+          this.api_heading_deg = HEAPF32[ptrApiHeadingDeg >> 2]
+          this.api_pitch_deg = HEAPF32[ptrApiPitchDeg >> 2]
+          this.api_bank_deg = HEAPF32[ptrApiBankDeg >> 2]
           this.api_simulation_pause = HEAP8[ptrApiSimulationPause]
           this.api_autopilot = HEAP8[ptrApiAutopilot]
           this.api_heading_hold = HEAP8[ptrApiHeadingHold]
           this.api_bank_hold = HEAP8[ptrApiBankHold]
           this.api_level_hold = HEAP8[ptrApiLevelHold]
           this.api_speed_hold = HEAP8[ptrApiSpeedHold]
+          this.api_mach_speed_hold = HEAP8[ptrApiMachSpeedHold]
           this.api_altitude_hold = HEAP8[ptrApiAltitudeHold]
           this.api_vertical_speed_hold = HEAP8[ptrApiVerticalSpeedHold]
           this.api_target_heading_deg = HEAPF32[ptrApiTargetHeadingDeg >> 2]
@@ -965,6 +986,7 @@ export default {
             HEAPF32[ptrApiTargetVerticalSpeed >> 2]
 
           this.api_target_speed = HEAPF32[ptrApiTargetSpeed >> 2]
+          this.api_target_mach_speed = HEAPF32[ptrApiTargetMachSpeed >> 2]
           this.api_atmosphere_sea_level_temperature =
             HEAPF32[ptrApiAtmosphereSeaLevelTemperature >> 2] | 0
           this.api_atmosphere_sea_level_density =
