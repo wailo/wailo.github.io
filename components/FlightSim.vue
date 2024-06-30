@@ -531,7 +531,7 @@ export default {
             setter: this.api_setWingAreaValue,
             unit: 'Ft²',
             min: 10,
-            max: 1000,
+            max: 7000,
             step: 1,
           },
         ],
@@ -550,7 +550,7 @@ export default {
             setter: this.api_setCdValue,
             min: 0.01,
             max: 1.0,
-            step: 0.01,
+            step: 0.0001,
           },
         ],
         Atmosphere: [
