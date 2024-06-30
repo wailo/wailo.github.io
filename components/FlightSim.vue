@@ -299,6 +299,7 @@
             :pre-erase-delay="promptTextEraseDelay"
             :erase-on-complete="true"
             variant="light"
+            @erased="onTypingCompleted"
           ></vue-typer>
         </b-form-text>
 
@@ -401,6 +402,7 @@ export default {
       isRealTimeDataDisplayed: false,
       promptText: '',
       promptTextEraseDelay: 5000,
+      resolveTyping: null
     }
   },
   computed: {
@@ -747,19 +749,38 @@ export default {
         this.$refs.scriptEditor.codeInterpret(this, data.content)
       }
     },
-    notifyUser(title, msg, duration = 1000) {
-      this.promptTextEraseDelay = duration - 200
+    // Show a popup to the user with a title, content for specified period of time in ms
+   async  notifyUser(title, msg, duration = 1000) {
+       this.promptTextEraseDelay = duration - 200
       this.promptText = title + ':  ' + msg
+         // Wait for the typing to complete by waiting for the promise to resolve
+         await new Promise(resolve => {
+        this.resolveTyping = resolve
+      })
 
-      // this.$bvToast.toast(msg, {
-      //   title,
-      //   noAutoHide: duration === -1,
-      //   autoHideDelay: duration,
-      //   appendToast: false,
-      //   variant: 'dark',
-      //   'body-class': 'strong',
-      // })
     },
+    // Event handler for the completed event
+    onTypingCompleted() {
+      if (this.resolveTyping) {
+        this.resolveTyping()
+        this.resolveTyping = null
+      }
+    },
+    // Wait until a given condition return true, without interrupting the simulation
+    api_waitForCondition(conditionFunction) {
+    const poll = (resolve) => {
+        if (conditionFunction()) resolve()
+        else setTimeout((_) => poll(resolve), 400)
+    }
+    return new Promise(poll)
+},
+   // Wait for a given time in ms without interrupting the simulation
+    api_waitFor(ms) {
+    const poll = (resolve) => {
+        setTimeout((_) => resolve(), ms)
+    }
+    return new Promise(poll)
+},
     reset() {
       this.$refs.scriptEditor.reset()
       this.api_setSimulationReset()
