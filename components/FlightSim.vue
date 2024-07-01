@@ -73,7 +73,7 @@
                     <!-- <b-input-group-prepend style="width: 30%"> -->
                     <SvgButton
                       :label="parameters.button_title"
-                      :is-pressed="parameters.status"
+                      :is-pressed="parameters.status === 1"
                       @click="parameters.toggle(!parameters.status)"
                     />
                     <!-- <b-button
@@ -203,7 +203,6 @@
                 ref="scriptEditor"
                 :context="this"
                 @run="sendScriptToPeer"
-                @finish="null"
                 @error="(e) => notifyUser('Script Error', e.message, 3000)"
               />
             </b-tab>
@@ -400,7 +399,7 @@ export default {
       api_cl: null,
       api_cdi: null,
       isRealTimeDataDisplayed: false,
-      promptText: '',
+      promptText: ' ',
       promptTextEraseDelay: 5000,
       resolveTyping: null
     }

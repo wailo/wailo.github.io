@@ -14,7 +14,7 @@
       <b-col>
         <b-input-group>
           <b-form-input
-            v-model="PeerId"
+            v-model="peerId"
             :readonly="online"
             placeholder="Enter room id"
           ></b-form-input>
@@ -23,7 +23,7 @@
               id="connect"
               variant="default"
               block
-              @click="connectToPeer(PeerId)"
+              @click="connectToPeer(peerId)"
               >Start
             </b-button>
           </b-input-group-append>
@@ -56,7 +56,7 @@
       <b-col sm="3"> </b-col
       ><b-col sm="4"
         ><vue-qr
-          :text="peerId ? `${baseUrl}/#sim?roomId=${peerId}` : null"
+          :text="peerId ? `${baseUrl}/#sim?roomId=${peerId}` : ''"
           :size="150"
         ></vue-qr>
       </b-col>
