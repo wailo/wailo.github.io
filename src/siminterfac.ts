@@ -1,0 +1,420 @@
+import MainModuleFactory, { MainModule } from "../public/flightsimulator_exec";
+
+export class SimData {
+  api_fps: Number = 0;
+  api_ups: Number = 0;
+  api_simulation_speed: Number = 0;
+  api_weight: Number = 0;
+  api_altitude: Number = 0;
+  api_vertical_speed: Number = 0;
+  api_alpha_tail: Number = 0;
+  api_alpha_aileron: Number = 0;
+  api_throttle: Number = 0;
+  api_ias_speed_knots: Number = 0;
+  api_heading_deg: Number = 0;
+  api_pitch_deg: Number = 0;
+  api_bank_deg: Number = 0;
+  api_simulation_pause: Boolean = false;
+  api_autopilot: Boolean = false;
+  api_heading_hold: Boolean = false;
+  api_bank_hold: Boolean = false;
+  api_level_hold: Boolean = false;
+  api_speed_hold: Boolean = false;
+  api_mach_speed_hold: Boolean = false;
+  api_altitude_hold: Boolean = false;
+  api_vertical_speed_hold: Boolean = false;
+  api_target_heading_deg: Number = 0;
+  api_target_bank_deg: Number = 0;
+  api_target_altitude: Number = 0;
+  api_target_vertical_speed: Number = 0;
+  api_target_speed: Number = 0;
+  api_target_mach_speed: Number = 0;
+  api_atmosphere_sea_level_temperature: Number = 0;
+  api_atmosphere_sea_level_density: Number = 0;
+  api_thrust_to_weight: Number = 0;
+  api_cl0: Number = 0;
+  api_cdo: Number = 0;
+  api_wing_area: Number = 0;
+  api_true_speed_knots: Number = 0;
+  api_mach: Number = 0;
+  api_vstall_speed_knots: Number = 0;
+  api_atmosphere_temperature: Number = 0;
+  api_atmosphere_density: Number = 0;
+  api_total_drag: Number = 0;
+  api_cl: Number = 0;
+  api_cdi: Number = 0;
+}
+
+let ptrApiFps: number = 0;
+let ptrApiUps: number = 0;
+let ptrApiWeight: number = 0;
+let ptrApiAltitude: number = 0;
+let ptrApiVerticalSpeed: number = 0;
+let ptrApiAlphaTail: number = 0;
+let ptrApiAlphaAileron: number = 0;
+let ptrApiThrottle: number = 0;
+let ptrApiIasSpeedKnots: number = 0;
+let ptrApiHeadingDeg: number = 0;
+let ptrApiPitchDeg: number = 0;
+let ptrApiBankDeg: number = 0;
+let ptrApiAutopilot: number = 0;
+let ptrApiHeadingHold: number = 0;
+let ptrApiBankHold: number = 0;
+let ptrApiLevelHold: number = 0;
+let ptrApiSpeedHold: number = 0;
+let ptrApiMachSpeedHold: number = 0;
+let ptrApiAltitudeHold: number = 0;
+let ptrApiVerticalSpeedHold: number = 0;
+let ptrApiTargetHeadingDeg: number = 0;
+let ptrApiTargetBankDeg: number = 0;
+let ptrApiTargetAltitude: number = 0;
+let ptrApiTargetVerticalSpeed: number = 0;
+let ptrApiTargetSpeed: number = 0;
+let ptrApiTargetMachSpeed: number = 0;
+let ptrApiAtmosphereSeaLevelTemperature: number = 0;
+let ptrApiAtmosphereSeaLevelDensity: number = 0;
+let ptrApiSimulationPause: number = 0;
+let ptrApiSimulationSpeed: number = 0;
+let ptrApiThrustToWeight: number = 0;
+let ptrApiCl0: number = 0;
+let ptrApiCdo: number = 0;
+let ptrApiWingArea: number = 0;
+let ptrApiTrueSpeedKnots: number = 0;
+let ptrApiVstallSpeedKnots: number = 0;
+let ptrApiAtmosphereTemperature: number = 0;
+let ptrApiAtmosphereDensity: number = 0;
+let ptrApiMach: number = 0;
+let PtrApiTotalDrag: number = 0;
+let ptrApiCl: number = 0;
+let ptrApiCdi: number = 0;
+
+export async function initializeModule(options: any) {
+  const module: MainModule = await MainModuleFactory(options);
+  return module;
+}
+
+function init(module: MainModule) {
+  ptrApiFps = module._api_fps() >> 2;
+  ptrApiUps = module._api_ups() >> 2;
+  ptrApiWeight = module._api_weight() >> 2;
+  ptrApiAltitude = module._api_altitude() >> 2;
+  ptrApiVerticalSpeed = module._api_vertical_speed() >> 2;
+  ptrApiAlphaTail = module._api_alpha_tail() >> 2;
+  ptrApiAlphaAileron = module._api_alpha_aileron() >> 2;
+  ptrApiThrottle = module._api_throttle() >> 2;
+  ptrApiIasSpeedKnots = module._api_ias_speed_knots() >> 2;
+  ptrApiHeadingDeg = module._api_heading_deg() >> 2;
+  ptrApiPitchDeg = module._api_pitch_deg() >> 2;
+  ptrApiBankDeg = module._api_bank_deg() >> 2;
+  ptrApiAutopilot = module._api_autopilot();
+  ptrApiHeadingHold = module._api_heading_hold();
+  ptrApiBankHold = module._api_bank_hold();
+  ptrApiLevelHold = module._api_level_hold();
+  ptrApiSpeedHold = module._api_speed_hold();
+  ptrApiMachSpeedHold = module._api_mach_speed_hold();
+  ptrApiAltitudeHold = module._api_altitude_hold();
+  ptrApiVerticalSpeedHold = module._api_vertical_speed_hold();
+  ptrApiTargetHeadingDeg = module._api_target_heading_deg() >> 2;
+  ptrApiTargetBankDeg = module._api_target_bank_deg() >> 2;
+  ptrApiTargetAltitude = module._api_target_altitude() >> 2;
+  ptrApiTargetVerticalSpeed = module._api_target_vertical_speed() >> 2;
+  ptrApiTargetSpeed = module._api_target_speed() >> 2;
+  ptrApiTargetMachSpeed = module._api_target_mach_speed() >> 2;
+  ptrApiAtmosphereSeaLevelTemperature =
+    module._api_atmosphere_sea_level_temperature() >> 2;
+  ptrApiAtmosphereSeaLevelDensity =
+    module._api_atmosphere_sea_level_density() >> 2;
+  ptrApiSimulationPause = module._api_simulation_pause();
+  ptrApiSimulationSpeed = module._api_simulation_speed() >> 2;
+  ptrApiThrustToWeight = module._api_thrust_to_weight() >> 2;
+  ptrApiCl0 = module._api_dcl() >> 2;
+  ptrApiCdo = module._api_cdo() >> 2;
+  ptrApiWingArea = module._api_wing_area() >> 2;
+  ptrApiTrueSpeedKnots = module._api_true_speed_knots() >> 2;
+  ptrApiMach = module._api_mach() >> 2;
+  ptrApiVstallSpeedKnots = module._api_vstall_speed_knots() >> 2;
+  ptrApiAtmosphereTemperature = module._api_atmosphere_temperature() >> 2;
+  ptrApiAtmosphereDensity = module._api_atmosphere_density() >> 2;
+  PtrApiTotalDrag = module._api_total_drag() >> 2;
+  ptrApiCl = module._api_cl() >> 2;
+  ptrApiCdi = module._api_cdi() >> 2;
+}
+
+function round(value: number, decimals: number) {
+  return Number(Math.round(value + "e" + decimals) + "e-" + decimals);
+}
+
+export async function update(module: MainModule, payload: SimData) {
+  if (!payload || !module) {
+    return;
+  }
+  // Detect sim reset and update memory addresses
+  if (ptrApiWeight !== module._api_weight() >> 2) {
+    init(module);
+  }
+
+  payload.api_fps = round(module.HEAP32[ptrApiFps], 0);
+  payload.api_ups = round(module.HEAP32[ptrApiUps], 0);
+  payload.api_simulation_speed = round(
+    module.HEAPF32[ptrApiSimulationSpeed],
+    0,
+  );
+  payload.api_weight = round(module.HEAPF32[ptrApiWeight], 2);
+  payload.api_altitude = round(module.HEAPF32[ptrApiAltitude], 0);
+  payload.api_vertical_speed = round(
+    module.HEAPF32[ptrApiVerticalSpeed] * 60,
+    0,
+  );
+  payload.api_alpha_tail = round(module.HEAPF32[ptrApiAlphaTail], 3);
+  payload.api_alpha_aileron = round(module.HEAPF32[ptrApiAlphaAileron], 3);
+  payload.api_throttle = round(module.HEAPF32[ptrApiThrottle], 3);
+  payload.api_ias_speed_knots = round(module.HEAPF32[ptrApiIasSpeedKnots], 0);
+  payload.api_heading_deg = round(module.HEAPF32[ptrApiHeadingDeg], 0);
+  payload.api_pitch_deg = round(module.HEAPF32[ptrApiPitchDeg], 0);
+  payload.api_bank_deg = round(module.HEAPF32[ptrApiBankDeg], 0);
+  payload.api_simulation_pause = module.HEAP8[ptrApiSimulationPause] !== 0;
+  payload.api_autopilot = module.HEAP8[ptrApiAutopilot] !== 0;
+  payload.api_heading_hold = module.HEAP8[ptrApiHeadingHold] !== 0;
+  payload.api_bank_hold = module.HEAP8[ptrApiBankHold] !== 0;
+  payload.api_level_hold = module.HEAP8[ptrApiLevelHold] !== 0;
+  payload.api_speed_hold = module.HEAP8[ptrApiSpeedHold] !== 0;
+  payload.api_mach_speed_hold = module.HEAP8[ptrApiMachSpeedHold] !== 0;
+  payload.api_altitude_hold = module.HEAP8[ptrApiAltitudeHold] !== 0;
+  payload.api_vertical_speed_hold = module.HEAP8[ptrApiVerticalSpeedHold] !== 0;
+  payload.api_target_heading_deg = round(
+    module.HEAPF32[ptrApiTargetHeadingDeg],
+    0,
+  );
+  payload.api_target_bank_deg = round(module.HEAPF32[ptrApiTargetBankDeg], 0);
+  payload.api_target_altitude = round(module.HEAPF32[ptrApiTargetAltitude], 0);
+  payload.api_target_vertical_speed = round(
+    module.HEAPF32[ptrApiTargetVerticalSpeed],
+    0,
+  );
+  payload.api_target_speed = round(module.HEAPF32[ptrApiTargetSpeed], 0);
+  payload.api_target_mach_speed = round(
+    module.HEAPF32[ptrApiTargetMachSpeed],
+    2,
+  );
+  payload.api_atmosphere_sea_level_temperature = round(
+    module.HEAPF32[ptrApiAtmosphereSeaLevelTemperature],
+    2,
+  );
+  payload.api_atmosphere_sea_level_density = round(
+    module.HEAPF32[ptrApiAtmosphereSeaLevelDensity],
+    4,
+  );
+  payload.api_thrust_to_weight = round(module.HEAPF32[ptrApiThrustToWeight], 2);
+  payload.api_cl0 = round(module.HEAPF32[ptrApiCl0], 4);
+  payload.api_cdo = round(module.HEAPF32[ptrApiCdo], 4);
+  payload.api_wing_area = round(module.HEAPF32[ptrApiWingArea], 0);
+  payload.api_true_speed_knots = round(module.HEAPF32[ptrApiTrueSpeedKnots], 2);
+  payload.api_mach = round(module.HEAPF32[ptrApiMach], 2);
+  payload.api_vstall_speed_knots = round(
+    module.HEAPF32[ptrApiVstallSpeedKnots],
+    2,
+  );
+  payload.api_atmosphere_temperature = round(
+    module.HEAPF32[ptrApiAtmosphereTemperature],
+    2,
+  );
+  payload.api_atmosphere_density = round(
+    module.HEAPF32[ptrApiAtmosphereDensity],
+    4,
+  );
+  payload.api_total_drag = round(module.HEAPF32[PtrApiTotalDrag], 2);
+  payload.api_cl = round(module.HEAPF32[ptrApiCl], 4);
+  payload.api_cdi = round(module.HEAPF32[ptrApiCdi], 4);
+}
+
+export function getAutopilotProperties(module: MainModule, payload: SimData) {
+  return [
+    {
+      id: "masterAP",
+      label: "MASTER AP",
+      stateValue: payload.api_autopilot,
+      toggleFunc: () => module._api_set_autopilot(!payload.api_autopilot),
+      setterFunc: null,
+      unit: null,
+      min: null,
+      max: null,
+    },
+    {
+      id: "headingHold",
+      label: "HEADING",
+      inputValue: payload.api_target_heading_deg,
+      stateValue: payload.api_heading_hold,
+      toggleFunc: () => module._api_set_heading_hold(!payload.api_heading_hold),
+      setterFunc: module._api_set_target_heading_deg,
+      unit: "°",
+      min: 0,
+      max: 359,
+      step: 1.0,
+    },
+    {
+      id: "bankHold",
+      label: "BANK",
+      inputValue: payload.api_target_bank_deg,
+      stateValue: payload.api_bank_hold,
+      toggleFunc: () => module._api_set_bank_hold(!payload.api_bank_hold),
+      setterFunc: module._api_set_target_bank_deg,
+      unit: "°",
+      min: -50,
+      max: 50,
+      step: 1.0,
+    },
+    {
+      id: "altitudeHold",
+      label: "ALTITUDE",
+      inputValue: payload.api_target_altitude,
+      stateValue: payload.api_altitude_hold,
+      toggleFunc: () =>
+        module._api_set_altitude_hold(!payload.api_altitude_hold),
+      setterFunc: module._api_set_target_altitude,
+      unit: "ft",
+      min: 0,
+      max: 50000,
+      step: 100.0,
+    },
+    {
+      id: "verticalSpeedHold",
+      label: "VERT SPEED",
+      inputValue: payload.api_target_vertical_speed,
+      stateValue: payload.api_vertical_speed_hold,
+      toggleFunc: () =>
+        module._api_set_vertical_speed_hold(!payload.api_vertical_speed_hold),
+      setterFunc: module._api_set_target_vertical_speed,
+      unit: "fpm",
+      min: -6000,
+      max: 6000,
+      step: 100,
+    },
+    {
+      id: "speedHold",
+      label: "SPEED",
+      inputValue: payload.api_target_speed,
+      stateValue: payload.api_speed_hold,
+      toggleFunc: () => module._api_set_speed_hold(!payload.api_speed_hold),
+      setterFunc: module._api_set_target_speed,
+      unit: "kt",
+      min: 0,
+      max: 350,
+      step: 1,
+    },
+    {
+      id: "machHold",
+      label: "MACH",
+      inputValue: payload.api_target_mach_speed,
+      stateValue: payload.api_mach_speed_hold,
+      toggleFunc: () =>
+        module._api_set_mach_speed_hold(!payload.api_mach_speed_hold),
+      setterFunc: module._api_set_target_mach_speed,
+      unit: "M",
+      min: 0,
+      max: 1.5,
+      step: 0.01,
+    },
+  ];
+}
+
+export function getSimulationParameters(module: MainModule, payload: SimData) {
+  return {
+    Simulation: [
+      {
+        title: payload.api_simulation_pause ? "Resume" : "Pause",
+        toggleFunc: () =>
+          module._api_set_simulation_pause(!payload.api_simulation_pause),
+        icon: payload.api_simulation_pause ? "play-fill" : "pause-fill",
+      },
+      {
+        title: "Reset",
+        toggleFunc: () => module._api_set_simulation_reset(),
+        icon: "x-circle",
+      },
+      {
+        title: "Fullscreen",
+        toggleFunc: () => module.GLFW.requestFullscreen(false, true),
+        icon: "arrows-fullscreen",
+      },
+
+      {
+        title: "Simulation Speed",
+        inputValue: payload.api_simulation_speed,
+        setterFunc: module._api_set_simulation_speed,
+        unit: "x",
+        min: 0.5,
+        max: 100,
+        step: 0.5,
+      },
+      {
+        title: "Update Rate",
+        inputValue: 60,
+        setterFunc: module._api_set_update_rate,
+        unit: "fps",
+        min: 1,
+        max: 1000,
+        step: 5,
+      },
+    ],
+    Aircraft: [
+      {
+        title: "Thrust to Weight Ratio",
+        inputValue: payload.api_thrust_to_weight,
+        setterFunc: module._api_set_thrust_to_weight,
+        min: 0.1,
+        max: 5,
+        step: 0.1,
+      },
+      {
+        title: "Wing Area",
+        inputValue: payload.api_wing_area,
+        setterFunc: module._api_set_wing_area,
+        unit: "Ft²",
+        min: 10,
+        max: 7000,
+        step: 1,
+      },
+    ],
+    Aerodynamics: [
+      {
+        title: "Lift Cofficient Slope",
+        inputValue: payload.api_cl0,
+        setterFunc: module._api_set_dcl,
+        min: 0.1,
+        max: 5,
+        step: 0.01,
+      },
+      {
+        title: "Drag Cofficient",
+        inputValue: payload.api_cdo,
+        setterFunc: module._api_set_cdo,
+        min: 0.01,
+        max: 1.0,
+        step: 0.0001,
+      },
+    ],
+    Atmosphere: [
+      {
+        title: "Sea Level Temperature",
+        unit: "R",
+        inputValue: payload.api_atmosphere_sea_level_temperature,
+        setterFunc: module._api_set_atmosphere_sea_level_temperature,
+        min: 311,
+        max: 672,
+        step: 1.0,
+      },
+      {
+        title: "Sea Level Density",
+        unit: "Slug/ft³",
+        inputValue: payload.api_atmosphere_sea_level_density,
+        setterFunc: module._api_set_atmosphere_sea_level_density,
+        min: 0.001756,
+        max: 0.002939,
+        step: 0.000001,
+      },
+    ],
+  };
+}
+
+// console.log("This is a test")
+// initializeModule().catch(console.error);

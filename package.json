@@ -1,61 +1,24 @@
 {
-  "name": "wa.il",
-  "version": "1.0.0",
-  "description": "",
-  "author": "wy",
+  "name": "v3_personal_page",
   "private": true,
+  "version": "0.0.0",
+  "type": "module",
   "scripts": {
-    "dev": "nuxt",
-    "build": "npm run build:emscripten && nuxt build",
-    "start": "nuxt start",
-    "generate": "nuxt generate",
-    "lint": "eslint --ext .js,.vue --ignore-path .gitignore .",
-    "deploy": "push-dir --dir=dist --branch=master --cleanup",
-    "build:emscripten": "git -C node_modules/Compact-Flight-Simulator checkout 6230210 && ./node_modules/Compact-Flight-Simulator/build_wasm.sh && cp -a node_modules/Compact-Flight-Simulator/build_wasm/bin/flightsimulator* static/",
-    "preinstall": "git clone --recursive https://oauth2:$ACCESS_TOKEN@github.com/wailo/Compact-Flight-Simulator.git node_modules/Compact-Flight-Simulator"
-  },
-  "lint-staged": {
-    "*.{js,vue}": "eslint"
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
-    }
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@nuxtjs/axios": "^5.13.6",
-    "@nuxtjs/dotenv": "^1.4.1",
-    "@nuxtjs/pwa": "^3.3.4",
-    "bootstrap-vue": "^2.22.0",
-    "less": "^4.1.3",
-    "nuxt": "^2.15.0",
-    "peerjs": "^1.4.5",
-    "splitpanes": "^2.4.1",
-    "vue-mq": "^1.0.1",
-    "vue-qr": "^4.0.6",
-    "vue-typer": "^1.2.0"
+    "vue": "^3.4.29"
   },
   "devDependencies": {
-    "@babel/eslint-parser": "^7.17.0",
-    "@nuxtjs/eslint-config": "^12.0.0",
-    "@nuxtjs/eslint-module": "^3.0.2",
-    "@nuxtjs/stylelint-module": "^4.1.0",
-    "eslint": "^8.39.0",
-    "eslint-config-prettier": "^8.5.0",
-    "eslint-plugin-nuxt": "^3.1.0",
-    "eslint-plugin-prettier": "^4.0.0",
-    "husky": "^2.6.0",
-    "lint-staged": "^8.2.1",
-    "postcss-html": "^1.5.0",
-    "prettier": "^2.0.5",
-    "push-dir": "^0.4.1",
-    "stylelint": "^15.6.0",
-    "stylelint-config-recommended-vue": "^1.4.0",
-    "vue2-ace-editor": "^0.0.15"
-  },
-  "eslintConfig": {
-    "ignorePatterns": [
-      "static/flightSimulator.js"
-    ]
+    "@vitejs/plugin-vue": "^5.0.5",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.39",
+    "prettier": "3.3.2",
+    "tailwindcss": "^3.4.4",
+    "typescript": "^5.2.2",
+    "vite": "^5.3.1",
+    "vue-tsc": "^2.0.21"
   }
 }
