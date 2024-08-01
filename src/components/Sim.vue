@@ -1,10 +1,12 @@
 <template>
   <div class="container max-w-full h-screen gap-3 p-5" :style="{ background: theme.backgroundColor }">
-    <SimPanel title="Panel 1" status="Live" class="panel-1">
+    <!-- Panel 1 -->
+    <SimPanel title="Cockpit" :status="sim_data.api_simulation_pause ? 'Pause' : 'Running'" class="panel-1">
       <canvas id="canvas" class="emscripten bg-black" oncontextmenu="event.preventDefault()" tabindex="-1">
       </canvas>
     </SimPanel>
-    <SimPanel title="Real Time Data 2" :status="`${sim_data.api_fps} HZ`" class="panel-2">
+    <!-- Panel 2 -->
+    <SimPanel title="Real Time Data" :status="`${sim_data.api_fps} HZ`" class="panel-2">
       <table class="flex w-full h-full p-2">
         <tbody class="w-full">
           <tr class="flex w-full border-b" :style="{ borderColor: theme.separatorLineColor }"
@@ -15,7 +17,8 @@
         </tbody>
       </table>
     </SimPanel>
-    <SimPanel title="Simulation Controls 3" status="Status" :active=false class="panel-3">
+    <!-- Panel 3 -->
+    <SimPanel title="Simulation Controls" status="Status" :active=false class="panel-3">
       <div class="w-full h-full grid grid-cols-3 gap-1">
         <ButtonSwitch v-if="sim_module_loaded" v-for="(input, i) in simulationProps.Simulation" :key="i"
           :buttonLabel="input.title" :buttonClick="input.toggleFunc" :textInput="input.inputValue"
@@ -23,17 +26,22 @@
         </ButtonSwitch>
       </div>
     </SimPanel>
-    <SimPanel title="Scripting 4" status="Status" class="panel-4">Other Controls</SimPanel>
-    <SimPanel title="Autopilot Controls 5" status="Status" class="panel-5">
+    <!-- Panel 4 -->
+    <SimPanel title="Scripting" status="Status" class="panel-4">
+      <Editor v-if="sim_module_loaded" :context-object="FlightSimModule" class="w-full h-full">
+      </Editor>
+    </SimPanel>
+    <!-- Panel 5 -->
+    <SimPanel title=" Autopilot Controls" status="Status" class="panel-5">
       <div class="w-full h-full grid grid-cols-3 gap-1">
         <button-switch v-if="sim_module_loaded" class="border border-slate-600" v-for="(input, i) in autopilotProps"
           :key="i" :buttonLabel="input.label" :textInput="input.inputValue" :buttonClick="input.toggleFunc"
-          :inputChange="input.setterFunc" :buttonState="input.stateValue" :inputMin="input.min"
-          :inputMax="input.max" :inputStep="input.step" :class="input.inputValue == undefined ? 'col-span-3' : ''"></button-switch>
+          :inputChange="input.setterFunc" :buttonState="input.stateValue" :inputMin="input.min" :inputMax="input.max"
+          :inputStep="input.step" :class="input.inputValue == undefined ? 'col-span-3' : ''"></button-switch>
       </div>
     </SimPanel>
-
-    <SimPanel title="Simulation Control 6" status="Status" class="panel-6">
+    <!-- Panel 6 -->
+    <SimPanel title="Simulation Control" status="Status" class="panel-6">
       <div class="w-full max-h-full grid gap-1">
         <template v-if="sim_module_loaded"
           v-for="(parentKey) in Object.keys(simulationProps).filter(key => key != 'Simulation')" :key="parentKey">
@@ -45,18 +53,19 @@
         </template>
       </div>
     </SimPanel>
-
-    <SimPanel title="Classroom Controls 7" status="Status" class="panel-7">Classroom Controls</SimPanel>
+    <!-- Panel 7 -->
+    <SimPanel title="Classroom Controls" status="Status" class="panel-7">Classroom Controls</SimPanel>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, provide } from "vue";
+import { ref, reactive, computed, onMounted, onUnmounted, provide } from "vue";
 import SimPanel from "./SimPanel.vue";
 import ButtonSwitch from "./ButtonSwitch.vue";
 import FlightSimulator, { MainModule } from "../../public/flightsimulator_exec.js";
 import { initializeModule, update, SimData, getAutopilotProperties, getSimulationParameters } from "../siminterfac.js"
 import { Theme, theme } from '../theme'
+import Editor from './Editor.vue'
 
 provide('theme', theme as Theme);
 let FlightSimModule: MainModule;
@@ -64,9 +73,8 @@ const sim_data = reactive(new SimData());
 let sim_module_loaded = ref(false);
 
 let autopilotProps: ReturnType<typeof computed<ReturnType<typeof getAutopilotProperties>>>;
-let simulationControls: ReturnType<typeof computed<ReturnType<typeof getSimulationParameters>>>;
 let simulationProps: ReturnType<typeof computed<ReturnType<typeof getSimulationParameters>>>;
-
+let simUpdateInterval: number | undefined;
 
 const sim_data_display = [
   { key: 'api_fps', label: 'Frames Per Second' },
@@ -75,8 +83,8 @@ const sim_data_display = [
   { key: 'api_weight', label: 'Weight' },
   { key: 'api_altitude', label: 'Altitude' },
   { key: 'api_vertical_speed', label: 'Vertical Speed' },
-  { key: 'api_alpha_tail', label: 'Alpha Tail' },
-  { key: 'api_alpha_aileron', label: 'Alpha Aileron' },
+  { key: 'api_alpha_tail', label: 'Elevator' },
+  { key: 'api_alpha_aileron', label: 'Aileron' },
   { key: 'api_throttle', label: 'Throttle' },
   { key: 'api_ias_speed_knots', label: 'IAS Speed' },
   { key: 'api_heading_deg', label: 'Heading' },
@@ -139,9 +147,10 @@ onMounted(async () => {
     window.removeEventListener('keypress', FlightSimModule.GLFW.onKeyPress, true)
     window.removeEventListener('keyup', FlightSimModule.GLFW.onKeyup, true)
     window.removeEventListener('blur', FlightSimModule.GLFW.onBlur, true)
-    canvas.addEventListener('keydown', FlightSimModule.GLFW.onKeydown, true)
-    canvas.addEventListener('keypress', FlightSimModule.GLFW.onKeyPress, true)
-    canvas.addEventListener('keyup', FlightSimModule.GLFW.onKeyup, true)
+    const canvas = document.getElementById("canvas");
+    canvas?.addEventListener('keydown', FlightSimModule.GLFW.onKeydown, true)
+    canvas?.addEventListener('keypress', FlightSimModule.GLFW.onKeyPress, true)
+    canvas?.addEventListener('keyup', FlightSimModule.GLFW.onKeyup, true)
 
     function isTextInput() {
       const activeElement = document.activeElement;
@@ -154,7 +163,7 @@ onMounted(async () => {
     window.addEventListener('blur', (event) => {
       // When defocuses (blur), revert back to canvas to enable keyboard controls
       setTimeout(() => {
-        if (isTextInput()) { return }
+        if (document.activeElement == canvas || isTextInput()) { return }
         canvas.focus()
       }, 1000)
     },
@@ -162,7 +171,7 @@ onMounted(async () => {
     )
 
     console.log("Module loaded")
-    setInterval(() => {
+    const simUpdateInterval = setInterval(() => {
       update(FlightSimModule, sim_data)
     }, 200)
 
@@ -170,6 +179,9 @@ onMounted(async () => {
   }).catch(console.error);
 });
 
+onUnmounted(() => {
+  clearInterval(simUpdateInterval)
+})
 
 async function initSim() {
   FlightSimulator({
@@ -211,9 +223,9 @@ async function initSim() {
     "panel1 panel1 panel2"
     "panel1 panel1 panel2"
     "panel1 panel1 panel3"
-    "panel5 panel4 panel6"
-    "panel7 panel4 panel6"
-    "panel7 panel4 panel6";
+    "panel5 panel7 panel6"
+    "panel4 panel7 panel6"
+    "panel4 panel7 panel6";
 
 
   /* gap: 10px; */
