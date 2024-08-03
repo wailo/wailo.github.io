@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, PropType, inject, computed } from "vue";
+import {PropType, inject, computed } from "vue";
 
 
 
@@ -36,12 +36,12 @@ const borderColor = computed(() => props.active === true ? "#3cd437" : theme.bor
       class="max-h-1/6 text-sm font-medium h-5 box-border justify-between border-b pb-0">
       <!-- panel-title -->
       <span :style="{ borderColor: panelStatusBackgroundColor, color: panelStatusBackgroundColor }"
-        class="inline-block w-9/12 pl-2">{{
+        class="inline-block w-9/12 pl-2 text-nowrap">{{
           title
         }}</span>
       <!-- panel-status -->
       <span :style="{ backgroundColor: panelStatusBackgroundColor, color: statusTextColor }"
-        class="inline-block w-3/12 h-full pl-2">{{
+        class="inline-block w-3/12 h-full pl-2 text-nowrap">{{
           status
         }}</span>
     </div>
