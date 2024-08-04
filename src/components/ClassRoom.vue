@@ -52,13 +52,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import * as PeerJS from "peerjs";
 import { DataConnection } from "peerjs";
 
 import vueQr from "vue-qr/src/packages/vue-qr.vue";
 
-const emit = defineEmits(["dataEvent", "error"]);
+// Define the event emitter
+const emit = defineEmits<{
+  (event: "statusChanged", newValue: boolean): void;
+  (event: "dataEvent", receivedData: Object): void;
+  (event: "error", errorMessage: string): void;
+}>();
 
 const name = "WebRTC";
 const isDevelopment = true; // env.NODE_ENV === "development";
@@ -72,6 +77,11 @@ let outgoingConn: PeerJS.DataConnection;
 type ConnectionsList = { [peerId: string]: PeerJS.DataConnection };
 const incomingConns = ref<ConnectionsList>({});
 const routeHash = window.location.href;
+
+// Watch the booleanVariable and emit an event when it changes
+watch(online, (newValue: boolean) => {
+  emit("statusChanged", newValue);
+});
 
 onMounted(() => {
   const match = /roomId=(.*)/g.exec(routeHash);
@@ -114,10 +124,17 @@ const onDisconnected = (peer: PeerJS.Peer) => {
 
 const onPeerClose = (peerId: string) => {
   trace(`Peer closed ${peerId}`);
+  online.value = false;
 };
 
 const onConnectionClose = (peerId: string) => {
   trace(`Connection closed ${peerId}`);
+
+  // If we close the connection, we are not online anymore.
+  // Not sure if this state ever get triggerred.
+  if (peerId === myPeerId.value) {
+    online.value = false;
+  }
   delete incomingConns.value[peerId];
 };
 
@@ -202,7 +219,7 @@ const connectToPeer = async (remotePeerId: string) => {
   conn.on("error", (e) =>
     onError(`${e.type} - ${e.name} - ${e.message} - ${e.stack}`),
   );
-  conn.on("close", () => onClose(conn.peer));
+  conn.on("close", () => onConnectionClose(conn.peer));
 
   conn.on("open", () => {
     trace(`OPEN Connected to a peer ${remotePeerId}`);

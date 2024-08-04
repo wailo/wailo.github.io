@@ -1,60 +1,90 @@
 <template>
   <div class="flex">
-    <button class="font-medium" :disabled="buttonState == null && buttonClick == null" @click="buttonClick"
-      :style="{ color: labelColor, backgroundColor: buttonBackgroundColor, width: buttonWidth, maxWidth: buttonWidth }">
-      {{ buttonLabel }}
-    </button>
-    <input @change="event => inputChange(event.target.value)" v-if="textInput != undefined" type="number"
-      class="bg-transparent border-l border-slate-600 pl-1 h-full" :style="{ width: inputWidth, maxWidth: inputWidth }"
-      :value="textInput" :min="inputMin" :max="inputMax" :step="inputStep" />
+    <div class="flex w-full h-full">
+      <input
+        type="checkbox"
+        :checked="buttonState"
+        :id="buttonLabel"
+        class="hidden peer"
+        @click.prevent="() => (buttonClick ? buttonClick() : null)"
+      />
+      <label
+        :for="buttonLabel"
+        :class="[
+          'flex items-center justify-center w-full h-full',
+          buttonWidth,
+          'cursor-pointer transition-colors font-medium peer-checked:bg-primary peer-checked:text-simActiveButton peer-checked:border-transparent bg-activeButton text-primary border-transparent',
+        ]"
+      >
+        {{ buttonLabel }}
+      </label>
+    </div>
+
+    <!-- <button
+      class="font-medium bg-primary"
+      :disabled="buttonState == null && buttonClick == null"
+      @click="buttonClick"
+      :style="{ color: labelColor, width: buttonWidth, maxWidth: buttonWidth }"
+    >
+
+    </button> -->
+    <input
+      @change="(event) => inputChange(event.target.value)"
+      v-if="textInput != undefined"
+      type="number"
+      :class="[
+        'bg-transparent border-l border-slate-600 pl-1 h-full',
+        inputWidth,
+      ]"
+      :value="textInput"
+      :min="inputMin"
+      :max="inputMax"
+      :step="inputStep"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-
-import { PropType, computed, inject } from "vue";
-
-const theme = inject('theme');
+import { PropType, computed } from "vue";
 
 const props = defineProps({
-  // hasInput: {
-  //   type: Boolean as PropType<Boolean>,
-  //   default: false
-  // },
   buttonLabel: {
-    type: String as PropType<string>,
-    required: true
+    type: String,
+    required: true,
   },
   buttonState: {
-    type: Boolean as PropType<Boolean>
+    type: Boolean,
+    default: false,
   },
   textInput: {
-    type: Number as PropType<Number>
+    type: Number as PropType<number>,
   },
   buttonClick: {
-    type: Function as PropType<Function>
+    type: Function,
   },
   inputChange: {
-    type: Function as PropType<Function>
+    type: Function,
   },
   inputMin: {
-    type: Number as PropType<Number>,
-    default: 0
+    type: Number as PropType<number>,
+    default: 0,
   },
   inputMax: {
-    type: Number as PropType<Number>,
-    default: 100
+    type: Number as PropType<number>,
+    default: 100,
   },
   inputStep: {
-    type: Number as PropType<Number>,
-    default: 1
-  }
+    type: Number as PropType<number>,
+    default: 1,
+  },
 });
 
-const buttonBackgroundColor = computed(() => props.buttonState === true ? theme.primaryColor : theme.activeButton)
-const labelColor = computed(() => props.buttonState === true ? theme.activeButton : theme.primaryColor)
-const buttonWidth = computed(() => props.textInput != undefined ? "60%" : "100%")
-const inputWidth = computed(() => props.textInput != undefined ? "40%" : "100%")
+const buttonWidth = computed(() =>
+  props.textInput != undefined ? "w-3/5" : "w-full",
+);
+const inputWidth = computed(() =>
+  props.textInput != undefined ? "w-2/5" : "w-full",
+);
 </script>
 
 <style scoped>

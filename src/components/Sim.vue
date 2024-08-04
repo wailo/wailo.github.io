@@ -1,8 +1,5 @@
 <template>
-  <div
-    class="container max-w-full h-screen gap-3 p-5"
-    :style="{ background: theme.backgroundColor }"
-  >
+  <div class="container max-w-full h-screen gap-3 p-5 bg-simBackground">
     <!-- Panel 1 -->
     <Panel
       title="Cockpit"
@@ -26,8 +23,7 @@
       <table class="flex w-full h-full p-2">
         <tbody class="w-full">
           <tr
-            class="flex w-full border-b"
-            :style="{ borderColor: theme.separatorLineColor }"
+            class="flex w-full border-b border-simSeparatorLineColor"
             v-for="sim_display_item in sim_data_display"
             :key="sim_display_item.key"
           >
@@ -38,21 +34,20 @@
       </table>
     </Panel>
     <!-- Panel 3 -->
-    <Panel
-      title="Simulation"
-      status="Status"
-      :active="false"
-      class="panel-3"
-    >
+    <Panel title="Simulation" status="Status" :active="false" class="panel-3">
       <div class="w-full h-full grid grid-cols-3 gap-1">
         <ButtonSwitch
           v-if="sim_module_loaded"
           v-for="(input, i) in simulationProps.Simulation"
           :key="i"
-          :buttonLabel="input.title"
+          :buttonLabel="input.label"
           :buttonClick="input.toggleFunc"
           :textInput="input.inputValue"
           :inputChange="input.setterFunc"
+          :button-state="input.stateValue"
+          :inputMin="input.min"
+          :inputMax="input.max"
+          :inputStep="input.step"
           class="border border-slate-600"
           :class="input.inputValue ? 'col-span-3' : ''"
         >
@@ -103,20 +98,24 @@
             class="border border-slate-600"
             v-for="(input, i) in simulationProps[parentKey]"
             :key="i"
-            :buttonLabel="input.title"
+            :buttonLabel="input.label"
             :textInput="input.inputValue"
             :inputChange="input.setterFunc"
             :inputMin="input.min"
             :inputMax="input.max"
             :inputStep="input.step"
-            :class="!input.inputValue ? '' : ''"
           ></button-switch>
         </template>
       </div>
     </Panel>
     <!-- Panel 7 -->
-    <Panel title="Classroom" status="Status" class="panel-7"
+    <Panel
+      title="Classroom"
+      :status="classRoomOnline ? 'Online' : 'Offline'"
+      class="panel-7"
+      :active="classRoomOnline"
       ><ClassRoom
+        @status-changed="(newStatus) => (classRoomOnline = newStatus)"
     /></Panel>
   </div>
 </template>
@@ -136,13 +135,12 @@ import {
   getAutopilotProperties,
   getSimulationParameters,
 } from "../siminterfac.js";
-import { Theme, theme } from "../theme";
 import Editor from "./Editor.vue";
 
-provide("theme", theme as Theme);
 let FlightSimModule: MainModule;
 const sim_data = reactive(new SimData());
 let sim_module_loaded = ref(false);
+let classRoomOnline = ref(false);
 
 let autopilotProps: ReturnType<
   typeof computed<ReturnType<typeof getAutopilotProperties>>
@@ -318,17 +316,6 @@ async function initSim() {
     "panel5 panel7 panel6"
     "panel4 panel7 panel6"
     "panel4 panel7 panel6";
-
-  /* gap: 10px; */
-  /* background-color: #000; */
-  /* color: #eee; */
-  /* padding: 20px; */
-  /* font-family: "Orbitron", "Courier New", Courier, monospace; */
-  /* font-size: 12px; */
-  /* height: 100%; */
-  /* width: 100%;   Full viewport width */
-  /* height: 100vh;  Full viewport height */
-  /* box-sizing: border-box; */
 }
 
 .panel-1 {

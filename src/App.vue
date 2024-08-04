@@ -3,7 +3,7 @@ import simNew from './components/Sim.vue'
 </script>
 
 <template >
-  <simNew class="font-panel font-light"/>
+  <simNew class="font-panelFont font-light"/>
 </template>
 
 <style scoped>

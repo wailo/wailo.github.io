@@ -1,48 +1,48 @@
 import MainModuleFactory, { MainModule } from "../public/flightsimulator_exec";
 
 export class SimData {
-  api_fps: Number = 0;
-  api_ups: Number = 0;
-  api_simulation_speed: Number = 0;
-  api_weight: Number = 0;
-  api_altitude: Number = 0;
-  api_vertical_speed: Number = 0;
-  api_alpha_tail: Number = 0;
-  api_alpha_aileron: Number = 0;
-  api_throttle: Number = 0;
-  api_ias_speed_knots: Number = 0;
-  api_heading_deg: Number = 0;
-  api_pitch_deg: Number = 0;
-  api_bank_deg: Number = 0;
-  api_simulation_pause: Boolean = false;
-  api_autopilot: Boolean = false;
-  api_heading_hold: Boolean = false;
-  api_bank_hold: Boolean = false;
-  api_level_hold: Boolean = false;
-  api_speed_hold: Boolean = false;
-  api_mach_speed_hold: Boolean = false;
-  api_altitude_hold: Boolean = false;
-  api_vertical_speed_hold: Boolean = false;
-  api_target_heading_deg: Number = 0;
-  api_target_bank_deg: Number = 0;
-  api_target_altitude: Number = 0;
-  api_target_vertical_speed: Number = 0;
-  api_target_speed: Number = 0;
-  api_target_mach_speed: Number = 0;
-  api_atmosphere_sea_level_temperature: Number = 0;
-  api_atmosphere_sea_level_density: Number = 0;
-  api_thrust_to_weight: Number = 0;
-  api_cl0: Number = 0;
-  api_cdo: Number = 0;
-  api_wing_area: Number = 0;
-  api_true_speed_knots: Number = 0;
-  api_mach: Number = 0;
-  api_vstall_speed_knots: Number = 0;
-  api_atmosphere_temperature: Number = 0;
-  api_atmosphere_density: Number = 0;
-  api_total_drag: Number = 0;
-  api_cl: Number = 0;
-  api_cdi: Number = 0;
+  api_fps: number = 0;
+  api_ups: number = 0;
+  api_simulation_speed: number = 0;
+  api_weight: number = 0;
+  api_altitude: number = 0;
+  api_vertical_speed: number = 0;
+  api_alpha_tail: number = 0;
+  api_alpha_aileron: number = 0;
+  api_throttle: number = 0;
+  api_ias_speed_knots: number = 0;
+  api_heading_deg: number = 0;
+  api_pitch_deg: number = 0;
+  api_bank_deg: number = 0;
+  api_simulation_pause: boolean = false;
+  api_autopilot: boolean = false;
+  api_heading_hold: boolean = false;
+  api_bank_hold: boolean = false;
+  api_level_hold: boolean = false;
+  api_speed_hold: boolean = false;
+  api_mach_speed_hold: boolean = false;
+  api_altitude_hold: boolean = false;
+  api_vertical_speed_hold: boolean = false;
+  api_target_heading_deg: number = 0;
+  api_target_bank_deg: number = 0;
+  api_target_altitude: number = 0;
+  api_target_vertical_speed: number = 0;
+  api_target_speed: number = 0;
+  api_target_mach_speed: number = 0;
+  api_atmosphere_sea_level_temperature: number = 0;
+  api_atmosphere_sea_level_density: number = 0;
+  api_thrust_to_weight: number = 0;
+  api_cl0: number = 0;
+  api_cdo: number = 0;
+  api_wing_area: number = 0;
+  api_true_speed_knots: number = 0;
+  api_mach: number = 0;
+  api_vstall_speed_knots: number = 0;
+  api_atmosphere_temperature: number = 0;
+  api_atmosphere_density: number = 0;
+  api_total_drag: number = 0;
+  api_cl: number = 0;
+  api_cdi: number = 0;
 }
 
 let ptrApiFps: number = 0;
@@ -91,6 +91,20 @@ let ptrApiCdi: number = 0;
 export async function initializeModule(options: any) {
   const module: MainModule = await MainModuleFactory(options);
   return module;
+}
+
+interface SimulationProperties {
+  id?: string;
+  label: string;
+  inputValue?: number;
+  stateValue?: boolean;
+  toggleFunc?: Function;
+  setterFunc?: Function;
+  unit?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  icon?: string;
 }
 
 function init(module: MainModule) {
@@ -157,7 +171,7 @@ export async function update(module: MainModule, payload: SimData) {
   payload.api_ups = round(module.HEAP32[ptrApiUps], 0);
   payload.api_simulation_speed = round(
     module.HEAPF32[ptrApiSimulationSpeed],
-    0,
+    1,
   );
   payload.api_weight = round(module.HEAPF32[ptrApiWeight], 2);
   payload.api_altitude = round(module.HEAPF32[ptrApiAltitude], 0);
@@ -227,17 +241,16 @@ export async function update(module: MainModule, payload: SimData) {
   payload.api_cdi = round(module.HEAPF32[ptrApiCdi], 4);
 }
 
-export function getAutopilotProperties(module: MainModule, payload: SimData) {
+export function getAutopilotProperties(
+  module: MainModule,
+  payload: SimData,
+): SimulationProperties[] {
   return [
     {
       id: "masterAP",
       label: "MASTER AP",
       stateValue: payload.api_autopilot,
       toggleFunc: () => module._api_set_autopilot(!payload.api_autopilot),
-      setterFunc: null,
-      unit: null,
-      min: null,
-      max: null,
     },
     {
       id: "headingHold",
@@ -317,28 +330,32 @@ export function getAutopilotProperties(module: MainModule, payload: SimData) {
   ];
 }
 
-export function getSimulationParameters(module: MainModule, payload: SimData) {
+export function getSimulationParameters(
+  module: MainModule,
+  payload: SimData,
+): { [key: string]: SimulationProperties[] } {
   return {
     Simulation: [
       {
-        title: payload.api_simulation_pause ? "Resume" : "Pause",
+        label: payload.api_simulation_pause ? "Resume" : "Pause",
         toggleFunc: () =>
           module._api_set_simulation_pause(!payload.api_simulation_pause),
         icon: payload.api_simulation_pause ? "play-fill" : "pause-fill",
+        stateValue: payload.api_simulation_pause,
       },
       {
-        title: "Reset",
+        label: "Reset",
         toggleFunc: () => module._api_set_simulation_reset(),
         icon: "x-circle",
       },
       {
-        title: "Fullscreen",
+        label: "Fullscreen",
         toggleFunc: () => module.GLFW.requestFullscreen(false, true),
         icon: "arrows-fullscreen",
       },
 
       {
-        title: "Simulation Speed",
+        label: "Simulation Speed",
         inputValue: payload.api_simulation_speed,
         setterFunc: module._api_set_simulation_speed,
         unit: "x",
@@ -347,18 +364,18 @@ export function getSimulationParameters(module: MainModule, payload: SimData) {
         step: 0.5,
       },
       {
-        title: "Update Rate",
+        label: "Update Rate",
         inputValue: 60,
         setterFunc: module._api_set_update_rate,
         unit: "fps",
         min: 1,
         max: 1000,
-        step: 5,
+        step: 1,
       },
     ],
     Aircraft: [
       {
-        title: "Thrust to Weight Ratio",
+        label: "Thrust to Weight Ratio",
         inputValue: payload.api_thrust_to_weight,
         setterFunc: module._api_set_thrust_to_weight,
         min: 0.1,
@@ -366,7 +383,7 @@ export function getSimulationParameters(module: MainModule, payload: SimData) {
         step: 0.1,
       },
       {
-        title: "Wing Area",
+        label: "Wing Area",
         inputValue: payload.api_wing_area,
         setterFunc: module._api_set_wing_area,
         unit: "Ft²",
@@ -377,7 +394,7 @@ export function getSimulationParameters(module: MainModule, payload: SimData) {
     ],
     Aerodynamics: [
       {
-        title: "Lift Cofficient Slope",
+        label: "Lift Cofficient Slope",
         inputValue: payload.api_cl0,
         setterFunc: module._api_set_dcl,
         min: 0.1,
@@ -385,7 +402,7 @@ export function getSimulationParameters(module: MainModule, payload: SimData) {
         step: 0.01,
       },
       {
-        title: "Drag Cofficient",
+        label: "Drag Cofficient",
         inputValue: payload.api_cdo,
         setterFunc: module._api_set_cdo,
         min: 0.01,
@@ -395,7 +412,7 @@ export function getSimulationParameters(module: MainModule, payload: SimData) {
     ],
     Atmosphere: [
       {
-        title: "Sea Level Temperature",
+        label: "Sea Level Temperature",
         unit: "R",
         inputValue: payload.api_atmosphere_sea_level_temperature,
         setterFunc: module._api_set_atmosphere_sea_level_temperature,
@@ -404,7 +421,7 @@ export function getSimulationParameters(module: MainModule, payload: SimData) {
         step: 1.0,
       },
       {
-        title: "Sea Level Density",
+        label: "Sea Level Density",
         unit: "Slug/ft³",
         inputValue: payload.api_atmosphere_sea_level_density,
         setterFunc: module._api_set_atmosphere_sea_level_density,
