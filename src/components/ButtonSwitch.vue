@@ -11,9 +11,9 @@
       <label
         :for="buttonLabel"
         :class="[
-          'flex items-center justify-center w-full h-full',
+          'flex items-center justify-center w-full h-full text-nowrap',
           buttonWidth,
-          'cursor-pointer transition-colors font-medium peer-checked:bg-primary peer-checked:text-simActiveButton peer-checked:border-transparent bg-activeButton text-primary border-transparent',
+          'cursor-pointer transition-colors font-medium peer-checked:bg-simActiveButton peer-checked:text-primary peer-checked:border-transparent bg-primary text-secondary border-transparent',
         ]"
       >
         {{ buttonLabel }}
@@ -33,7 +33,7 @@
       v-if="textInput != undefined"
       type="number"
       :class="[
-        'bg-transparent border-l border-slate-600 pl-1 h-full',
+        'bg-transparent border-l border-simElementBorder pl-1 h-full text-secondary',
         inputWidth,
       ]"
       :value="textInput"

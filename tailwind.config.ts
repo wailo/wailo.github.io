@@ -18,17 +18,28 @@ export default {
         black: "900",
       },
       colors: {
-        primary: "#000000",
-        secondary: "#ffffff",
-        accent: "#000000", // Black
+        primary: "#dfe4e2",
+        secondary: "#130f0c",
+        openglCanvasBackground: "#130f0c",
+        panelBorder: "#7b8079",
+        panelHeaderBackground: "#dfe4e2",
+        panelContentBackground: "#f7f7f7",
+        simElementBorder: "#130f0c",
+        panelActive: "#b9391b",
+        simBackground: "#f7f7f7",
+        simActiveButton: "#b9391b",
+      },
+      colors_black_white: {
+        primary: "#ffffff", // White
+        secondary: "#000000", // Black
+        openglCanvasBackground: "#000000", // Preferable black or very dark,
         panelBorder: "#000000", // Black
-        panelHeaderBackground: "#00000000", // Light Grey
-        panelContentBackground: "#00000000", // White
+        panelHeaderBackground: "#00000000", // Black
+        panelContentBackground: "#00000000", // Black
+        simElementBorder: "rgb(71 85 105)", // Dark grey
         panelActive: "#4b00ff",
-        simBackground: "#f5f5f5", // White
-        simText: "#000000", // Black
-        simSeparatorLine: "#e0e0e0", // Light Grey
-        simActiveButton: "#ffffff", // white
+        simBackground: "#f5f5f5", // Off White
+        simActiveButton: "#555555", // white
       },
     },
   },

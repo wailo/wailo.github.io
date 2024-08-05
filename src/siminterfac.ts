@@ -43,6 +43,7 @@ export class SimData {
   api_total_drag: number = 0;
   api_cl: number = 0;
   api_cdi: number = 0;
+  api_ground_collision: boolean = false;
 }
 
 let ptrApiFps: number = 0;
@@ -87,6 +88,7 @@ let ptrApiMach: number = 0;
 let PtrApiTotalDrag: number = 0;
 let ptrApiCl: number = 0;
 let ptrApiCdi: number = 0;
+let ptrApiGroundCollision: number = 0;
 
 export async function initializeModule(options: any) {
   const module: MainModule = await MainModuleFactory(options);
@@ -152,6 +154,7 @@ function init(module: MainModule) {
   PtrApiTotalDrag = module._api_total_drag() >> 2;
   ptrApiCl = module._api_cl() >> 2;
   ptrApiCdi = module._api_cdi() >> 2;
+  ptrApiGroundCollision = module._api_ground_collision();
 }
 
 function round(value: number, decimals: number) {
@@ -239,6 +242,7 @@ export async function update(module: MainModule, payload: SimData) {
   payload.api_total_drag = round(module.HEAPF32[PtrApiTotalDrag], 2);
   payload.api_cl = round(module.HEAPF32[ptrApiCl], 4);
   payload.api_cdi = round(module.HEAPF32[ptrApiCdi], 4);
+  payload.api_ground_collision = module.HEAP8[ptrApiGroundCollision] !== 0;
 }
 
 export function getAutopilotProperties(

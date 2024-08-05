@@ -3,12 +3,19 @@
     <!-- Panel 1 -->
     <Panel
       title="Cockpit"
-      :status="sim_data.api_simulation_pause ? 'Pause' : 'Running'"
+      :status="
+        sim_data.api_ground_collision
+          ? 'Collision'
+          : sim_data.api_simulation_pause
+            ? 'Pause'
+            : 'Running'
+      "
+      :flash="sim_data.api_ground_collision"
       class="panel-1"
     >
       <canvas
         id="canvas"
-        class="emscripten bg-black"
+        class="emscripten bg-openglCanvasBackground"
         oncontextmenu="event.preventDefault()"
         tabindex="-1"
       >
@@ -17,13 +24,13 @@
     <!-- Panel 2 -->
     <Panel
       title="Real Time Data"
-      :status="`${sim_data.api_fps} HZ`"
+      :status="`${1000 / update_interval_ms} HZ`"
       class="panel-2"
     >
       <table class="flex w-full h-full p-2">
         <tbody class="w-full">
           <tr
-            class="flex w-full border-b border-simSeparatorLineColor"
+            class="flex w-full border-b border-simElementBorder"
             v-for="sim_display_item in sim_data_display"
             :key="sim_display_item.key"
           >
@@ -34,7 +41,13 @@
       </table>
     </Panel>
     <!-- Panel 3 -->
-    <Panel title="Simulation" status="Status" :active="false" class="panel-3">
+    <Panel
+      title="Simulation"
+      :status="`${sim_data.api_fps} HZ`"
+      :active="false"
+      :flash="sim_data.api_simulation_pause"
+      class="panel-3"
+    >
       <div class="w-full h-full grid grid-cols-3 gap-1">
         <ButtonSwitch
           v-if="sim_module_loaded"
@@ -48,7 +61,7 @@
           :inputMin="input.min"
           :inputMax="input.max"
           :inputStep="input.step"
-          class="border border-slate-600"
+          class="border border-simElementBorder"
           :class="input.inputValue ? 'col-span-3' : ''"
         >
         </ButtonSwitch>
@@ -64,11 +77,15 @@
       </Editor>
     </Panel>
     <!-- Panel 5 -->
-    <Panel title=" Autopilot" status="Status" class="panel-5">
+    <Panel
+      title=" Autopilot"
+      :status="sim_data.api_autopilot ? 'Engaged' : 'Disengaged'"
+      class="panel-5"
+    >
       <div class="w-full h-full grid grid-cols-3 gap-1">
         <button-switch
           v-if="sim_module_loaded"
-          class="border border-slate-600"
+          class="border border-simElementBorder"
           v-for="(input, i) in autopilotProps"
           :key="i"
           :buttonLabel="input.label"
@@ -84,7 +101,7 @@
       </div>
     </Panel>
     <!-- Panel 6 -->
-    <Panel title="Flight Model" status="Status" class="panel-6">
+    <Panel title="Flight Model" status="Default" class="panel-6">
       <div class="w-full max-h-full grid gap-1">
         <template
           v-if="sim_module_loaded"
@@ -95,7 +112,7 @@
         >
           <!-- <h3>{{ parentKey }}</h3> -->
           <button-switch
-            class="border border-slate-600"
+            class="border border-simElementBorder"
             v-for="(input, i) in simulationProps[parentKey]"
             :key="i"
             :buttonLabel="input.label"
@@ -141,6 +158,7 @@ let FlightSimModule: MainModule;
 const sim_data = reactive(new SimData());
 let sim_module_loaded = ref(false);
 let classRoomOnline = ref(false);
+const update_interval_ms = 200;
 
 let autopilotProps: ReturnType<
   typeof computed<ReturnType<typeof getAutopilotProperties>>
@@ -154,6 +172,7 @@ const sim_data_display = [
   { key: "api_fps", label: "Frames Per Second" },
   { key: "api_ups", label: "Update Per Second" },
   { key: "api_simulation_speed", label: "Simulation Speed" },
+  { key: "api_ground_collision", label: "Ground Collision" },
   { key: "api_weight", label: "Weight" },
   { key: "api_altitude", label: "Altitude" },
   { key: "api_vertical_speed", label: "Vertical Speed" },
@@ -264,7 +283,7 @@ onMounted(async () => {
 
       simUpdateInterval = setInterval(() => {
         update(FlightSimModule, sim_data);
-      }, 200);
+      }, update_interval_ms);
     })
     .catch(console.error);
 });
