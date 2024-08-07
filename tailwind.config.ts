@@ -18,7 +18,7 @@ export default {
         black: "900",
       },
       colors: {
-        primary: "#dfe4e2",
+        primary: "#ffffff",
         secondary: "#130f0c",
         openglCanvasBackground: "#130f0c",
         panelBorder: "#7b8079",
