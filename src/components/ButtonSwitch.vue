@@ -1,33 +1,20 @@
 <template>
-  <div class="flex">
-    <div class="flex w-full h-full">
-      <input
-        type="checkbox"
-        :checked="buttonState"
-        :id="buttonLabel"
-        class="hidden peer"
-        @click.prevent="() => (buttonClick ? buttonClick() : null)"
-      />
-      <label
-        :for="buttonLabel"
-        :class="[
-          'flex items-center justify-center w-full h-full text-nowrap',
-          buttonWidth,
-          'cursor-pointer transition-colors font-medium peer-checked:bg-simActiveButton peer-checked:text-primary peer-checked:border-transparent bg-primary text-secondary border-transparent',
-        ]"
-      >
-        {{ buttonLabel }}
-      </label>
-    </div>
-
-    <!-- <button
-      class="font-medium bg-primary"
-      :disabled="buttonState == null && buttonClick == null"
+  <div class="flex w-full h-full">
+    <button
+      :class="[
+        'flex items-center justify-center w-full h-full text-nowrap',
+        buttonWidth,
+        buttonState
+          ? 'bg-simActiveButton text-primary'
+          : 'bg-primary text-secondary',
+        'cursor-pointer  font-medium border-transparent',
+      ]"
       @click="buttonClick"
-      :style="{ color: labelColor, width: buttonWidth, maxWidth: buttonWidth }"
     >
+      {{ buttonLabel }}
+    </button>
+    <slot></slot>
 
-    </button> -->
     <input
       @change="(event) => inputChange(event.target.value)"
       v-if="textInput != undefined"
@@ -87,9 +74,4 @@ const inputWidth = computed(() =>
 );
 </script>
 
-<style scoped>
-button:enabled:hover {
-  opacity: 70%;
-  color: white;
-}
-</style>
+<style scoped></style>
