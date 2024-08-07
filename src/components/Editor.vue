@@ -10,11 +10,18 @@
         v-model:value="code"
       ></MonacoEditor>
     </div>
-    <div>
-      <button class="border border-slate-600 w-1/5" @click="executeCode">
-        Execute Code
-      </button>
-      <button class="border border-slate-600 w-1/5" @click="stop">Stop</button>
+    <div class="flex">
+      <ButtonSwitch
+        buttonLabel="Execute Code"
+        class="border border-simElementBorder w-1/5"
+        @click="executeCode"
+      >
+      </ButtonSwitch>
+      <ButtonSwitch
+        buttonLabel="Stop"
+        class="border border-simElementBorder w-1/5"
+        @click="stop"
+      ></ButtonSwitch>
       <span class="w-3/5">
         <span>Execution Result: </span>
         <span>{{ executionResult }}</span>
@@ -25,6 +32,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, PropType } from "vue";
+import ButtonSwitch from "./ButtonSwitch.vue";
 import { MainModule } from "../../public/flightsimulator_exec";
 
 declare module "monaco-editor-vue3";
