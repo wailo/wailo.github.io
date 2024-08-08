@@ -54,9 +54,19 @@
           v-for="(input, i) in simulationProps.Simulation"
           :key="i"
           :buttonLabel="input.label"
-          :buttonClick="input.toggleFunc"
+          :buttonClick="
+            () => {
+              input.toggleFunc?.();
+              broadcast(input.toggleFuncStr?.());
+            }
+          "
           :textInput="input.inputValue"
-          :inputChange="input.setterFunc"
+          :inputChange="
+            (newVal: number) => {
+              input.setterFunc?.(newVal);
+              broadcast(input.setterFuncStr?.(newVal));
+            }
+          "
           :button-state="input.stateValue"
           :inputMin="input.min"
           :inputMax="input.max"
@@ -90,8 +100,18 @@
           :key="i"
           :buttonLabel="input.label"
           :textInput="input.inputValue"
-          :buttonClick="input.toggleFunc"
-          :inputChange="input.setterFunc"
+          :buttonClick="
+            () => {
+              input.toggleFunc?.();
+              broadcast(input.toggleFuncStr?.());
+            }
+          "
+          :inputChange="
+            (newVal: number) => {
+              input.setterFunc?.(newVal);
+              broadcast(input.setterFuncStr?.(newVal));
+            }
+          "
           :buttonState="input.stateValue"
           :inputMin="input.min"
           :inputMax="input.max"
@@ -117,7 +137,12 @@
             :key="i"
             :buttonLabel="input.label"
             :textInput="input.inputValue"
-            :inputChange="input.setterFunc"
+            :inputChange="
+              (newVal: number) => {
+                input.setterFunc?.(newVal);
+                broadcast(input.setterFuncStr?.(newVal));
+              }
+            "
             :inputMin="input.min"
             :inputMax="input.max"
             :inputStep="input.step"
@@ -132,6 +157,10 @@
       class="panel-7"
       :active="classRoomOnline"
       ><ClassRoom
+        @api-data-event="
+          (receivedApiCall) => runReceivedCode(receivedApiCall?.data?.api)
+        "
+        ref="classroomComponentRef"
         @status-changed="(newStatus) => (classRoomOnline = newStatus)"
     /></Panel>
   </div>
@@ -154,11 +183,34 @@ import {
 } from "../siminterfac.js";
 import Editor from "./Editor.vue";
 
+// Define a decorator function
+function broadcast(code: string | undefined) {
+  console.log(code);
+  classroomComponentRef.value.sendApiCall(code);
+}
+
+// Define a decorator function
+function broadcastOld(fn: () => any) {
+  return function (...args: any[]) {
+    // console.log(`Calling function with arguments: ${args}`);
+    const result = fn(...args);
+    classroomComponentRef.value.sendApiCall(result);
+    // return result;
+  };
+}
+
+const runReceivedCode = (code: string) => {
+  eval(`FlightSimModule.${code}`);
+};
+
 let FlightSimModule: MainModule;
 const sim_data = reactive(new SimData());
 let sim_module_loaded = ref(false);
 let classRoomOnline = ref(false);
 const update_interval_ms = 200;
+
+// Components refs
+const classroomComponentRef = ref(null);
 
 let autopilotProps: ReturnType<
   typeof computed<ReturnType<typeof getAutopilotProperties>>

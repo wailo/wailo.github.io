@@ -111,7 +111,11 @@
           </tr>
         </tbody>
       </table>
-      <button-switch button-label="Follow Mode" :button-state="followMode"  :button-click="() => followMode = !followMode"/>
+      <button-switch
+        button-label="Mirro Mode"
+        :button-state="mirrorMode"
+        :button-click="() => (mirrorMode = !mirrorMode)"
+      />
     </div>
 
     <div
@@ -163,6 +167,7 @@ import vueQr from "vue-qr/src/packages/vue-qr.vue";
 const emit = defineEmits<{
   (event: "statusChanged", newValue: boolean): void;
   (event: "dataEvent", receivedData: Object): void;
+  (event: "apiDataEvent", receivedData: Object): void;
   (event: "error", errorMessage: string): void;
 }>();
 
@@ -176,12 +181,10 @@ let displayname = ref<string>();
 let isOnline = ref(false);
 let outgoingConn: PeerJS.DataConnection;
 type ConnectionsList = { [peerId: string]: PeerJS.DataConnection };
-const incomingConns = ref<ConnectionsList>({
-  "332-ddd-23": { metadata: { displayName: "John Smith" } },
-});
+const incomingConns = ref<ConnectionsList>({});
 const routeHash = window.location.href;
 const isQrPopupOpen = ref(false);
-const followMode = ref(false);
+const mirrorMode = ref(false);
 
 // Watch the booleanVariable and emit an event when it changes
 watch(isOnline, (newValue: boolean) => {
@@ -201,7 +204,7 @@ const copyToClipboard = () => {
 };
 
 onMounted(() => {
-  createAnJoinPeer(myPeerId.value);
+  // createAnJoinPeer(myPeerId.value);
   const match = /roomId=(.*)/g.exec(routeHash);
   if (match && match[1]) {
     const roomId = match[1];
@@ -258,7 +261,12 @@ const onConnectionClose = (peerId: string) => {
 
 const onData = (data, conn: PeerJS.DataConnection) => {
   trace(`Received ${data} from ${conn.peer}`);
-  emit("dataEvent", { conn, data });
+  console.log(data);
+  if (data.api) {
+    emit("apiDataEvent", { conn, data });
+  } else {
+    emit("dataEvent", { conn, data });
+  }
 };
 
 const onError = (err: string) => {
@@ -356,13 +364,26 @@ const connectToPeer = async (remotePeerId: string) => {
   });
 };
 
-const send = (data) => {
+const send = (data: any) => {
   // Send data to all peers
   Object.entries(incomingConns.value).forEach(([, conn]) => {
     trace(`Sending data to ${conn.peer}:  ${data}`);
     conn.send(data);
   });
 };
+
+const sendApiCall = (apiCall: string) => {
+  // Must be online and mirror mode activated
+  if (!isOnline.value || !mirrorMode.value) {
+    return;
+  }
+
+  const data = { api: apiCall };
+  // Send data to all peers
+  send(data);
+};
+
+defineExpose({ sendApiCall });
 
 const trace = (text: string) => {
   if (isDevelopment === false) {
