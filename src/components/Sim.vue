@@ -158,7 +158,7 @@
       :active="classRoomOnline"
       ><ClassRoom
         @api-data-event="
-          (receivedApiCall) => runReceivedCode(receivedApiCall?.data?.api)
+          (receivedApiCall) => executeCode(receivedApiCall?.data?.api)
         "
         ref="classroomComponentRef"
         @status-changed="(newStatus) => (classRoomOnline = newStatus)"
@@ -185,21 +185,10 @@ import Editor from "./Editor.vue";
 
 // Define a decorator function
 function broadcast(code: string | undefined) {
-  console.log(code);
   classroomComponentRef.value.sendApiCall(code);
 }
 
-// Define a decorator function
-function broadcastOld(fn: () => any) {
-  return function (...args: any[]) {
-    // console.log(`Calling function with arguments: ${args}`);
-    const result = fn(...args);
-    classroomComponentRef.value.sendApiCall(result);
-    // return result;
-  };
-}
-
-const runReceivedCode = (code: string) => {
+const executeCode = (code: string) => {
   eval(`FlightSimModule.${code}`);
 };
 

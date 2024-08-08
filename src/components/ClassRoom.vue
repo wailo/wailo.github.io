@@ -171,15 +171,12 @@ const emit = defineEmits<{
   (event: "error", errorMessage: string): void;
 }>();
 
-const name = "WebRTC";
-const isDevelopment = true; // env.NODE_ENV === "development";
+const isDevelopment = import.meta.env.MODE === "development"; // env.NODE_ENV === "development";
 const baseUrl = window.location.origin;
-const server = ""; // process.server;
 let myPeer: PeerJS.Peer;
 const myPeerId = ref<string>("EK583838");
 let displayname = ref<string>();
 let isOnline = ref(false);
-let outgoingConn: PeerJS.DataConnection;
 type ConnectionsList = { [peerId: string]: PeerJS.DataConnection };
 const incomingConns = ref<ConnectionsList>({});
 const routeHash = window.location.href;
@@ -189,6 +186,7 @@ const mirrorMode = ref(false);
 // Watch the booleanVariable and emit an event when it changes
 watch(isOnline, (newValue: boolean) => {
   emit("statusChanged", newValue);
+  mirrorMode.value = true;
 });
 
 const copyToClipboard = () => {
@@ -204,7 +202,10 @@ const copyToClipboard = () => {
 };
 
 onMounted(() => {
-  // createAnJoinPeer(myPeerId.value);
+  if (isDevelopment) {
+    createAnJoinPeer(myPeerId.value);
+  }
+
   const match = /roomId=(.*)/g.exec(routeHash);
   if (match && match[1]) {
     const roomId = match[1];
@@ -261,7 +262,6 @@ const onConnectionClose = (peerId: string) => {
 
 const onData = (data, conn: PeerJS.DataConnection) => {
   trace(`Received ${data} from ${conn.peer}`);
-  console.log(data);
   if (data.api) {
     emit("apiDataEvent", { conn, data });
   } else {
@@ -284,15 +284,15 @@ const createAnJoinPeer = (targetPeerId: string) => {
   displayname.value =
     displayname.value || Math.random().toString(36).substr(2, 5).toUpperCase();
 
-  // const hostConfig: PeerJS.PeerOptions = {};
-  // if (isDevelopment) {
-  //   hostConfig.host = "localhost";
-  //   hostConfig.port = 9000;
-  //   hostConfig.path = "/myapp";
-  // }
+  const hostConfig: PeerJS.PeerOptions = {};
+  if (isDevelopment) {
+    hostConfig.host = "127.0.0.1";
+    hostConfig.port = 9000;
+    // hostConfig.path = "/myapp";
+  }
 
   // Create a new peer
-  const peer = new PeerJS.Peer(targetPeerId);
+  const peer = new PeerJS.Peer(targetPeerId, hostConfig);
 
   // Peer receive a connection request from the server
   // let conn: PeerJS.DataConnection;
@@ -335,13 +335,6 @@ const disconnect = () => {
   isOnline.value = false;
 };
 const connectToPeer = async (remotePeerId: string) => {
-  // If no peer created, create a new peer
-  // if (!myPeer) {
-  //   console.log("creating a new pear");
-  //   createPeer(remotePeerId.trim())
-  //   return;
-  // }
-
   trace(`Connecting to a peer ${remotePeerId}`);
   const conn = myPeer.connect(remotePeerId, {
     metadata: { displayName: displayname.value },
@@ -355,8 +348,6 @@ const connectToPeer = async (remotePeerId: string) => {
 
   conn.on("open", () => {
     trace(`OPEN Connected to a peer ${remotePeerId}`);
-    outgoingConn = conn;
-
     // Data received from remote peer
     conn.on("data", (data) => {
       onData(data, conn);
