@@ -174,7 +174,7 @@ const emit = defineEmits<{
 const isDevelopment = import.meta.env.MODE === "development"; // env.NODE_ENV === "development";
 const baseUrl = window.location.origin;
 let myPeer: PeerJS.Peer;
-const myPeerId = ref<string>("EK583838");
+const myPeerId = ref<string>(isDevelopment ? "EK583838" : "");
 let displayname = ref<string>();
 let isOnline = ref(false);
 type ConnectionsList = { [peerId: string]: PeerJS.DataConnection };
