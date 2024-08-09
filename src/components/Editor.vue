@@ -8,6 +8,7 @@
         automaticLayout="true"
         language="typescript"
         v-model:value="code"
+        @editorDidMount="setupMonaco"
       ></MonacoEditor>
     </div>
     <div class="flex">
@@ -34,10 +35,14 @@
 import { ref, onMounted, PropType } from "vue";
 import ButtonSwitch from "./ButtonSwitch.vue";
 import { MainModule } from "../../public/flightsimulator_exec";
+import simApiTypes from "../../public/flightsimulator_exec.d.ts?raw";
 
 declare module "monaco-editor-vue3";
 import MonacoEditor from "monaco-editor-vue3";
 import * as monaco from "monaco-editor";
+
+// Context (scope) for script execution.
+let editorContext: Object = {};
 
 import editorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
 import jsonWorker from "monaco-editor/esm/vs/language/json/json.worker?worker";
@@ -45,8 +50,8 @@ import cssWorker from "monaco-editor/esm/vs/language/css/css.worker?worker";
 import htmlWorker from "monaco-editor/esm/vs/language/html/html.worker?worker";
 import tsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker";
 
-self.MonacoEnvironment = {
-  getWorker(_, label: string) {
+window.MonacoEnvironment = {
+  getWorker(_: string, label: string) {
     if (label === "json") {
       return new jsonWorker();
     }
@@ -83,53 +88,43 @@ const options = {
 };
 
 // Define the Monaco Editor configuration
-const setupMonaco = () => {
-  // Register a new language (e.g., TypeScript)
-  monaco.languages.register({ id: "typescript" });
+const setupMonaco = (editor: monaco.editor.IStandaloneCodeEditor) => {
+  // capture the simulator interface for intellisense
+  const regexMatch = simApiTypes.match(/interface EmbindModule\s*\{([^}]*)\}/g);
+  let EmbindModuleStr;
+  if (!regexMatch) {
+    console.log(
+      "// Error while parsing the api types. Autocompletion will not be available",
+    );
+  } else {
+    EmbindModuleStr = regexMatch[0];
+  }
 
-  // Define TypeScript language configuration
-  monaco.languages.setMonarchTokensProvider("typescript", {
-    tokenizer: {
-      root: [
-        [
-          /\b(?:import|export|function|class|let|const|var|if|else|for|while)\b/,
-          "keyword",
-        ],
-        [/\b(?:true|false|null|undefined)\b/, "constant"],
-        [/\b\d+\b/, "number"],
-        [/[a-zA-Z_]\w*/, "identifier"],
-      ],
-    },
-  });
+  // Exctract api functions and copy them to the object that will be used as context for the editor.
+  for (const key of Object.keys(props.contextObject)) {
+    if (
+      key.startsWith("api") &&
+      typeof props.contextObject[key as keyof typeof props.contextObject] ===
+        "function"
+    ) {
+      // Copy function to target object with a modified name
+      const targetKey = key;
+      (editorContext as any)[targetKey] = (props.contextObject as any)[key];
+    }
+  }
 
-  // Provide autocomplete suggestions based on the context object
-  monaco.languages.registerCompletionItemProvider("typescript", {
-    provideCompletionItems: () => {
-      const completionItems: monaco.languages.CompletionItem[] = Object.keys([
-        props.contextObject,
-      ]).map((key) => ({
-        label: key,
-        kind: monaco.languages.CompletionItemKind.Variable,
-        insertText: key,
-        detail:
-          typeof props.contextObject[key] === "function"
-            ? "Function"
-            : "Variable",
-      }));
-
-      return { suggestions: completionItems };
-    },
-  });
+  monaco.languages.typescript.typescriptDefaults.addExtraLib(
+    `${EmbindModuleStr};
+    const sim : EmbindModule = {}`,
+  );
 };
 
 const executionResult = ref<string | null>(null);
-const code = ref(`_api_set_altitude_hold(true);
-_api_set_autopilot(true);`);
+const code = ref(`// Use sim object to control the simulation
+sim.api_set_autopilot(true);`);
 
 // Dynamically import Monaco Editor configuration
-onMounted(async () => {
-  setupMonaco();
-});
+onMounted(() => {});
 
 const stop = () => {};
 
@@ -138,15 +133,16 @@ const executeCode = () => {
   try {
     // Create a function with context binding
     const func = new Function(`
-      const context = arguments[0];
+      const sim = arguments[0];
       const code = arguments[1];
-      with (context) {
-        return eval(code);
-      }
+      eval(code)
+      // with (sim) {
+       // return eval(code);
+      // }
     `);
 
     // Execute the code with context
-    const result = func(props.contextObject, code.value);
+    const result = func(editorContext, code.value);
     executionResult.value = result;
   } catch (error) {
     executionResult.value = `Error: ${error.message}`;
