@@ -8,6 +8,7 @@
         automaticLayout="true"
         language="typescript"
         v-model:value="code"
+        @editorDidMount="setupMonaco"
       ></MonacoEditor>
     </div>
     <div class="flex">
@@ -34,6 +35,7 @@
 import { ref, onMounted, PropType } from "vue";
 import ButtonSwitch from "./ButtonSwitch.vue";
 import { MainModule } from "../../public/flightsimulator_exec";
+import simApiTypes from "../../public/flightsimulator_exec.d.ts?raw";
 
 declare module "monaco-editor-vue3";
 import MonacoEditor from "monaco-editor-vue3";
@@ -83,53 +85,32 @@ const options = {
 };
 
 // Define the Monaco Editor configuration
-const setupMonaco = () => {
-  // Register a new language (e.g., TypeScript)
-  monaco.languages.register({ id: "typescript" });
+const setupMonaco = (editor: monaco.editor.IStandaloneCodeEditor) => {
+  const code = ref("");
 
-  // Define TypeScript language configuration
-  monaco.languages.setMonarchTokensProvider("typescript", {
-    tokenizer: {
-      root: [
-        [
-          /\b(?:import|export|function|class|let|const|var|if|else|for|while)\b/,
-          "keyword",
-        ],
-        [/\b(?:true|false|null|undefined)\b/, "constant"],
-        [/\b\d+\b/, "number"],
-        [/[a-zA-Z_]\w*/, "identifier"],
-      ],
-    },
-  });
-
-  // Provide autocomplete suggestions based on the context object
-  monaco.languages.registerCompletionItemProvider("typescript", {
-    provideCompletionItems: () => {
-      const completionItems: monaco.languages.CompletionItem[] = Object.keys([
-        props.contextObject,
-      ]).map((key) => ({
-        label: key,
-        kind: monaco.languages.CompletionItemKind.Variable,
-        insertText: key,
-        detail:
-          typeof props.contextObject[key] === "function"
-            ? "Function"
-            : "Variable",
-      }));
-
-      return { suggestions: completionItems };
-    },
-  });
+  // capture the simulator interface for intellisense
+  const regexMatch = simApiTypes.match(/interface WasmModule\s*\{([^}]*)\}/g);
+  let WasmModuleInterfaceStr;
+  if (!regexMatch) {
+    console.log(
+      "// Error while parsing the api types. Autocompletion will not be available",
+    );
+  } else {
+    WasmModuleInterfaceStr = regexMatch[0];
+  }
+  monaco.languages.typescript.typescriptDefaults.addExtraLib(
+    `${WasmModuleInterfaceStr};
+    const sim : WasmModule = {}`,
+    "simple/types.d.ts",
+  );
 };
 
 const executionResult = ref<string | null>(null);
-const code = ref(`_api_set_altitude_hold(true);
-_api_set_autopilot(true);`);
+const code = ref(`// Use sim object to control the simulation
+sim._api_set_autopilot(true);`);
 
 // Dynamically import Monaco Editor configuration
-onMounted(async () => {
-  setupMonaco();
-});
+onMounted(() => {});
 
 const stop = () => {};
 
@@ -138,11 +119,12 @@ const executeCode = () => {
   try {
     // Create a function with context binding
     const func = new Function(`
-      const context = arguments[0];
+      const sim = arguments[0];
       const code = arguments[1];
-      with (context) {
-        return eval(code);
-      }
+      eval(code)
+      // with (sim) {
+       // return eval(code);
+      // }
     `);
 
     // Execute the code with context
