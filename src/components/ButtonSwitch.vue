@@ -16,7 +16,7 @@
     <slot></slot>
 
     <input
-      @change="(event) => inputChange(event.target.value)"
+      @change="(event) => inputChange?.(event.target?.value)"
       v-if="textInput != undefined"
       type="number"
       :class="[

@@ -475,6 +475,3 @@ export function getSimulationParameters(
     ],
   };
 }
-
-// console.log("This is a test")
-// initializeModule().catch(console.error);
