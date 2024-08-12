@@ -82,6 +82,7 @@
       <Editor
         v-if="sim_module_loaded"
         :context-object="FlightSimModule"
+        :data-object="sim_data"
         class="w-full h-full"
       >
       </Editor>
@@ -167,7 +168,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, provide } from "vue";
+import { ref, reactive, computed, onMounted, onUnmounted } from "vue";
 import Panel from "./Panel.vue";
 import ButtonSwitch from "./ButtonSwitch.vue";
 import ClassRoom from "./ClassRoom.vue";
@@ -302,9 +303,9 @@ onMounted(async () => {
       function isTextInput() {
         const activeElement = document.activeElement;
         return (
-          activeElement.tagName === "INPUT" ||
-          activeElement.tagName === "TEXTAREA" ||
-          activeElement.isContentEditable
+          activeElement?.tagName === "INPUT" ||
+          activeElement?.tagName === "TEXTAREA" ||
+          activeElement?.isContentEditable
         );
       }
 

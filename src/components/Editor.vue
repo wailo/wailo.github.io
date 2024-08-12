@@ -32,17 +32,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, PropType } from "vue";
+import { ref, PropType } from "vue";
 import ButtonSwitch from "./ButtonSwitch.vue";
 import { MainModule } from "../../public/flightsimulator_exec";
+import { SimData } from "../siminterfac.ts";
 import simApiTypes from "../../public/flightsimulator_exec.d.ts?raw";
+import simDataTypes from "../siminterfac.ts?raw";
 
 declare module "monaco-editor-vue3";
 import MonacoEditor from "monaco-editor-vue3";
 import * as monaco from "monaco-editor";
-
-// Context (scope) for script execution.
-let editorContext: Object = {};
 
 import editorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
 import jsonWorker from "monaco-editor/esm/vs/language/json/json.worker?worker";
@@ -69,7 +68,14 @@ window.MonacoEnvironment = {
 };
 
 const props = defineProps({
-  contextObject: Object as PropType<MainModule>,
+  contextObject: {
+    type: Object as PropType<MainModule>,
+    required: true,
+  },
+  dataObject: {
+    type: Object as PropType<SimData>,
+    required: true,
+  },
 });
 
 const options = {
@@ -89,8 +95,10 @@ const options = {
 
 // Define the Monaco Editor configuration
 const setupMonaco = (editor: monaco.editor.IStandaloneCodeEditor) => {
-  // capture the simulator interface for intellisense
-  const regexMatch = simApiTypes.match(/interface EmbindModule\s*\{([^}]*)\}/g);
+  // Capture the simulator interface for intellisense
+
+  // Get functions interface
+  let regexMatch = simApiTypes.match(/interface EmbindModule\s*\{([^}]*)\}/g);
   let EmbindModuleStr;
   if (!regexMatch) {
     console.log(
@@ -100,49 +108,47 @@ const setupMonaco = (editor: monaco.editor.IStandaloneCodeEditor) => {
     EmbindModuleStr = regexMatch[0];
   }
 
-  // Exctract api functions and copy them to the object that will be used as context for the editor.
-  for (const key of Object.keys(props.contextObject)) {
-    if (
-      key.startsWith("api") &&
-      typeof props.contextObject[key as keyof typeof props.contextObject] ===
-        "function"
-    ) {
-      // Copy function to target object with a modified name
-      const targetKey = key;
-      (editorContext as any)[targetKey] = (props.contextObject as any)[key];
-    }
+  // Get data interface
+  regexMatch = simDataTypes.match(/class SimData\s*\{([^}]*)\}/g);
+  let SimDataStr;
+  if (!regexMatch) {
+    console.log(
+      "// Error while parsing the api types. Autocompletion will not be available",
+    );
+  } else {
+    SimDataStr = regexMatch[0].replace("class", "interface");
   }
 
   monaco.languages.typescript.typescriptDefaults.addExtraLib(
-    `${EmbindModuleStr};
-    const sim : EmbindModule = {}`,
+    `${EmbindModuleStr}; ${SimDataStr}
+    const simControls : EmbindModule = {};
+    const simData : SimData = {}`,
   );
 };
 
 const executionResult = ref<string | null>(null);
 const code = ref(`// Use sim object to control the simulation
-sim.api_set_autopilot(true);`);
+// [simControls] contains all functions to change the state of the simulator
+// [simData] contains all variables to read the state of the simulator
 
-// Dynamically import Monaco Editor configuration
-onMounted(() => {});
-
-const stop = () => {};
+simControls.api_set_autopilot(!simData.api_autopilot);`);
 
 // Function to execute code in the context of the provided object
 const executeCode = () => {
   try {
     // Create a function with context binding
     const func = new Function(`
-      const sim = arguments[0];
+      const simControls = arguments[0];
       const code = arguments[1];
+      const simData = arguments[2];
       eval(code)
-      // with (sim) {
+      // with (sim a) {
        // return eval(code);
       // }
     `);
 
     // Execute the code with context
-    const result = func(editorContext, code.value);
+    const result = func(props.contextObject, code.value, props.dataObject);
     executionResult.value = result;
   } catch (error) {
     executionResult.value = `Error: ${error.message}`;
