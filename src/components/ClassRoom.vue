@@ -1,6 +1,6 @@
 <template>
-  <div class="w-full border grid grid-flow-row grid-cols-1">
-    <div class="w-full border grid grid-flow-row grid-cols-1">
+  <div class="w-full max-h-full grid grid-flow-row grid-cols-1 gap-2">
+    <div class="w-full grid grid-flow-row grid-cols-1 gap-1">
       <input
         v-model="myPeerId"
         :readonly="isOnline"
@@ -23,6 +23,7 @@
       <button-switch
         id="connect"
         :button-label="isOnline ? 'Disconnect' : 'Start'"
+        :button-state="isOnline"
         class="border border-simElementBorder"
         :buttonClick="
           () => (isOnline ? disconnect() : createAnJoinPeer(myPeerId))
@@ -38,7 +39,7 @@
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 16 16"
             fill="currentColor"
-            class="size-4"
+            class="size-3"
           >
             <path
               d="M12 6a2 2 0 1 0-1.994-1.842L5.323 6.5a2 2 0 1 0 0 3l4.683 2.342a2 2 0 1 0 .67-1.342L5.995 8.158a2.03 2.03 0 0 0 0-.316L10.677 5.5c.353.311.816.5 1.323.5Z"
@@ -48,18 +49,12 @@
       </button-switch>
     </div>
 
-    <!-- <textarea
-      id="data-channel-send"
-      :readonly="!Object.keys(incomingConns).length"
-      placeholder="Press Start, enter some text, then press Send."
-      variant="success"
-      @input="(event) => send(event?.target?.value)"
-    ></textarea> -->
-
     <div class="grid grid-flow-row grid-cols-1">
       <h3>Peers</h3>
       <table class="table-fixed text-left border">
-        <thead class="border-b border-t border-black bg-panelHeaderBackground">
+        <thead
+          class="border-b border-t border-simElementBorder bg-panelHeaderBackground"
+        >
           <tr>
             <th class="w-3/5">Callsign</th>
             <th class="w-1/5">Status</th>
@@ -111,46 +106,46 @@
           </tr>
         </tbody>
       </table>
-      <button-switch
-        button-label="Mirro Mode"
-        :button-state="mirrorMode"
-        :button-click="() => (mirrorMode = !mirrorMode)"
-      />
     </div>
+    <button-switch
+      button-label="Mirro Mode"
+      :button-state="mirrorMode"
+      :button-click="() => (mirrorMode = !mirrorMode)"
+    />
+  </div>
 
-    <div
-      v-if="isQrPopupOpen == true"
-      class="fixed inset-0 flex items-center justify-center bg-simBackground bg-opacity-50"
-      @click.self="() => (isQrPopupOpen = false)"
-    >
-      <div class="bg-simBackground p-6 rounded-lg shadow-lg w-min text-center">
-        <vue-qr
-          :text="myPeerId ? `${baseUrl}/#sim?roomId=${myPeerId}` : ''"
-          :size="150"
-          :margin="0"
-          backgroundColor="rgba(0,0,0,0)"
-        ></vue-qr>
+  <div
+    v-if="isQrPopupOpen == true"
+    class="fixed inset-0 flex items-center justify-center bg-simBackground bg-opacity-50"
+    @click.self="() => (isQrPopupOpen = false)"
+  >
+    <div class="bg-simBackground p-6 rounded-lg shadow-lg w-min text-center">
+      <vue-qr
+        :text="myPeerId ? `${baseUrl}/#sim?roomId=${myPeerId}` : ''"
+        :size="150"
+        :margin="0"
+        backgroundColor="rgba(0,0,0,0)"
+      ></vue-qr>
 
-        <div class="border">
-          <b :v-if="myPeerId && myPeerId.length"
-            >{{ myPeerId ? `${baseUrl}/#sim?roomId=${myPeerId}` : "" }}
-          </b>
-        </div>
-
-        <button
-          @click="copyToClipboard"
-          class="mt-4 px-4 py-2 bg-primary text-secondary border border-simElementBorder"
-        >
-          Copy
-        </button>
-
-        <button
-          @click="() => (isQrPopupOpen = false)"
-          class="mt-4 px-4 py-2 bg-primary text-secondary border border-simElementBorder"
-        >
-          Close
-        </button>
+      <div class="border">
+        <b :v-if="myPeerId && myPeerId.length"
+          >{{ myPeerId ? `${baseUrl}/#sim?roomId=${myPeerId}` : "" }}
+        </b>
       </div>
+
+      <button
+        @click="copyToClipboard"
+        class="mt-4 px-4 py-2 bg-primary text-secondary border border-simElementBorder"
+      >
+        Copy
+      </button>
+
+      <button
+        @click="() => (isQrPopupOpen = false)"
+        class="mt-4 px-4 py-2 bg-primary text-secondary border border-simElementBorder"
+      >
+        Close
+      </button>
     </div>
   </div>
 </template>
@@ -260,7 +255,7 @@ const onConnectionClose = (peerId: string) => {
   delete incomingConns.value[peerId];
 };
 
-const onData = (data, conn: PeerJS.DataConnection) => {
+const onData = (data: any, conn: PeerJS.DataConnection) => {
   trace(`Received ${data} from ${conn.peer}`);
   if (data.api) {
     emit("apiDataEvent", { conn, data });
