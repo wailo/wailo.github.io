@@ -177,7 +177,7 @@ import FlightSimulator, {
 } from "../../public/flightsimulator_exec.js";
 import {
   initializeModule,
-  update,
+  fetchSimData,
   SimData,
   getAutopilotProperties,
   getSimulationParameters,
@@ -324,7 +324,7 @@ onMounted(async () => {
       );
 
       simUpdateInterval = setInterval(() => {
-        update(FlightSimModule, sim_data);
+        fetchSimData(FlightSimModule, sim_data);
       }, update_interval_ms);
     })
     .catch(console.error);

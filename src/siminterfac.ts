@@ -103,7 +103,7 @@ interface SimulationProperties {
   toggleFunc?: Function;
   toggleFuncStr?: () => string;
   setterFunc?: Function;
-  setterFuncStr?: (val: number) => string;
+  setterFuncStr?: (val: string) => string;
   unit?: string;
   min?: number;
   max?: number;
@@ -163,7 +163,7 @@ function round(value: number, decimals: number) {
   return Number(Math.round(value + "e" + decimals) + "e-" + decimals);
 }
 
-export async function update(module: MainModule, payload: SimData) {
+export async function fetchSimData(module: MainModule, payload: SimData) {
   if (!payload || !module) {
     return;
   }
@@ -265,11 +265,10 @@ export function getAutopilotProperties(
       inputValue: payload.api_target_heading_deg,
       stateValue: payload.api_heading_hold,
       toggleFunc: () => module.api_set_heading_hold(!payload.api_heading_hold),
-      toggleFuncStr: () =>
-        `api_set_heading_hold(${!payload.api_heading_hold})`,
-      setterFunc: (newVal: number) =>
-        module.api_set_target_heading_deg(newVal),
-      setterFuncStr: (newVal: number) =>
+      toggleFuncStr: () => `api_set_heading_hold(${!payload.api_heading_hold})`,
+      setterFunc: (newVal: string) =>
+        module.api_set_target_heading_deg(Number(newVal)),
+      setterFuncStr: (newVal: string) =>
         `api_set_target_heading_deg(${newVal})`,
       unit: "°",
       min: 0,
@@ -283,8 +282,9 @@ export function getAutopilotProperties(
       stateValue: payload.api_bank_hold,
       toggleFunc: () => module.api_set_bank_hold(!payload.api_bank_hold),
       toggleFuncStr: () => `api_set_bank_hold(${!payload.api_bank_hold})`,
-      setterFunc: (newVal: number) => module.api_set_target_bank_deg(newVal),
-      setterFuncStr: (newVal: number) => `api_set_target_bank_deg(${newVal})`,
+      setterFunc: (newVal: string) =>
+        module.api_set_target_bank_deg(Number(newVal)),
+      setterFuncStr: (newVal: string) => `api_set_target_bank_deg(${newVal})`,
       unit: "°",
       min: -50,
       max: 50,
@@ -299,8 +299,9 @@ export function getAutopilotProperties(
         module.api_set_altitude_hold(!payload.api_altitude_hold),
       toggleFuncStr: () =>
         `api_set_altitude_hold(${!payload.api_altitude_hold})`,
-      setterFunc: (newVal: number) => module.api_set_target_altitude(newVal),
-      setterFuncStr: (newVal: number) => `api_set_target_altitude(${newVal})`,
+      setterFunc: (newVal: string) =>
+        module.api_set_target_altitude(Number(newVal)),
+      setterFuncStr: (newVal: string) => `api_set_target_altitude(${newVal})`,
       unit: "ft",
       min: 0,
       max: 50000,
@@ -315,10 +316,10 @@ export function getAutopilotProperties(
         module.api_set_vertical_speed_hold(!payload.api_vertical_speed_hold),
       toggleFuncStr: () =>
         `api_set_vertical_speed_hold(${!payload.api_vertical_speed_hold})`,
-      setterFunc: (newVal: number) =>
-        module.api_set_target_vertical_speed(newVal),
-      setterFuncStr: (newVal: number) =>
-        `api_set_target_vertical_speed(${newVal})`,
+      setterFunc: (newVal: string) =>
+        module.api_set_target_vertical_speed(Number(newVal)),
+      setterFuncStr: (newVal: string) =>
+        `api_set_target_vertical_speed(${Number(newVal)})`,
       unit: "fpm",
       min: -6000,
       max: 6000,
@@ -331,8 +332,9 @@ export function getAutopilotProperties(
       stateValue: payload.api_speed_hold,
       toggleFunc: () => module.api_set_speed_hold(!payload.api_speed_hold),
       toggleFuncStr: () => `api_set_speed_hold(${!payload.api_speed_hold})`,
-      setterFunc: module.api_set_target_speed,
-      setterFuncStr: (newVal: number) => `api_set_target_speed(${newVal})`,
+      setterFunc: (newVal: string) =>
+        module.api_set_target_speed(Number(newVal)),
+      setterFuncStr: (newVal: string) => `api_set_target_speed(${newVal})`,
       unit: "kt",
       min: 0,
       max: 350,
@@ -347,9 +349,9 @@ export function getAutopilotProperties(
         module.api_set_mach_speed_hold(!payload.api_mach_speed_hold),
       toggleFuncStr: () =>
         `api_set_mach_speed_hold(${!payload.api_mach_speed_hold})`,
-      setterFunc: module.api_set_target_mach_speed,
-      setterFuncStr: (newVal: number) =>
-        `api_set_target_mach_speed(${newVal})`,
+      setterFunc: (newVal: string) =>
+        module.api_set_target_mach_speed(Number(newVal)),
+      setterFuncStr: (newVal: string) => `api_set_target_mach_speed(${newVal})`,
       unit: "M",
       min: 0,
       max: 1.5,
@@ -375,7 +377,7 @@ export function getSimulationParameters(
       },
       {
         label: "Reset",
-        toggleFunc: () => module.api_set_simulation_reset(),
+        toggleFunc: module.api_set_simulation_reset,
         toggleFuncStr: () => `api_set_simulation_reset()`,
         icon: "x-circle",
       },
@@ -388,8 +390,9 @@ export function getSimulationParameters(
       {
         label: "Simulation Speed",
         inputValue: payload.api_simulation_speed,
-        setterFunc: module.api_set_simulation_speed,
-        setterFuncStr: (newVal: number) =>
+        setterFunc: (newVal: string) =>
+          module.api_set_simulation_speed(Number(newVal)),
+        setterFuncStr: (newVal: string) =>
           `api_set_simulation_speed(${newVal})`,
         unit: "x",
         min: 0.5,
@@ -399,8 +402,8 @@ export function getSimulationParameters(
       {
         label: "Update Rate",
         inputValue: 60,
-        setterFunc: module.api_set_update_rate,
-        setterFuncStr: (newVal: number) => `api_set_update_rate(${newVal})`,
+        setterFunc:(newVal:string) => module.api_set_update_rate(Number(newVal)),
+        setterFuncStr: (newVal: string) => `api_set_update_rate(${newVal})`,
         unit: "fps",
         min: 1,
         max: 1000,
@@ -411,8 +414,8 @@ export function getSimulationParameters(
       {
         label: "Thrust to Weight Ratio",
         inputValue: payload.api_thrust_to_weight,
-        setterFunc: module.api_set_thrust_to_weight,
-        setterFuncStr: (newVal: number) =>
+        setterFunc: (newVal :string) => module.api_set_thrust_to_weight(Number(newVal)),
+        setterFuncStr: (newVal: string) =>
           `api_set_thrust_to_weight(${newVal})`,
         min: 0.1,
         max: 5,
@@ -421,8 +424,8 @@ export function getSimulationParameters(
       {
         label: "Wing Area",
         inputValue: payload.api_wing_area,
-        setterFunc: module.api_set_wing_area,
-        setterFuncStr: (newVal: number) => `api_set_wing_area(${newVal})`,
+        setterFunc: (newVal :string) => module.api_set_wing_area(Number(newVal)),
+        setterFuncStr: (newVal: string) => `api_set_wing_area(${newVal})`,
         unit: "Ft²",
         min: 10,
         max: 7000,
@@ -433,17 +436,17 @@ export function getSimulationParameters(
       {
         label: "Lift Cofficient Slope",
         inputValue: payload.api_cl0,
-        setterFunc: module.api_set_dcl,
-        setterFuncStr: (newVal: number) => `api_set_dcl(${newVal})`,
-        min: 0.1,
+        setterFunc: (newVal :string) => module.api_set_dcl(Number(newVal)),
+        setterFuncStr: (newVal: string) => `api_set_dcl(${newVal})`,
+        min: 0.01,
         max: 5,
         step: 0.01,
       },
       {
         label: "Drag Cofficient",
         inputValue: payload.api_cdo,
-        setterFunc: module.api_set_cdo,
-        setterFuncStr: (newVal: number) => `api_set_cdo(${newVal})`,
+        setterFunc: (newVal :string) => module.api_set_cdo(Number(newVal)),
+        setterFuncStr: (newVal: string) => `api_set_cdo(${newVal})`,
         min: 0.01,
         max: 1.0,
         step: 0.0001,
@@ -454,8 +457,8 @@ export function getSimulationParameters(
         label: "Sea Level Temperature",
         unit: "R",
         inputValue: payload.api_atmosphere_sea_level_temperature,
-        setterFunc: module.api_set_atmosphere_sea_level_temperature,
-        setterFuncStr: (newVal: number) =>
+        setterFunc: (newVal :string) => module.api_set_atmosphere_sea_level_temperature(Number(newVal)),
+        setterFuncStr: (newVal: string) =>
           `api_set_atmosphere_sea_level_temperature(${newVal})`,
         min: 311,
         max: 672,
@@ -465,8 +468,8 @@ export function getSimulationParameters(
         label: "Sea Level Density",
         unit: "Slug/ft³",
         inputValue: payload.api_atmosphere_sea_level_density,
-        setterFunc: module.api_set_atmosphere_sea_level_density,
-        setterFuncStr: (newVal: number) =>
+        setterFunc: (newVal :string) => module.api_set_atmosphere_sea_level_density(Number(newVal)),
+        setterFuncStr: (newVal: string) =>
           `api_set_atmosphere_sea_level_density(${newVal})`,
         min: 0.001756,
         max: 0.002939,
