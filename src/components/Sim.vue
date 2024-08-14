@@ -78,12 +78,21 @@
       </div>
     </Panel>
     <!-- Panel 4 -->
-    <Panel title="Scripting" status="Status" class="panel-4">
+    <Panel
+      title="Scripting"
+      :status="scriptComponentStatus"
+      class="panel-4"
+      :active="scriptComponentStatus != 'IDLE'"
+    >
       <Editor
         v-if="sim_module_loaded"
         :context-object="FlightSimModule"
         :data-object="sim_data"
+        @start="scriptComponentStatus = 'RUNNING'"
+        @reset="scriptComponentStatus = 'IDLE'"
+        @error="scriptComponentStatus = 'ERROR'"
         class="w-full h-full"
+        ref="editorComponentRef"
       >
       </Editor>
     </Panel>
@@ -154,15 +163,15 @@
     <!-- Panel 7 -->
     <Panel
       title="Classroom"
-      :status="classRoomOnline ? 'Online' : 'Offline'"
+      :status="classRoomComponentState ? 'Online' : 'Offline'"
       class="panel-7"
-      :active="classRoomOnline"
+      :active="classRoomComponentState"
       ><ClassRoom
         @api-data-event="
           (receivedApiCall) => executeCode(receivedApiCall?.data?.api)
         "
         ref="classroomComponentRef"
-        @status-changed="(newStatus) => (classRoomOnline = newStatus)"
+        @status-changed="(newStatus) => (classRoomComponentState = newStatus)"
     /></Panel>
   </div>
 </template>
@@ -182,7 +191,7 @@ import {
   getAutopilotProperties,
   getSimulationParameters,
 } from "../siminterfac.js";
-import Editor from "./Editor.vue";
+import Editor, { ScriptStatus } from "./Editor.vue";
 
 // Define a decorator function
 function broadcast(code: string | undefined) {
@@ -193,14 +202,22 @@ const executeCode = (code: string) => {
   eval(`FlightSimModule.${code}`);
 };
 
+// Logic to reset components, triggered with simulation module is reset
+const resetComponents = () => {
+  // Called when user invoke reset from a button, still can't tell if keyboard is pressed.
+  editorComponentRef.value.reset();
+};
+
 let FlightSimModule: MainModule;
 const sim_data = reactive(new SimData());
 let sim_module_loaded = ref(false);
-let classRoomOnline = ref(false);
+let classRoomComponentState = ref(false);
+let scriptComponentStatus = ref<ScriptStatus>("IDLE");
 const update_interval_ms = 200;
 
 // Components refs
 const classroomComponentRef = ref(null);
+const editorComponentRef = ref(null);
 
 let autopilotProps: ReturnType<
   typeof computed<ReturnType<typeof getAutopilotProperties>>

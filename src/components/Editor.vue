@@ -11,7 +11,7 @@
         @editorDidMount="setupMonaco"
       ></MonacoEditor>
     </div>
-    <div class="flex">
+    <div class="flex gap-1">
       <ButtonSwitch
         buttonLabel="Execute Code"
         class="border border-simElementBorder w-1/5"
@@ -21,7 +21,7 @@
       <ButtonSwitch
         buttonLabel="Stop"
         class="border border-simElementBorder w-1/5"
-        @click="stop"
+        @click="() => reset()"
       ></ButtonSwitch>
       <span class="w-3/5">
         <span>Execution Result: </span>
@@ -39,15 +39,26 @@ import { SimData } from "../siminterfac.ts";
 import simApiTypes from "../../public/flightsimulator_exec.d.ts?raw";
 import simDataTypes from "../siminterfac.ts?raw";
 
+// Monaco Editor
 declare module "monaco-editor-vue3";
 import MonacoEditor from "monaco-editor-vue3";
 import * as monaco from "monaco-editor";
-
 import editorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
 import jsonWorker from "monaco-editor/esm/vs/language/json/json.worker?worker";
 import cssWorker from "monaco-editor/esm/vs/language/css/css.worker?worker";
 import htmlWorker from "monaco-editor/esm/vs/language/html/html.worker?worker";
 import tsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker";
+
+const isScriptRunning = ref(false);
+
+// Define the event emitter
+const emit = defineEmits<{
+  (event: "start"): void;
+  (event: "reset"): void;
+  (event: "error", error: any): void;
+}>();
+
+export type ScriptStatus = "RUNNING" | "IDLE" | "ERROR";
 
 window.MonacoEnvironment = {
   getWorker(_: string, label: string) {
@@ -121,8 +132,12 @@ const setupMonaco = (editor: monaco.editor.IStandaloneCodeEditor) => {
 
   monaco.languages.typescript.typescriptDefaults.addExtraLib(
     `${EmbindModuleStr}; ${SimDataStr}
+    // Declare types here for autocompletion
     const simControls : EmbindModule = {};
-    const simData : SimData = {}`,
+    const simData : SimData = {}
+    declare const waitForCondition: (conditionFunction: (...args: any[]) => boolean) => Promise<unknown>;
+    declare const waitFor: (ms: number) => Promise<unknown>;
+    `,
   );
 };
 
@@ -131,26 +146,131 @@ const code = ref(`// Use sim object to control the simulation
 // [simControls] contains all functions to change the state of the simulator
 // [simData] contains all variables to read the state of the simulator
 
-simControls.api_set_autopilot(!simData.api_autopilot);`);
+// Reset the simulation
+simControls.api_set_simulation_reset()
+
+// Wait for 1000 ms (1 second)
+await waitFor(1000);
+
+// Toggle the autopilot master switch state.
+simControls.api_set_autopilot(!simData.api_autopilot);
+
+// Wait for autopilot bank hold to be engaged
+await waitForCondition(() => { return simData.api_bank_hold == true })
+// Toggle autopilot altitude hold
+simControls.api_set_altitude_hold(!simData.api_altitude_hold);
+`);
+
+const reset = () => {
+  window.flag = false;
+  if (!window.cache) {
+    return;
+  }
+  window.cache.forEach((n) => clearTimeout(n));
+  window.cache.length = 0;
+  isScriptRunning.value = false;
+  emit("reset");
+};
+
+defineExpose({ reset });
 
 // Function to execute code in the context of the provided object
 const executeCode = () => {
+  window.flag = true;
+  window.cache = [];
   try {
+    isScriptRunning.value = true;
+    emit("start");
     // Create a function with context binding
-    const func = new Function(`
-      const simControls = arguments[0];
-      const code = arguments[1];
-      const simData = arguments[2];
-      eval(code)
-      // with (sim a) {
-       // return eval(code);
-      // }
+    const userScriptFunc = new Function(`
+const simControls = arguments[0];
+const simData = arguments[1];
+
+const waitForCondition = (conditionFunction) => {
+    const poll = (resolve) => {
+        if (conditionFunction() === true) {
+            resolve()
+        }
+        else {
+
+            if (window.flag) {
+                setTimeout((_) => poll(resolve), 400)
+            }
+        }
+    }
+    return new Promise(poll)
+}
+
+// Wait for a given time in ms without interrupting the simulation
+const waitFor = (ms) => {
+    const poll = (resolve) => {
+        setTimeout((_) => resolve(), ms)
+    }
+    return new Promise(poll)
+}
+
+const _set = window.setTimeout; // save original reference
+const _clear = window.clearTimeout; // save original reference
+
+// Wrap original setTimeout with a function
+const setTimeout = function (callback, duration, arg) {
+    // also, wrap the callback, so the cache reference will be removed
+    // when the timeout has reached (fired the callback)
+    const id = _set(
+        function () {
+            callback.apply(null, arguments);
+            removeCacheItem(id);
+        },
+        duration || 0,
+        arg,
+    );
+
+    // store reference in the cache array
+    window.cache.push(id);
+
+    // id reference must be returned to be able to clear it
+    return id;
+};
+
+// Wrap original clearTimeout with a function
+const clearTimeout = (id) => {
+    _clear(id);
+    removeCacheItem(id);
+};
+
+// Add a custom function named "clearTimeouts" to the "window" object
+const resetTimeouts = () => {
+    window.cache.forEach((n) => _clear(n));
+    // Clear the cache array
+    window.cache.length = 0;
+};
+
+// removes a specific id from the cache array
+const removeCacheItem = (id) => {
+    const idx = cache.indexOf(id);
+    if (idx > -1) {
+        window.cache = window.cache.filter((n) => n != id);
+    }
+}
+
+resetTimeouts();
+return async function () {${code.value} };
     `);
 
-    // Execute the code with context
-    const result = func(props.contextObject, code.value, props.dataObject);
-    executionResult.value = result;
+    userScriptFunc(props.contextObject, props.dataObject)()
+      .then(() => {
+        emit("reset");
+      })
+      .catch((error) => {
+        console.log(`Script error: ${error}`);
+        executionResult.value = error;
+        emit("error", error);
+      })
+      .finally(() => {
+        isScriptRunning.value = false;
+      });
   } catch (error) {
+    console.log(error);
     executionResult.value = `Error: ${error.message}`;
   }
 };
