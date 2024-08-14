@@ -1,5 +1,5 @@
 <template>
-  <div class="flex w-full h-full">
+  <div class="flex">
     <button
       :class="[
         'flex items-center justify-center w-full h-full text-nowrap',
@@ -16,7 +16,7 @@
     <slot></slot>
 
     <input
-      @change="(event) => inputChange?.(event.target?.value)"
+      @change="(event) => inputChange(event.target?.value)"
       v-if="textInput != undefined"
       type="number"
       :class="[
