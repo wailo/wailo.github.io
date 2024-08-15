@@ -169,6 +169,7 @@ const emit = defineEmits<{
 const isDevelopment = import.meta.env.MODE === "development"; // env.NODE_ENV === "development";
 const baseUrl = window.location.origin;
 let myPeer: PeerJS.Peer;
+let outConnection: PeerJS.DataConnection;
 const myPeerId = ref<string>(isDevelopment ? "EK583838" : "");
 let displayname = ref<string>();
 let isOnline = ref(false);
@@ -201,6 +202,10 @@ onMounted(() => {
     createAnJoinPeer(myPeerId.value);
   }
 
+  // There is no hook in Vuejs to detect when a tab is closed.
+  // When the user closes the tab, disconnect
+  window.addEventListener("beforeunload", disconnect);
+
   const match = /roomId=(.*)/g.exec(routeHash);
   if (match && match[1]) {
     const roomId = match[1];
@@ -216,7 +221,8 @@ const setupConnection = (conn: DataConnection) => {
   // Connected to remote peer.
   conn.on("open", () => {
     trace(`OPEN Peer ${conn.peer}`);
-    // Done this way due to limitation in Vue2 reactivity with objects
+
+    // Add to incomming connection lists
     incomingConns.value[conn.peer] = conn;
   });
 
@@ -292,8 +298,8 @@ const createAnJoinPeer = (targetPeerId: string) => {
   // Peer receive a connection request from the server
   // let conn: PeerJS.DataConnection;
   peer.on("connection", (newConn: PeerJS.DataConnection) => {
-    // conn = newConn;
-    setupConnection(newConn);
+    outConnection = newConn;
+    setupConnection(outConnection);
   });
 
   // Peer is disconnected from the server, but can recover
@@ -326,26 +332,40 @@ const createAnJoinPeer = (targetPeerId: string) => {
 
 const disconnect = () => {
   trace("Disconnect");
-  myPeer.disconnect();
+  if (outConnection) {
+    outConnection.close();
+  }
+  if (incomingConns) {
+    Object.keys(incomingConns.value).forEach((id) => {
+      const conn = incomingConns.value[id];
+      conn.close();
+    });
+  }
+
+  if (myPeer) {
+    myPeer.disconnect();
+  }
+
   isOnline.value = false;
 };
+
 const connectToPeer = async (remotePeerId: string) => {
   trace(`Connecting to a peer ${remotePeerId}`);
-  const conn = myPeer.connect(remotePeerId, {
+  outConnection = myPeer.connect(remotePeerId, {
     metadata: { displayName: displayname.value },
   });
 
   // conn.on('disconnected', this.onDisconnected)
-  conn.on("error", (e) =>
+  outConnection.on("error", (e) =>
     onError(`${e.type} - ${e.name} - ${e.message} - ${e.stack}`),
   );
-  conn.on("close", () => onConnectionClose(conn.peer));
+  outConnection.on("close", () => onConnectionClose(outConnection.peer));
 
-  conn.on("open", () => {
+  outConnection.on("open", () => {
     trace(`OPEN Connected to a peer ${remotePeerId}`);
     // Data received from remote peer
-    conn.on("data", (data) => {
-      onData(data, conn);
+    outConnection.on("data", (data) => {
+      onData(data, outConnection);
     });
   });
 };
