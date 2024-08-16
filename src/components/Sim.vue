@@ -309,6 +309,7 @@ onMounted(async () => {
       window.removeEventListener("keyup", FlightSimModule.GLFW.onKeyup, true);
       window.removeEventListener("blur", FlightSimModule.GLFW.onBlur, true);
       const canvas = document.getElementById("canvas");
+      canvas?.focus();
       canvas?.addEventListener("keydown", FlightSimModule.GLFW.onKeydown, true);
       canvas?.addEventListener(
         "keypress",
@@ -350,35 +351,6 @@ onMounted(async () => {
 onUnmounted(() => {
   clearInterval(simUpdateInterval);
 });
-
-async function initSim() {
-  FlightSimulator({
-    print: (function () {
-      const element = document.getElementById("output");
-      if (element) element.value = ""; // clear browser cache
-      return function (text) {
-        if (arguments.length > 1)
-          text = Array.prototype.slice.call(arguments).join(" ");
-
-        if (element) {
-          element.value += text + "\n";
-          element.scrollTop = element.scrollHeight; // focus on bottom
-        }
-      };
-    })(),
-    printErr(text) {
-      if (arguments.length > 1)
-        text = Array.prototype.slice.call(arguments).join(" ");
-    },
-
-    canvas: (() => {
-      const canvas = document.getElementById("canvas");
-      return canvas;
-    })(),
-  }).then((FlightSimulatorModule: Object) => {
-    return FlightSimulatorModule;
-  });
-}
 </script>
 
 <style scoped>
