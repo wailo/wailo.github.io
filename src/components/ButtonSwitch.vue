@@ -1,6 +1,7 @@
 <template>
   <div class="flex">
     <button
+      v-if="buttonClick"
       :class="[
         'flex items-center justify-center w-full h-full text-nowrap',
         buttonWidth,
@@ -13,6 +14,17 @@
     >
       {{ buttonLabel }}
     </button>
+    <div
+      v-else
+      :class="[
+        'flex items-center justify-left w-full h-full text-nowrap pl-1',
+        buttonWidth,
+        'font-medium border-transparent',
+      ]"
+    >
+      {{ buttonLabel }}
+    </div>
+
     <slot></slot>
 
     <input
@@ -20,7 +32,7 @@
       v-if="textInput != undefined"
       type="number"
       :class="[
-        'bg-transparent border-l border-simElementBorder pl-1 h-full text-secondary',
+        'bg-simInputBackground border-l border-simElementBorder pl-1 h-full text-secondary',
         inputWidth,
       ]"
       :value="textInput"

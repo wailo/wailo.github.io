@@ -25,6 +25,7 @@ export default {
         panelHeaderBackground: "#dfe4e2",
         panelContentBackground: "#f7f7f7",
         simElementBorder: "#130f0c",
+        simInputBackground: "#e6e6e6",
         panelActive: "#b9391b",
         simBackground: "#f7f7f7",
         simActiveButton: "#b9391b",

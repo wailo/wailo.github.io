@@ -5,12 +5,12 @@
         v-model="myPeerId"
         :readonly="isOnline"
         placeholder="Classroom name (optional)"
-        class="text-secondary bg-primary w-full border border-simElementBorder"
+        class="pl-1 text-secondary bg-primary w-full border border-simElementBorder"
       />
       <input
         v-model="displayname"
         placeholder="Enter your display name (optional)"
-        class="text-secondary bg-primary w-full border border-simElementBorder"
+        class="pl-1 text-secondary bg-primary w-full border border-simElementBorder"
       />
       <!-- <button-switch
         id="share"
