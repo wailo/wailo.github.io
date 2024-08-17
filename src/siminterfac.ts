@@ -221,7 +221,7 @@ export async function fetchSimData(module: MainModule, payload: SimData) {
   );
   payload.api_atmosphere_sea_level_density = round(
     module.HEAPF32[ptrApiAtmosphereSeaLevelDensity],
-    4,
+    6,
   );
   payload.api_thrust_to_weight = round(module.HEAPF32[ptrApiThrustToWeight], 2);
   payload.api_cl0 = round(module.HEAPF32[ptrApiCl0], 4);
@@ -239,7 +239,7 @@ export async function fetchSimData(module: MainModule, payload: SimData) {
   );
   payload.api_atmosphere_density = round(
     module.HEAPF32[ptrApiAtmosphereDensity],
-    4,
+    6,
   );
   payload.api_total_drag = round(module.HEAPF32[PtrApiTotalDrag], 2);
   payload.api_cl = round(module.HEAPF32[ptrApiCl], 4);
