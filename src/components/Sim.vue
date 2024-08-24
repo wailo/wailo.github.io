@@ -1,5 +1,5 @@
 <template>
-  <div class="container max-w-full h-screen gap-3 p-5 bg-simBackground">
+  <div class="container max-w-full h-screen gap-2 p-5 bg-simBackground">
     <!-- Panel 1 -->
     <Panel
       title="Cockpit"
@@ -360,9 +360,9 @@ onUnmounted(() => {
   grid-template-rows: repeat(6, 1fr);
   /* Define grid areas */
   grid-template-areas:
-    "panel1 panel1 panel2"
-    "panel1 panel1 panel2"
-    "panel1 panel1 panel3"
+    "panel1 panel8 panel2"
+    "panel1 panel8 panel2"
+    "panel1 panel8 panel3"
     "panel5 panel7 panel6"
     "panel4 panel7 panel6"
     "panel4 panel7 panel6";

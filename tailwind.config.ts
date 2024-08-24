@@ -17,12 +17,13 @@ export default {
         bold: "700",
         black: "900",
       },
-      colors: {
+      colors_: {
         primary: "#ffffff",
         secondary: "#130f0c",
         openglCanvasBackground: "#130f0c",
         panelBorder: "#7b8079",
         panelHeaderBackground: "#dfe4e2",
+        panelStatusBackground: "#130f0c",
         panelContentBackground: "#f7f7f7",
         simElementBorder: "#130f0c",
         simInputBackground: "#e6e6e6",
@@ -30,18 +31,19 @@ export default {
         simBackground: "#f7f7f7",
         simActiveButton: "#b9391b",
       },
-      colors_: {
-        primary: "#000000", // Black (for primary background)
-        secondary: "#f5f5f5", // Very Light Grey (for text and highlights)
-        openglCanvasBackground: "#000000", // Black (matching the primary background)
-        panelBorder: "#4d4d4d", // Dark Grey (for panel borders)
-        panelHeaderBackground: "#2e2e2e", // Dark Grey (for panel headers)
-        panelContentBackground: "#1e1e1e", // Slightly darker than panel header for content
-        simElementBorder: "#ff5733", // Very Light Grey (for simulation element borders)
-        panelActive: "#ff5733", // Vivid Orange (for active panel elements)
-        simBackground: "#1e1e1e", // Dark Grey (for simulation background)
-        simText: "#f5f5f5", // Very Light Grey (for text in the simulation)
-        simActiveButton: "#ff5733", // Vivid Orange (for active buttons in the simulation)
+      colors: {
+        primary: "#191919",
+        secondary: "#d6d6d6",
+        openglCanvasBackground: "#130f0c",
+        panelBorder: "#8a8a8a",
+        panelHeaderBackground: "#191919",
+        panelStatusBackground: "#dfe4e2",
+        panelContentBackground: "#000000",
+        simElementBorder: "#595959",
+        simInputBackground: "#191919",
+        panelActive: "#b9391b",
+        simBackground: "#000000",
+        simActiveButton: "#1bb95e",
       },
     },
   },
