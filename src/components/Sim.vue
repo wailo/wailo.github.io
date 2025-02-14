@@ -72,7 +72,7 @@
           :inputMax="input.max"
           :inputStep="input.step"
           class="border border-simElementBorder"
-          :class="input.inputValue ? 'col-span-3' : ''"
+          :class="input.hasOwnProperty('inputValue') ? 'col-span-3' : ''"
         >
         </ButtonSwitch>
       </div>
