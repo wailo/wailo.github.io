@@ -3,7 +3,7 @@ name: Node.js CI
 on:
   push:
     branches:
-      - development
+      - vuejs3
 
 jobs:
   build:
@@ -18,7 +18,7 @@ jobs:
     - name: Checkout page
       uses: actions/checkout@v3
       with:
-        ref: 'development'
+        ref: 'vuejs3'
 
     - name: Setup Node.js
       uses: actions/setup-node@v2
@@ -34,10 +34,6 @@ jobs:
     - name: Build
       run: |
         npm run build
-
-    - name: Generate
-      run: |
-        npm run generate
 
     - name: Deploy to GitHub Pages
       uses: JamesIves/github-pages-deploy-action@v4
