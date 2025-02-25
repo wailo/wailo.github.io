@@ -108,9 +108,9 @@
       </table>
     </div>
     <button-switch
-      button-label="Mirro Mode"
-      :button-state="mirrorMode"
-      :button-click="() => (mirrorMode = !mirrorMode)"
+      button-label="Follow Mode"
+      :button-state="followMode"
+      :button-click="() => (followMode = !followMode)"
     />
   </div>
 
@@ -156,13 +156,13 @@ import ButtonSwitch from "./ButtonSwitch.vue";
 import * as PeerJS from "peerjs";
 import { DataConnection } from "peerjs";
 
-import vueQr from "vue-qr/src/packages/vue-qr.vue";
+// import vueQr from "vue-qr/src/packages/vue-qr.vue";
 
 // Define the event emitter
 const emit = defineEmits<{
   (event: "statusChanged", newValue: boolean): void;
   (event: "dataEvent", receivedData: Object): void;
-  (event: "apiDataEvent", receivedData: Object): void;
+  (event: "apiDataEvent", receivedData: PeerData): void;
   (event: "error", errorMessage: string): void;
 }>();
 
@@ -177,12 +177,21 @@ type ConnectionsList = { [peerId: string]: PeerJS.DataConnection };
 const incomingConns = ref<ConnectionsList>({});
 const routeHash = window.location.href;
 const isQrPopupOpen = ref(false);
-const mirrorMode = ref(false);
+const followMode = ref(false);
+
+
+
+// for (let i = 0; i < 10; ++i) {
+//   incomingConns.value[i] = {
+//     peer: i.toString(),
+//     metadata: { displayName: i.toString() },
+//   };
+// }
 
 // Watch the booleanVariable and emit an event when it changes
 watch(isOnline, (newValue: boolean) => {
   emit("statusChanged", newValue);
-  mirrorMode.value = true;
+  followMode.value = true;
 });
 
 const copyToClipboard = () => {
@@ -218,6 +227,11 @@ onMounted(() => {
 const setupConnection = (conn: DataConnection) => {
   // Connection request from remote peer
   trace(`Received a connection data from ${conn.peer}`);
+  
+   // Data from remote peer
+   conn.on("data", (data: unknown) => {
+    onData(data as PeerData, conn);
+  });
   // Connected to remote peer.
   conn.on("open", () => {
     trace(`OPEN Peer ${conn.peer}`);
@@ -226,18 +240,22 @@ const setupConnection = (conn: DataConnection) => {
     incomingConns.value[conn.peer] = conn;
   });
 
-  // Data from remote peer
-  conn.on("data", (data) => {
-    onData(data, conn);
-  });
+ 
 
   // Lost connection with remote peer
   conn.on("close", () => onConnectionClose(conn.peer));
 
   // Error
-  conn.on("error", (e: PeerJS.PeerError<string>) =>
-    onError(`${e.type} - ${e.name} - ${e.message} - ${e.stack}`),
-  );
+  conn.on("error", (e: PeerJS.PeerError<string>) => {
+    onError(`${e.type} - ${e.name} - ${e.message} - ${e.stack}`);
+    conn.close()
+
+    if (e.type === "unavailable-id") {
+      // if id is taken, it means someone gave us the class-id and we want to join the class.
+      // A peer will be created with a random ID.
+      createAnJoinPeer("");
+    }
+});
 };
 
 const onDisconnected = (peer: PeerJS.Peer) => {
@@ -261,10 +279,10 @@ const onConnectionClose = (peerId: string) => {
   delete incomingConns.value[peerId];
 };
 
-const onData = (data: any, conn: PeerJS.DataConnection) => {
+const onData = (data: PeerData, conn: PeerJS.DataConnection) => {
   trace(`Received ${data} from ${conn.peer}`);
   if (data.api) {
-    emit("apiDataEvent", { conn, data });
+    emit("apiDataEvent", data );
   } else {
     emit("dataEvent", { conn, data });
   }
@@ -364,8 +382,8 @@ const connectToPeer = async (remotePeerId: string) => {
   outConnection.on("open", () => {
     trace(`OPEN Connected to a peer ${remotePeerId}`);
     // Data received from remote peer
-    outConnection.on("data", (data) => {
-      onData(data, outConnection);
+    outConnection.on("data", (data : unknown) => {
+      onData(data as PeerData, outConnection);
     });
   });
 };
@@ -380,7 +398,7 @@ const send = (data: any) => {
 
 const sendApiCall = (apiCall: string) => {
   // Must be online and mirror mode activated
-  if (!isOnline.value || !mirrorMode.value) {
+  if (!isOnline.value || !followMode.value) {
     return;
   }
 

@@ -4,10 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev:start": "docker run --rm --name peerjs -p 9000:9000 -d peerjs/peerjs-server",
+    "dev:stop": "docker stop peerjs || true",
+    "dev": "npm run dev:start && trap 'npm run dev:stop' EXIT; vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview",
-    "docker:run": "docker run -p 9000:9000 -d peerjs/peerjs-server --platform linux/amd64"
+    "preview": "vite preview"
   },
   "dependencies": {
     "monaco-editor-vue3": "^0.1.10",

@@ -13,13 +13,10 @@
       :flash="sim_data.api_ground_collision"
       class="panel-1"
     >
-      <canvas
-        id="canvas"
-        class="emscripten bg-openglCanvasBackground"
-        oncontextmenu="event.preventDefault()"
-        tabindex="-1"
-      >
-      </canvas>
+    
+    <div id="canvas-container">
+<canvas class=emscripten id=canvas oncontextmenu=event.preventDefault() tabindex=-1></canvas>
+</div>
     </Panel>
     <!-- Panel 2 -->
     <Panel
@@ -57,14 +54,18 @@
           :buttonClick="
             () => {
               input.toggleFunc?.();
-              broadcast(input.toggleFuncStr?.());
+              if (input.toggleFuncStr) {
+                broadcast(input.toggleFuncStr());
+              }
             }
           "
           :textInput="input.inputValue"
           :inputChange="
             (newVal: number) => {
               input.setterFunc?.(newVal);
-              broadcast(input.setterFuncStr?.(newVal));
+              if (input.setterFuncStr) {
+                broadcast(input.setterFuncStr(String(newVal)));
+              }
             }
           "
           :button-state="input.stateValue"
@@ -88,7 +89,11 @@
         v-if="sim_module_loaded"
         :context-object="FlightSimModule"
         :data-object="sim_data"
-        @start="scriptComponentStatus = 'RUNNING'"
+        @start="(_code) => {
+          // broadcast(code)
+          scriptComponentStatus = 'RUNNING'
+
+        }"
         @reset="scriptComponentStatus = 'IDLE'"
         @error="scriptComponentStatus = 'ERROR'"
         class="w-full h-full"
@@ -113,13 +118,17 @@
           :buttonClick="
             () => {
               input.toggleFunc?.();
-              broadcast(input.toggleFuncStr?.());
+              if (input.toggleFuncStr) {
+                broadcast(input.toggleFuncStr());
+              }
             }
           "
           :inputChange="
             (newVal: number) => {
               input.setterFunc?.(newVal);
-              broadcast(input.setterFuncStr?.(newVal));
+              if (input.setterFuncStr) {
+                broadcast(input.setterFuncStr(String(newVal)));
+              }
             }
           "
           :buttonState="input.stateValue"
@@ -150,7 +159,9 @@
             :inputChange="
               (newVal: number) => {
                 input.setterFunc?.(newVal);
-                broadcast(input.setterFuncStr?.(newVal));
+                if (input.setterFuncStr) {
+                  broadcast(input.setterFuncStr(String(newVal)));
+                }
               }
             "
             :inputMin="input.min"
@@ -167,12 +178,19 @@
       class="panel-7"
       :active="classRoomComponentState"
       ><ClassRoom
-        @api-data-event="
-          (receivedApiCall) => executeCode(receivedApiCall?.data?.api)
-        "
+        @api-data-event="(receivedApiCall: PeerData) => executeCode(receivedApiCall?.api)"
         ref="classroomComponentRef"
         @status-changed="(newStatus) => (classRoomComponentState = newStatus)"
     /></Panel>
+    <Panel title="map" class="" style="grid-area: panel8">
+      <!-- <\!-- <NacaAirfoil/> -\-> -->
+      <iframe
+        width="425"
+        height="350"
+        src="https://www.openstreetmap.org/export/embed.html?bbox=103.9678716659546%2C1.3397807641972048%2C104.0070104598999%2C1.370799877695522&amp;layer=mapnik"
+        style="border: 1px solid black"
+      ></iframe
+    ></Panel>
   </div>
 </template>
 
@@ -181,9 +199,9 @@ import { ref, reactive, computed, onMounted, onUnmounted } from "vue";
 import Panel from "./Panel.vue";
 import ButtonSwitch from "./ButtonSwitch.vue";
 import ClassRoom from "./ClassRoom.vue";
-import FlightSimulator, {
-  MainModule,
-} from "../../public/flightsimulator_exec.js";
+//import PeerData from "./ClassRoom.vue";
+// import NacaAirfoil from "./NacaAirfoil.vue";
+import { MainModule } from "../../public/flightsimulator_exec.js";
 import {
   initializeModule,
   fetchSimData,
@@ -194,19 +212,24 @@ import {
 import Editor, { ScriptStatus } from "./Editor.vue";
 
 // Define a decorator function
-function broadcast(code: string | undefined) {
-  classroomComponentRef.value.sendApiCall(code);
+function broadcast(code: string) {
+  if (classroomComponentRef.value) {
+    classroomComponentRef.value.sendApiCall(code);
+  }
 }
 
 const executeCode = (code: string) => {
   eval(`FlightSimModule.${code}`);
 };
 
-// Logic to reset components, triggered with simulation module is reset
-const resetComponents = () => {
-  // Called when user invoke reset from a button, still can't tell if keyboard is pressed.
-  editorComponentRef.value.reset();
-};
+// // Logic to reset components, triggered with simulation module is reset
+// const resetComponents = () => {
+//   // Called when user invoke reset from a button, still can't tell if keyboard is pressed.
+//   if (editorComponentRef.value) 
+//   { 
+//     editorComponentRef.value.reset();
+//   }
+// };
 
 let FlightSimModule: MainModule;
 const sim_data = reactive(new SimData());
@@ -216,8 +239,10 @@ let scriptComponentStatus = ref<ScriptStatus>("IDLE");
 const update_interval_ms = 200;
 
 // Components refs
-const classroomComponentRef = ref(null);
-const editorComponentRef = ref(null);
+const classroomComponentRef = ref<InstanceType<typeof ClassRoom> | null>(null); // Use the ClassRoom component type
+const editorComponentRef = ref<InstanceType<typeof Editor> | null>(null); // Use the Editor component type
+
+
 
 let autopilotProps: ReturnType<
   typeof computed<ReturnType<typeof getAutopilotProperties>>
@@ -227,7 +252,9 @@ let simulationProps: ReturnType<
 >;
 let simUpdateInterval: number | undefined;
 
-const sim_data_display = [
+type SimDataKeys = keyof typeof sim_data;
+
+const sim_data_display: { key: SimDataKeys; label: string }[] = [
   { key: "api_fps", label: "Frames Per Second" },
   { key: "api_ups", label: "Update Per Second" },
   { key: "api_simulation_speed", label: "Simulation Speed" },
@@ -323,19 +350,19 @@ onMounted(async () => {
         return (
           activeElement?.tagName === "INPUT" ||
           activeElement?.tagName === "TEXTAREA" ||
-          activeElement?.isContentEditable
+          (activeElement as HTMLElement)?.isContentEditable
         );
       }
 
       window.addEventListener(
         "blur",
-        (event) => {
+        (_event) => {
           // When defocuses (blur), revert back to canvas to enable keyboard controls
           setTimeout(() => {
             if (document.activeElement == canvas || isTextInput()) {
               return;
             }
-            canvas.focus();
+            canvas?.focus();
           }, 1000);
         },
         true,
@@ -396,10 +423,22 @@ onUnmounted(() => {
   grid-area: panel7;
 }
 
-canvas.emscripten {
-  /* background-color: black; */
+/* #canvas {
+  background-color: transparent;
   width: 100%;
   height: 100%;
   object-fit: contain;
-}
+} */
+
+#canvas-container {
+      /*position: absolute;*/
+      top: 0;
+      left: 0;
+      padding: 0;
+      border: 0 none;
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+    }
 </style>

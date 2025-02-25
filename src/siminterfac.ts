@@ -18,7 +18,7 @@ export class SimData {
   api_autopilot: boolean = false;
   api_heading_hold: boolean = false;
   api_bank_hold: boolean = false;
-  api_level_hold: boolean = false;
+  // api_level_hold: boolean = false;
   api_speed_hold: boolean = false;
   api_mach_speed_hold: boolean = false;
   api_altitude_hold: boolean = false;
@@ -44,6 +44,8 @@ export class SimData {
   api_cl: number = 0;
   api_cdi: number = 0;
   api_ground_collision: boolean = false;
+  api_latitude : number = 0;
+  api_longitude : number = 0;
 }
 
 let ptrApiFps: number = 0;
@@ -61,7 +63,7 @@ let ptrApiBankDeg: number = 0;
 let ptrApiAutopilot: number = 0;
 let ptrApiHeadingHold: number = 0;
 let ptrApiBankHold: number = 0;
-let ptrApiLevelHold: number = 0;
+// let ptrApiLevelHold: number = 0;
 let ptrApiSpeedHold: number = 0;
 let ptrApiMachSpeedHold: number = 0;
 let ptrApiAltitudeHold: number = 0;
@@ -89,6 +91,8 @@ let PtrApiTotalDrag: number = 0;
 let ptrApiCl: number = 0;
 let ptrApiCdi: number = 0;
 let ptrApiGroundCollision: number = 0;
+let ptrApiLatitude: number = 0;
+let ptrApiLongitude: number = 0;
 
 export async function initializeModule(options: any) {
   const module: MainModule = await MainModuleFactory(options);
@@ -127,7 +131,7 @@ function init(module: MainModule) {
   ptrApiAutopilot = module._api_autopilot();
   ptrApiHeadingHold = module._api_heading_hold();
   ptrApiBankHold = module._api_bank_hold();
-  ptrApiLevelHold = module._api_level_hold();
+  // ptrApiLevelHold = module._api_level_hold();
   ptrApiSpeedHold = module._api_speed_hold();
   ptrApiMachSpeedHold = module._api_mach_speed_hold();
   ptrApiAltitudeHold = module._api_altitude_hold();
@@ -157,10 +161,12 @@ function init(module: MainModule) {
   ptrApiCl = module._api_cl() >> 2;
   ptrApiCdi = module._api_cdi() >> 2;
   ptrApiGroundCollision = module._api_ground_collision();
+  ptrApiLatitude = module._api_latitude() >> 2;
+  ptrApiLongitude = module._api_longitude() >> 2;
 }
 
 function round(value: number, decimals: number) {
-  return Number(Math.round(value + "e" + decimals) + "e-" + decimals);
+  return Number(Math.round(Number(`${value}e${decimals}`)) + `e-${decimals}`);
 }
 
 export async function fetchSimData(module: MainModule, payload: SimData) {
@@ -180,10 +186,7 @@ export async function fetchSimData(module: MainModule, payload: SimData) {
   );
   payload.api_weight = round(module.HEAPF32[ptrApiWeight], 2);
   payload.api_altitude = round(module.HEAPF32[ptrApiAltitude], 0);
-  payload.api_vertical_speed = round(
-    module.HEAPF32[ptrApiVerticalSpeed] * 60,
-    0,
-  );
+  payload.api_vertical_speed = round(module.HEAPF32[ptrApiVerticalSpeed], 0);
   payload.api_alpha_tail = round(module.HEAPF32[ptrApiAlphaTail], 3);
   payload.api_alpha_aileron = round(module.HEAPF32[ptrApiAlphaAileron], 3);
   payload.api_throttle = round(module.HEAPF32[ptrApiThrottle], 3);
@@ -195,26 +198,17 @@ export async function fetchSimData(module: MainModule, payload: SimData) {
   payload.api_autopilot = module.HEAP8[ptrApiAutopilot] !== 0;
   payload.api_heading_hold = module.HEAP8[ptrApiHeadingHold] !== 0;
   payload.api_bank_hold = module.HEAP8[ptrApiBankHold] !== 0;
-  payload.api_level_hold = module.HEAP8[ptrApiLevelHold] !== 0;
+  // payload.api_level_hold = module.HEAP8[ptrApiLevelHold] !== 0;
   payload.api_speed_hold = module.HEAP8[ptrApiSpeedHold] !== 0;
   payload.api_mach_speed_hold = module.HEAP8[ptrApiMachSpeedHold] !== 0;
   payload.api_altitude_hold = module.HEAP8[ptrApiAltitudeHold] !== 0;
   payload.api_vertical_speed_hold = module.HEAP8[ptrApiVerticalSpeedHold] !== 0;
-  payload.api_target_heading_deg = round(
-    module.HEAPF32[ptrApiTargetHeadingDeg],
-    0,
-  );
-  payload.api_target_bank_deg = round(module.HEAPF32[ptrApiTargetBankDeg], 0);
-  payload.api_target_altitude = round(module.HEAPF32[ptrApiTargetAltitude], 0);
-  payload.api_target_vertical_speed = round(
-    module.HEAPF32[ptrApiTargetVerticalSpeed],
-    0,
-  );
-  payload.api_target_speed = round(module.HEAPF32[ptrApiTargetSpeed], 0);
-  payload.api_target_mach_speed = round(
-    module.HEAPF32[ptrApiTargetMachSpeed],
-    2,
-  );
+  payload.api_target_heading_deg = module.HEAP32[ptrApiTargetHeadingDeg];
+  payload.api_target_bank_deg = module.HEAP32[ptrApiTargetBankDeg];
+  payload.api_target_altitude = module.HEAP32[ptrApiTargetAltitude];
+  payload.api_target_vertical_speed = module.HEAP32[ptrApiTargetVerticalSpeed];
+  payload.api_target_speed = module.HEAP32[ptrApiTargetSpeed]
+  payload.api_target_mach_speed = round(module.HEAP32[ptrApiTargetMachSpeed] / 100, 2)
   payload.api_atmosphere_sea_level_temperature = round(
     module.HEAPF32[ptrApiAtmosphereSeaLevelTemperature],
     2,
@@ -245,6 +239,9 @@ export async function fetchSimData(module: MainModule, payload: SimData) {
   payload.api_cl = round(module.HEAPF32[ptrApiCl], 4);
   payload.api_cdi = round(module.HEAPF32[ptrApiCdi], 4);
   payload.api_ground_collision = module.HEAP8[ptrApiGroundCollision] !== 0;
+
+  payload.api_latitude =  module.HEAPF32[ptrApiLatitude];
+  payload.api_longitude =  module.HEAPF32[ptrApiLongitude];
 }
 
 export function getAutopilotProperties(
@@ -402,7 +399,8 @@ export function getSimulationParameters(
       {
         label: "Update Rate",
         inputValue: 60,
-        setterFunc:(newVal:string) => module.api_set_update_rate(Number(newVal)),
+        setterFunc: (newVal: string) =>
+          module.api_set_update_rate(Number(newVal)),
         setterFuncStr: (newVal: string) => `api_set_update_rate(${newVal})`,
         unit: "fps",
         min: 1,
@@ -414,7 +412,8 @@ export function getSimulationParameters(
       {
         label: "Thrust to Weight Ratio",
         inputValue: payload.api_thrust_to_weight,
-        setterFunc: (newVal :string) => module.api_set_thrust_to_weight(Number(newVal)),
+        setterFunc: (newVal: string) =>
+          module.api_set_thrust_to_weight(Number(newVal)),
         setterFuncStr: (newVal: string) =>
           `api_set_thrust_to_weight(${newVal})`,
         min: 0.1,
@@ -424,7 +423,8 @@ export function getSimulationParameters(
       {
         label: "Wing Area",
         inputValue: payload.api_wing_area,
-        setterFunc: (newVal :string) => module.api_set_wing_area(Number(newVal)),
+        setterFunc: (newVal: string) =>
+          module.api_set_wing_area(Number(newVal)),
         setterFuncStr: (newVal: string) => `api_set_wing_area(${newVal})`,
         unit: "Ft²",
         min: 10,
@@ -436,7 +436,7 @@ export function getSimulationParameters(
       {
         label: "Lift Cofficient Slope",
         inputValue: payload.api_cl0,
-        setterFunc: (newVal :string) => module.api_set_dcl(Number(newVal)),
+        setterFunc: (newVal: string) => module.api_set_dcl(Number(newVal)),
         setterFuncStr: (newVal: string) => `api_set_dcl(${newVal})`,
         min: 0.01,
         max: 5,
@@ -445,7 +445,7 @@ export function getSimulationParameters(
       {
         label: "Drag Cofficient",
         inputValue: payload.api_cdo,
-        setterFunc: (newVal :string) => module.api_set_cdo(Number(newVal)),
+        setterFunc: (newVal: string) => module.api_set_cdo(Number(newVal)),
         setterFuncStr: (newVal: string) => `api_set_cdo(${newVal})`,
         min: 0.01,
         max: 1.0,
@@ -457,7 +457,8 @@ export function getSimulationParameters(
         label: "Sea Level Temperature",
         unit: "R",
         inputValue: payload.api_atmosphere_sea_level_temperature,
-        setterFunc: (newVal :string) => module.api_set_atmosphere_sea_level_temperature(Number(newVal)),
+        setterFunc: (newVal: string) =>
+          module.api_set_atmosphere_sea_level_temperature(Number(newVal)),
         setterFuncStr: (newVal: string) =>
           `api_set_atmosphere_sea_level_temperature(${newVal})`,
         min: 311,
@@ -468,7 +469,8 @@ export function getSimulationParameters(
         label: "Sea Level Density",
         unit: "Slug/ft³",
         inputValue: payload.api_atmosphere_sea_level_density,
-        setterFunc: (newVal :string) => module.api_set_atmosphere_sea_level_density(Number(newVal)),
+        setterFunc: (newVal: string) =>
+          module.api_set_atmosphere_sea_level_density(Number(newVal)),
         setterFuncStr: (newVal: string) =>
           `api_set_atmosphere_sea_level_density(${newVal})`,
         min: 0.001756,

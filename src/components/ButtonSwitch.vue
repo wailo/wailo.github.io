@@ -1,9 +1,9 @@
 <template>
   <div class="flex">
     <button
-      v-if="buttonClick"
+      v-if="buttonClick != null"
       :class="[
-        'flex items-center justify-center w-full h-full text-nowrap',
+        'outline-none flex items-center justify-center w-full h-full text-nowrap',
         buttonWidth,
         buttonState
           ? 'bg-simActiveButton text-primary'
@@ -28,7 +28,7 @@
     <slot></slot>
 
     <input
-      @change="(event) => inputChange(event.target?.value)"
+      @change="(event) => inputChange && inputChange((event.target as HTMLInputElement)?.value)"
       v-if="textInput != undefined"
       type="number"
       :class="[
@@ -59,7 +59,7 @@ const props = defineProps({
     type: Number as PropType<number>,
   },
   buttonClick: {
-    type: Function,
+    type: Function as PropType<(event: MouseEvent) => void>,
   },
   inputChange: {
     type: Function,

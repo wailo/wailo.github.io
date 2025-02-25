@@ -53,7 +53,7 @@ const isScriptRunning = ref(false);
 
 // Define the event emitter
 const emit = defineEmits<{
-  (event: "start"): void;
+  (event: "start", code: string): void;
   (event: "reset"): void;
   (event: "error", error: any): void;
 }>();
@@ -105,7 +105,7 @@ const options = {
 };
 
 // Define the Monaco Editor configuration
-const setupMonaco = (editor: monaco.editor.IStandaloneCodeEditor) => {
+const setupMonaco = (_editor: monaco.editor.IStandaloneCodeEditor) => {
   // Capture the simulator interface for intellisense
 
   // Get functions interface
@@ -152,13 +152,31 @@ simControls.api_set_simulation_reset()
 // Wait for 1000 ms (1 second)
 await waitFor(1000);
 
+simControls.api_set_engine_throttle_value(1);
 // Toggle the autopilot master switch state.
-simControls.api_set_autopilot(!simData.api_autopilot);
+simControls.api_set_autopilot(true);
+simControls.api_set_target_speed(300)
+simControls.api_set_target_altitude(35000)
+simControls.api_set_target_vertical_speed(3000)
 
 // Wait for autopilot bank hold to be engaged
-await waitForCondition(() => { return simData.api_bank_hold == true })
-// Toggle autopilot altitude hold
-simControls.api_set_altitude_hold(!simData.api_altitude_hold);
+await waitForCondition(() => { return simData.api_ias_speed_knots > 180 })
+
+// Toggle vertical speed hold
+simControls.api_set_vertical_speed_hold(true)
+
+// Toggle speed hold
+simControls.api_set_speed_hold(true);
+
+// Wait until target altitude is reached
+await waitForCondition(() => { return simData.api_altitude > 33500 })
+
+// Switch to target altitude
+simControls.api_set_vertical_speed_hold(false)
+// Wait for 1000 ms (1 second)
+await waitFor(1000);
+simControls.api_set_altitude_hold(true);
+
 `);
 
 const reset = () => {
@@ -180,7 +198,7 @@ const executeCode = () => {
   window.cache = [];
   try {
     isScriptRunning.value = true;
-    emit("start");
+    emit("start", code.value);
     // Create a function with context binding
     const userScriptFunc = new Function(`
 const simControls = arguments[0];
@@ -261,7 +279,7 @@ return async function () {${code.value} };
       .then(() => {
         emit("reset");
       })
-      .catch((error) => {
+      .catch((error: any) => {
         console.log(`Script error: ${error}`);
         executionResult.value = error;
         emit("error", error);
@@ -269,7 +287,7 @@ return async function () {${code.value} };
       .finally(() => {
         isScriptRunning.value = false;
       });
-  } catch (error) {
+  } catch (error: any) {
     console.log(error);
     executionResult.value = `Error: ${error.message}`;
   }
