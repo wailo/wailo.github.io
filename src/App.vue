@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import simNew from './components/Sim.vue'
+import flightSim from './components/Sim.vue'
+import home from './components/Home.vue'
 </script>
 
 <template >
-  <simNew class="font-panelFont font-light"/>
+  <div class="font-panelFont font-light">
+    <router-view></router-view> <!-- Renders the current page -->
+  </div>
 </template>
 
 <style scoped>
