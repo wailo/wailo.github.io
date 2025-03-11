@@ -95,7 +95,9 @@
 
         }"
         @reset="scriptComponentStatus = 'IDLE'"
-        @error="scriptComponentStatus = 'ERROR'"
+        @error="(error) => {
+          notifyUser('Editor Error', error, 5000)
+          scriptComponentStatus = 'ERROR'}"
         class="w-full h-full"
         ref="editorComponentRef"
       >
@@ -218,6 +220,10 @@ function broadcast(code: string) {
   }
 }
 
+function notifyUser(title: string, message: string, _time: number) {
+      alert(`${title}: ${message}`);
+    }
+
 const executeCode = (code: string) => {
   eval(`FlightSimModule.${code}`);
 };
@@ -311,6 +317,7 @@ onMounted(async () => {
       const canvas = document.getElementById("canvas");
       return canvas;
     })(),
+    notifyUser: notifyUser
   })
     .then((module) => {
       FlightSimModule = module;
