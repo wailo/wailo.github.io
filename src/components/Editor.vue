@@ -155,9 +155,11 @@ await waitFor(1000);
 simControls.api_set_engine_throttle_value(1);
 // Toggle the autopilot master switch state.
 simControls.api_set_autopilot(true);
-simControls.api_set_target_speed(300)
-simControls.api_set_target_altitude(35000)
+simControls.api_set_target_speed(280)
+simControls.api_set_target_altitude(33000)
 simControls.api_set_target_vertical_speed(3000)
+simControls.api_set_target_heading_deg(270)
+
 
 // Wait for autopilot bank hold to be engaged
 await waitForCondition(() => { return simData.api_ias_speed_knots > 180 })
@@ -168,14 +170,34 @@ simControls.api_set_vertical_speed_hold(true)
 // Toggle speed hold
 simControls.api_set_speed_hold(true);
 
+// Wait until the altitude crosses 1000
+await waitForCondition(() => { return simData.api_altitude > 1000 })
+
+// Toggle heading hold
+simControls.api_set_heading_hold(true)
+
+// Wait for 3000 ms (3 seconds)
+await waitFor(3000);
+
+// Increase simulation speed
+simControls.api_set_simulation_speed(2)
+
 // Wait until target altitude is reached
-await waitForCondition(() => { return simData.api_altitude > 33500 })
+await waitForCondition(() => { return simData.api_altitude > 3000 && simData.api_heading_deg == 270 })
+
 
 // Switch to target altitude
 simControls.api_set_vertical_speed_hold(false)
 // Wait for 1000 ms (1 second)
 await waitFor(1000);
 simControls.api_set_altitude_hold(true);
+
+// Incraese simulation speed
+simControls.api_set_simulation_speed(100)
+
+await waitForCondition(() => { return simData.api_altitude > 33000 })
+
+simControls.api_set_simulation_speed(1)
 
 `);
 
