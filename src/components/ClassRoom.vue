@@ -207,9 +207,6 @@ const copyToClipboard = () => {
 };
 
 onMounted(() => {
-  if (isDevelopment) {
-    createAnJoinPeer(myPeerId.value);
-  }
 
   // There is no hook in Vuejs to detect when a tab is closed.
   // When the user closes the tab, disconnect
@@ -217,11 +214,15 @@ onMounted(() => {
 
   const match = /roomId=(.*)/g.exec(routeHash);
   if (match && match[1]) {
-    const roomId = match[1];
-    if (roomId) {
-      createAnJoinPeer(roomId);
+    myPeerId.value = match[1];
+    if (myPeerId.value) {
+      createAnJoinPeer(myPeerId.value);
     }
   }
+  else if (isDevelopment) {
+    createAnJoinPeer(myPeerId.value);
+  }
+
 });
 
 const setupConnection = (conn: DataConnection) => {

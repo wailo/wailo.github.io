@@ -135,7 +135,7 @@ const setupMonaco = (_editor: monaco.editor.IStandaloneCodeEditor) => {
     // Declare types here for autocompletion
     const simControls : EmbindModule = {};
     const simData : SimData = {}
-    declare const waitForCondition: (conditionFunction: (...args: any[]) => boolean) => Promise<unknown>;
+    declare const waitForCondition: (conditionFunction: (...args: any[], number) => boolean) => Promise<unknown>;
     declare const waitFor: (ms: number) => Promise<unknown>;
     `,
   );
@@ -204,7 +204,7 @@ const executeCode = () => {
 const simControls = arguments[0];
 const simData = arguments[1];
 
-const waitForCondition = (conditionFunction) => {
+const waitForCondition = (conditionFunction, ms=400) => {
     const poll = (resolve) => {
         if (conditionFunction() === true) {
             resolve()
@@ -212,7 +212,7 @@ const waitForCondition = (conditionFunction) => {
         else {
 
             if (window.flag) {
-                setTimeout((_) => poll(resolve), 400)
+                setTimeout((_) => poll(resolve), ms)
             }
         }
     }

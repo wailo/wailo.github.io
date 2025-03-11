@@ -2,7 +2,7 @@
     <div class="flex justify-center items-center h-screen bg-gray-100">
       <div class="grid grid-cols-6 grid-rows-6 gap-1">
         <button
-          v-for="(btn, index) in 36"
+          v-for="(_btn, index) in 36"
           :key="index"
           class="w-5 h-5 border-2 border-gray-500 rounded-sm transition-colors duration-500"
           :class="{ 'bg-gray-300': activeButtons.includes(index) }"

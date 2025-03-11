@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import flightSim from './components/Sim.vue'
-import home from './components/Home.vue'
+// import flightSim from './components/Sim.vue'
+// import home from './components/Home.vue'
 </script>
 
 <template >
