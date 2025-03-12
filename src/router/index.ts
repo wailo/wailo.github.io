@@ -1,5 +1,5 @@
 // src/router/index.ts
-import { createRouter, createWebHistory } from 'vue-router';
+import { createRouter, createWebHashHistory } from 'vue-router';
 import Sim from '../components/Sim.vue';
 import Home from '../components/Home.vue';
 
@@ -9,7 +9,7 @@ const routes = [
 ];
 
 const router = createRouter({
-  history: createWebHistory(),
+    history: createWebHashHistory(), // Use hash mode (fixes GitHub Pages refresh issue)
   routes,
 });
 
