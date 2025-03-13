@@ -360,6 +360,7 @@ export function getAutopilotProperties(
 export function getSimulationParameters(
   module: MainModule,
   payload: SimData,
+  resetCallback: () => void
 ): { [key: string]: SimulationProperties[] } {
   return {
     Simulation: [
@@ -374,7 +375,10 @@ export function getSimulationParameters(
       },
       {
         label: "Reset",
-        toggleFunc: module.api_set_simulation_reset,
+        toggleFunc: () => {
+          resetCallback();
+          module.api_set_simulation_reset()
+        },
         toggleFuncStr: () => `api_set_simulation_reset()`,
         icon: "x-circle",
       },

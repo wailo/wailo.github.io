@@ -228,14 +228,15 @@ const executeCode = (code: string) => {
   eval(`FlightSimModule.${code}`);
 };
 
-// // Logic to reset components, triggered with simulation module is reset
-// const resetComponents = () => {
-//   // Called when user invoke reset from a button, still can't tell if keyboard is pressed.
-//   if (editorComponentRef.value) 
-//   { 
-//     editorComponentRef.value.reset();
-//   }
-// };
+// Logic to reset components, triggered with simulation module is reset
+const resetComponents = () => {
+  // Called when user invoke reset from a button, still can't tell if keyboard is pressed.
+  console.log("Resetting components");
+  if (editorComponentRef.value)
+  {
+    editorComponentRef.value.reset();
+  }
+};
 
 let FlightSimModule: MainModule;
 const sim_data = reactive(new SimData());
@@ -247,8 +248,6 @@ const update_interval_ms = 200;
 // Components refs
 const classroomComponentRef = ref<InstanceType<typeof ClassRoom> | null>(null); // Use the ClassRoom component type
 const editorComponentRef = ref<InstanceType<typeof Editor> | null>(null); // Use the Editor component type
-
-
 
 let autopilotProps: ReturnType<
   typeof computed<ReturnType<typeof getAutopilotProperties>>
@@ -325,7 +324,7 @@ onMounted(async () => {
         getAutopilotProperties(FlightSimModule, sim_data),
       );
       simulationProps = computed(() =>
-        getSimulationParameters(FlightSimModule, sim_data),
+        getSimulationParameters(FlightSimModule, sim_data, resetComponents),
       );
       sim_module_loaded.value = true;
 
