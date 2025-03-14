@@ -155,6 +155,7 @@ interface WasmModule {
   _api_set_wing_area(_0: number): number;
   _api_set_engine_throttle_value(_0: number): number;
   _api_set_thrust_to_weight(_0: number): number;
+  _api_set_landing_gear_position(_0: number): number;
   _api_set_dcl(_0: number): number;
   _api_set_cdo(_0: number): number;
   _api_set_simulation_pause(_0: number): number;
@@ -213,6 +214,11 @@ interface WasmModule {
   _api_longitude(): number;
 }
 
+export interface GearSelectorValue<T extends number> {
+  value: T;
+}
+export type GearSelector = GearSelectorValue<0>|GearSelectorValue<1>|GearSelectorValue<2>;
+
 interface EmbindModule {
   api_set_altitude_hold(_0: boolean): void;
   api_set_atmosphere_sea_level_density(_0: number): void;
@@ -235,9 +241,11 @@ interface EmbindModule {
   api_set_target_speed(_0: number): void;
   api_set_target_vertical_speed(_0: number): void;
   api_set_thrust_to_weight(_0: number): boolean;
+  api_set_landing_gear_position(_0: number): boolean;
   api_set_update_rate(_0: number): void;
   api_set_vertical_speed_hold(_0: boolean): void;
   api_set_wing_area(_0: number): boolean;
+  GearSelector: {OFF: GearSelectorValue<0>, UP: GearSelectorValue<1>, DOWN: GearSelectorValue<2>};
 }
 
 export type MainModule = WasmModule & typeof RuntimeExports & EmbindModule;
