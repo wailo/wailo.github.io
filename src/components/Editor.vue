@@ -170,6 +170,12 @@ simControls.api_set_vertical_speed_hold(true)
 // Toggle speed hold
 simControls.api_set_speed_hold(true);
 
+// Wait until the altitude crosses 300
+await waitForCondition(() => { return simData.api_altitude > 300 })
+
+// Landing gear up
+simControls.api_set_landing_gear_position(simControls.GearSelector.UP.value)
+
 // Wait until the altitude crosses 1000
 await waitForCondition(() => { return simData.api_altitude > 1000 })
 
