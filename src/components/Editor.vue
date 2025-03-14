@@ -161,7 +161,7 @@ simControls.api_set_target_vertical_speed(3000)
 simControls.api_set_target_heading_deg(270)
 
 
-// Wait for autopilot bank hold to be engaged
+// Wait for speed to cross 180 knots
 await waitForCondition(() => { return simData.api_ias_speed_knots > 180 })
 
 // Toggle vertical speed hold
