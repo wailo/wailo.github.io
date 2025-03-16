@@ -283,8 +283,8 @@ export function getAutopilotProperties(
         module.api_set_target_bank_deg(Number(newVal)),
       setterFuncStr: (newVal: string) => `api_set_target_bank_deg(${newVal})`,
       unit: "°",
-      min: -50,
-      max: 50,
+      min: -60,
+      max: 60,
       step: 1.0,
     },
     {
