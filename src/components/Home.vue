@@ -49,7 +49,7 @@
 
   const title = ref("Flight Simulator");
   const sentence = ref("Minimal Versatile Intellegent");
-  const roomId = ref(Math.floor(100000 + Math.random() * 10000).toString());
+  const roomId = ref("SIM-" + Math.floor(100000 + Math.random() * 10000).toString());
   const isFocused = ref(false);
   const words = computed(() => sentence.value.split(" "));
   </script>
