@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist -b master",
-    "build:emscripten": "git -C node_modules/Compact-Flight-Simulator checkout a72ec79 && ./node_modules/Compact-Flight-Simulator/build_wasm.sh && cp -a node_modules/Compact-Flight-Simulator/build_wasm_*/bin/flightsimulator* public/",
+    "build:emscripten": "git -C node_modules/Compact-Flight-Simulator checkout a72ec79 && git -C node_modules/Compact-Flight-Simulator submodule update --init --recursive && ./node_modules/Compact-Flight-Simulator/build_wasm.sh && cp -a node_modules/Compact-Flight-Simulator/build_wasm_*/bin/flightsimulator* public/",
     "preinstall": "[ -z \"$ACCESS_TOKEN\" ] && set -a && . .env && set +a; git clone --recursive https://oauth2:$ACCESS_TOKEN@github.com/wailo/Compact-Flight-Simulator.git node_modules/Compact-Flight-Simulator"
   },
   "dependencies": {
