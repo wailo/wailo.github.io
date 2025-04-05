@@ -2,7 +2,6 @@
   <div class="container max-w-full h-screen gap-2 p-5 bg-simBackground">
     <!-- Panel 1 -->
     <Panel
-      title="Cockpit"
       :status="
         sim_data.api_ground_collision
           ? 'Collision'
@@ -13,17 +12,19 @@
       :flash="sim_data.api_ground_collision"
       class="panel-1"
     >
-    
+    <template #Cockpit>
+
     <div id="canvas-container">
 <canvas class=emscripten id=canvas oncontextmenu=event.preventDefault() tabindex=-1></canvas>
 </div>
+</template>
     </Panel>
     <!-- Panel 2 -->
     <Panel
-      title="Real Time Data"
       :status="`${1000 / update_interval_ms} HZ`"
       class="panel-2"
     >
+    <template #Real-Time-Data display="Real Time Data">
       <table class="flex w-full h-full p-2">
         <tbody class="w-full">
           <tr
@@ -36,15 +37,16 @@
           </tr>
         </tbody>
       </table>
+      </template>
     </Panel>
     <!-- Panel 3 -->
     <Panel
-      title="Simulation"
       :status="`${sim_data.api_fps} HZ`"
       :active="false"
       :flash="sim_data.api_simulation_pause"
       class="panel-3"
     >
+    <template #Simulation>
       <div class="w-full h-full grid grid-cols-3 gap-1">
         <ButtonSwitch
           v-if="sim_module_loaded"
@@ -77,38 +79,42 @@
         >
         </ButtonSwitch>
       </div>
+      </template>
     </Panel>
-    <!-- Panel 4 -->
-    <Panel
-      title="Scripting"
-      :status="scriptComponentStatus"
-      class="panel-4"
-      :active="scriptComponentStatus != 'IDLE'"
-    >
+          <!-- Panel 4 -->
+  <Panel class="panel-4">
+<template #Learning-Modules>
+      <CategoryList
+        :items="groupedItems"
+        @itemSelected="(item: string) => {
+          console.log(`You selected: ${item}`);
+        }"
+      />
+</template>
+<template #Scripting>
       <Editor
         v-if="sim_module_loaded"
         :context-object="FlightSimModule"
         :data-object="sim_data"
         @start="(_code) => {
-          // broadcast(code)
-          scriptComponentStatus = 'RUNNING'
-
+          scriptComponentStatus = 'RUNNING';
         }"
         @reset="scriptComponentStatus = 'IDLE'"
         @error="(error) => {
-          notifyUser('Editor Error', error, 5000)
-          scriptComponentStatus = 'ERROR'}"
+          notifyUser('Editor Error', error, 5000);
+          scriptComponentStatus = 'ERROR';
+        }"
         class="w-full h-full"
         ref="editorComponentRef"
-      >
-      </Editor>
-    </Panel>
+      />
+</template>
+  </Panel>
     <!-- Panel 5 -->
     <Panel
-      title=" Autopilot"
       :status="sim_data.api_autopilot ? 'Engaged' : 'Disengaged'"
       class="panel-5"
     >
+    <template #Autopilot>
       <div class="w-full h-full grid grid-cols-3 gap-1">
         <button-switch
           v-if="sim_module_loaded"
@@ -140,9 +146,11 @@
           :class="input.inputValue == undefined ? 'col-span-3' : ''"
         ></button-switch>
       </div>
+      </template>
     </Panel>
     <!-- Panel 6 -->
-    <Panel title="Flight Model" status="Default" class="panel-6">
+    <Panel status="Running" class="panel-6">
+      <template #Flight-Model>
       <div class="w-full max-h-full grid gap-1">
         <template
           v-if="sim_module_loaded"
@@ -172,33 +180,45 @@
           ></button-switch>
         </template>
       </div>
+      </template>
     </Panel>
     <!-- Panel 7 -->
     <Panel
-      title="Classroom"
       :status="classRoomComponentState ? 'Online' : 'Offline'"
       class="panel-7"
       :active="classRoomComponentState"
-      ><ClassRoom
+      >
+      <template #ClassRoom>
+
+      <ClassRoom
         @api-data-event="(receivedApiCall: PeerData) => executeCode(receivedApiCall?.api)"
         ref="classroomComponentRef"
         @status-changed="(newStatus) => (classRoomComponentState = newStatus)"
-    /></Panel>
-    <Panel title="map" class="" style="grid-area: panel8">
-      <!-- <\!-- <NacaAirfoil/> -\-> -->
-      <iframe
+    />
+    </template>
+  </Panel>
+      <!-- Panel 8 -->
+  <Panel
+      status="ChatGPT"
+      class="panel-8"
+      :active="false"
+      >
+      <template #Prompt>
+              <iframe
         width="425"
         height="350"
         src="https://www.openstreetmap.org/export/embed.html?bbox=103.9678716659546%2C1.3397807641972048%2C104.0070104598999%2C1.370799877695522&amp;layer=mapnik"
         style="border: 1px solid black"
-      ></iframe
-    ></Panel>
+      ></iframe>
+    </template>
+  </Panel>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted } from "vue";
 import Panel from "./Panel.vue";
+import CategoryList from "./CategoryList.vue";
 import ButtonSwitch from "./ButtonSwitch.vue";
 import ClassRoom from "./ClassRoom.vue";
 //import PeerData from "./ClassRoom.vue";
@@ -237,6 +257,38 @@ const resetComponents = () => {
     editorComponentRef.value.reset();
   }
 };
+
+const groupedItems = {
+  "The Four Forces of Flight": [
+    "Observe Level Flight Forces",
+    "Increase and Reduce Thrust",
+    "Change Aircraft Weight"
+  ],
+  "Bernoulli’s Principle and Airflow Over the Wing": [
+    "Monitor Lift Generation in Flight",
+    "Increase Airspeed and Observe Lift Changes",
+    "Effect of Altitude on Lift"
+  ],
+  "Relationship Between Pressure, Velocity, and Airflow": [
+    "The Relationship Between Velocity and Pressure",
+    "Changes in Airspeed and Lift at Different Flap Settings"
+  ],
+  "Angle of Attack (AoA) and Its Influence on Lift and Drag": [
+    "Monitor AoA and Lift in Straight and Level Flight",
+    "Increase AoA Until Stall",
+    "Stall Recovery Practice"
+  ],
+  "Practical Application – Flying an Efficient Climb and Descent": [
+    "Optimizing Climb Performance",
+    "Simulating a High-Drag Descent",
+    "Autopilot vs. Manual Climb/Descent"
+  ],
+  "Free Flight Exercise & Student Demonstrations": [
+    "Simulator Challenge",
+    "Final Exam (Written & Practical)"
+  ]
+}
+
 
 let FlightSimModule: MainModule;
 const sim_data = reactive(new SimData());
@@ -429,6 +481,9 @@ onUnmounted(() => {
   grid-area: panel7;
 }
 
+.panel-8 {
+  grid-area: panel8;
+}
 /* #canvas {
   background-color: transparent;
   width: 100%;

@@ -1,14 +1,11 @@
 <script setup lang="ts">
+import { ref, watchEffect, useSlots } from "vue";
 import { PropType } from "vue";
 
 const props = defineProps({
-  title: {
-    type: String as PropType<string>,
-    required: true,
-  },
   status: {
     type: String as PropType<string>,
-    default: "Hello",
+    default: "Idle",
   },
   active: {
     type: Boolean as PropType<boolean>,
@@ -20,9 +17,24 @@ const props = defineProps({
   },
 });
 
-// const color = computed(() =>
-//   props.active === false ? theme.primaryColor : "#00ff00",
-// );
+// Dynamic tab detection via named slots
+const tabSlots = useSlots();
+const tabMap = ref<{ name: string; display: string }[]>([]);
+const activeTab = ref<string | null>(null);
+
+watchEffect(() => {
+  tabMap.value = Object.keys(tabSlots)
+    .filter((key) => key !== 'default')
+    .map((slotName) => ({
+      name: slotName,
+      display: slotName.replace(/-/g, ' '), // Customize to your liking
+    }));
+
+  if (!activeTab.value && tabMap.value.length > 0) {
+    activeTab.value = tabMap.value[0].name;
+  }
+});
+
 </script>
 
 <template>
@@ -37,29 +49,43 @@ const props = defineProps({
     <!-- panel-header -->
     <div
       :class="[
-        'max-h-1/6 text-sm font-medium h-5 box-border justify-between border-b pb-0',
+        'max-h-1/6 text-sm font-medium h-5 box-border justify-between border-b pb-0 flex items-center',
         props.active ? 'border-panelActive' : 'border-panelBorder',
       ]"
     >
-      <!-- panel-title -->
-      <span
-        class="inline-block w-9/12 pl-2 text-nowrap border-panelBorder text-secondary"
-        >{{ title }}</span
-      >
+      <!-- TABS -->
+      <div class="flex h-full gap-2 pl-2 text-secondary">
+        <button
+          v-for="tab in tabMap"
+          :key="tab.name"
+          @click="activeTab = tab.name"
+          :class="[
+            'px-2 rounded-t',
+            tabMap.length > 1 ? activeTab === tab.name
+              ? 'bg-panelActive'
+              : 'text-xs' : '',
+          ]"
+        >
+          {{ tab.display}}
+        </button>
+      </div>
+
       <!-- panel-status -->
       <span
         :class="[
           'inline-block w-3/12 h-full pl-2 text-nowrap text-primary border-panelBorder border-l-1',
           props.active ? 'bg-panelActive' : 'bg-panelStatusBackground',
         ]"
-        >{{ status }}</span
       >
+        {{ status }}
+      </span>
     </div>
-    <!-- panel-conent -->
+
+    <!-- panel-content -->
     <div
-      class="h-5/6 flex flex-1 box-border items-start justify-center pt-2 p-1 overflow-auto text-panelFont text-secondary bg-panelContentBackground"
+      class="h-5/6 flex flex-1 box-border items-start justify-center pt-2 p-1 overflow-auto text-panelFont text-secondary bg-panelContentBackground w-full"
     >
-      <slot></slot>
+      <slot :name="activeTab" />
     </div>
   </div>
 </template>
