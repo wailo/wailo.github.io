@@ -5,6 +5,7 @@ export class SimData {
   api_ups: number = 0;
   api_simulation_speed: number = 0;
   api_weight: number = 0;
+  api_empty_weight: number = 0;
   api_altitude: number = 0;
   api_vertical_speed: number = 0;
   api_alpha_tail: number = 0;
@@ -42,6 +43,7 @@ export class SimData {
   api_atmosphere_density: number = 0;
   api_total_drag: number = 0;
   api_cl: number = 0;
+  api_aoa_deg: number = 0;
   api_cdi: number = 0;
   api_ground_collision: boolean = false;
   api_latitude : number = 0;
@@ -51,6 +53,7 @@ export class SimData {
 let ptrApiFps: number = 0;
 let ptrApiUps: number = 0;
 let ptrApiWeight: number = 0;
+let ptrApiEmptyWeight: number = 0;
 let ptrApiAltitude: number = 0;
 let ptrApiVerticalSpeed: number = 0;
 let ptrApiAlphaTail: number = 0;
@@ -89,6 +92,7 @@ let ptrApiAtmosphereDensity: number = 0;
 let ptrApiMach: number = 0;
 let PtrApiTotalDrag: number = 0;
 let ptrApiCl: number = 0;
+let ptrApiAoaDeg: number = 0;
 let ptrApiCdi: number = 0;
 let ptrApiGroundCollision: number = 0;
 let ptrApiLatitude: number = 0;
@@ -119,6 +123,7 @@ function init(module: MainModule) {
   ptrApiFps = module._api_fps() >> 2;
   ptrApiUps = module._api_ups() >> 2;
   ptrApiWeight = module._api_weight() >> 2;
+  ptrApiEmptyWeight = module._api_empty_weight() >> 2;
   ptrApiAltitude = module._api_altitude() >> 2;
   ptrApiVerticalSpeed = module._api_vertical_speed() >> 2;
   ptrApiAlphaTail = module._api_alpha_tail() >> 2;
@@ -159,6 +164,7 @@ function init(module: MainModule) {
   ptrApiAtmosphereDensity = module._api_atmosphere_density() >> 2;
   PtrApiTotalDrag = module._api_total_drag() >> 2;
   ptrApiCl = module._api_cl() >> 2;
+  ptrApiAoaDeg = module._api_aoa_deg () >> 2;
   ptrApiCdi = module._api_cdi() >> 2;
   ptrApiGroundCollision = module._api_ground_collision();
   ptrApiLatitude = module._api_latitude() >> 2;
@@ -185,6 +191,7 @@ export async function fetchSimData(module: MainModule, payload: SimData) {
     1,
   );
   payload.api_weight = round(module.HEAPF32[ptrApiWeight], 2);
+  payload.api_empty_weight = round(module.HEAPF32[ptrApiEmptyWeight], 2);
   payload.api_altitude = round(module.HEAPF32[ptrApiAltitude], 0);
   payload.api_vertical_speed = round(module.HEAPF32[ptrApiVerticalSpeed], 0);
   payload.api_alpha_tail = round(module.HEAPF32[ptrApiAlphaTail], 3);
@@ -208,7 +215,7 @@ export async function fetchSimData(module: MainModule, payload: SimData) {
   payload.api_target_altitude = module.HEAP32[ptrApiTargetAltitude];
   payload.api_target_vertical_speed = module.HEAP32[ptrApiTargetVerticalSpeed];
   payload.api_target_speed = module.HEAP32[ptrApiTargetSpeed]
-  payload.api_target_mach_speed = round(module.HEAP32[ptrApiTargetMachSpeed] / 100, 2)
+  payload.api_target_mach_speed = module.HEAP32[ptrApiTargetMachSpeed]
   payload.api_atmosphere_sea_level_temperature = round(
     module.HEAPF32[ptrApiAtmosphereSeaLevelTemperature],
     2,
@@ -237,6 +244,7 @@ export async function fetchSimData(module: MainModule, payload: SimData) {
   );
   payload.api_total_drag = round(module.HEAPF32[PtrApiTotalDrag], 2);
   payload.api_cl = round(module.HEAPF32[ptrApiCl], 4);
+  payload.api_aoa_deg = round(module.HEAPF32[ptrApiAoaDeg], 4);
   payload.api_cdi = round(module.HEAPF32[ptrApiCdi], 4);
   payload.api_ground_collision = module.HEAP8[ptrApiGroundCollision] !== 0;
 
@@ -340,7 +348,7 @@ export function getAutopilotProperties(
     {
       id: "machHold",
       label: "MACH",
-      inputValue: payload.api_target_mach_speed,
+      inputValue: payload.api_target_mach_speed / 1000,
       stateValue: payload.api_mach_speed_hold,
       toggleFunc: () =>
         module.api_set_mach_speed_hold(!payload.api_mach_speed_hold),
@@ -413,6 +421,17 @@ export function getSimulationParameters(
       },
     ],
     Aircraft: [
+      {
+        label: "Empty Weight",
+        inputValue: payload.api_empty_weight,
+        setterFunc: (newVal: string) =>
+          module.api_set_empty_weight(Number(newVal)),
+        setterFuncStr: (newVal: string) =>
+          `api_set_empty_weight(${newVal})`,
+        min: 0.0,
+        max: 500000,
+        step: 1.0,
+      },
       {
         label: "Thrust to Weight Ratio",
         inputValue: payload.api_thrust_to_weight,

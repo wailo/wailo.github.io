@@ -1,39 +1,80 @@
 <template>
-  <!-- Editor component -->
-  <div class="flex flex-col h-full w-full">
-    <div class="w-full flex-grow">
-      <MonacoEditor
-        theme="vs-dark"
-        :options="options"
-        automaticLayout="true"
-        language="typescript"
-        v-model:value="code"
-        @editorDidMount="setupMonaco"
-      ></MonacoEditor>
+  <div class="flex h-full w-full text-white">
+    <!-- Sidebar -->
+    <div class="w-2/5 border-r border-slate-700 flex flex-col">
+      <!-- Header -->
+      <div class="px-4 mb-1 border-b border-slate-700 text-xs font-semibold">
+        {{ ModuleTitle || "Select a Module" }}
+      </div>
+
+      <!-- File Tree -->
+      <div class="flex-1 overflow-y-auto p-2">
+        <ul>
+          <li v-for="(folder, folderName) in fileTree" :key="folderName">
+            <div
+              @click="toggleFolder(folderName)"
+              class="cursor-pointer font-semibold text-secondary hover:text-white mt-1"
+            >
+              📁 {{ folderName }}
+            </div>
+            <ul v-show="openFolders[folderName]" class="ml-4">
+              <li
+                v-for="file in folder"
+                :key="file.name"
+                class="cursor-pointer rounded hover:bg-slate-700"
+                :class="{
+                  'text-blue-400': ModuleTitle !== file.name,
+                  'text-green-400 bg-slate-700': ModuleTitle === file.name,
+                }"
+                @click="loadFileContent(file)"
+              >
+                📄 {{ file.name }}
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </div>
     </div>
-    <div class="flex gap-1">
-      <ButtonSwitch
-        buttonLabel="Execute Code"
-        class="border border-simElementBorder w-1/5"
-        @click="executeCode"
+
+    <!-- Editor + Controls -->
+    <div class="flex flex-col flex-1 min-w-0">
+      <!-- Monaco Editor -->
+      <div class="flex-1">
+        <MonacoEditor
+          theme="vs-dark"
+          :options="options"
+          language="typescript"
+          v-model:value="code"
+          @editorDidMount="setupMonaco"
+        />
+      </div>
+
+      <!-- Controls -->
+      <div
+        class="flex items-center gap-1 px-1 py-1 border-t border-slate-700 bg-[#1e1e2f]"
       >
-      </ButtonSwitch>
-      <ButtonSwitch
-        buttonLabel="Stop"
-        class="border border-simElementBorder w-1/5"
-        @click="() => reset()"
-      ></ButtonSwitch>
-      <span class="w-3/5">
-        <span>Execution Result: </span>
-        <span>{{ executionResult }}</span>
-      </span>
+        <button
+          class="px-4 border border-green-500 text-green-400 hover:bg-green-500/10 transition"
+          @click="executeCode"
+        >
+          ▶ Run
+        </button>
+        <button
+          class="px-4 border border-red-500 text-red-400 hover:bg-red-500/10 transition"
+          @click="reset"
+        >
+          ■ Stop
+        </button>
+        <span v-if="executionResult" class="ml-auto truncate text-slate-300">
+          <span class="opacity-60">Result:</span> {{ executionResult }}
+        </span>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, PropType } from "vue";
-import ButtonSwitch from "./ButtonSwitch.vue";
+import { ref, PropType, onMounted } from "vue";
 import { MainModule } from "../../public/flightsimulator_exec";
 import { SimData } from "../siminterfac.ts";
 import simApiTypes from "../../public/flightsimulator_exec.d.ts?raw";
@@ -50,6 +91,9 @@ import htmlWorker from "monaco-editor/esm/vs/language/html/html.worker?worker";
 import tsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker";
 
 const isScriptRunning = ref(false);
+const ModuleTitle = ref("");
+const selectedFile = ref<string | null>(null);
+// let monacoEditor: monaco.editor.IStandaloneCodeEditor | null = null;
 
 // Define the event emitter
 const emit = defineEmits<{
@@ -58,7 +102,7 @@ const emit = defineEmits<{
   (event: "error", error: any): void;
 }>();
 
-export type ScriptStatus = "RUNNING" | "IDLE" | "ERROR";
+export type ScriptStatus = "IN-PROGRESS" | "IDLE" | "ERROR";
 
 window.MonacoEnvironment = {
   getWorker(_: string, label: string) {
@@ -90,6 +134,7 @@ const props = defineProps({
 });
 
 const options = {
+  automaticLayout: true,
   colorDecorators: true,
   tabSize: 2,
   minimap: {
@@ -102,6 +147,10 @@ const options = {
   // Undocumented see https://github.com/Microsoft/vscode/issues/30795#issuecomment-410998882
   lineDecorationsWidth: 10,
   lineNumbersMinChars: 0,
+  scrollbar: {
+    verticalScrollbarSize: 7,
+    horizontalScrollbarSize: 7,
+  },
 };
 
 // Define the Monaco Editor configuration
@@ -142,72 +191,10 @@ const setupMonaco = (_editor: monaco.editor.IStandaloneCodeEditor) => {
 };
 
 const executionResult = ref<string | null>(null);
-const code = ref(`// Use sim object to control the simulation
-// [simControls] contains all functions to change the state of the simulator
-// [simData] contains all variables to read the state of the simulator
-
-// Reset the simulation
-simControls.api_set_simulation_reset()
-
-// Wait for 1000 ms (1 second)
-await waitFor(1000);
-
-simControls.api_set_engine_throttle_value(1);
-// Toggle the autopilot master switch state.
-simControls.api_set_autopilot(true);
-simControls.api_set_target_speed(280)
-simControls.api_set_target_altitude(33000)
-simControls.api_set_target_vertical_speed(3000)
-simControls.api_set_target_heading_deg(270)
-
-
-// Wait for speed to cross 180 knots
-await waitForCondition(() => { return simData.api_ias_speed_knots > 180 })
-
-// Toggle vertical speed hold
-simControls.api_set_vertical_speed_hold(true)
-
-// Toggle speed hold
-simControls.api_set_speed_hold(true);
-
-// Wait until the altitude crosses 300
-await waitForCondition(() => { return simData.api_altitude > 300 })
-
-// Landing gear up
-simControls.api_set_landing_gear_position(simControls.GearSelector.UP.value)
-
-// Wait until the altitude crosses 1000
-await waitForCondition(() => { return simData.api_altitude > 1000 })
-
-// Toggle heading hold
-simControls.api_set_heading_hold(true)
-
-// Wait for 3000 ms (3 seconds)
-await waitFor(3000);
-
-// Increase simulation speed
-simControls.api_set_simulation_speed(2)
-
-// Wait until target altitude is reached
-await waitForCondition(() => { return simData.api_altitude > 3000 && simData.api_heading_deg == 270 })
-
-
-// Switch to target altitude
-simControls.api_set_vertical_speed_hold(false)
-// Wait for 1000 ms (1 second)
-await waitFor(1000);
-simControls.api_set_altitude_hold(true);
-
-// Incraese simulation speed
-simControls.api_set_simulation_speed(100)
-
-await waitForCondition(() => { return simData.api_altitude > 33000 })
-
-simControls.api_set_simulation_speed(1)
-
-`);
+const code = ref(``);
 
 const reset = () => {
+  executionResult.value = null;
   window.flag = false;
   if (!window.cache) {
     return;
@@ -221,7 +208,12 @@ const reset = () => {
 defineExpose({ reset });
 
 // Function to execute code in the context of the provided object
-const executeCode = () => {
+const executeCode = async () => {
+  reset();
+  const res = await fetch("/LearningModules/core.ts?raw");
+  const helperCode = await res.text();
+
+  executionResult.value = null;
   window.flag = true;
   window.cache = [];
   try {
@@ -299,8 +291,9 @@ const removeCacheItem = (id) => {
     }
 }
 
+${helperCode}
 resetTimeouts();
-return async function () {${code.value} };
+return async function () {${code.value}};
     `);
 
     userScriptFunc(props.contextObject, props.dataObject)()
@@ -320,6 +313,50 @@ return async function () {${code.value} };
     executionResult.value = `Error: ${error.message}`;
   }
 };
+
+import {
+  moduleTree as importedNModuleTree,
+  type ModuleEntry,
+} from "./data/EASAModules";
+
+// Reactive copy of the fileTree
+const fileTree = ref(importedNModuleTree);
+
+const openFolders = ref<Record<string, boolean>>(
+  Object.fromEntries(Object.keys(fileTree.value).map((key) => [key, true])),
+);
+const toggleFolder = (folderName: string) => {
+  openFolders.value[folderName] = !openFolders.value[folderName];
+};
+
+const loadFileContent = async (file: ModuleEntry) => {
+  try {
+    selectedFile.value = file.name;
+    ModuleTitle.value = file.name;
+    const response = await fetch(file.path);
+    const text = await response.text();
+    code.value = text;
+  } catch (error) {
+    console.error(error);
+    code.value = `// Failed to load ${file.name}`;
+    ModuleTitle.value = `Error loading ${file.name}`;
+  }
+};
+
+onMounted(() => {
+  // Load the first file in the first folder by default
+  const firstFolder = Object.keys(fileTree.value)[0];
+  const firstFile = fileTree.value[firstFolder][0];
+  if (firstFile) {
+    loadFileContent(firstFile);
+
+    // if demo mode
+    // wait for 5 seconds then run the code
+    setTimeout(() => {
+      executeCode();
+    }, 5000);
+  }
+});
 </script>
 
 <style></style>

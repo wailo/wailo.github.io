@@ -54,7 +54,7 @@ watchEffect(() => {
       ]"
     >
       <!-- TABS -->
-      <div class="flex h-full gap-2 pl-2 text-secondary">
+      <div class="flex h-full gap-2  text-secondary">
         <button
           v-for="tab in tabMap"
           :key="tab.name"

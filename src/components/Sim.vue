@@ -5,9 +5,7 @@
       :status="
         sim_data.api_ground_collision
           ? 'Collision'
-          : sim_data.api_simulation_pause
-            ? 'Pause'
-            : 'Running'
+          : `${sim_data.api_fps} FPS`
       "
       :flash="sim_data.api_ground_collision"
       class="panel-1"
@@ -41,8 +39,8 @@
     </Panel>
     <!-- Panel 3 -->
     <Panel
-      :status="`${sim_data.api_fps} HZ`"
-      :active="false"
+      :status="sim_data.api_simulation_speed == 1 ? `RUNNING` :`${sim_data.api_simulation_speed}x`"
+      :active="sim_data.api_simulation_speed != 1"
       :flash="sim_data.api_simulation_pause"
       class="panel-3"
     >
@@ -82,22 +80,15 @@
       </template>
     </Panel>
           <!-- Panel 4 -->
-  <Panel class="panel-4">
+  <Panel class="panel-4" :status=scriptComponentStatus  :active="scriptComponentStatus != 'IDLE'">
+
 <template #Learning-Modules>
-      <CategoryList
-        :items="groupedItems"
-        @itemSelected="(item: string) => {
-          console.log(`You selected: ${item}`);
-        }"
-      />
-</template>
-<template #Scripting>
       <Editor
         v-if="sim_module_loaded"
         :context-object="FlightSimModule"
         :data-object="sim_data"
         @start="(_code) => {
-          scriptComponentStatus = 'RUNNING';
+          scriptComponentStatus = 'IN-PROGRESS';
         }"
         @reset="scriptComponentStatus = 'IDLE'"
         @error="(error) => {
@@ -199,17 +190,23 @@
   </Panel>
       <!-- Panel 8 -->
   <Panel
-      status="ChatGPT"
+      :status="userPromptStatus"
+      :active="userPromptActive"
       class="panel-8"
-      :active="false"
       >
       <template #Prompt>
-              <iframe
+        <textarea
+          disabled
+        v-model="userPromptText"
+        class="w-full h-full p-2 border border-simElementBorder bg-primary text-secondary"
+        ></textarea>
+              <!-- <iframe
         width="425"
         height="350"
         src="https://www.openstreetmap.org/export/embed.html?bbox=103.9678716659546%2C1.3397807641972048%2C104.0070104598999%2C1.370799877695522&amp;layer=mapnik"
         style="border: 1px solid black"
-      ></iframe>
+      ></iframe> -->
+
     </template>
   </Panel>
   </div>
@@ -218,7 +215,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted } from "vue";
 import Panel from "./Panel.vue";
-import CategoryList from "./CategoryList.vue";
 import ButtonSwitch from "./ButtonSwitch.vue";
 import ClassRoom from "./ClassRoom.vue";
 //import PeerData from "./ClassRoom.vue";
@@ -241,11 +237,28 @@ function broadcast(code: string) {
 }
 
 function notifyUser(title: string, message: string, _time: number) {
-      alert(`${title}: ${message}`);
+  userPromptText.value = `${title}: ${message}`
+  // set Prompt status to New for 3 seconds then revert to empty
+  userPromptActive.value = true;
+  setTimeout(() => {
+
+    userPromptActive.value = false
+  }, 200);
+
     }
 
-const executeCode = (code: string) => {
-  eval(`FlightSimModule.${code}`);
+const executeCode = (_code: string) => {
+  return
+  // if (typeof code === "string" && /^[a-zA-Z0-9_.$]+$/.test(code)) {
+  //   const func = code.split('.').reduce((obj, key) => obj?.[key], FlightSimModule);
+  //   if (typeof func === "function") {
+  //     func();
+  //   } else {
+  //     console.error("Invalid function or property in code:", code);
+  //   }
+  // } else {
+  //   console.error("Invalid or unsafe code:", code);
+  // }
 };
 
 // Logic to reset components, triggered with simulation module is reset
@@ -258,44 +271,15 @@ const resetComponents = () => {
   }
 };
 
-const groupedItems = {
-  "The Four Forces of Flight": [
-    "Observe Level Flight Forces",
-    "Increase and Reduce Thrust",
-    "Change Aircraft Weight"
-  ],
-  "Bernoulli’s Principle and Airflow Over the Wing": [
-    "Monitor Lift Generation in Flight",
-    "Increase Airspeed and Observe Lift Changes",
-    "Effect of Altitude on Lift"
-  ],
-  "Relationship Between Pressure, Velocity, and Airflow": [
-    "The Relationship Between Velocity and Pressure",
-    "Changes in Airspeed and Lift at Different Flap Settings"
-  ],
-  "Angle of Attack (AoA) and Its Influence on Lift and Drag": [
-    "Monitor AoA and Lift in Straight and Level Flight",
-    "Increase AoA Until Stall",
-    "Stall Recovery Practice"
-  ],
-  "Practical Application – Flying an Efficient Climb and Descent": [
-    "Optimizing Climb Performance",
-    "Simulating a High-Drag Descent",
-    "Autopilot vs. Manual Climb/Descent"
-  ],
-  "Free Flight Exercise & Student Demonstrations": [
-    "Simulator Challenge",
-    "Final Exam (Written & Practical)"
-  ]
-}
-
-
 let FlightSimModule: MainModule;
 const sim_data = reactive(new SimData());
 let sim_module_loaded = ref(false);
 let classRoomComponentState = ref(false);
 let scriptComponentStatus = ref<ScriptStatus>("IDLE");
 const update_interval_ms = 200;
+const userPromptText = ref<string>("");
+const userPromptStatus = ref<string>("----");
+const userPromptActive = ref<boolean>(false);
 
 // Components refs
 const classroomComponentRef = ref<InstanceType<typeof ClassRoom> | null>(null); // Use the ClassRoom component type
@@ -342,6 +326,7 @@ const sim_data_display: { key: SimDataKeys; label: string }[] = [
   { key: "api_atmosphere_density", label: "Atmosphere Density" },
   { key: "api_total_drag", label: "Total Drag" },
   { key: "api_cl", label: "Lift Coefficient" },
+  { key: "api_aoa_deg", label: "Angle of Attack" },
   { key: "api_cdi", label: "Drag Coefficient" },
 
   // {key: 'api_heading_hold', label: 'Heading_hold'},
