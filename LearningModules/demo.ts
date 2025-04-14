@@ -4,9 +4,9 @@ simControls.api_set_simulation_reset();
 // 📘 Demo Introduction
 simControls.notifyUser(
     "📘 Simulator Demo",
-    "🎬 Welcome to the simulator demo!\n\nIn this experience, we’ll demonstrate how a scripted lesson can control the simulator dynamically. " +
-    "This includes: pausing/resuming, controlling time, setting autopilot, performing takeoff, and using intelligent wait conditions.\n\n" +
-    "Sit back and watch the scenario unfold step-by-step!"
+    "🎬 This is a demo!\n\nIn this lesson, we’ll demonstrate how a scripted lesson can control the simulator dynamically. " +
+    "This includes: pausing/resuming, controlling time, setting autopilot, performing takeoff, and using logical condition to control the execution of the lesson.\n\n" +
+    "The simulation will start soon"
   );
   await waitFor(7000);
   
@@ -16,29 +16,19 @@ simControls.notifyUser(
   simControls.api_set_engine_throttle_value(1);
   
   // 🧭 Enable Autopilot
-  simControls.notifyUser("🧭 Enabling Autopilot", "We’ll now activate the autopilot to begin managing our climb.\n\nCommand:\n`simControls.api_set_autopilot(true)`");
-  await waitFor(5000);
-  simControls.api_set_autopilot(true);
-  
-  // 🔧 Configure Autopilot Settings (Grouped)
-  simControls.notifyUser(
-    "🔧 Configuring Autopilot Targets",
-    "We’ll now set key autopilot parameters:\n• Target Speed: 280 KT\n• Target Altitude: FL330\n• Heading: 270°\n\n" +
-    "These inputs reflect how lessons control the aircraft state.\n" +
-    "Each setting is sent as an API call."
-  );
+simControls.notifyUser("🔧 Enabling Autopilot", "We’ll now activate and configure the autopilot to begin managing the climb.\n\nCommand:\n`simControls.api_set_autopilot(true)`\n\n" +
+  "Set key autopilot parameters:\n• Target Speed: 280 KT\n• Target Altitude: FL330\n• Vertical Speed: 3000 ft/min\n• Heading: 270°\n\n" +
+  "These inputs reflect how lessons control the aircraft state.\n" +
+    "Each setting is sent as an API call.");
   await waitFor(6000);
-  
+  simControls.api_set_autopilot(true);
+  await waitFor(1000);
   simControls.api_set_target_speed(280);
   await waitFor(1000);
   simControls.api_set_target_altitude(33000);
   await waitFor(1000);
   simControls.api_set_target_heading_deg(270);
   await waitFor(1000);
-  
-  // 📈 Set Climb Rate
-  simControls.notifyUser("📈 Climb Rate", "Now we define our climb performance by setting vertical speed to 3000 ft/min.\n\nCommand:\n`simControls.api_set_target_vertical_speed(3000)`");
-  await waitFor(5000);
   simControls.api_set_target_vertical_speed(3000);
   
   // ⏳ Wait for Takeoff Conditions
@@ -126,8 +116,8 @@ simControls.notifyUser(
   // ✅ Wrap-up
   simControls.notifyUser(
     "✅ Demo Complete!",
-    "🎉 That’s a wrap on the simulator demo!\n\nYou’ve just seen how powerful and flexible the scripting engine is:\n" +
+    "🎉 That’s a wrap on the simulator demo!\n\n We have just demonstrated the following capabilities:\n" +
     "• Full autopilot control\n• Smart timing with conditions\n• Simulation speed adjustments\n• Takeoff and climb procedures\n\n" +
-    "💡 Use these tools to build engaging, automated training lessons.\n\n🛫 Ready for your next mission?"
+    "💡 There more tools ls to build engaging, automated training lessons."
   );
   
