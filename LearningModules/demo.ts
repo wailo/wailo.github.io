@@ -116,7 +116,7 @@ simControls.notifyUser("🔧 Enabling Autopilot", "We’ll now activate and conf
   // ✅ Wrap-up
   simControls.notifyUser(
     "✅ Demo Complete!",
-    "🎉 That’s a wrap on the simulator demo!\n\n We have just demonstrated the following capabilities:\n" +
+    "We have just demonstrated the following capabilities:\n" +
     "• Full autopilot control\n• Smart timing with conditions\n• Simulation speed adjustments\n• Takeoff and climb procedures\n\n" +
     "💡 There more tools ls to build engaging, automated training lessons."
   );
