@@ -15,6 +15,7 @@
     "preinstall": "[ -z \"$ACCESS_TOKEN\" ] && set -a && . .env && set +a; git clone --recursive https://oauth2:$ACCESS_TOKEN@github.com/wailo/Compact-Flight-Simulator.git node_modules/Compact-Flight-Simulator"
   },
   "dependencies": {
+    "fuse.js": "^7.1.0",
     "monaco-editor-vue3": "^0.1.10",
     "peerjs": "^1.5.4",
     "vue": "^3.4.29",

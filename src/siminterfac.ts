@@ -50,6 +50,69 @@ export class SimData {
   api_longitude : number = 0;
 }
 
+type SimDataKeys = keyof SimData;
+
+export interface SimulationDataDisplay {
+  key: SimDataKeys;
+  label: string;
+  visible: boolean;
+}
+
+
+export function getSimulationDataDisplay(): SimulationDataDisplay[] {
+return  [
+  { key: "api_fps", label: "Frames Per Second", visible: false },
+  { key: "api_ups", label: "Update Per Second", visible: false },
+  { key: "api_simulation_speed", label: "Simulation Speed", visible: false },
+  { key: "api_ground_collision", label: "Ground Collision", visible: false },
+  { key: "api_weight", label: "Weight", visible: false },
+  { key: "api_altitude", label: "Altitude", visible: false },
+  { key: "api_vertical_speed", label: "Vertical Speed", visible: false },
+  { key: "api_alpha_tail", label: "Elevator", visible: false },
+  { key: "api_alpha_aileron", label: "Aileron", visible: false },
+  { key: "api_throttle", label: "Throttle", visible: false },
+  { key: "api_ias_speed_knots", label: "IAS Speed", visible: false },
+  { key: "api_heading_deg", label: "Heading", visible: false },
+  { key: "api_pitch_deg", label: "Pitch", visible: false },
+  { key: "api_bank_deg", label: "Bank", visible: false },
+  { key: "api_simulation_pause", label: "Simulation Pause", visible: false },
+  { key: "api_autopilot", label: "Autopilot Master Switch", visible: false },
+  {
+    key: "api_atmosphere_sea_level_temperature",
+    label: "Sea Level Temperature",
+    visible: false,
+  },
+  { key: "api_atmosphere_sea_level_density", label: "Sea Level Density", visible: false },
+  { key: "api_thrust_to_weight", label: "Thrust To Weight", visible: false },
+  { key: "api_wing_area", label: "Wing Area", visible: false },
+  { key: "api_true_speed_knots", label: "True Airspeed", visible: false },
+  { key: "api_mach", label: "Mach", visible: false },
+  { key: "api_vstall_speed_knots", label: "Vstall Speed", visible: false },
+  { key: "api_atmosphere_temperature", label: "Atmosphere Temperature", visible: false },
+  { key: "api_atmosphere_density", label: "Atmosphere Density", visible: false },
+  { key: "api_total_drag", label: "Total Drag", visible: false },
+  { key: "api_cl", label: "Lift Coefficient", visible: false },
+  { key: "api_aoa_deg", label: "Angle of Attack", visible: false },
+  { key: "api_cdi", label: "Drag Coefficient", visible: false },
+
+  // {key: 'api_heading_hold', label: 'Heading_hold'},
+  // {key: 'api_bank_hold', label: 'Bank_hold'},
+  // {key: 'api_level_hold', label: 'Level_hold'},
+  // {key: 'api_speed_hold', label: 'Speed_hold'},
+  // {key: 'api_mach_speed_hold', label: 'Mach_speed_hold'},
+  // {key: 'api_altitude_hold', label: 'Altitude_hold'},
+  // {key: 'api_vertical_speed_hold', label: 'Vertical_speed_hold'},
+  // {key: 'api_target_heading_deg', label: 'Target_heading_deg'},
+  // {key: 'api_target_bank_deg', label: 'Target_bank_deg'},
+  // {key: 'api_target_altitude', label: 'Target_altitude'},
+  // {key: 'api_target_vertical_speed', label: 'Target_vertical_speed'},
+  // {key: 'api_target_speed', label: 'Target_speed'},
+  // {key: 'api_target_mach_speed', label: 'Target_mach_speed'},
+  // {key: 'api_cl0', label: 'Cl0'},
+  // {key: 'api_cdo', label: 'Cdo'},
+];}
+
+
 let ptrApiFps: number = 0;
 let ptrApiUps: number = 0;
 let ptrApiWeight: number = 0;

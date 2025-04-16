@@ -23,18 +23,13 @@
       class="panel-2"
     >
     <template #Real-Time-Data display="Real Time Data">
-      <table class="flex w-full h-full p-2">
-        <tbody class="w-full">
-          <tr
-            class="flex w-full border-b border-simElementBorder"
-            v-for="sim_display_item in sim_data_display"
-            :key="sim_display_item.key"
-          >
-            <td class="font-medium w-4/5">{{ sim_display_item.label }}</td>
-            <td class="w-1/5">{{ sim_data[sim_display_item.key] }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <SimDataDisplay
+    ref="displayRef"
+    v-model:items="simulationDisplayData"
+    :sim-data="sim_data"
+    v-if="sim_module_loaded"
+  />
+
       </template>
     </Panel>
     <!-- Panel 3 -->
@@ -217,6 +212,7 @@ import { ref, reactive, computed, onMounted, onUnmounted } from "vue";
 import Panel from "./Panel.vue";
 import ButtonSwitch from "./ButtonSwitch.vue";
 import ClassRoom from "./ClassRoom.vue";
+import SimDataDisplay from './DataDisplay.vue'
 //import PeerData from "./ClassRoom.vue";
 // import NacaAirfoil from "./NacaAirfoil.vue";
 import { MainModule } from "../../public/flightsimulator_exec.js";
@@ -224,8 +220,10 @@ import {
   initializeModule,
   fetchSimData,
   SimData,
+  SimulationDataDisplay,
   getAutopilotProperties,
   getSimulationParameters,
+  getSimulationDataDisplay,
 } from "../siminterfac.js";
 import Editor, { ScriptStatus } from "./Editor.vue";
 
@@ -291,60 +289,10 @@ let autopilotProps: ReturnType<
 let simulationProps: ReturnType<
   typeof computed<ReturnType<typeof getSimulationParameters>>
 >;
+
+const simulationDisplayData = ref<SimulationDataDisplay[]>([]) // empty init
+
 let simUpdateInterval: number | undefined;
-
-type SimDataKeys = keyof typeof sim_data;
-
-const sim_data_display: { key: SimDataKeys; label: string }[] = [
-  { key: "api_fps", label: "Frames Per Second" },
-  { key: "api_ups", label: "Update Per Second" },
-  { key: "api_simulation_speed", label: "Simulation Speed" },
-  { key: "api_ground_collision", label: "Ground Collision" },
-  { key: "api_weight", label: "Weight" },
-  { key: "api_altitude", label: "Altitude" },
-  { key: "api_vertical_speed", label: "Vertical Speed" },
-  { key: "api_alpha_tail", label: "Elevator" },
-  { key: "api_alpha_aileron", label: "Aileron" },
-  { key: "api_throttle", label: "Throttle" },
-  { key: "api_ias_speed_knots", label: "IAS Speed" },
-  { key: "api_heading_deg", label: "Heading" },
-  { key: "api_pitch_deg", label: "Pitch" },
-  { key: "api_bank_deg", label: "Bank" },
-  { key: "api_simulation_pause", label: "Simulation Pause" },
-  { key: "api_autopilot", label: "Autopilot Master Switch" },
-  {
-    key: "api_atmosphere_sea_level_temperature",
-    label: "Sea Level Temperature",
-  },
-  { key: "api_atmosphere_sea_level_density", label: "Sea Level Density" },
-  { key: "api_thrust_to_weight", label: "Thrust To Weight" },
-  { key: "api_wing_area", label: "Wing Area" },
-  { key: "api_true_speed_knots", label: "True Airspeed" },
-  { key: "api_mach", label: "Mach" },
-  { key: "api_vstall_speed_knots", label: "Vstall Speed" },
-  { key: "api_atmosphere_temperature", label: "Atmosphere Temperature" },
-  { key: "api_atmosphere_density", label: "Atmosphere Density" },
-  { key: "api_total_drag", label: "Total Drag" },
-  { key: "api_cl", label: "Lift Coefficient" },
-  { key: "api_aoa_deg", label: "Angle of Attack" },
-  { key: "api_cdi", label: "Drag Coefficient" },
-
-  // {key: 'api_heading_hold', label: 'Heading_hold'},
-  // {key: 'api_bank_hold', label: 'Bank_hold'},
-  // {key: 'api_level_hold', label: 'Level_hold'},
-  // {key: 'api_speed_hold', label: 'Speed_hold'},
-  // {key: 'api_mach_speed_hold', label: 'Mach_speed_hold'},
-  // {key: 'api_altitude_hold', label: 'Altitude_hold'},
-  // {key: 'api_vertical_speed_hold', label: 'Vertical_speed_hold'},
-  // {key: 'api_target_heading_deg', label: 'Target_heading_deg'},
-  // {key: 'api_target_bank_deg', label: 'Target_bank_deg'},
-  // {key: 'api_target_altitude', label: 'Target_altitude'},
-  // {key: 'api_target_vertical_speed', label: 'Target_vertical_speed'},
-  // {key: 'api_target_speed', label: 'Target_speed'},
-  // {key: 'api_target_mach_speed', label: 'Target_mach_speed'},
-  // {key: 'api_cl0', label: 'Cl0'},
-  // {key: 'api_cdo', label: 'Cdo'},
-];
 
 // Lifecycle hooks
 onMounted(async () => {
@@ -363,6 +311,9 @@ onMounted(async () => {
       simulationProps = computed(() =>
         getSimulationParameters(FlightSimModule, sim_data, resetComponents),
       );
+
+      simulationDisplayData.value = getSimulationDataDisplay();
+
       sim_module_loaded.value = true;
 
       // key presses are handled inside the canvas only
