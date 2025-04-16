@@ -59,8 +59,7 @@ export interface SimulationDataDisplay {
 }
 
 
-export function getSimulationDataDisplay(): SimulationDataDisplay[] {
-return  [
+export const simulationDataDisplay: SimulationDataDisplay[] = [
   { key: "api_fps", label: "Frames Per Second", visible: false },
   { key: "api_ups", label: "Update Per Second", visible: false },
   { key: "api_simulation_speed", label: "Simulation Speed", visible: false },
@@ -110,7 +109,7 @@ return  [
   // {key: 'api_target_mach_speed', label: 'Target_mach_speed'},
   // {key: 'api_cl0', label: 'Cl0'},
   // {key: 'api_cdo', label: 'Cdo'},
-];}
+];
 
 
 let ptrApiFps: number = 0;

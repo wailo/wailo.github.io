@@ -9,39 +9,60 @@
         class="w-3/5 border bg-transparent border-simElementBorder p-1"
         @focus="isFocused = true"
       />
-      <button @click="showAll" class="w-1/5 px-1 py-1 border text-secondary">Show All</button>
-      <button @click="hideAll" class="w-1/5 px-1 py-1 border text-secondary">Hide All</button>
+      <button @click="showAll" class="w-1/5 border text-secondary">
+        Show All
+      </button>
+      <button @click="hideAll" class="w-1/5 border text-secondary">
+        Hide All
+      </button>
     </div>
 
     <!-- Dropdown -->
     <div
-      v-if="isDropdownVisible"
-      class="border rounded shadow p-2 max-h-48 overflow-auto"
+  v-if="isDropdownVisible"
+  class="border rounded shadow max-h-48 overflow-auto"
+>
+  <div class="flex justify-end p-1 border-b">
+    <button
+      @click="isFocused = false"
     >
-      <div
-        v-for="item in searchResults"
-        :key="item.key"
-        class="cursor-pointer p-1 transition"
-        :class="{
-          'bg-green-100 font-semibold': recentlyAddedKey === item.key,
-          'hover:bg-gray-100': recentlyAddedKey !== item.key,
-        }"
-        @click="showItem(item.key)"
-      >
-        {{ item.label }}
-      </div>
-    </div>
+      ✖ Close
+    </button>
+  </div>
+  <div
+    v-for="item in searchResults"
+    :key="item.key"
+    class="cursor-pointer p-1 transition"
+    :class="{
+      'bg-green-100 font-semibold': recentlyAddedKey === item.key,
+      'hover:bg-gray-100': recentlyAddedKey !== item.key,
+    }"
+    @click="showItem(item.key)"
+  >
+    {{ item.label }}
+  </div>
+</div>
+
 
     <!-- Visible Items Table -->
     <table class="flex w-full h-full">
       <tbody class="w-full">
         <tr
-          class="flex w-full border-b border-simElementBorder"
+          class="flex w-full border-b border-simElementBorder items-center"
           v-for="item in visibleItems"
           :key="item.key"
         >
-          <td class="font-medium w-4/5">{{ item.label }}</td>
+          <td class="font-medium w-3/5">{{ item.label }}</td>
           <td class="w-1/5">{{ props.simData[item.key] }}</td>
+          <td class="w-1/5 text-right">
+            <button
+              @click="hideItem(item.key)"
+              class=" hover:text-red-700 transition"
+              title="Remove"
+            >
+              ⅹ
+            </button>
+          </td>
         </tr>
       </tbody>
     </table>
@@ -49,8 +70,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineModel, defineProps, onMounted, onBeforeUnmount } from 'vue'
-import {SimulationDataDisplay} from "../siminterfac"
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { SimulationDataDisplay } from '../siminterfac'
 import Fuse from 'fuse.js'
 
 // v-model:items binding
@@ -127,4 +148,5 @@ defineExpose({ showItem, hideItem, showAll, hideAll })
 .bg-green-100 {
   transition: background-color 0.3s ease;
 }
+
 </style>

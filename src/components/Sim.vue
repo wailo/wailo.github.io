@@ -220,10 +220,9 @@ import {
   initializeModule,
   fetchSimData,
   SimData,
-  SimulationDataDisplay,
   getAutopilotProperties,
   getSimulationParameters,
-  getSimulationDataDisplay,
+  simulationDataDisplay
 } from "../siminterfac.js";
 import Editor, { ScriptStatus } from "./Editor.vue";
 
@@ -290,7 +289,7 @@ let simulationProps: ReturnType<
   typeof computed<ReturnType<typeof getSimulationParameters>>
 >;
 
-const simulationDisplayData = ref<SimulationDataDisplay[]>([]) // empty init
+const simulationDisplayData = ref(simulationDataDisplay)
 
 let simUpdateInterval: number | undefined;
 
@@ -312,7 +311,6 @@ onMounted(async () => {
         getSimulationParameters(FlightSimModule, sim_data, resetComponents),
       );
 
-      simulationDisplayData.value = getSimulationDataDisplay();
 
       sim_module_loaded.value = true;
 
