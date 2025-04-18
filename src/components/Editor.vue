@@ -76,7 +76,7 @@
 <script setup lang="ts">
 import { ref, PropType, onMounted } from "vue";
 import { MainModule } from "../../public/flightsimulator_exec";
-import { SimData } from "../siminterfac.ts";
+import { SimData, SimulationDataDisplay } from "../siminterfac.ts";
 import simApiTypes from "../../public/flightsimulator_exec.d.ts?raw";
 import simDataTypes from "../siminterfac.ts?raw";
 
@@ -131,6 +131,10 @@ const props = defineProps({
     type: Object as PropType<SimData>,
     required: true,
   },
+  displayData: {
+    type: Object as PropType<SimulationDataDisplay[]>,
+    required: true,
+  }
 });
 
 const options = {
@@ -223,6 +227,7 @@ const executeCode = async () => {
     const userScriptFunc = new Function(`
 const simControls = arguments[0];
 const simData = arguments[1];
+const displayData = arguments[2];
 
 const waitForCondition = (conditionFunction, ms=400) => {
     const poll = (resolve) => {
@@ -296,7 +301,7 @@ resetTimeouts();
 return async function () {${code.value}};
     `);
 
-    userScriptFunc(props.contextObject, props.dataObject)()
+    userScriptFunc(props.contextObject, props.dataObject, props.displayData)()
       .then(() => {
         emit("reset");
       })

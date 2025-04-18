@@ -50,49 +50,72 @@ export class SimData {
   api_longitude : number = 0;
 }
 
-type SimDataKeys = keyof SimData;
+export type SimDataKeys = keyof SimData;
 
-export interface SimulationDataDisplay {
-  key: SimDataKeys;
-  label: string;
-  visible: boolean;
-}
+export type SimulationDataDisplay = {
+  [key in SimDataKeys]: {
+    api: key;
+    label: string;
+    visible: boolean;
+  };
+};
 
 
-export const simulationDataDisplay: SimulationDataDisplay[] = [
-  { key: "api_fps", label: "Frames Per Second", visible: false },
-  { key: "api_ups", label: "Update Per Second", visible: false },
-  { key: "api_simulation_speed", label: "Simulation Speed", visible: false },
-  { key: "api_ground_collision", label: "Ground Collision", visible: false },
-  { key: "api_weight", label: "Weight", visible: false },
-  { key: "api_altitude", label: "Altitude", visible: false },
-  { key: "api_vertical_speed", label: "Vertical Speed", visible: false },
-  { key: "api_alpha_tail", label: "Elevator", visible: false },
-  { key: "api_alpha_aileron", label: "Aileron", visible: false },
-  { key: "api_throttle", label: "Throttle", visible: false },
-  { key: "api_ias_speed_knots", label: "IAS Speed", visible: false },
-  { key: "api_heading_deg", label: "Heading", visible: false },
-  { key: "api_pitch_deg", label: "Pitch", visible: false },
-  { key: "api_bank_deg", label: "Bank", visible: false },
-  { key: "api_simulation_pause", label: "Simulation Pause", visible: false },
-  { key: "api_autopilot", label: "Autopilot Master Switch", visible: false },
-  {
-    key: "api_atmosphere_sea_level_temperature",
+export const simulationDataDisplay:  SimulationDataDisplay = {
+  api_fps: { api: "api_fps", label: "Frames Per Second", visible: false },
+  api_ups: { api: "api_ups", label: "Update Per Second", visible: false },
+  api_simulation_speed: { api: "api_simulation_speed", label: "Simulation Speed", visible: false },
+  api_ground_collision: { api: "api_ground_collision", label: "Ground Collision", visible: false },
+  api_weight: { api: "api_weight", label: "Weight", visible: false },
+  api_empty_weight: { api: "api_empty_weight", label: "Empty Weight", visible: false },
+  api_altitude: { api: "api_altitude", label: "Altitude", visible: false },
+  api_vertical_speed: { api: "api_vertical_speed", label: "Vertical Speed", visible: false },
+  api_alpha_tail: { api: "api_alpha_tail", label: "Elevator", visible: false },
+  api_alpha_aileron: { api: "api_alpha_aileron", label: "Aileron", visible: false },
+  api_throttle: { api: "api_throttle", label: "Throttle", visible: false },
+  api_ias_speed_knots: { api: "api_ias_speed_knots", label: "IAS Speed", visible: false },
+  api_heading_deg: { api: "api_heading_deg", label: "Heading", visible: false },
+  api_pitch_deg: { api: "api_pitch_deg", label: "Pitch", visible: false },
+  api_bank_deg: { api: "api_bank_deg", label: "Bank", visible: false },
+  api_simulation_pause: { api: "api_simulation_pause", label: "Simulation Pause", visible: false },
+  api_autopilot: { api: "api_autopilot", label: "Autopilot Master Switch", visible: false },
+  api_heading_hold: { api: "api_heading_hold", label: "Heading Hold", visible: false },
+  api_bank_hold: { api: "api_bank_hold", label: "Bank Hold", visible: false },
+  api_speed_hold: { api: "api_speed_hold", label: "Speed Hold", visible: false },
+  api_mach_speed_hold: { api: "api_mach_speed_hold", label: "Mach Speed Hold", visible: false },
+  api_altitude_hold: { api: "api_altitude_hold", label: "Altitude Hold", visible: false },
+  api_vertical_speed_hold: { api: "api_vertical_speed_hold", label: "Vertical Speed Hold", visible: false },
+  api_target_heading_deg: { api: "api_target_heading_deg", label: "Target Heading", visible: false },
+  api_target_bank_deg: { api: "api_target_bank_deg", label: "Target Bank", visible: false },
+  api_target_altitude: { api: "api_target_altitude", label: "Target Altitude", visible: false },
+  api_target_vertical_speed: { api: "api_target_vertical_speed", label: "Target Vertical Speed", visible: false },
+  api_target_speed: { api: "api_target_speed", label: "Target Speed", visible: false },
+  api_target_mach_speed: { api: "api_target_mach_speed", label: "Target Mach Speed", visible: false },
+  api_atmosphere_sea_level_temperature: {
+    api: "api_atmosphere_sea_level_temperature",
     label: "Sea Level Temperature",
     visible: false,
   },
-  { key: "api_atmosphere_sea_level_density", label: "Sea Level Density", visible: false },
-  { key: "api_thrust_to_weight", label: "Thrust To Weight", visible: false },
-  { key: "api_wing_area", label: "Wing Area", visible: false },
-  { key: "api_true_speed_knots", label: "True Airspeed", visible: false },
-  { key: "api_mach", label: "Mach", visible: false },
-  { key: "api_vstall_speed_knots", label: "Vstall Speed", visible: false },
-  { key: "api_atmosphere_temperature", label: "Atmosphere Temperature", visible: false },
-  { key: "api_atmosphere_density", label: "Atmosphere Density", visible: false },
-  { key: "api_total_drag", label: "Total Drag", visible: false },
-  { key: "api_cl", label: "Lift Coefficient", visible: false },
-  { key: "api_aoa_deg", label: "Angle of Attack", visible: false },
-  { key: "api_cdi", label: "Drag Coefficient", visible: false },
+  api_atmosphere_sea_level_density: {
+    api: "api_atmosphere_sea_level_density",
+    label: "Sea Level Density",
+    visible: false,
+  },
+  api_thrust_to_weight: { api: "api_thrust_to_weight", label: "Thrust To Weight", visible: false },
+  api_wing_area: { api: "api_wing_area", label: "Wing Area", visible: false },
+  api_true_speed_knots: { api: "api_true_speed_knots", label: "True Airspeed", visible: false },
+  api_mach: { api: "api_mach", label: "Mach", visible: false },
+  api_vstall_speed_knots: { api: "api_vstall_speed_knots", label: "Vstall Speed", visible: false },
+  api_atmosphere_temperature: {
+    api: "api_atmosphere_temperature",
+    label: "Atmosphere Temperature",
+    visible: false,
+  },
+  api_atmosphere_density: { api: "api_atmosphere_density", label: "Atmosphere Density", visible: false },
+  api_total_drag: { api: "api_total_drag", label: "Total Drag", visible: false },
+  api_cl: { api: "api_cl", label: "Lift Coefficient", visible: false },
+  api_aoa_deg: { api: "api_aoa_deg", label: "Angle of Attack", visible: false },
+  api_cdi: { api: "api_cdi", label: "Drag Coefficient", visible: false },
 
   // {key: 'api_heading_hold', label: 'Heading_hold'},
   // {key: 'api_bank_hold', label: 'Bank_hold'},
@@ -108,8 +131,8 @@ export const simulationDataDisplay: SimulationDataDisplay[] = [
   // {key: 'api_target_speed', label: 'Target_speed'},
   // {key: 'api_target_mach_speed', label: 'Target_mach_speed'},
   // {key: 'api_cl0', label: 'Cl0'},
-  // {key: 'api_cdo', label: 'Cdo'},
-];
+
+};
 
 
 let ptrApiFps: number = 0;
@@ -160,9 +183,19 @@ let ptrApiGroundCollision: number = 0;
 let ptrApiLatitude: number = 0;
 let ptrApiLongitude: number = 0;
 
-export async function initializeModule(options: any) {
+
+export type ExtendedMainModule = MainModule & { simData: SimData; simDataDisplay: SimulationDataDisplay[];
+  simulationProperties: {[key: string]: SimulationProperties[]}; autopilotProperties: SimulationProperties[]} & {
+ };
+export async function initializeModule(options: any): Promise<ExtendedMainModule> {
   const module: MainModule = await MainModuleFactory(options);
-  return module;
+  const simData = new SimData();
+  const simDataDisplay = simulationDataDisplay;
+  const simulationProperties = getSimulationParameters(module, simData, () => {});
+  const autopilotProperties = getAutopilotProperties(module, simData);
+  // Extend the module with additional properties
+  const extendedModule = Object.assign(module, { simData, simDataDisplay, simulationProperties, autopilotProperties});
+  return extendedModule as ExtendedMainModule;
 }
 
 interface SimulationProperties {

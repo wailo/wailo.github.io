@@ -30,14 +30,14 @@
     </button>
   </div>
   <div
-    v-for="item in searchResults"
-    :key="item.key"
+    v-for="item in Object.values(searchResults)"
+    :key="item"
     class="cursor-pointer p-1 transition"
     :class="{
-      'bg-green-100 font-semibold': recentlyAddedKey === item.key,
-      'hover:bg-gray-100': recentlyAddedKey !== item.key,
+      'bg-green-100 font-semibold': recentlyAddedKey === item.api,
+      'hover:bg-gray-100': recentlyAddedKey !== item.api,
     }"
-    @click="showItem(item.key)"
+    @click="showItem(item.api)"
   >
     {{ item.label }}
   </div>
@@ -50,13 +50,13 @@
         <tr
           class="flex w-full border-b border-simElementBorder items-center"
           v-for="item in visibleItems"
-          :key="item.key"
+          :key="item.api"
         >
           <td class="font-medium w-3/5">{{ item.label }}</td>
-          <td class="w-1/5">{{ props.simData[item.key] }}</td>
+          <td class="w-1/5">{{ props.simData[item.api] }}</td>
           <td class="w-1/5 text-right">
             <button
-              @click="hideItem(item.key)"
+              @click="hideItem(item.api)"
               class=" hover:text-red-700 transition"
               title="Remove"
             >
@@ -71,11 +71,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { SimulationDataDisplay } from '../siminterfac'
+import { SimData, SimulationDataDisplay, SimDataKeys } from '../siminterfac'
 import Fuse from 'fuse.js'
 
 // v-model:items binding
-const items = defineModel<SimulationDataDisplay[]>('items', { required: true })
+const items = defineModel<SimulationDataDisplay>('items', { required: true })
 
 const props = defineProps<{
   simData: Record<string, any>
@@ -86,24 +86,24 @@ const isFocused = ref(false)
 const recentlyAddedKey = ref<string | null>(null)
 
 // Search setup
-const fuse = new Fuse(items.value, {
+const fuse = computed(() => new Fuse(Object.values(items.value), {
   keys: ['label'],
   threshold: 0.4,
-})
+}))
 
 const searchResults = computed(() => {
   const query = searchQuery.value.trim()
-  if (query) return fuse.search(query).map((r) => r.item)
-  if (isFocused.value) return items.value
+  if (query) return fuse.value.search(query).map((r) => r.item)
+  if (isFocused.value) return Object.values(items.value)
   return []
 })
 
 const isDropdownVisible = computed(() => isFocused.value && searchResults.value.length > 0)
-const visibleItems = computed(() => items.value.filter(item => item.visible))
+const visibleItems = computed(() => Object.values(items.value).filter((item => item.visible)))
 
 // Show single item by key
-function showItem(key: string) {
-  const item = items.value.find(i => i.key === key)
+function showItem(key: SimDataKeys) {
+  const item = items.value[key];
   if (item && !item.visible) {
     item.visible = true
     recentlyAddedKey.value = key
@@ -114,19 +114,19 @@ function showItem(key: string) {
 }
 
 // Hide single item by key
-function hideItem(key: string) {
-  const item = items.value.find(i => i.key === key)
+function hideItem(key: SimDataKeys) {
+  const item = items.value[key];
   if (item) item.visible = false
 }
 
 // Show all
 function showAll() {
-  items.value.forEach(i => (i.visible = true))
+  Object.values(items.value).forEach(i => (i.visible = true))
 }
 
 // Hide all
 function hideAll() {
-  items.value.forEach(i => (i.visible = false))
+  Object.values(items.value).forEach(i => (i.visible = false))
 }
 
 // Close dropdown when clicking outside

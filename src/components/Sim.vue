@@ -82,6 +82,7 @@
         v-if="sim_module_loaded"
         :context-object="FlightSimModule"
         :data-object="sim_data"
+        :display-data="simulationDisplayData"
         @start="(_code) => {
           scriptComponentStatus = 'IN-PROGRESS';
         }"
@@ -222,7 +223,8 @@ import {
   SimData,
   getAutopilotProperties,
   getSimulationParameters,
-  simulationDataDisplay
+  simulationDataDisplay,
+  ExtendedMainModule
 } from "../siminterfac.js";
 import Editor, { ScriptStatus } from "./Editor.vue";
 
@@ -268,8 +270,8 @@ const resetComponents = () => {
   }
 };
 
-let FlightSimModule: MainModule;
-const sim_data = reactive(new SimData());
+let FlightSimModule: ExtendedMainModule;
+let sim_data = reactive(new SimData());
 let sim_module_loaded = ref(false);
 let classRoomComponentState = ref(false);
 let scriptComponentStatus = ref<ScriptStatus>("IDLE");
