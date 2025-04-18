@@ -9,7 +9,20 @@ simControls.notifyUser(
     "The simulation will start soon"
   );
   await waitFor(7000);
-  
+
+
+// Watch key data. Altitude, mach, speed, Pitch Angle, Angle of Attack (AoA), lift coefficient (Cl)
+simControls.notifyUser("Viewing live data", "Altitude, Speed, Pitch Angle, Bank Angle");
+await waitFor(3000);
+displayData.api_altitude.visible = true;
+await waitFor(1000);
+displayData.api_ias_speed_knots.visible = true;
+await waitFor(1000);
+displayData.api_pitch_deg.visible = true;
+await waitFor(1000);
+displayData.api_bank_deg.visible = true;
+
+
   // 🔊 Throttle Up & Takeoff Roll
   simControls.notifyUser("🛫 Starting Takeoff", "Let's begin with a takeoff roll by setting throttle to 100%.\n\nCommand:\n`simControls.api_set_engine_throttle_value(1)`");
   await waitFor(5000);
