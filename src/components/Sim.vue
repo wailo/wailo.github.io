@@ -216,7 +216,6 @@ import ClassRoom from "./ClassRoom.vue";
 import SimDataDisplay from './DataDisplay.vue'
 //import PeerData from "./ClassRoom.vue";
 // import NacaAirfoil from "./NacaAirfoil.vue";
-import { MainModule } from "../../public/flightsimulator_exec.js";
 import {
   initializeModule,
   fetchSimData,

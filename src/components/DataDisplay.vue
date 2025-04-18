@@ -31,7 +31,7 @@
   </div>
   <div
     v-for="item in Object.values(searchResults)"
-    :key="item"
+    :key="item.api"
     class="cursor-pointer p-1 transition"
     :class="{
       'bg-green-100 font-semibold': recentlyAddedKey === item.api,
@@ -71,7 +71,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { SimData, SimulationDataDisplay, SimDataKeys } from '../siminterfac'
+import { SimulationDataDisplay, SimDataKeys } from '../siminterfac'
 import Fuse from 'fuse.js'
 
 // v-model:items binding

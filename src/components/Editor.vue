@@ -132,7 +132,7 @@ const props = defineProps({
     required: true,
   },
   displayData: {
-    type: Object as PropType<SimulationDataDisplay[]>,
+    type: Object as PropType<SimulationDataDisplay>,
     required: true,
   }
 });

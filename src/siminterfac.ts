@@ -116,22 +116,10 @@ export const simulationDataDisplay:  SimulationDataDisplay = {
   api_cl: { api: "api_cl", label: "Lift Coefficient", visible: false },
   api_aoa_deg: { api: "api_aoa_deg", label: "Angle of Attack", visible: false },
   api_cdi: { api: "api_cdi", label: "Drag Coefficient", visible: false },
-
-  // {key: 'api_heading_hold', label: 'Heading_hold'},
-  // {key: 'api_bank_hold', label: 'Bank_hold'},
-  // {key: 'api_level_hold', label: 'Level_hold'},
-  // {key: 'api_speed_hold', label: 'Speed_hold'},
-  // {key: 'api_mach_speed_hold', label: 'Mach_speed_hold'},
-  // {key: 'api_altitude_hold', label: 'Altitude_hold'},
-  // {key: 'api_vertical_speed_hold', label: 'Vertical_speed_hold'},
-  // {key: 'api_target_heading_deg', label: 'Target_heading_deg'},
-  // {key: 'api_target_bank_deg', label: 'Target_bank_deg'},
-  // {key: 'api_target_altitude', label: 'Target_altitude'},
-  // {key: 'api_target_vertical_speed', label: 'Target_vertical_speed'},
-  // {key: 'api_target_speed', label: 'Target_speed'},
-  // {key: 'api_target_mach_speed', label: 'Target_mach_speed'},
-  // {key: 'api_cl0', label: 'Cl0'},
-
+  api_cl0:  {api: 'api_cl0', label: 'Cl0', visible: false},
+  api_latitude: { api: "api_latitude", label: "Latitude", visible: false },
+  api_longitude: { api: "api_longitude", label: "Longitude", visible: false },
+  api_cdo: { api: "api_cdo", label: "Drag Coefficient", visible: false },
 };
 
 
@@ -184,7 +172,7 @@ let ptrApiLatitude: number = 0;
 let ptrApiLongitude: number = 0;
 
 
-export type ExtendedMainModule = MainModule & { simData: SimData; simDataDisplay: SimulationDataDisplay[];
+export type ExtendedMainModule = MainModule & { simData: SimData; simDataDisplay: SimulationDataDisplay;
   simulationProperties: {[key: string]: SimulationProperties[]}; autopilotProperties: SimulationProperties[]} & {
  };
 export async function initializeModule(options: any): Promise<ExtendedMainModule> {
