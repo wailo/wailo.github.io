@@ -18,17 +18,21 @@ export class SimData {
   api_simulation_pause: boolean = false;
   api_autopilot: boolean = false;
   api_heading_hold: boolean = false;
+  api_pitch_hold: boolean = false;
   api_bank_hold: boolean = false;
   // api_level_hold: boolean = false;
   api_speed_hold: boolean = false;
+  api_true_speed_hold: boolean = false;
   api_mach_speed_hold: boolean = false;
   api_altitude_hold: boolean = false;
   api_vertical_speed_hold: boolean = false;
   api_target_heading_deg: number = 0;
+  api_target_pitch_deg: number = 0;
   api_target_bank_deg: number = 0;
   api_target_altitude: number = 0;
   api_target_vertical_speed: number = 0;
   api_target_speed: number = 0;
+  api_target_true_speed: number = 0;
   api_target_mach_speed: number = 0;
   api_atmosphere_sea_level_temperature: number = 0;
   api_atmosphere_sea_level_density: number = 0;
@@ -81,15 +85,19 @@ export const simulationDataDisplay:  SimulationDataDisplay = {
   api_autopilot: { api: "api_autopilot", label: "Autopilot Master Switch", visible: false },
   api_heading_hold: { api: "api_heading_hold", label: "Heading Hold", visible: false },
   api_bank_hold: { api: "api_bank_hold", label: "Bank Hold", visible: false },
+  api_pitch_hold: { api: "api_pitch_hold", label: "Pitch Hold", visible: false },
   api_speed_hold: { api: "api_speed_hold", label: "Speed Hold", visible: false },
+  api_true_speed_hold: { api: "api_true_speed_hold", label: "True Speed Hold", visible: false },
   api_mach_speed_hold: { api: "api_mach_speed_hold", label: "Mach Speed Hold", visible: false },
   api_altitude_hold: { api: "api_altitude_hold", label: "Altitude Hold", visible: false },
   api_vertical_speed_hold: { api: "api_vertical_speed_hold", label: "Vertical Speed Hold", visible: false },
   api_target_heading_deg: { api: "api_target_heading_deg", label: "Target Heading", visible: false },
   api_target_bank_deg: { api: "api_target_bank_deg", label: "Target Bank", visible: false },
+  api_target_pitch_deg: { api: "api_target_pitch_deg", label: "Target Pitch", visible: false },
   api_target_altitude: { api: "api_target_altitude", label: "Target Altitude", visible: false },
   api_target_vertical_speed: { api: "api_target_vertical_speed", label: "Target Vertical Speed", visible: false },
   api_target_speed: { api: "api_target_speed", label: "Target Speed", visible: false },
+  api_target_true_speed: { api: "api_target_true_speed", label: "Target True Speed", visible: false },
   api_target_mach_speed: { api: "api_target_mach_speed", label: "Target Mach Speed", visible: false },
   api_atmosphere_sea_level_temperature: {
     api: "api_atmosphere_sea_level_temperature",
@@ -138,17 +146,21 @@ let ptrApiPitchDeg: number = 0;
 let ptrApiBankDeg: number = 0;
 let ptrApiAutopilot: number = 0;
 let ptrApiHeadingHold: number = 0;
+let ptrApiPitchHold: number = 0;
 let ptrApiBankHold: number = 0;
 // let ptrApiLevelHold: number = 0;
 let ptrApiSpeedHold: number = 0;
+let ptrApiTrueSpeedHold: number = 0;
 let ptrApiMachSpeedHold: number = 0;
 let ptrApiAltitudeHold: number = 0;
 let ptrApiVerticalSpeedHold: number = 0;
 let ptrApiTargetHeadingDeg: number = 0;
+let ptrApiTargetPitchDeg: number = 0;
 let ptrApiTargetBankDeg: number = 0;
 let ptrApiTargetAltitude: number = 0;
 let ptrApiTargetVerticalSpeed: number = 0;
 let ptrApiTargetSpeed: number = 0;
+let ptrApiTargetTrueSpeed: number = 0;
 let ptrApiTargetMachSpeed: number = 0;
 let ptrApiAtmosphereSeaLevelTemperature: number = 0;
 let ptrApiAtmosphereSeaLevelDensity: number = 0;
@@ -218,17 +230,21 @@ function init(module: MainModule) {
   ptrApiBankDeg = module._api_bank_deg() >> 2;
   ptrApiAutopilot = module._api_autopilot();
   ptrApiHeadingHold = module._api_heading_hold();
+  ptrApiPitchHold = module._api_pitch_hold();
   ptrApiBankHold = module._api_bank_hold();
   // ptrApiLevelHold = module._api_level_hold();
   ptrApiSpeedHold = module._api_speed_hold();
+  ptrApiTrueSpeedHold = module._api_true_speed_hold();
   ptrApiMachSpeedHold = module._api_mach_speed_hold();
   ptrApiAltitudeHold = module._api_altitude_hold();
   ptrApiVerticalSpeedHold = module._api_vertical_speed_hold();
   ptrApiTargetHeadingDeg = module._api_target_heading_deg() >> 2;
+  ptrApiTargetPitchDeg = module._api_target_pitch_deg() >> 2;
   ptrApiTargetBankDeg = module._api_target_bank_deg() >> 2;
   ptrApiTargetAltitude = module._api_target_altitude() >> 2;
   ptrApiTargetVerticalSpeed = module._api_target_vertical_speed() >> 2;
   ptrApiTargetSpeed = module._api_target_speed() >> 2;
+  ptrApiTargetTrueSpeed = module._api_target_true_speed() >> 2;
   ptrApiTargetMachSpeed = module._api_target_mach_speed() >> 2;
   ptrApiAtmosphereSeaLevelTemperature =
     module._api_atmosphere_sea_level_temperature() >> 2;
@@ -287,17 +303,21 @@ export async function fetchSimData(module: MainModule, payload: SimData) {
   payload.api_simulation_pause = module.HEAP8[ptrApiSimulationPause] !== 0;
   payload.api_autopilot = module.HEAP8[ptrApiAutopilot] !== 0;
   payload.api_heading_hold = module.HEAP8[ptrApiHeadingHold] !== 0;
+  payload.api_pitch_hold = module.HEAP8[ptrApiPitchHold] !== 0;
   payload.api_bank_hold = module.HEAP8[ptrApiBankHold] !== 0;
   // payload.api_level_hold = module.HEAP8[ptrApiLevelHold] !== 0;
   payload.api_speed_hold = module.HEAP8[ptrApiSpeedHold] !== 0;
+  payload.api_true_speed_hold = module.HEAP8[ptrApiTrueSpeedHold] !== 0;
   payload.api_mach_speed_hold = module.HEAP8[ptrApiMachSpeedHold] !== 0;
   payload.api_altitude_hold = module.HEAP8[ptrApiAltitudeHold] !== 0;
   payload.api_vertical_speed_hold = module.HEAP8[ptrApiVerticalSpeedHold] !== 0;
   payload.api_target_heading_deg = module.HEAP32[ptrApiTargetHeadingDeg];
+  payload.api_target_pitch_deg = module.HEAP32[ptrApiTargetPitchDeg];
   payload.api_target_bank_deg = module.HEAP32[ptrApiTargetBankDeg];
   payload.api_target_altitude = module.HEAP32[ptrApiTargetAltitude];
   payload.api_target_vertical_speed = module.HEAP32[ptrApiTargetVerticalSpeed];
   payload.api_target_speed = module.HEAP32[ptrApiTargetSpeed]
+  payload.api_target_true_speed = module.HEAP32[ptrApiTargetTrueSpeed]
   payload.api_target_mach_speed = module.HEAP32[ptrApiTargetMachSpeed]
   payload.api_atmosphere_sea_level_temperature = round(
     module.HEAPF32[ptrApiAtmosphereSeaLevelTemperature],
@@ -311,7 +331,7 @@ export async function fetchSimData(module: MainModule, payload: SimData) {
   payload.api_cl0 = round(module.HEAPF32[ptrApiCl0], 4);
   payload.api_cdo = round(module.HEAPF32[ptrApiCdo], 4);
   payload.api_wing_area = round(module.HEAPF32[ptrApiWingArea], 0);
-  payload.api_true_speed_knots = round(module.HEAPF32[ptrApiTrueSpeedKnots], 2);
+  payload.api_true_speed_knots = round(module.HEAPF32[ptrApiTrueSpeedKnots], 0);
   payload.api_mach = round(module.HEAPF32[ptrApiMach], 2);
   payload.api_vstall_speed_knots = round(
     module.HEAPF32[ptrApiVstallSpeedKnots],
@@ -379,6 +399,21 @@ export function getAutopilotProperties(
       step: 1.0,
     },
     {
+      id: "pitchHold",
+      label: "PITCH",
+      inputValue: payload.api_target_pitch_deg,
+      stateValue: payload.api_pitch_hold,
+      toggleFunc: () => module.api_set_pitch_hold(!payload.api_pitch_hold),
+      toggleFuncStr: () => `api_set_pitch_hold(${!payload.api_pitch_hold})`,
+      setterFunc: (newVal: string) =>
+        module.api_set_target_pitch_deg(Number(newVal)),
+      setterFuncStr: (newVal: string) => `api_set_target_pitch_deg(${newVal})`,
+      unit: "°",
+      min: -40,
+      max: 40,
+      step: 1.0,
+    },
+    {
       id: "altitudeHold",
       label: "ALTITUDE",
       inputValue: payload.api_target_altitude,
@@ -429,8 +464,23 @@ export function getAutopilotProperties(
       step: 1,
     },
     {
+      id: "speedHold",
+      label: "TRUE SPEED",
+      inputValue: payload.api_target_true_speed,
+      stateValue: payload.api_true_speed_hold,
+      toggleFunc: () => module.api_set_true_speed_hold(!payload.api_true_speed_hold),
+      toggleFuncStr: () => `api_set_speed_hold(${!payload.api_true_speed_hold})`,
+      setterFunc: (newVal: string) =>
+        module.api_set_target_true_speed(Number(newVal)),
+      setterFuncStr: (newVal: string) => `api_set_target_true_speed(${newVal})`,
+      unit: "kt",
+      min: 0,
+      max: 350,
+      step: 1,
+    },
+    {
       id: "machHold",
-      label: "MACH",
+      label: "MACH SPEED",
       inputValue: payload.api_target_mach_speed / 1000,
       stateValue: payload.api_mach_speed_hold,
       toggleFunc: () =>

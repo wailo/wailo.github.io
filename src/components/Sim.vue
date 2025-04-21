@@ -102,7 +102,7 @@
       class="panel-5"
     >
     <template #Autopilot>
-      <div class="w-full h-full grid grid-cols-3 gap-1">
+      <div class="w-full h-full grid grid-cols-4 gap-1">
         <button-switch
           v-if="sim_module_loaded"
           class="border border-simElementBorder"
@@ -130,7 +130,7 @@
           :inputMin="input.min"
           :inputMax="input.max"
           :inputStep="input.step"
-          :class="input.inputValue == undefined ? 'col-span-3' : ''"
+          :class="input.inputValue == undefined ? 'col-span-4' : ''"
         ></button-switch>
       </div>
       </template>
