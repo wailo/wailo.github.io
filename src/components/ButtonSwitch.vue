@@ -79,10 +79,10 @@ const props = defineProps({
 });
 
 const buttonWidth = computed(() =>
-  props.textInput != undefined ? "w-8/12" : "w-full",
+  props.textInput != undefined ? "w-7/12" : "w-full",
 );
 const inputWidth = computed(() =>
-  props.textInput != undefined ? "w-4/12" : "w-full",
+  props.textInput != undefined ? "w-5/12" : "w-full",
 );
 </script>
 
