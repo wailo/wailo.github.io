@@ -229,20 +229,36 @@ const simControls = arguments[0];
 const simData = arguments[1];
 const displayData = arguments[2];
 
-const waitForCondition = (conditionFunction, ms=400) => {
-    const poll = (resolve) => {
-        if (conditionFunction() === true) {
-            resolve()
-        }
-        else {
+// Function to wait for a condition to be true after a given confirmation time in ms
+// This function will poll the conditionFunction every pollInterval ms
+const waitForCondition = (conditionFunction, confirmation_ms = 0, pollInterval_ms = 400) => {
+    const maxAttempts = Math.ceil(confirmation_ms / pollInterval_ms);
+    let attempts = 0;
+    let resolved = false;
 
+    const poll = (resolve) => {
+        if (resolved) return;
+
+        if (conditionFunction() === true) {
+            attempts++;
+            if (attempts >= maxAttempts) {
+                resolved = true;
+                resolve();
+            } else {
+                setTimeout(() => poll(resolve), pollInterval_ms);
+            }
+        } else {
             if (window.flag) {
-                setTimeout((_) => poll(resolve), ms)
+                attempts = 0;
+                setTimeout(() => poll(resolve), pollInterval_ms);
             }
         }
-    }
-    return new Promise(poll)
-}
+    };
+
+    return new Promise(poll);
+};
+
+
 
 // Wait for a given time in ms without interrupting the simulation
 const waitFor = (ms) => {
