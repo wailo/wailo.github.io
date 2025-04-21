@@ -30,7 +30,7 @@ displayData.api_bank_deg.visible = true;
   
   // 🧭 Enable Autopilot
 simControls.notifyUser("🔧 Enabling Autopilot", "We’ll now activate and configure the autopilot to begin managing the climb.\n\nCommand:\n`simControls.api_set_autopilot(true)`\n\n" +
-  "Set key autopilot parameters:\n• Target Speed: 280 KT\n• Target Altitude: FL330\n• Vertical Speed: 3000 ft/min\n• Heading: 270°\n\n" +
+  "Set key autopilot parameters:\n• Target Speed: 280 KT\n• Target Altitude: FL180\n• Vertical Speed: 3000 ft/min\n• Heading: 270°\n\n" +
   "These inputs reflect how lessons control the aircraft state.\n" +
     "Each setting is sent as an API call.");
   await waitFor(6000);
@@ -38,7 +38,7 @@ simControls.notifyUser("🔧 Enabling Autopilot", "We’ll now activate and conf
   await waitFor(1000);
   simControls.api_set_target_speed(280);
   await waitFor(1000);
-  simControls.api_set_target_altitude(33000);
+  simControls.api_set_target_altitude(18000);
   await waitFor(1000);
   simControls.api_set_target_heading_deg(270);
   await waitFor(1000);
@@ -47,11 +47,11 @@ simControls.notifyUser("🔧 Enabling Autopilot", "We’ll now activate and conf
   // ⏳ Wait for Takeoff Conditions
   simControls.notifyUser(
     "⌛ Monitoring Takeoff Progress",
-    "We'll wait for indicated airspeed to exceed 180 KT before continuing.\n\n" +
+    "We'll wait for indicated airspeed to exceed 150 KT before continuing.\n\n" +
     "✅ This shows how wait conditions allow scripted lessons to flow automatically based on real aircraft data."
   );
 //   await waitFor(6000);
-  await waitForCondition(() => simData.api_ias_speed_knots > 180);
+  await waitForCondition(() => simData.api_ias_speed_knots >= 150);
   
   // ✅ Lock in Controls
   simControls.notifyUser("✅ Engaging Autopilot Modes", "Now enabling vertical speed and speed hold modes.");
@@ -111,9 +111,9 @@ simControls.notifyUser("🔧 Enabling Autopilot", "We’ll now activate and conf
   simControls.api_set_simulation_speed(100);
   
   // ⏳ Wait for Cruise
-  simControls.notifyUser("⏳ Climbing to FL330", "Waiting for aircraft to reach 33,000 ft...");
-  await waitForCondition(() => simData.api_altitude > 33000);
-  simControls.notifyUser("⏳ Climbing to FL330", "Reacehd to 33,000 ft");
+  simControls.notifyUser("⏳ Climbing to FL180", "Waiting for aircraft to reach 18,000 ft...");
+  await waitForCondition(() => simData.api_altitude >= 18000);
+  simControls.notifyUser("⏳ Climbing to FL180", "Reacehd to 18,000 ft");
   await waitFor(6000);
   
   // ⏱️ Return to Normal Speed
@@ -121,10 +121,6 @@ simControls.notifyUser("🔧 Enabling Autopilot", "We’ll now activate and conf
   await waitFor(5000);
   simControls.api_set_simulation_speed(1);
   
-  // 🔁 Reset Simulation (Now Visible)
-  simControls.notifyUser("🔁 Full Reset", "Let’s now show how to completely reset the simulation state.\n\nCommand:\n`simControls.api_set_simulation_reset()`");
-  await waitFor(5000);
-  simControls.api_set_simulation_reset();
   
   // ✅ Wrap-up
   simControls.notifyUser(
