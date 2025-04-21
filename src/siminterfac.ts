@@ -347,7 +347,7 @@ export async function fetchSimData(module: MainModule, payload: SimData) {
   );
   payload.api_total_drag = round(module.HEAPF32[PtrApiTotalDrag], 2);
   payload.api_cl = round(module.HEAPF32[ptrApiCl], 4);
-  payload.api_aoa_deg = round(module.HEAPF32[ptrApiAoaDeg], 4);
+  payload.api_aoa_deg = round(module.HEAPF32[ptrApiAoaDeg], 2);
   payload.api_cdi = round(module.HEAPF32[ptrApiCdi], 4);
   payload.api_ground_collision = module.HEAP8[ptrApiGroundCollision] !== 0;
 
