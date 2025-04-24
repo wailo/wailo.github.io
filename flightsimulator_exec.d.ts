@@ -139,38 +139,6 @@ declare namespace RuntimeExports {
 }
 interface WasmModule {
   _main(_0: number, _1: number): number;
-  _api_set_autopilot(_0: number): void;
-  _api_set_heading_hold(_0: number): void;
-  _api_set_pitch_hold(_0: number): void;
-  _api_set_bank_hold(_0: number): void;
-  _api_set_altitude_hold(_0: number): void;
-  _api_set_vertical_speed_hold(_0: number): void;
-  _api_set_speed_hold(_0: number): void;
-  _api_set_mach_speed_hold(_0: number): void;
-  _api_set_target_heading_deg(_0: number): void;
-  _api_set_target_pitch_deg(_0: number): void;
-  _api_set_target_bank_deg(_0: number): void;
-  _api_set_target_altitude(_0: number): void;
-  _api_set_target_vertical_speed(_0: number): void;
-  _api_set_target_speed(_0: number): void;
-  _api_set_target_mach_speed(_0: number): void;
-  _api_set_wing_area(_0: number): number;
-  _api_set_engine_throttle_value(_0: number): number;
-  _api_set_thrust_to_weight(_0: number): number;
-  _api_set_empty_weight(_0: number): number;
-  _api_set_landing_gear_position(_0: number): number;
-  _api_set_dcl(_0: number): number;
-  _api_set_cdo(_0: number): number;
-  _api_set_simulation_pause(_0: number): number;
-  _api_set_simulation_speed(_0: number): void;
-  _api_set_update_rate(_0: number): void;
-  _api_set_simulation_reset(): void;
-  _api_set_atmosphere_sea_level_temperature(_0: number): void;
-  _api_set_atmosphere_sea_level_density(_0: number): void;
-  _api_increment_aileron(): void;
-  _api_decrement_aileron(): void;
-  _api_increment_elevator(): void;
-  _api_decrement_elevator(): void;
   _api_fps(): number;
   _api_ups(): number;
   _api_weight(): number;
@@ -184,6 +152,12 @@ interface WasmModule {
   _api_alpha_tail(): number;
   _api_alpha_aileron(): number;
   _api_throttle(): number;
+  _api_landing_gear_selector_position(): number;
+  _api_flaps_selector_position(): number;
+  _api_rudder_position(): number;
+  _api_aileron_trim_position(): number;
+  _api_elevator_trim_position(): number;
+  _api_rudder_trim_position(): number;
   _api_ias_speed_knots(): number;
   _api_true_speed_knots(): number;
   _api_mach(): number;
@@ -228,6 +202,11 @@ export interface GearSelectorValue<T extends number> {
 }
 export type GearSelector = GearSelectorValue<0>|GearSelectorValue<1>|GearSelectorValue<2>;
 
+export interface FlapSelectorValue<T extends number> {
+  value: T;
+}
+export type FlapSelector = FlapSelectorValue<0>|FlapSelectorValue<1>|FlapSelectorValue<5>|FlapSelectorValue<10>|FlapSelectorValue<20>|FlapSelectorValue<25>|FlapSelectorValue<30>;
+
 interface EmbindModule {
   api_set_altitude_hold(_0: boolean): void;
   api_set_atmosphere_sea_level_density(_0: number): void;
@@ -254,12 +233,20 @@ interface EmbindModule {
   api_set_target_mach_speed(_0: number): void;
   api_set_target_vertical_speed(_0: number): void;
   api_set_thrust_to_weight(_0: number): boolean;
-  api_set_landing_gear_position(_0: number): boolean;
   api_set_update_rate(_0: number): void;
   api_set_vertical_speed_hold(_0: boolean): void;
   api_set_wing_area(_0: number): boolean;
   api_set_empty_weight(_0: number): boolean;
+  api_set_aileron_position(_0: number): void;
+  api_set_elevator_position(_0: number): void;
+  api_set_rudder_position(_0: number): void;
+  api_set_aileron_trim_position(_0: number): void;
+  api_set_rudder_trim_position(_0: number): void;
+  api_set_elevator_trim_position(_0: number): void;
+  api_set_landing_gear_selector_position(_0: GearSelector): boolean;
   GearSelector: {OFF: GearSelectorValue<0>, UP: GearSelectorValue<1>, DOWN: GearSelectorValue<2>};
+  api_set_flaps_selector_position(_0: FlapSelector): boolean;
+  FlapSelector: {ZERO: FlapSelectorValue<0>, ONE: FlapSelectorValue<1>, FIVE: FlapSelectorValue<5>, TEN: FlapSelectorValue<10>, TWENTY: FlapSelectorValue<20>, TWENTFIVE: FlapSelectorValue<25>, THIRTY: FlapSelectorValue<30>};
 }
 
 export type MainModule = WasmModule & typeof RuntimeExports & EmbindModule;

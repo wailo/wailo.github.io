@@ -68,7 +68,7 @@ simControls.notifyUser("🔧 Enabling Autopilot", "We’ll now activate and conf
   // ✅ Lock in Controls
   simControls.notifyUser("✅ Engaging Autopilot Modes", "Now enabling pitch angle and speed hold modes.");
   await waitFor(1000);
-  simControls.api_set_pitch_hold(true);
+  simControls.api_set_elevator_position(-0.25)
   simControls.api_set_speed_hold(true);
   await waitFor(3000);
   
@@ -78,7 +78,8 @@ simControls.notifyUser("🔧 Enabling Autopilot", "We’ll now activate and conf
 await waitForCondition(() => simData.api_vertical_speed > 400, 3000); 
   // await waitForCondition(() => simData.api_altitude > 200);
   simControls.notifyUser("🛬 Gear Retraction", "Positive climb rate, retacting landing gear and increasing speed.");
-  simControls.api_set_landing_gear_position(simControls.GearSelector.UP.value);
+   simControls.api_set_pitch_hold(true);
+  simControls.api_set_landing_gear_selector_position(simControls.GearSelector.UP);
   simControls.api_set_target_speed(210);
   await waitFor(3000);
   
