@@ -1,12 +1,11 @@
-
 export type ModuleEntry = {
     name: string;
     path: string;
   };
-  
+
   export type ModuleTree = Record<string, ModuleEntry[]>;
-  
- 
+
+
   export const moduleTree: ModuleTree = {
     "Demo": [
         {name: "Intro", path: "/LearningModules/demo.ts"},
@@ -20,6 +19,11 @@ export type ModuleEntry = {
         { name: "Monitor Lift Generation in Flight", path: "/LearningModules/lift_generation.ts" },
         { name: "Increase Airspeed and Observe Lift Changes", path : "/LearningModules/lift_vs_speed.ts" },
         { name: "Effect of Altitude on Lift", path: "/LearningModules/lift_vs_altitude.ts" }
+    ],
+    "Stability modes": [
+        { name: "Phugiod mode", path: "/LearningModules/phugiod_mode.ts" },
+        { name: "Dutch Roll", path : "/LearningModules/dutch_roll.ts" },
+
     ],
     // "Relationship Between Pressure, Velocity, and Airflow": [
     //     { name: "The Relationship Between Velocity and Pressure", content: "" },

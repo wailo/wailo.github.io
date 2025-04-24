@@ -1,5 +1,8 @@
 import MainModuleFactory, { MainModule } from "../public/flightsimulator_exec";
 
+let FlapSelectorKeys: { [key: number]: string } = {};
+let GearSelectorKeys: { [key: number]: string } = {};
+
 export class SimData {
   api_fps: number = 0;
   api_ups: number = 0;
@@ -10,6 +13,14 @@ export class SimData {
   api_vertical_speed: number = 0;
   api_alpha_tail: number = 0;
   api_alpha_aileron: number = 0;
+  api_landing_gear_selector_position :number = 0
+  api_landing_gear_selector_position_name :string = "";
+  api_flaps_selector_position :number = 0;
+  api_flaps_selector_position_name :string = "";
+  api_rudder_position: number = 0;
+  api_aileron_trim_position: number = 0;
+  api_elevator_trim_position: number = 0;
+  api_rudder_trim_position: number = 0;
   api_throttle: number = 0;
   api_ias_speed_knots: number = 0;
   api_heading_deg: number = 0;
@@ -77,6 +88,14 @@ export const simulationDataDisplay:  SimulationDataDisplay = {
   api_alpha_tail: { api: "api_alpha_tail", label: "Elevator", visible: false },
   api_alpha_aileron: { api: "api_alpha_aileron", label: "Aileron", visible: false },
   api_throttle: { api: "api_throttle", label: "Throttle", visible: false },
+  api_landing_gear_selector_position : { api: "api_landing_gear_selector_position", label: "Landing Gear Selector Position", visible: false },
+  api_landing_gear_selector_position_name : { api: "api_landing_gear_selector_position_name", label: "Landing Gear Selector Position Name", visible: false },
+  api_flaps_selector_position : { api: "api_flaps_selector_position", label: "Flap Selector Position", visible: false },
+  api_flaps_selector_position_name : { api: "api_flaps_selector_position_name", label: "Flap Selector Position Name", visible: false },
+  api_rudder_position: { api: "api_rudder_position", label: "Rudder Position", visible: false },
+  api_aileron_trim_position: { api: "api_aileron_trim_position", label: "Aileron Trim Position", visible: false },
+  api_elevator_trim_position: { api: "api_elevator_trim_position", label: "Elevator Trim Position", visible: false },
+  api_rudder_trim_position:  { api: "api_rudder_trim_position", label: "Rudder Trim Position", visible: false },
   api_ias_speed_knots: { api: "api_ias_speed_knots", label: "IAS Speed", visible: false },
   api_heading_deg: { api: "api_heading_deg", label: "Heading", visible: false },
   api_pitch_deg: { api: "api_pitch_deg", label: "Pitch", visible: false },
@@ -139,6 +158,12 @@ let ptrApiAltitude: number = 0;
 let ptrApiVerticalSpeed: number = 0;
 let ptrApiAlphaTail: number = 0;
 let ptrApiAlphaAileron: number = 0;
+let ptrApiLandingGearSelectorPosition: number = 0;
+let ptrApiFlapSelectorPosition: number = 0;
+let ptrApiRudderPosition: number = 0;
+let ptrApiAileronTrimPosition: number = 0;
+let ptrApiElevatorTrimPosition: number = 0;
+let ptrApiRudderTrimPosition: number = 0;
 let ptrApiThrottle: number = 0;
 let ptrApiIasSpeedKnots: number = 0;
 let ptrApiHeadingDeg: number = 0;
@@ -195,6 +220,16 @@ export async function initializeModule(options: any): Promise<ExtendedMainModule
   const autopilotProperties = getAutopilotProperties(module, simData);
   // Extend the module with additional properties
   const extendedModule = Object.assign(module, { simData, simDataDisplay, simulationProperties, autopilotProperties});
+
+  // Convert to value - string for quick lookup.
+  FlapSelectorKeys = Object.entries(module.FlapSelector).slice(2).reduce((acc: { [key: number]: string }, v: [string, { value: number }]) => {
+    acc[v[1].value] = v[0];
+    return acc;
+  }, {} as { [key: number]: string });
+  GearSelectorKeys = Object.entries(module.GearSelector).slice(2).reduce((acc: { [key: number]: string }, v: [string, { value: number }]) => {
+    acc[v[1].value] = v[0];
+    return acc;
+  }, {} as { [key: number]: string });
   return extendedModule as ExtendedMainModule;
 }
 
@@ -223,6 +258,12 @@ function init(module: MainModule) {
   ptrApiVerticalSpeed = module._api_vertical_speed() >> 2;
   ptrApiAlphaTail = module._api_alpha_tail() >> 2;
   ptrApiAlphaAileron = module._api_alpha_aileron() >> 2;
+  ptrApiLandingGearSelectorPosition = module._api_landing_gear_selector_position() >> 2;
+  ptrApiFlapSelectorPosition = module._api_flaps_selector_position() >> 2;
+  ptrApiRudderPosition = module._api_rudder_position() >> 2;
+  ptrApiAileronTrimPosition = module._api_aileron_trim_position() >> 2;
+  ptrApiElevatorTrimPosition = module._api_elevator_trim_position() >> 2;
+  ptrApiRudderTrimPosition = module._api_rudder_trim_position() >> 2;
   ptrApiThrottle = module._api_throttle() >> 2;
   ptrApiIasSpeedKnots = module._api_ias_speed_knots() >> 2;
   ptrApiHeadingDeg = module._api_heading_deg() >> 2;
@@ -294,6 +335,14 @@ export async function fetchSimData(module: MainModule, payload: SimData) {
   payload.api_altitude = round(module.HEAPF32[ptrApiAltitude], 0);
   payload.api_vertical_speed = round(module.HEAPF32[ptrApiVerticalSpeed], 0);
   payload.api_alpha_tail = round(module.HEAPF32[ptrApiAlphaTail], 3);
+  payload.api_landing_gear_selector_position = module.HEAP32[ptrApiLandingGearSelectorPosition]
+  payload.api_landing_gear_selector_position_name = GearSelectorKeys[module.HEAP32[ptrApiLandingGearSelectorPosition]]
+  payload.api_flaps_selector_position = module.HEAP32[ptrApiFlapSelectorPosition];
+  payload.api_flaps_selector_position_name = FlapSelectorKeys[module.HEAP32[ptrApiFlapSelectorPosition]];
+  payload.api_rudder_position = round(module.HEAPF32[ptrApiRudderPosition], 2);
+  payload.api_aileron_trim_position = round(module.HEAPF32[ptrApiAileronTrimPosition], 2);
+  payload.api_elevator_trim_position = round(module.HEAPF32[ptrApiElevatorTrimPosition], 2);
+  payload.api_rudder_trim_position = round(module.HEAPF32[ptrApiRudderTrimPosition], 2);
   payload.api_alpha_aileron = round(module.HEAPF32[ptrApiAlphaAileron], 3);
   payload.api_throttle = round(module.HEAPF32[ptrApiThrottle], 3);
   payload.api_ias_speed_knots = round(module.HEAPF32[ptrApiIasSpeedKnots], 0);

@@ -37,13 +37,13 @@
   });
 
   // Landing gear up
-  simControls.api_set_landing_gear_position(simControls.GearSelector.UP.value);
+  simControls.api_set_landing_gear_selector_position(simControls.GearSelector.UP);
 
   // Wait until the altitude crosses 300
   await waitForCondition(() => {
-    return simData.api_altitude == target_altitude && 
-    simData.api_ias_speed_knots == target_speed &&
-    simData.api_heading_deg == target_heading; 
+    return Math.abs(simData.api_altitude - target_altitude) < 0.1 && 
+    Math.abs(simData.api_ias_speed_knots - target_speed) < 0.1 &&
+    Math.abs(simData.api_heading_deg - target_heading) < 0.1; 
   });
 
   // Restore Simulation speed to 1
