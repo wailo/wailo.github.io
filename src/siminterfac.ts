@@ -653,17 +653,17 @@ export function getSimulationParameters(
         max: 500000,
         step: 1.0,
       },
-      {
-        label: "Thrust to Weight Ratio",
-        inputValue: payload.api_thrust_to_weight,
-        setterFunc: (newVal: string) =>
-          module.api_set_thrust_to_weight(Number(newVal)),
-        setterFuncStr: (newVal: string) =>
-          `api_set_thrust_to_weight(${newVal})`,
-        min: 0.1,
-        max: 5,
-        step: 0.1,
-      },
+      // {
+      //   label: "Thrust to Weight Ratio",
+      //   inputValue: payload.api_thrust_to_weight,
+      //   setterFunc: (newVal: string) =>
+      //     module.api_set_thrust_to_weight(Number(newVal)),
+      //   setterFuncStr: (newVal: string) =>
+      //     `api_set_thrust_to_weight(${newVal})`,
+      //   min: 0.1,
+      //   max: 5,
+      //   step: 0.1,
+      // },
       {
         label: "Wing Area",
         inputValue: payload.api_wing_area,
@@ -686,15 +686,15 @@ export function getSimulationParameters(
         max: 5,
         step: 0.01,
       },
-      {
-        label: "Drag Cofficient",
-        inputValue: payload.api_cdo,
-        setterFunc: (newVal: string) => module.api_set_cdo(Number(newVal)),
-        setterFuncStr: (newVal: string) => `api_set_cdo(${newVal})`,
-        min: 0.01,
-        max: 1.0,
-        step: 0.0001,
-      },
+      // {
+      //   label: "Drag Cofficient",
+      //   inputValue: payload.api_cdo,
+      //   setterFunc: (newVal: string) => module.api_set_cdo(Number(newVal)),
+      //   setterFuncStr: (newVal: string) => `api_set_cdo(${newVal})`,
+      //   min: 0.01,
+      //   max: 1.0,
+      //   step: 0.0001,
+      // },
     ],
     Atmosphere: [
       {
