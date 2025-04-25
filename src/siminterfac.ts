@@ -675,15 +675,15 @@ export function getSimulationParameters(
       },
       {
         label: "Sea Level Density",
-        unit: "Slug/ft³",
+        unit: "kg/m³",
         inputValue: payload.api_atmosphere_sea_level_density,
         setterFunc: (newVal: string) =>
           module.api_set_atmosphere_sea_level_density(Number(newVal)),
         setterFuncStr: (newVal: string) =>
           `api_set_atmosphere_sea_level_density(${newVal})`,
-        min: 0.001756,
-        max: 0.002939,
-        step: 0.000001,
+        min: 0.001,
+        max: 1.8,
+        step: 0.001,
       },
     ],
   };
