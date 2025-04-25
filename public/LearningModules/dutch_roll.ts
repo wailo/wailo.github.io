@@ -16,6 +16,8 @@ displayData.api_heading_deg.visible = true;
 displayData.api_pitch_deg.visible = true;
 displayData.api_bank_deg.visible = true;
 displayData.api_ias_speed_knots.visible = true;
+simControls.api_set_aileron_position(0.0)
+simControls.api_set_rudder_position(0.0)
 await waitFor(5000)
 
 simControls.notifyUser("Initiating Dutch Roll mode", "Applying rudder input for 2 seconds in each direction then returning to neutral position.\n\n")
@@ -23,7 +25,7 @@ await waitFor(5000)
 simControls.api_set_rudder_position(-1.0)
 await waitFor(2500)
 simControls.api_set_rudder_position(1.0)
-await waitFor(2500)
+await waitFor(3000)
 simControls.api_set_rudder_position(0.0)
 simControls.notifyUser("Dutch Roll mode", "We will observer the dutch roll in slow motion, Observe how the aircraft oscillates. Observe changes in yaw, roll, and sideslip angles.\n\n")
 simControls.api_set_simulation_speed(0.5);
