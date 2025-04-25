@@ -12,7 +12,7 @@ await reposition_with_autopilot(30000, 180, 0);
 simControls.api_set_autopilot(false);
 displayData.api_rudder_position.visible = true;
 displayData.api_alpha_aileron.visible = true;
-displayData.api_heading_deg.visible = true;
+displayData.api_sideslip_deg.visible = true;
 displayData.api_pitch_deg.visible = true;
 displayData.api_bank_deg.visible = true;
 displayData.api_ias_speed_knots.visible = true;

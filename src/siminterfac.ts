@@ -27,6 +27,8 @@ export class SimData {
   api_heading_deg: number = 0;
   api_pitch_deg: number = 0;
   api_bank_deg: number = 0;
+  api_sideslip_deg: number = 0;
+  api_heading_dot_deg: number = 0;
   api_simulation_pause: boolean = false;
   api_autopilot: boolean = false;
   api_heading_hold: boolean = false;
@@ -104,6 +106,8 @@ export const simulationDataDisplay:  SimulationDataDisplay = {
   api_heading_deg: { api: "api_heading_deg", label: "Heading", visible: false },
   api_pitch_deg: { api: "api_pitch_deg", label: "Pitch", visible: false },
   api_bank_deg: { api: "api_bank_deg", label: "Bank", visible: false },
+  api_sideslip_deg: {api: "api_sideslip_deg", label: "Side Slip", visible: false},
+  api_heading_dot_deg: {api: "api_heading_dot_deg", label: "Heading Change Rate", visible: false }, 
   api_simulation_pause: { api: "api_simulation_pause", label: "Simulation Pause", visible: false },
   api_autopilot: { api: "api_autopilot", label: "Autopilot Master Switch", visible: false },
   api_heading_hold: { api: "api_heading_hold", label: "Heading Hold", visible: false },
@@ -175,6 +179,8 @@ let ptrApiIasSpeedKnots: number = 0;
 let ptrApiHeadingDeg: number = 0;
 let ptrApiPitchDeg: number = 0;
 let ptrApiBankDeg: number = 0;
+let ptrApiSideSlipDeg: number = 0;
+let ptrApiHeadingDotDeg: number = 0;
 let ptrApiAutopilot: number = 0;
 let ptrApiHeadingHold: number = 0;
 let ptrApiPitchHold: number = 0;
@@ -277,6 +283,8 @@ function init(module: MainModule) {
   ptrApiHeadingDeg = module._api_heading_deg() >> 2;
   ptrApiPitchDeg = module._api_pitch_deg() >> 2;
   ptrApiBankDeg = module._api_bank_deg() >> 2;
+  ptrApiSideSlipDeg = module._api_sideslip_deg() >> 2;
+  ptrApiHeadingDotDeg = module._api_heading_dot_deg() >> 2;
   ptrApiAutopilot = module._api_autopilot();
   ptrApiHeadingHold = module._api_heading_hold();
   ptrApiPitchHold = module._api_pitch_hold();
@@ -360,6 +368,8 @@ export async function fetchSimData(module: MainModule, payload: SimData) {
   payload.api_heading_deg = round(module.HEAPF32[ptrApiHeadingDeg], 0);
   payload.api_pitch_deg = round(module.HEAPF32[ptrApiPitchDeg], 0);
   payload.api_bank_deg = round(module.HEAPF32[ptrApiBankDeg], 0);
+  payload.api_sideslip_deg =  round(module.HEAPF32[ptrApiSideSlipDeg], 0);
+  payload.api_heading_dot_deg =  round(module.HEAPF32[ptrApiHeadingDotDeg], 2);
   payload.api_simulation_pause = module.HEAP8[ptrApiSimulationPause] !== 0;
   payload.api_autopilot = module.HEAP8[ptrApiAutopilot] !== 0;
   payload.api_heading_hold = module.HEAP8[ptrApiHeadingHold] !== 0;
