@@ -102,38 +102,70 @@
       class="panel-5"
     >
     <template #Autopilot>
-      <div class="w-full h-full grid grid-cols-4 gap-1">
-        <button-switch
-          v-if="sim_module_loaded"
-          class="border border-simElementBorder"
-          v-for="(input, i) in autopilotProps"
-          :key="i"
-          :buttonLabel="input.label"
-          :textInput="input.inputValue"
-          :buttonClick="
-            () => {
-              input.toggleFunc?.();
-              if (input.toggleFuncStr) {
-                broadcast(input.toggleFuncStr());
-              }
-            }
-          "
-          :inputChange="
-            (newVal: number) => {
-              input.setterFunc?.(newVal);
-              if (input.setterFuncStr) {
-                broadcast(input.setterFuncStr(String(newVal)));
-              }
-            }
-          "
-          :buttonState="input.stateValue"
-          :inputMin="input.min"
-          :inputMax="input.max"
-          :inputStep="input.step"
-          :class="input.inputValue == undefined ? 'col-span-4' : ''"
-        ></button-switch>
-      </div>
-      </template>
+  <div class="w-full h-full grid grid-cols-3 gap-1 auto-rows-fr">
+    <div class="col-span-1 grid grid-cols-1 gap-1 auto-rows-fr">
+      <button-switch
+      v-if="sim_module_loaded"
+      v-for="(input, i) in autopilotControlsButtons"
+      :key="i"
+      class="border border-simElementBorder w-full h-full"
+      :buttonLabel="input.label"
+      :textInput="input.inputValue"
+      :buttonClick="
+        () => {
+          input.toggleFunc?.();
+          if (input.toggleFuncStr) {
+            broadcast(input.toggleFuncStr());
+          }
+        }
+      "
+      :inputChange="
+        (newVal: number) => {
+          input.setterFunc?.(newVal);
+          if (input.setterFuncStr) {
+            broadcast(input.setterFuncStr(String(newVal)));
+          }
+        }
+      "
+      :buttonState="input.stateValue"
+      :inputMin="input.min"
+      :inputMax="input.max"
+      :inputStep="input.step"
+    ></button-switch>
+    </div>
+  <div class="col-span-2 grid grid-cols-3 gap-1 auto-rows-fr">
+    <button-switch
+      v-if="sim_module_loaded"
+      v-for="(input, i) in autopilotControlsButtonsInputs"
+      :key="i"
+      class="border border-simElementBorder w-full h-full"
+      :buttonLabel="input.label"
+      :textInput="input.inputValue"
+      :buttonClick="
+        () => {
+          input.toggleFunc?.();
+          if (input.toggleFuncStr) {
+            broadcast(input.toggleFuncStr());
+          }
+        }
+      "
+      :inputChange="
+        (newVal: number) => {
+          input.setterFunc?.(newVal);
+          if (input.setterFuncStr) {
+            broadcast(input.setterFuncStr(String(newVal)));
+          }
+        }
+      "
+      :buttonState="input.stateValue"
+      :inputMin="input.min"
+      :inputMax="input.max"
+      :inputStep="input.step"
+    ></button-switch>
+    </div>
+  </div>
+</template>
+
     </Panel>
     <!-- Panel 6 -->
     <Panel status="Running" class="panel-6">
@@ -283,9 +315,15 @@ const userPromptActive = ref<boolean>(false);
 const classroomComponentRef = ref<InstanceType<typeof ClassRoom> | null>(null); // Use the ClassRoom component type
 const editorComponentRef = ref<InstanceType<typeof Editor> | null>(null); // Use the Editor component type
 
-let autopilotProps: ReturnType<
+let autopilotControlsButtons: ReturnType<
   typeof computed<ReturnType<typeof getAutopilotProperties>>
 >;
+
+let autopilotControlsButtonsInputs: ReturnType<
+  typeof computed<ReturnType<typeof getAutopilotProperties>>
+>;
+
+
 let simulationProps: ReturnType<
   typeof computed<ReturnType<typeof getSimulationParameters>>
 >;
@@ -306,9 +344,13 @@ onMounted(async () => {
     .then((module) => {
       FlightSimModule = module;
       sim_data = reactive(FlightSimModule.simData)
-      autopilotProps = computed(() =>
-        getAutopilotProperties(FlightSimModule, sim_data),
+      autopilotControlsButtons = computed(() =>
+        getAutopilotProperties(FlightSimModule, sim_data).filter(item => item.inputValue === undefined),
       );
+      autopilotControlsButtonsInputs = computed(() =>
+        getAutopilotProperties(FlightSimModule, sim_data).filter(item => item.inputValue !== undefined),
+      );
+
       simulationProps = computed(() =>
         getSimulationParameters(FlightSimModule, sim_data, resetComponents),
       );

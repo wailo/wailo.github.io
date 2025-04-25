@@ -38,6 +38,8 @@ export class SimData {
   api_mach_speed_hold: boolean = false;
   api_altitude_hold: boolean = false;
   api_vertical_speed_hold: boolean = false;
+  api_yaw_damper: boolean = false;
+  api_turn_coordinator: boolean = false;
   api_target_heading_deg: number = 0;
   api_target_pitch_deg: number = 0;
   api_target_bank_deg: number = 0;
@@ -112,6 +114,8 @@ export const simulationDataDisplay:  SimulationDataDisplay = {
   api_mach_speed_hold: { api: "api_mach_speed_hold", label: "Mach Speed Hold", visible: false },
   api_altitude_hold: { api: "api_altitude_hold", label: "Altitude Hold", visible: false },
   api_vertical_speed_hold: { api: "api_vertical_speed_hold", label: "Vertical Speed Hold", visible: false },
+  api_yaw_damper: { api: "api_yaw_damper", label: "Yaw Damper", visible: false},
+  api_turn_coordinator: { api: "api_turn_coordinator", label: "Turn Coordinator", visible: false},
   api_target_heading_deg: { api: "api_target_heading_deg", label: "Target Heading", visible: false },
   api_target_bank_deg: { api: "api_target_bank_deg", label: "Target Bank", visible: false },
   api_target_pitch_deg: { api: "api_target_pitch_deg", label: "Target Pitch", visible: false },
@@ -175,6 +179,8 @@ let ptrApiAutopilot: number = 0;
 let ptrApiHeadingHold: number = 0;
 let ptrApiPitchHold: number = 0;
 let ptrApiBankHold: number = 0;
+let ptrApiYawDamper: number = 0;
+let ptrApiTurnCoordinator:number = 0;
 // let ptrApiLevelHold: number = 0;
 let ptrApiSpeedHold: number = 0;
 let ptrApiTrueSpeedHold: number = 0;
@@ -275,6 +281,8 @@ function init(module: MainModule) {
   ptrApiHeadingHold = module._api_heading_hold();
   ptrApiPitchHold = module._api_pitch_hold();
   ptrApiBankHold = module._api_bank_hold();
+  ptrApiYawDamper = module._api_yaw_damper();
+  ptrApiTurnCoordinator = module._api_turn_coordinator();
   // ptrApiLevelHold = module._api_level_hold();
   ptrApiSpeedHold = module._api_speed_hold();
   ptrApiTrueSpeedHold = module._api_true_speed_hold();
@@ -357,6 +365,8 @@ export async function fetchSimData(module: MainModule, payload: SimData) {
   payload.api_heading_hold = module.HEAP8[ptrApiHeadingHold] !== 0;
   payload.api_pitch_hold = module.HEAP8[ptrApiPitchHold] !== 0;
   payload.api_bank_hold = module.HEAP8[ptrApiBankHold] !== 0;
+  payload.api_yaw_damper = module.HEAP8[ptrApiYawDamper] !== 0;
+  payload.api_turn_coordinator = module.HEAP8[ptrApiTurnCoordinator] !== 0;
   // payload.api_level_hold = module.HEAP8[ptrApiLevelHold] !== 0;
   payload.api_speed_hold = module.HEAP8[ptrApiSpeedHold] !== 0;
   payload.api_true_speed_hold = module.HEAP8[ptrApiTrueSpeedHold] !== 0;
@@ -420,6 +430,22 @@ export function getAutopilotProperties(
       toggleFuncStr: () => `api_set_autopilot(${!payload.api_autopilot})`,
     },
     {
+      id: "yawDamper",
+      label: "YAW DAMPER",
+      stateValue: payload.api_yaw_damper,
+      toggleFunc: () =>
+        module.api_set_yaw_damper(!payload.api_yaw_damper),
+      toggleFuncStr: () =>
+        `api_set_yaw_damper(${!payload.api_yaw_damper})`,
+    },
+    {
+      id: "turnCoordinator",
+      label: "TURN COORDINATOR",
+      stateValue: payload.api_turn_coordinator,
+      toggleFunc: () => module.api_set_turn_coordinator(!payload.api_turn_coordinator),
+      toggleFuncStr: () => `api_set_turn_coordinator(${!payload.api_turn_coordinator})`,
+    },
+    {
       id: "headingHold",
       label: "HEADING",
       inputValue: payload.api_target_heading_deg,
@@ -467,7 +493,7 @@ export function getAutopilotProperties(
     },
     {
       id: "altitudeHold",
-      label: "ALTITUDE",
+      label: "ALT",
       inputValue: payload.api_target_altitude,
       stateValue: payload.api_altitude_hold,
       toggleFunc: () =>
@@ -484,7 +510,7 @@ export function getAutopilotProperties(
     },
     {
       id: "verticalSpeedHold",
-      label: "VERT SPEED",
+      label: "VERT SPD",
       inputValue: payload.api_target_vertical_speed,
       stateValue: payload.api_vertical_speed_hold,
       toggleFunc: () =>
@@ -502,7 +528,7 @@ export function getAutopilotProperties(
     },
     {
       id: "speedHold",
-      label: "SPEED",
+      label: "SPD",
       inputValue: payload.api_target_speed,
       stateValue: payload.api_speed_hold,
       toggleFunc: () => module.api_set_speed_hold(!payload.api_speed_hold),
@@ -517,7 +543,7 @@ export function getAutopilotProperties(
     },
     {
       id: "speedHold",
-      label: "TRUE SPEED",
+      label: "TRUE SPD",
       inputValue: payload.api_target_true_speed,
       stateValue: payload.api_true_speed_hold,
       toggleFunc: () => module.api_set_true_speed_hold(!payload.api_true_speed_hold),
@@ -532,7 +558,7 @@ export function getAutopilotProperties(
     },
     {
       id: "machHold",
-      label: "MACH SPEED",
+      label: "MACH",
       inputValue: payload.api_target_mach_speed / 1000,
       stateValue: payload.api_mach_speed_hold,
       toggleFunc: () =>
@@ -546,7 +572,7 @@ export function getAutopilotProperties(
       min: 0,
       max: 1.5,
       step: 0.01,
-    },
+    }
   ];
 }
 
