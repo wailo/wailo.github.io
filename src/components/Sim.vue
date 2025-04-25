@@ -305,6 +305,7 @@ onMounted(async () => {
   })
     .then((module) => {
       FlightSimModule = module;
+      sim_data = reactive(FlightSimModule.simData)
       autopilotProps = computed(() =>
         getAutopilotProperties(FlightSimModule, sim_data),
       );

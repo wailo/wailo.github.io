@@ -4,6 +4,7 @@ let FlapSelectorKeys: { [key: number]: string } = {};
 let GearSelectorKeys: { [key: number]: string } = {};
 
 export class SimData {
+  api_version: string = "";
   api_fps: number = 0;
   api_ups: number = 0;
   api_simulation_speed: number = 0;
@@ -77,6 +78,7 @@ export type SimulationDataDisplay = {
 
 
 export const simulationDataDisplay:  SimulationDataDisplay = {
+  api_version : {api: "api_version", label: "Flight Model Version", visible: false},
   api_fps: { api: "api_fps", label: "Frames Per Second", visible: false },
   api_ups: { api: "api_ups", label: "Update Per Second", visible: false },
   api_simulation_speed: { api: "api_simulation_speed", label: "Simulation Speed", visible: false },
@@ -321,6 +323,7 @@ export async function fetchSimData(module: MainModule, payload: SimData) {
   }
   // Detect sim reset and update memory addresses
   if (ptrApiWeight !== module._api_weight() >> 2) {
+    payload.api_version = module.VERSION_STRING.toString();
     init(module);
   }
 
