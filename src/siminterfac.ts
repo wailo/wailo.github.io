@@ -35,7 +35,6 @@ export class SimData {
   api_heading_hold: boolean = false;
   api_pitch_hold: boolean = false;
   api_bank_hold: boolean = false;
-  // api_level_hold: boolean = false;
   api_speed_hold: boolean = false;
   api_true_speed_hold: boolean = false;
   api_mach_speed_hold: boolean = false;

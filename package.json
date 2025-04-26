@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev:start": "docker run --rm --name peerjs -p 9000:9000 -d peerjs/peerjs-server",
+    "check": "vue-tsc -b",
     "dev:stop": "docker stop peerjs || true",
     "dev": "npm run dev:start && trap 'npm run dev:stop' EXIT; vite",
     "build": "npm run build:emscripten && vue-tsc -b && vite build",
