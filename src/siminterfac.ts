@@ -52,7 +52,6 @@ export class SimData {
   api_target_mach_speed: number = 0;
   api_atmosphere_sea_level_temperature: number = 0;
   api_atmosphere_sea_level_density: number = 0;
-  api_thrust_to_weight: number = 0;
   api_cl0: number = 0;
   api_cdo: number = 0;
   api_wing_area: number = 0;
@@ -61,7 +60,9 @@ export class SimData {
   api_vstall_speed_knots: number = 0;
   api_atmosphere_temperature: number = 0;
   api_atmosphere_density: number = 0;
-  api_total_drag: number = 0;
+  api_drag: number = 0;
+  api_lift: number = 0;
+  api_thrust: number = 0;
   api_cl: number = 0;
   api_aoa_deg: number = 0;
   api_cdi: number = 0;
@@ -140,7 +141,6 @@ export const simulationDataDisplay:  SimulationDataDisplay = {
     label: "Sea Level Density",
     visible: false,
   },
-  api_thrust_to_weight: { api: "api_thrust_to_weight", label: "Thrust To Weight", visible: false },
   api_wing_area: { api: "api_wing_area", label: "Wing Area", visible: false },
   api_true_speed_knots: { api: "api_true_speed_knots", label: "True Airspeed", visible: false },
   api_mach: { api: "api_mach", label: "Mach", visible: false },
@@ -151,14 +151,16 @@ export const simulationDataDisplay:  SimulationDataDisplay = {
     visible: false,
   },
   api_atmosphere_density: { api: "api_atmosphere_density", label: "Atmosphere Density", visible: false },
-  api_total_drag: { api: "api_total_drag", label: "Total Drag", visible: false },
+  api_drag: { api: "api_drag", label: "Drag", visible: false },
+  api_lift: { api: "api_lift", label: "Lift", visible: false },
+  api_thrust: { api: "api_thrust", label: "Thrust", visible: false },
   api_cl: { api: "api_cl", label: "Lift Coefficient", visible: false },
   api_aoa_deg: { api: "api_aoa_deg", label: "Angle of Attack", visible: false },
-  api_cdi: { api: "api_cdi", label: "Drag Coefficient", visible: false },
+  api_cdi: { api: "api_cdi", label: "Induced Drag Coefficient", visible: false },
   api_cl0:  {api: 'api_cl0', label: 'Cl0', visible: false},
   api_latitude: { api: "api_latitude", label: "Latitude", visible: false },
   api_longitude: { api: "api_longitude", label: "Longitude", visible: false },
-  api_cdo: { api: "api_cdo", label: "Drag Coefficient", visible: false },
+  api_cdo: { api: "api_cdo", label: "Parasitic Drag Coefficient", visible: false },
 };
 
 
@@ -209,7 +211,6 @@ let ptrApiAtmosphereSeaLevelTemperature: number = 0;
 let ptrApiAtmosphereSeaLevelDensity: number = 0;
 let ptrApiSimulationPause: number = 0;
 let ptrApiSimulationSpeed: number = 0;
-let ptrApiThrustToWeight: number = 0;
 let ptrApiCl0: number = 0;
 let ptrApiCdo: number = 0;
 let ptrApiWingArea: number = 0;
@@ -218,7 +219,9 @@ let ptrApiVstallSpeedKnots: number = 0;
 let ptrApiAtmosphereTemperature: number = 0;
 let ptrApiAtmosphereDensity: number = 0;
 let ptrApiMach: number = 0;
-let PtrApiTotalDrag: number = 0;
+let PtrApiDrag: number = 0;
+let ptrApiLift: number = 0;
+let ptrApiThrust: number = 0;
 let ptrApiCl: number = 0;
 let ptrApiAoaDeg: number = 0;
 let ptrApiCdi: number = 0;
@@ -317,7 +320,6 @@ function init(module: MainModule) {
     module._api_atmosphere_sea_level_density() >> 2;
   ptrApiSimulationPause = module._api_simulation_pause();
   ptrApiSimulationSpeed = module._api_simulation_speed() >> 2;
-  ptrApiThrustToWeight = module._api_thrust_to_weight() >> 2;
   ptrApiCl0 = module._api_dcl() >> 2;
   ptrApiCdo = module._api_cdo() >> 2;
   ptrApiWingArea = module._api_wing_area() >> 2;
@@ -326,7 +328,9 @@ function init(module: MainModule) {
   ptrApiVstallSpeedKnots = module._api_vstall_speed_knots() >> 2;
   ptrApiAtmosphereTemperature = module._api_atmosphere_temperature() >> 2;
   ptrApiAtmosphereDensity = module._api_atmosphere_density() >> 2;
-  PtrApiTotalDrag = module._api_total_drag() >> 2;
+  PtrApiDrag = module._api_drag() >> 2;
+  ptrApiLift = module._api_lift() >> 2;
+  ptrApiThrust = module._api_thrust() >> 2;
   ptrApiCl = module._api_cl() >> 2;
   ptrApiAoaDeg = module._api_aoa_deg () >> 2;
   ptrApiCdi = module._api_cdi() >> 2;
@@ -407,7 +411,6 @@ export async function fetchSimData(module: MainModule, payload: SimData) {
     module.HEAPF32[ptrApiAtmosphereSeaLevelDensity],
     6,
   );
-  payload.api_thrust_to_weight = round(module.HEAPF32[ptrApiThrustToWeight], 2);
   payload.api_cl0 = round(module.HEAPF32[ptrApiCl0], 4);
   payload.api_cdo = round(module.HEAPF32[ptrApiCdo], 4);
   payload.api_wing_area = round(module.HEAPF32[ptrApiWingArea], 0);
@@ -425,7 +428,9 @@ export async function fetchSimData(module: MainModule, payload: SimData) {
     module.HEAPF32[ptrApiAtmosphereDensity],
     6,
   );
-  payload.api_total_drag = round(module.HEAPF32[PtrApiTotalDrag], 2);
+  payload.api_drag = round(module.HEAPF32[PtrApiDrag], 2);
+  payload.api_lift = round(module.HEAPF32[ptrApiLift], 2);
+  payload.api_thrust = round(module.HEAPF32[ptrApiThrust], 2);
   payload.api_cl = round(module.HEAPF32[ptrApiCl], 4);
   payload.api_aoa_deg = round(module.HEAPF32[ptrApiAoaDeg], 2);
   payload.api_cdi = round(module.HEAPF32[ptrApiCdi], 4);
