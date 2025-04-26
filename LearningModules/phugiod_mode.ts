@@ -36,7 +36,7 @@ simControls.api_set_simulation_speed(simData.api_simulation_speed +2);
 await waitFor(2000)
 simControls.api_set_simulation_speed(simData.api_simulation_speed +2);
 
-simControls.notifyUser(`Phugiod mode", "The simulation speed is now ${simData.api_simulation_speed}x.\n\n` +
+simControls.notifyUser("Phugiod mode", `The simulation speed is now ${simData.api_simulation_speed}x.\n\n` +
     "Observe the aircraft's oscillation in pitch and altitude.\n\n" +
     "The oscillation is damped, meaning the amplitude of the oscillation decreases over time.\n\n" +
     "This is a characteristic of the phugoid mode.")

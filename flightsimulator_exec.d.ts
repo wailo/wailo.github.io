@@ -163,6 +163,8 @@ interface WasmModule {
   _api_mach(): number;
   _api_vstall_speed_knots(): number;
   _api_heading_deg(): number;
+  _api_heading_dot_deg(): number;
+  _api_sideslip_deg(): number;
   _api_pitch_deg(): number;
   _api_bank_deg(): number;
   _api_cl(): number;
@@ -184,6 +186,8 @@ interface WasmModule {
   _api_heading_hold(): number;
   _api_pitch_hold(): number;
   _api_bank_hold(): number;
+  _api_yaw_damper(): number;
+  _api_turn_coordinator(): number;
   _api_speed_hold(): number;
   _api_true_speed_hold(): number;
   _api_mach_speed_hold(): number;
@@ -197,6 +201,7 @@ interface WasmModule {
   _api_longitude(): number;
 }
 
+type EmbindString = ArrayBuffer|Uint8Array|Uint8ClampedArray|Int8Array|string;
 export interface GearSelectorValue<T extends number> {
   value: T;
 }
@@ -208,12 +213,15 @@ export interface FlapSelectorValue<T extends number> {
 export type FlapSelector = FlapSelectorValue<0>|FlapSelectorValue<1>|FlapSelectorValue<5>|FlapSelectorValue<10>|FlapSelectorValue<20>|FlapSelectorValue<25>|FlapSelectorValue<30>;
 
 interface EmbindModule {
+  VERSION_STRING: EmbindString;
   api_set_altitude_hold(_0: boolean): void;
   api_set_atmosphere_sea_level_density(_0: number): void;
   api_set_atmosphere_sea_level_temperature(_0: number): void;
   api_set_autopilot(_0: boolean): void;
   api_set_bank_hold(_0: boolean): void;
   api_set_pitch_hold(_0: boolean): void;
+  api_set_turn_coordinator(_0: boolean): void;
+  api_set_yaw_damper(_0: boolean): void;
   api_set_cdo(_0: number): boolean;
   api_set_dcl(_0: number): boolean;
   api_set_engine_throttle_value(_0: number): boolean;
