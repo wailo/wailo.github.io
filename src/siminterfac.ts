@@ -666,17 +666,6 @@ export function getSimulationParameters(
         max: 500000,
         step: 1.0,
       },
-      // {
-      //   label: "Thrust to Weight Ratio",
-      //   inputValue: payload.api_thrust_to_weight,
-      //   setterFunc: (newVal: string) =>
-      //     module.api_set_thrust_to_weight(Number(newVal)),
-      //   setterFuncStr: (newVal: string) =>
-      //     `api_set_thrust_to_weight(${newVal})`,
-      //   min: 0.1,
-      //   max: 5,
-      //   step: 0.1,
-      // },
       {
         label: "Wing Area",
         inputValue: payload.api_wing_area,
