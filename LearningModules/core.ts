@@ -41,10 +41,17 @@
 
   // Wait until the altitude crosses 300
   await waitForCondition(() => {
-    return Math.abs(simData.api_altitude - target_altitude) < 0.1 && 
-    Math.abs(simData.api_ias_speed_knots - target_speed) < 0.1 &&
-    Math.abs(simData.api_heading_deg - target_heading) < 0.1; 
+    return Math.abs(simData.api_altitude - target_altitude) < 0.01 &&
+    Math.abs(simData.api_ias_speed_knots - target_speed) < 0.01 &&
+    Math.abs(simData.api_heading_deg - target_heading) < 0.1;
   });
+
+  await waitFor(1000);
+
+  simControls.api_set_autopilot(false);
+  simControls.api_set_altitude_hold(false);
+  simControls.api_set_speed_hold(false );
+  simControls.api_set_heading_hold(false);
 
   // Restore Simulation speed to 1
   simControls.api_set_simulation_speed(1);

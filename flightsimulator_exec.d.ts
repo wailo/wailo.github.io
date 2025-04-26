@@ -146,7 +146,6 @@ interface WasmModule {
   _api_wing_area(): number;
   _api_dcl(): number;
   _api_cdo(): number;
-  _api_thrust_to_weight(): number;
   _api_altitude(): number;
   _api_vertical_speed(): number;
   _api_alpha_tail(): number;
@@ -164,13 +163,17 @@ interface WasmModule {
   _api_vstall_speed_knots(): number;
   _api_heading_deg(): number;
   _api_heading_dot_deg(): number;
+  _api_bank_dot_deg(): number;
+  _api_pitch_dot_deg(): number;
   _api_sideslip_deg(): number;
   _api_pitch_deg(): number;
   _api_bank_deg(): number;
   _api_cl(): number;
   _api_aoa_deg(): number;
   _api_cdi(): number;
-  _api_total_drag(): number;
+  _api_drag(): number;
+  _api_thrust(): number;
+  _api_lift(): number;
   _api_target_heading_deg(): number;
   _api_target_pitch_deg(): number;
   _api_target_bank_deg(): number;
@@ -240,7 +243,6 @@ interface EmbindModule {
   api_set_target_speed(_0: number): void;
   api_set_target_mach_speed(_0: number): void;
   api_set_target_vertical_speed(_0: number): void;
-  api_set_thrust_to_weight(_0: number): boolean;
   api_set_update_rate(_0: number): void;
   api_set_vertical_speed_hold(_0: boolean): void;
   api_set_wing_area(_0: number): boolean;
