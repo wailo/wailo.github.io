@@ -7,7 +7,7 @@ const requiredHeadingChange_deg = 180;
 const challengeTimeLimit_ms = 2 * 60 * 1000; // 2 minutes
 
 // 📘 Step 1: Reposition
-simControls.notifyUser("📍 Setting Up", `Repositioning aircraft for the coordinated turn challenge to ${targetAltitude_ft} ft, ${targetSpeed_knots} knots, and ${targetHeading_deg}°...`);
+simControls.notifyUser("📍 **Setting Up**", `Repositioning aircraft for the *coordinated turn* challenge to **${targetAltitude_ft} ft**, **${targetSpeed_knots} knots**, and **${targetHeading_deg}°**...`);
 await waitFor(3000);
 
 await reposition_with_autopilot(targetAltitude_ft, targetSpeed_knots, targetHeading_deg);
@@ -19,9 +19,9 @@ simControls.api_set_heading_hold(true); // Set heading hold
 
 // 📘 Step 2: Explain Coordinated Turn
 simControls.notifyUser(
-    "🎯 Coordinated Turn",
-    "A coordinated turn maintains balance between lift, weight, and centrifugal force.\n" +
-    "No slipping or skidding — the aircraft turns smoothly while maintaining altitude."
+    "🎯 **Coordinated Turn**",
+    "**A coordinated turn** maintains balance between lift, weight, and centrifugal force.\n" +
+    "**No slipping or skidding** — the aircraft turns smoothly while maintaining altitude."
 );
 await waitFor(6000);
 
@@ -42,8 +42,8 @@ let altitudeWithinLimits = false;
 
 // 📘 Step 4: Start Challenge and Monitor User Action
 simControls.notifyUser(
-    "🛫 Pilot In Command!",
-    `Disengaging autopilot now. Complete the coordinated turn within ${challengeTimeLimit_ms / 1000 / 60} minutes without exceeding ${maxAltitudeDeviation_ft} ft in altitude.`
+    "🛫 **Pilot In Command!**",
+    `**Disengaging autopilot now.** Complete the coordinated turn within **${challengeTimeLimit_ms / 1000 / 60} minutes** without exceeding **${maxAltitudeDeviation_ft} ft** in altitude.`
 );
 
 await waitFor(6000);
@@ -62,8 +62,8 @@ const success = await waitForCondition(
         altitudeWithinLimits = Math.abs(currentAltitude - initialAltitude) <= maxAltitudeDeviation_ft;
         if (!altitudeWithinLimits) {
             simControls.notifyUser(
-                "❌ Altitude Exceeded",
-                `Altitude deviation exceeded ${maxAltitudeDeviation_ft} ft. You lost control of the altitude. Try again!`
+                "❌ **Altitude Exceeded**",
+                `**Altitude deviation exceeded ${maxAltitudeDeviation_ft} ft.** You lost control of the altitude. Try again!`
             );
             return true; // Fail condition immediately if altitude is out of limits
         }
@@ -71,8 +71,8 @@ const success = await waitForCondition(
         if (simData.api_autopilot) {
           // Fail condition if autopilot is engaged during the challenge
           simControls.notifyUser(
-              "❌ Autopilot Engaged",
-              "Autopilot cannot be engaged during the challenge."
+              "❌ **Autopilot Engaged**",
+              "**Autopilot cannot be engaged during the challenge.**"
           );
           simControls.api_set_autopilot(false);  // Ensure autopilot is off
         }
@@ -91,28 +91,28 @@ const success = await waitForCondition(
 if (success) {
     if (!altitudeWithinLimits) {
         simControls.notifyUser(
-            "❌ Challenge Failed",
-            `Altitude deviation exceeded ${maxAltitudeDeviation_ft} ft. Try again!`
+            "❌ **Challenge Failed**",
+            `**Altitude deviation exceeded ${maxAltitudeDeviation_ft} ft.**`
         );
     } else {
         simControls.notifyUser(
-            "🏆 Challenge Complete!",
-            `You performed a coordinated ${requiredHeadingChange_deg}° turn without major altitude loss or gain. Well done!`
+            "🏆 **Challenge Complete!**",
+            `You performed a coordinated **${requiredHeadingChange_deg}° turn** without major altitude loss or gain. **Well done!**`
         );
     }
 } else {
     simControls.notifyUser(
-        "❌ Challenge Failed",
-        `Time ran out. Try again!`
+        "❌ **Challenge Failed**",
+        `**Time ran out.** Try again!`
     );
 }
 
-await waitFor(2000); // Give the user a moment to read the message
+await waitFor(10000); // Give the user a moment to read the message
 
 
 // 📘 Step 8: Declare End of Challenge
 simControls.notifyUser(
-  "🛑 Challenge Ended",
+  "🛑 **Challenge Ended**",
   "You can run this challenge again anytime."
 );
 

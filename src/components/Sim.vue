@@ -223,18 +223,10 @@
       class="panel-8"
       >
       <template #Prompt>
-        <textarea
-          disabled
-        v-model="userPromptText"
-        class="w-full h-full p-2 border border-simElementBorder bg-primary text-secondary"
-        ></textarea>
-              <!-- <iframe
-        width="425"
-        height="350"
-        src="https://www.openstreetmap.org/export/embed.html?bbox=103.9678716659546%2C1.3397807641972048%2C104.0070104598999%2C1.370799877695522&amp;layer=mapnik"
-        style="border: 1px solid black"
-      ></iframe> -->
-
+          <MarkDown
+          class="w-full h-full"
+          :content="userPromptText"
+          />
     </template>
   </Panel>
   </div>
@@ -246,6 +238,8 @@ import Panel from "./Panel.vue";
 import ButtonSwitch from "./ButtonSwitch.vue";
 import ClassRoom from "./ClassRoom.vue";
 import SimDataDisplay from './DataDisplay.vue'
+import MarkDown from "./MarkDown.vue";
+
 //import PeerData from "./ClassRoom.vue";
 // import NacaAirfoil from "./NacaAirfoil.vue";
 import {
@@ -267,7 +261,9 @@ function broadcast(code: string) {
 }
 
 function notifyUser(title: string, message: string, _time: number) {
-  userPromptText.value = `${title}: ${message}`
+  // icon for the notification
+  userPromptStatus.value = "☀︎"
+  userPromptText.value = `## ${title}\n\n${message}`
   // set Prompt status to New for 3 seconds then revert to empty
   userPromptActive.value = true;
   setTimeout(() => {
