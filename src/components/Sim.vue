@@ -102,7 +102,7 @@
       class="panel-5"
     >
     <template #Autopilot>
-  <div class="w-full h-full grid grid-cols-3 gap-1 auto-rows-fr">
+  <div class="w-full h-full grid grid-cols-4 gap-1 auto-rows-fr">
     <div class="col-span-1 grid grid-cols-1 gap-1 auto-rows-fr">
       <button-switch
       v-if="sim_module_loaded"
@@ -133,7 +133,7 @@
       :inputStep="input.step"
     ></button-switch>
     </div>
-  <div class="col-span-2 grid grid-cols-3 gap-1 auto-rows-fr">
+  <div class="col-span-3 grid grid-cols-3 gap-1 auto-rows-fr">
     <button-switch
       v-if="sim_module_loaded"
       v-for="(input, i) in autopilotControlsButtonsInputs"
