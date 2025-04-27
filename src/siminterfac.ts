@@ -11,8 +11,8 @@ export class SimData {
   api_empty_weight: number = 0;
   api_altitude: number = 0;
   api_vertical_speed: number = 0;
-  api_alpha_tail: number = 0;
-  api_alpha_aileron: number = 0;
+  api_elevator_position: number = 0;
+  api_aileron_position: number = 0;
   api_landing_gear_selector_position :number = 0
   api_landing_gear_selector_position_name :string = "";
   api_flaps_selector_position :number = 0;
@@ -92,8 +92,8 @@ export const simulationDataDisplay:  SimulationDataDisplay = {
   api_empty_weight: { api: "api_empty_weight", label: "Empty Weight", visible: false },
   api_altitude: { api: "api_altitude", label: "Altitude", visible: false },
   api_vertical_speed: { api: "api_vertical_speed", label: "Vertical Speed", visible: false },
-  api_alpha_tail: { api: "api_alpha_tail", label: "Elevator", visible: false },
-  api_alpha_aileron: { api: "api_alpha_aileron", label: "Aileron", visible: false },
+  api_elevator_position: { api: "api_elevator_position", label: "Elevator", visible: false },
+  api_aileron_position: { api: "api_aileron_position", label: "Aileron", visible: false },
   api_throttle: { api: "api_throttle", label: "Throttle", visible: false },
   api_landing_gear_selector_position : { api: "api_landing_gear_selector_position", label: "Landing Gear Selector Position", visible: false },
   api_landing_gear_selector_position_name : { api: "api_landing_gear_selector_position_name", label: "Landing Gear Selector Position Name", visible: false },
@@ -170,8 +170,8 @@ let ptrApiWeight: number = 0;
 let ptrApiEmptyWeight: number = 0;
 let ptrApiAltitude: number = 0;
 let ptrApiVerticalSpeed: number = 0;
-let ptrApiAlphaTail: number = 0;
-let ptrApiAlphaAileron: number = 0;
+let ptrApiElevatorPosition: number = 0;
+let ptrApiAileronPosition: number = 0;
 let ptrApiLandingGearSelectorPosition: number = 0;
 let ptrApiFlapSelectorPosition: number = 0;
 let ptrApiRudderPosition: number = 0;
@@ -277,8 +277,8 @@ function init(module: MainModule) {
   ptrApiEmptyWeight = module._api_empty_weight() >> 2;
   ptrApiAltitude = module._api_altitude() >> 2;
   ptrApiVerticalSpeed = module._api_vertical_speed() >> 2;
-  ptrApiAlphaTail = module._api_alpha_tail() >> 2;
-  ptrApiAlphaAileron = module._api_alpha_aileron() >> 2;
+  ptrApiElevatorPosition = module._api_alpha_tail() >> 2;
+  ptrApiAileronPosition = module._api_alpha_aileron() >> 2;
   ptrApiLandingGearSelectorPosition = module._api_landing_gear_selector_position() >> 2;
   ptrApiFlapSelectorPosition = module._api_flaps_selector_position() >> 2;
   ptrApiRudderPosition = module._api_rudder_position() >> 2;
@@ -363,7 +363,7 @@ export async function fetchSimData(module: MainModule, payload: SimData) {
   payload.api_empty_weight = round(module.HEAPF32[ptrApiEmptyWeight], 2);
   payload.api_altitude = round(module.HEAPF32[ptrApiAltitude], 0);
   payload.api_vertical_speed = round(module.HEAPF32[ptrApiVerticalSpeed], 0);
-  payload.api_alpha_tail = round(module.HEAPF32[ptrApiAlphaTail], 3);
+  payload.api_elevator_position = round(module.HEAPF32[ptrApiElevatorPosition], 3);
   payload.api_landing_gear_selector_position = module.HEAP32[ptrApiLandingGearSelectorPosition]
   payload.api_landing_gear_selector_position_name = GearSelectorKeys[module.HEAP32[ptrApiLandingGearSelectorPosition]]
   payload.api_flaps_selector_position = module.HEAP32[ptrApiFlapSelectorPosition];
@@ -372,7 +372,7 @@ export async function fetchSimData(module: MainModule, payload: SimData) {
   payload.api_aileron_trim_position = round(module.HEAPF32[ptrApiAileronTrimPosition], 2);
   payload.api_elevator_trim_position = round(module.HEAPF32[ptrApiElevatorTrimPosition], 2);
   payload.api_rudder_trim_position = round(module.HEAPF32[ptrApiRudderTrimPosition], 2);
-  payload.api_alpha_aileron = round(module.HEAPF32[ptrApiAlphaAileron], 3);
+  payload.api_aileron_position = round(module.HEAPF32[ptrApiAileronPosition], 3);
   payload.api_throttle = round(module.HEAPF32[ptrApiThrottle], 3);
   payload.api_ias_speed_knots = round(module.HEAPF32[ptrApiIasSpeedKnots], 0);
   payload.api_heading_deg = round(module.HEAPF32[ptrApiHeadingDeg], 0);
@@ -637,22 +637,23 @@ export function getSimulationParameters(
           module.api_set_simulation_speed(Number(newVal)),
         setterFuncStr: (newVal: string) =>
           `api_set_simulation_speed(${newVal})`,
+        toggleFunc: () => { module.api_set_simulation_speed(1);},
         unit: "x",
         min: 0.5,
         max: 100,
         step: 0.5,
       },
-      {
-        label: "Update Rate",
-        inputValue: 60,
-        setterFunc: (newVal: string) =>
-          module.api_set_update_rate(Number(newVal)),
-        setterFuncStr: (newVal: string) => `api_set_update_rate(${newVal})`,
-        unit: "fps",
-        min: 1,
-        max: 1000,
-        step: 1,
-      },
+      // {
+      //   label: "Update Rate",
+      //   inputValue: 60,
+      //   setterFunc: (newVal: string) =>
+      //     module.api_set_update_rate(Number(newVal)),
+      //   setterFuncStr: (newVal: string) => `api_set_update_rate(${newVal})`,
+      //   unit: "fps",
+      //   min: 1,
+      //   max: 1000,
+      //   step: 1,
+      // },
     ],
     Aircraft: [
       {

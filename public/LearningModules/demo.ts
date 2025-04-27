@@ -33,7 +33,7 @@ simControls.notifyUser(
   await waitFor(300);
   displayData.api_aoa_deg.visible = true;
   await waitFor(300);
-  displayData.api_alpha_tail.visible = true;
+  displayData.api_elevator_position.visible = true;
   await waitFor(300);
   displayData.api_throttle.visible = true;
 

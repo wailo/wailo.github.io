@@ -10,7 +10,7 @@ simControls.notifyUser("Phugiod Mode", "Observe the aircraft's oscillation in pi
 await waitFor(5000)
 await reposition_with_autopilot(8000, 180, 0);
 simControls.api_set_autopilot(false);
-displayData.api_alpha_tail.visible = true;
+displayData.api_elevator_position.visible = true;
 displayData.api_pitch_deg.visible = true;
 displayData.api_ias_speed_knots.visible = true;
 await waitFor(5000)

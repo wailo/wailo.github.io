@@ -39,8 +39,8 @@ export type ModuleEntry = {
     //     { name: "Simulating a High-Drag Descent", content: "" },
     //     { name: "Autopilot vs. Manual Climb/Descent", content: "" }
     // ],
-    // "Free Flight Exercise & Student Demonstrations": [
-    //     { name: "Simulator Challenge", content: "" },
-    //     { name: "Final Exam (Written & Practical)", content: "" }
-    // ]
+    "Flight Exercise": [
+        { name: "Coordinated Turne Challenge", path: "/LearningModules/coordinated_turn_challenge.ts" },
+        // { name: "Final Exam (Written & Practical)", content: "" }
+    ]
 };

@@ -231,32 +231,51 @@ const displayData = arguments[2];
 
 // Function to wait for a condition to be true after a given confirmation time in ms
 // This function will poll the conditionFunction every pollInterval ms
-const waitForCondition = (conditionFunction, confirmation_ms = 0, pollInterval_ms = 400) => {
+// confirmation_ms is the time to wait before checking the condition again
+// pollInterval_ms is the time to wait between each check of the condition
+// hardTimeout_ms is the maximum time to wait for the condition to be true
+// throwOnTimeout will throw an error if the condition is not met within the timeout
+const waitForCondition = (conditionFunction, confirmation_ms = 0, pollInterval_ms = 400, hardTimeout_ms = null, throwOnTimeout = false) => {
     const maxAttempts = Math.ceil(confirmation_ms / pollInterval_ms);
     let attempts = 0;
     let resolved = false;
+    let timeoutHandle = null;
 
-    const poll = (resolve) => {
+    const poll = (resolve, reject) => {
         if (resolved) return;
 
         if (conditionFunction() === true) {
             attempts++;
             if (attempts >= maxAttempts) {
+                clearTimeout(timeoutHandle);
                 resolved = true;
-                resolve();
+                resolve(true); // Condition confirmed
             } else {
-                setTimeout(() => poll(resolve), pollInterval_ms);
+                setTimeout(() => poll(resolve, reject), pollInterval_ms);
             }
         } else {
-            if (window.flag) {
-                attempts = 0;
-                setTimeout(() => poll(resolve), pollInterval_ms);
-            }
+            attempts = 0; // reset if fails
+            setTimeout(() => poll(resolve, reject), pollInterval_ms);
         }
     };
 
-    return new Promise(poll);
+    return new Promise((resolve, reject) => {
+        if (hardTimeout_ms !== null) {
+            timeoutHandle = setTimeout(() => {
+                if (!resolved) {
+                    resolved = true;
+                    if (throwOnTimeout) {
+                        reject(new Error("Condition not met within timeout."));
+                    } else {
+                        resolve(false); // Safe failure
+                    }
+                }
+            }, hardTimeout_ms);
+        }
+        poll(resolve, reject);
+    });
 };
+
 
 
 
