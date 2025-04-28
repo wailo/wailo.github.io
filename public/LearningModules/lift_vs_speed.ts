@@ -31,6 +31,7 @@ simControls.notifyUser(
   simControls.api_set_simulation_reset();
   simControls.api_set_simulation_speed(100);
   await reposition_with_autopilot(6000, 230, 90);
+  simControls.api_set_autopilot(true);
   
   // 🛫 Initial Setup
   simControls.api_set_altitude_hold(true);
