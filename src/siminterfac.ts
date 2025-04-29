@@ -82,7 +82,7 @@ export type SimulationDataDisplay = {
 };
 
 
-export const simulationDataDisplay:  SimulationDataDisplay = {
+export const simulationDataDisplay: SimulationDataDisplay = {
   api_version : {api: "api_version", label: "Flight Model Version", visible: false},
   api_fps: { api: "api_fps", label: "Frames Per Second", visible: false },
   api_ups: { api: "api_ups", label: "Update Per Second", visible: false },
@@ -109,8 +109,8 @@ export const simulationDataDisplay:  SimulationDataDisplay = {
   api_bank_deg: { api: "api_bank_deg", label: "Bank", visible: false },
   api_sideslip_deg: {api: "api_sideslip_deg", label: "Side Slip", visible: false},
   api_pitch_dot_deg: {api: "api_pitch_dot_deg", label: "Pitch Change Rate", visible: false },
-  api_bank_dot_deg: {api: "api_bank_dot_deg", label: "Bank Change Rate", visible: false }, 
-  api_heading_dot_deg: {api: "api_heading_dot_deg", label: "Heading Change Rate", visible: false }, 
+  api_bank_dot_deg: {api: "api_bank_dot_deg", label: "Bank Change Rate", visible: false },
+  api_heading_dot_deg: {api: "api_heading_dot_deg", label: "Heading Change Rate", visible: false },
   api_simulation_pause: { api: "api_simulation_pause", label: "Simulation Pause", visible: false },
   api_autopilot: { api: "api_autopilot", label: "Autopilot Master Switch", visible: false },
   api_heading_hold: { api: "api_heading_hold", label: "Heading Hold", visible: false },
@@ -656,6 +656,114 @@ export function getSimulationParameters(
       // },
     ],
     Aircraft: [
+      {
+        label: "Engine Throttle",
+        inputValue: payload.api_throttle,
+        setterFunc: (newVal: string) =>
+          module.api_set_engine_throttle_value(Number(newVal)),
+        setterFuncStr: (newVal: string) =>
+          `api_set_engine_throttle_value(${newVal})`,
+        unit: "%",
+        min: 0,
+        max: 100,
+        step: 1,
+      },
+        {
+        label: "Aileron Position",
+        inputValue: payload.api_aileron_position,
+        setterFunc: (newVal: string) =>
+          module.api_set_aileron_position(Number(newVal)),
+        setterFuncStr: (newVal: string) =>
+          `api_set_aileron_position(${newVal})`,
+        unit: "°",
+        min: -1,
+        max: 1,
+        step: 0.01,
+      },
+      {
+        label: "Elevator Position",
+        inputValue: payload.api_elevator_position,
+        setterFunc: (newVal: string) =>
+          module.api_set_elevator_position(Number(newVal)),
+        setterFuncStr: (newVal: string) =>
+          `api_set_elevator_position(${newVal})`,
+        unit: "°",
+        min: -1,
+        max: 1,
+        step: 0.01,
+      },
+      {
+        label: "Rudder Position",
+        inputValue: payload.api_rudder_position,
+        setterFunc: (newVal: string) =>
+          module.api_set_rudder_position(Number(newVal)),
+        setterFuncStr: (newVal: string) =>
+          `api_set_rudder_position(${newVal})`,
+        unit: "°",
+        min: -1,
+        max: 1,
+        step: 0.01,
+      },
+      {
+        label: "Aileron Trim Position",
+        inputValue: payload.api_aileron_trim_position,
+        setterFunc: (newVal: string) =>
+          module.api_set_aileron_trim_position(Number(newVal)),
+        setterFuncStr: (newVal: string) =>
+          `api_set_aileron_trim_position(${newVal})`,
+        unit: "°",
+        min: -1,
+        max: 1,
+        step: 0.01,
+      },
+      {
+        label: "Elevator Trim Position",
+        inputValue: payload.api_elevator_trim_position,
+        setterFunc: (newVal: string) =>
+          module.api_set_elevator_trim_position(Number(newVal)),
+        setterFuncStr: (newVal: string) =>
+          `api_set_elevator_trim_position(${newVal})`,
+        unit: "°",
+        min: -1,
+        max: 1,
+        step: 0.01,
+      },
+      {
+        label: "Rudder Trim Position",
+        inputValue: payload.api_rudder_trim_position,
+        setterFunc: (newVal: string) =>
+          module.api_set_rudder_trim_position(Number(newVal)),
+        setterFuncStr: (newVal: string) =>
+          `api_set_rudder_trim_position(${newVal})`,
+        unit: "°",
+        min: -1,
+        max: 1,
+        step: 0.01,
+      },
+      {
+        label: "Landing Gear",
+        inputValue: payload.api_landing_gear_selector_position,
+        setterFunc: (newVal: string) =>
+          module.api_set_landing_gear_selector_position(Number(newVal)),
+        setterFuncStr: (newVal: string) =>
+          `api_set_landing_gear_selector_position(${newVal})`,
+        unit: "",
+        min: 0,
+        max: Object.keys(GearSelectorKeys).length - 1,
+        step: 1,
+      },
+      {
+        label: "Flaps",
+        inputValue: payload.api_flaps_selector_position,
+        setterFunc: (newVal: string) =>
+          module.api_set_flaps_selector_position(Number(newVal)),
+        setterFuncStr: (newVal: string) =>
+          `api_set_flaps_selector_position(${newVal})`,
+        unit: "",
+        min: 0,
+        max: Object.keys(FlapSelectorKeys).length - 1,
+        step: 1,
+      },
       {
         label: "Empty Weight",
         inputValue: payload.api_empty_weight,
