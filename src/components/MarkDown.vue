@@ -57,6 +57,14 @@ watch(
   .markdown h4 { font-size: 1.25em; margin: 1em 0 0.5em; }
   .markdown h5 { font-size: 1em; margin: 1em 0 0.5em; }
   .markdown h6 { font-size: 0.875em; margin: 1em 0 0.5em; }
+  .markdown ol {
+    list-style-type: decimal;
+    margin-left: 1.5em;
+  }
+  .markdown ul {
+    list-style-type: disc;
+    margin-left: 1.5em;
+  }
   
   /* Code blocks */
   .markdown pre {
@@ -77,4 +85,3 @@ watch(
     padding: 0.5em 1em;
   }
   </style>
-  
