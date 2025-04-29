@@ -11,11 +11,40 @@
       class="panel-1"
     >
     <template #Cockpit>
+      <div id="fullscreen-container" class="flex w-full h-full">
+  <!-- MarkDown -->
+  <div
+    v-if="isFullscreen"
+    id="overlay"
+    class="flex flex-col w-1/5 min-w-0 overflow-hidden h-full bg-opacity-50 border-r border-Sim border-SimElementBorder p-1"
+  >
+    <!-- Top half -->
+    <div class="flex-1 overflow-y-auto p-2 border-b border-white/20">
+      <MarkDown :content="userPromptText" />
+    </div>
 
-    <div id="canvas-container">
-<canvas class=emscripten id=canvas oncontextmenu=event.preventDefault() tabindex=-1></canvas>
+    <!-- Bottom half -->
+    <div class="flex-1 overflow-y-auto p-2">
+      <SimDataDisplay
+    ref="displayRef"
+    v-model:items="simulationDisplayData"
+    :sim-data="sim_data"
+    v-if="sim_module_loaded"
+  />
+    </div>
+  </div>
+
+  <!-- Canvas container -->
+  <div id="canvas-container" class="flex-grow h-full">
+    <canvas
+      class="emscripten w-full h-full"
+      id="canvas"
+      @contextmenu.prevent
+      tabindex="-1"
+    ></canvas>
+  </div>
 </div>
-</template>
+    </template>
     </Panel>
     <!-- Panel 2 -->
     <Panel
@@ -233,7 +262,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted } from "vue";
+import { ref, reactive, computed, onMounted, onUnmounted, onBeforeMount } from "vue";
 import Panel from "./Panel.vue";
 import ButtonSwitch from "./ButtonSwitch.vue";
 import ClassRoom from "./ClassRoom.vue";
@@ -260,6 +289,24 @@ function broadcast(code: string) {
   }
 }
 
+const toggleFullscreen = () => {
+      const container = document.getElementById('fullscreen-container');
+      if (!document.fullscreenElement) {
+        // Request fullscreen on the container div
+        container?.requestFullscreen().then(() => {
+          // You can do something once fullscreen is activated (optional)
+        }).catch(err => {
+          console.error('Error attempting to enter fullscreen:', err);
+        });
+      } else {
+        // Exit fullscreen
+        document.exitFullscreen().then(() => {
+          // Optionally handle exiting fullscreen
+        }).catch(err => {
+          console.error('Error attempting to exit fullscreen:', err);
+        });
+      }
+    }
 function notifyUser(title: string, message: string, _time: number) {
   // icon for the notification
   userPromptStatus.value = "☀︎"
@@ -306,6 +353,7 @@ const update_interval_ms = 200;
 const userPromptText = ref<string>("");
 const userPromptStatus = ref<string>("----");
 const userPromptActive = ref<boolean>(false);
+const isFullscreen = ref(false);
 
 // Components refs
 const classroomComponentRef = ref<InstanceType<typeof ClassRoom> | null>(null); // Use the ClassRoom component type
@@ -339,6 +387,7 @@ onMounted(async () => {
   })
     .then((module) => {
       FlightSimModule = module;
+      FlightSimModule.GLFW.requestFullscreen = toggleFullscreen; // Replace with custom implementation
       sim_data = reactive(FlightSimModule.simData)
       autopilotControlsButtons = computed(() =>
         getAutopilotProperties(FlightSimModule, sim_data).filter(item => item.inputValue === undefined),
@@ -400,11 +449,16 @@ onMounted(async () => {
         true,
       );
 
+      document.addEventListener('fullscreenchange', () => isFullscreen.value = document.fullscreenElement !== null);
       simUpdateInterval = setInterval(() => {
         fetchSimData(FlightSimModule, sim_data);
       }, update_interval_ms);
     })
     .catch(console.error);
+});
+
+onBeforeMount(() => {
+  document.removeEventListener('fullscreenchange', () => isFullscreen.value = document.fullscreenElement !== null);;
 });
 
 onUnmounted(() => {
@@ -458,22 +512,9 @@ onUnmounted(() => {
 .panel-8 {
   grid-area: panel8;
 }
-/* #canvas {
+ #canvas {
   background-color: transparent;
-  width: 100%;
-  height: 100%;
   object-fit: contain;
-} */
+}
 
-#canvas-container {
-      /*position: absolute;*/
-      top: 0;
-      left: 0;
-      padding: 0;
-      border: 0 none;
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      display: flex;
-    }
 </style>

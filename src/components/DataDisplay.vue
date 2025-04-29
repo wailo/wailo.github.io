@@ -5,15 +5,15 @@
       <input
         v-model="searchQuery"
         type="text"
-        placeholder="Choose data to watch..."
-        class="w-3/5 border bg-transparent border-simElementBorder p-1"
+        placeholder="Search..."
+        class="w-1/3 border bg-transparent border-simElementBorder p-1"
         @focus="isFocused = true"
       />
-      <button @click="showAll" class="w-1/5 border text-secondary">
+      <button @click="showAll" class="w-1/3 border text-secondary">
         Show All
       </button>
-      <button @click="hideAll" class="w-1/5 border text-secondary">
-        Hide All
+      <button @click="hideAll" class="w-1/3 border text-secondary">
+        Clear
       </button>
     </div>
 
