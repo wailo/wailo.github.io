@@ -215,7 +215,7 @@ defineExpose({ reset });
 const executeCode = async () => {
   reset();
   const res = await fetch("/LearningModules/core.ts?raw");
-  const helperCode = await res.text();
+  const coreCode = await res.text();
 
   executionResult.value = null;
   window.flag = true;
@@ -228,110 +228,7 @@ const executeCode = async () => {
 const simControls = arguments[0];
 const simData = arguments[1];
 const displayData = arguments[2];
-
-// Function to wait for a condition to be true after a given confirmation time in ms
-// This function will poll the conditionFunction every pollInterval ms
-// confirmation_ms is the time to wait before checking the condition again
-// pollInterval_ms is the time to wait between each check of the condition
-// hardTimeout_ms is the maximum time to wait for the condition to be true
-// throwOnTimeout will throw an error if the condition is not met within the timeout
-const waitForCondition = (conditionFunction, confirmation_ms = 0, pollInterval_ms = 400, hardTimeout_ms = null, throwOnTimeout = false) => {
-    const maxAttempts = Math.ceil(confirmation_ms / pollInterval_ms);
-    let attempts = 0;
-    let resolved = false;
-    let timeoutHandle = null;
-
-    const poll = (resolve, reject) => {
-        if (resolved) return;
-
-        if (conditionFunction() === true) {
-            attempts++;
-            if (attempts >= maxAttempts) {
-                clearTimeout(timeoutHandle);
-                resolved = true;
-                resolve(true); // Condition confirmed
-            } else {
-                setTimeout(() => poll(resolve, reject), pollInterval_ms);
-            }
-        } else {
-            attempts = 0; // reset if fails
-            setTimeout(() => poll(resolve, reject), pollInterval_ms);
-        }
-    };
-
-    return new Promise((resolve, reject) => {
-        if (hardTimeout_ms !== null) {
-            timeoutHandle = setTimeout(() => {
-                if (!resolved) {
-                    resolved = true;
-                    if (throwOnTimeout) {
-                        reject(new Error("Condition not met within timeout."));
-                    } else {
-                        resolve(false); // Safe failure
-                    }
-                }
-            }, hardTimeout_ms);
-        }
-        poll(resolve, reject);
-    });
-};
-
-
-
-
-// Wait for a given time in ms without interrupting the simulation
-const waitFor = (ms) => {
-    const poll = (resolve) => {
-        setTimeout((_) => resolve(), ms)
-    }
-    return new Promise(poll)
-}
-
-const _set = window.setTimeout; // save original reference
-const _clear = window.clearTimeout; // save original reference
-
-// Wrap original setTimeout with a function
-const setTimeout = function (callback, duration, arg) {
-    // also, wrap the callback, so the cache reference will be removed
-    // when the timeout has reached (fired the callback)
-    const id = _set(
-        function () {
-            callback.apply(null, arguments);
-            removeCacheItem(id);
-        },
-        duration || 0,
-        arg,
-    );
-
-    // store reference in the cache array
-    window.cache.push(id);
-
-    // id reference must be returned to be able to clear it
-    return id;
-};
-
-// Wrap original clearTimeout with a function
-const clearTimeout = (id) => {
-    _clear(id);
-    removeCacheItem(id);
-};
-
-// Add a custom function named "clearTimeouts" to the "window" object
-const resetTimeouts = () => {
-    window.cache.forEach((n) => _clear(n));
-    // Clear the cache array
-    window.cache.length = 0;
-};
-
-// removes a specific id from the cache array
-const removeCacheItem = (id) => {
-    const idx = cache.indexOf(id);
-    if (idx > -1) {
-        window.cache = window.cache.filter((n) => n != id);
-    }
-}
-
-${helperCode}
+${coreCode}
 resetTimeouts();
 return async function () {${code.value}};
     `);
