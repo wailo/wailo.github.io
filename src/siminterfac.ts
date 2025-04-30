@@ -740,30 +740,30 @@ export function getSimulationParameters(
         max: 1,
         step: 0.01,
       },
-      {
-        label: "Landing Gear",
-        inputValue: payload.api_landing_gear_selector_position,
-        setterFunc: (newVal: string) =>
-          module.api_set_landing_gear_selector_position(Number(newVal)),
-        setterFuncStr: (newVal: string) =>
-          `api_set_landing_gear_selector_position(${newVal})`,
-        unit: "",
-        min: 0,
-        max: Object.keys(GearSelectorKeys).length - 1,
-        step: 1,
-      },
-      {
-        label: "Flaps",
-        inputValue: payload.api_flaps_selector_position,
-        setterFunc: (newVal: string) =>
-          module.api_set_flaps_selector_position(Number(newVal)),
-        setterFuncStr: (newVal: string) =>
-          `api_set_flaps_selector_position(${newVal})`,
-        unit: "",
-        min: 0,
-        max: Object.keys(FlapSelectorKeys).length - 1,
-        step: 1,
-      },
+      // {
+      //   label: "Landing Gear",
+      //   inputValue: payload.api_landing_gear_selector_position,
+      //   setterFunc: (newVal: string) =>
+      //     module.api_set_landing_gear_selector_position(Number(newVal)),
+      //   setterFuncStr: (newVal: string) =>
+      //     `api_set_landing_gear_selector_position(${newVal})`,
+      //   unit: "",
+      //   min: 0,
+      //   max: Object.keys(GearSelectorKeys).length - 1,
+      //   step: 1,
+      // },
+      // {
+      //   label: "Flaps",
+      //   inputValue: payload.api_flaps_selector_position,
+      //   setterFunc: (newVal: string) =>
+      //     module.api_set_flaps_selector_position(Number(newVal)),
+      //   setterFuncStr: (newVal: string) =>
+      //     `api_set_flaps_selector_position(${newVal})`,
+      //   unit: "",
+      //   min: 0,
+      //   max: Object.keys(FlapSelectorKeys).length - 1,
+      //   step: 1,
+      // },
       {
         label: "Empty Weight",
         inputValue: payload.api_empty_weight,
