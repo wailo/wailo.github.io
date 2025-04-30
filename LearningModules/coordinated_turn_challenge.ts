@@ -1,13 +1,13 @@
 // 📘 Configurations
 const targetAltitude_ft = 5000;
-const targetSpeed_knots = 210;
+const targetSpeed_knots = 180;
 const targetHeading_deg = 0;
-const maxAltitudeDeviation_ft = 500;
+const maxAltitudeDeviation_ft = 200;
 const requiredHeadingChange_deg = 180;
 const challengeTimeLimit_ms = 2 * 60 * 1000; // 2 minutes
 
 // 📘 Step 1: Reposition
-simControls.notifyUser("📍 **Setting Up**", `Repositioning aircraft for the *coordinated turn* challenge to **${targetAltitude_ft} ft**, **${targetSpeed_knots} knots**, and **${targetHeading_deg}°**...`);
+simControls.notifyUser("📍 **Repositioning**", `Repositioning to **${targetAltitude_ft} ft**, **${targetSpeed_knots} knots**, and **${targetHeading_deg}°**...`);
 await waitFor(3000);
 
 await reposition_with_autopilot(targetAltitude_ft, targetSpeed_knots, targetHeading_deg);
@@ -122,4 +122,4 @@ await waitFor(1000); // Give the user a moment to read the message
 simControls.api_set_autopilot(true);  // Enable autopilot again
 simControls.api_set_altitude_hold(true); // Set altitude hold
 simControls.api_set_speed_hold(true); // Set speed hold
-simControls.api_set_heading_hold(true); // Set heading hold
+simControls.api_set_bank_hold(true); // Set bank hold
