@@ -51,12 +51,14 @@ watch(
   }
   
   /* Headings */
-  .markdown h1 { font-size: 2em; margin: 1em 0 0.5em; }
-  .markdown h2 { font-size: 1.75em !important; margin: 1em 0 0.5em; }
+
+  .markdown h1 { font-size: 2em; margin: 1em 0 0.5em;  }
+  .markdown h2 { font-size: 1.75em !important; margin: 1em 0 0.5em; margin: 0;}
   .markdown h3 { font-size: 1.5em; margin: 1em 0 0.5em; }
   .markdown h4 { font-size: 1.25em; margin: 1em 0 0.5em; }
   .markdown h5 { font-size: 1em; margin: 1em 0 0.5em; }
   .markdown h6 { font-size: 0.875em; margin: 1em 0 0.5em; }
+  .markdown p  { font-size: 1.25em; margin: 0.1em 0 0.1em;  }
   .markdown ol {
     list-style-type: decimal;
     margin-left: 1.5em;

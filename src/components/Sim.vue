@@ -16,15 +16,15 @@
   <div
     v-if="isFullscreen"
     id="overlay"
-    class="flex flex-col w-1/5 min-w-0 overflow-hidden h-full bg-opacity-50 border-r border-Sim border-SimElementBorder p-1"
+    class="flex flex-col w-2/6 min-w-0 overflow-hidden h-full bg-opacity-50 border-r border-Sim border-SimElementBorder p-1"
   >
     <!-- Top half -->
-    <div class="flex-1 overflow-y-auto p-2 border-b border-white/20">
+    <div class="flex-1 overflow-y p-2 border-b border-SimElementBorder">
       <MarkDown :content="userPromptText" />
     </div>
 
     <!-- Bottom half -->
-    <div class="flex-1 overflow-y-auto p-2">
+    <div class="flex-2 overflow-y-auto p-2">
       <SimDataDisplay
     ref="displayRef"
     v-model:items="simulationDisplayData"
@@ -476,7 +476,7 @@ onUnmounted(() => {
     "panel1 panel8 panel2"
     "panel1 panel8 panel2"
     "panel1 panel8 panel3"
-    "panel5 panel7 panel6"
+    "panel5 panel8 panel6"
     "panel4 panel7 panel6"
     "panel4 panel7 panel6";
 }
