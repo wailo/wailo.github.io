@@ -2,7 +2,7 @@
 let currentStep = 0;
 
 const steps = [
-  { name: "Pre-Takeoff Configuration", condition: "" },
+  { name: "Pre-Takeoff Configuration", condition: "On the ground" },
   { name: "Throttle Up", condition: "IAS < 150" },
   { name: "Wait for Takeoff speed", condition: "IAS < 150" },
   { name: "Rotate", condition: "IAS ≥ 150" },
@@ -23,9 +23,9 @@ function advanceSchedule(extraText = "", title = "") {
 
 function showSchedule(highlightIndex, title, optionalText = "") {
   const tableRows = steps.map((step, index) => {
-    const stepLabel = index === highlightIndex ? `**${step.name}**` : step.name;
-    const condition = index === highlightIndex ? `**${step.condition}**` : step.condition;
-    return `| ${index + 1} | ${stepLabel} | ${condition} |`;
+    return index === highlightIndex
+      ? `| <u><b>${index + 1}</b></u> | <u><b>${step.name}</b></u> | <u><b>${step.condition}</b></u> |`
+      : `| ${index + 1} | ${step.name} | ${step.condition} |`;
   });
 
   const scheduleMarkdown = [
@@ -142,7 +142,7 @@ simControls.api_set_simulation_speed(100);
 
 // Wait until corssing FL100
 await waitForCondition(() => simData.api_altitude >= 10000);
-simControls.api_set_target_mach_speed(0.7);
+simControls.api_set_target_mach_speed(0.6);
 simControls.api_set_mach_speed_hold(true)
 
 
