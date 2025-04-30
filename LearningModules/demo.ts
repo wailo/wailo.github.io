@@ -142,7 +142,7 @@ simControls.api_set_simulation_speed(100);
 
 // Wait until corssing FL100
 await waitForCondition(() => simData.api_altitude >= 10000);
-simControls.api_set_target_mach_speed(0.7);
+simControls.api_set_target_mach_speed(0.6);
 simControls.api_set_mach_speed_hold(true)
 
 
