@@ -11,12 +11,12 @@
       class="panel-1"
     >
     <template #Cockpit>
-      <div id="fullscreen-container" class="flex w-full h-full">
+      <div id="fullscreen-container" class="flex w-full h-full bg-simBackground">
   <!-- MarkDown -->
   <div
     v-if="isFullscreen"
     id="overlay"
-    class="flex flex-col w-2/6 min-w-0 overflow-hidden h-full bg-opacity-50 border-r border-Sim border-SimElementBorder p-1"
+    class="flex flex-col w-2/6 min-w-0 overflow-hidden h-full border-r border-Sim border-SimElementBorder p-1"
   >
     <!-- Top half -->
     <div class="flex-1 overflow-y p-2 border-b border-SimElementBorder">
@@ -37,7 +37,7 @@
   <!-- Canvas container -->
   <div id="canvas-container" class="flex-grow h-full">
     <canvas
-      class="emscripten w-full h-full"
+      class="emscripten w-full h-full bg-openglCanvasBackground"
       id="canvas"
       @contextmenu.prevent
       tabindex="-1"
@@ -513,7 +513,6 @@ onUnmounted(() => {
   grid-area: panel8;
 }
  #canvas {
-  background-color: transparent;
   object-fit: contain;
 }
 

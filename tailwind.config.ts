@@ -19,7 +19,7 @@ export default {
       colors_: {
         primary: "#ffffff",
         secondary: "#130f0c",
-        openglCanvasBackground: "#130f0c",
+        openglCanvasBackground: "#000000",
         panelBorder: "#7b8079",
         panelHeaderBackground: "#dfe4e2",
         panelStatusBackground: "#130f0c",
@@ -33,7 +33,7 @@ export default {
       colors: {
         primary: "#191919",
         secondary: "#d6d6d6",
-        openglCanvasBackground: "#130f0c",
+        openglCanvasBackground: "#000000",
         panelBorder: "#8a8a8a",
         panelHeaderBackground: "#191919",
         panelStatusBackground: "#dfe4e2",
