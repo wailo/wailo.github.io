@@ -46,7 +46,7 @@
     :class="isEditing === true ? 'w-4/5' : 'w-2/5'"
   >
     <!-- Monaco Editor -->
-    <div class="flex-1">
+    <div class="flex-1 overflow-auto">
       <MonacoEditor
         theme="vs-dark"
         :options="options"
