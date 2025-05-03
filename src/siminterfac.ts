@@ -52,6 +52,10 @@ export class SimData {
   api_target_mach_speed: number = 0;
   api_atmosphere_sea_level_temperature: number = 0;
   api_atmosphere_sea_level_density: number = 0;
+  api_atmosphere_wind_direction_deg: number = 0;
+  api_atmosphere_wind_speed_knots: number = 0;
+  api_atmosphere_turbulence_level : number = 0;
+  api_atmosphere_turbulence_intervals : number = 0;
   api_cl0: number = 0;
   api_cdo: number = 0;
   api_wing_area: number = 0;
@@ -83,7 +87,7 @@ export type SimulationDataDisplay = {
 
 
 export const simulationDataDisplay: SimulationDataDisplay = {
-  api_version : {api: "api_version", label: "Flight Model Version", visible: false},
+  api_version: { api: "api_version", label: "Flight Model Version", visible: false },
   api_fps: { api: "api_fps", label: "Frames Per Second", visible: false },
   api_ups: { api: "api_ups", label: "Update Per Second", visible: false },
   api_simulation_speed: { api: "api_simulation_speed", label: "Simulation Speed", visible: false },
@@ -95,22 +99,22 @@ export const simulationDataDisplay: SimulationDataDisplay = {
   api_elevator_position: { api: "api_elevator_position", label: "Elevator", visible: false },
   api_aileron_position: { api: "api_aileron_position", label: "Aileron", visible: false },
   api_throttle: { api: "api_throttle", label: "Throttle", visible: false },
-  api_landing_gear_selector_position : { api: "api_landing_gear_selector_position", label: "Landing Gear Selector Position", visible: false },
-  api_landing_gear_selector_position_name : { api: "api_landing_gear_selector_position_name", label: "Landing Gear Selector Position Name", visible: false },
-  api_flaps_selector_position : { api: "api_flaps_selector_position", label: "Flap Selector Position", visible: false },
-  api_flaps_selector_position_name : { api: "api_flaps_selector_position_name", label: "Flap Selector Position Name", visible: false },
+  api_landing_gear_selector_position: { api: "api_landing_gear_selector_position", label: "Landing Gear Selector Position", visible: false },
+  api_landing_gear_selector_position_name: { api: "api_landing_gear_selector_position_name", label: "Landing Gear Selector Position Name", visible: false },
+  api_flaps_selector_position: { api: "api_flaps_selector_position", label: "Flap Selector Position", visible: false },
+  api_flaps_selector_position_name: { api: "api_flaps_selector_position_name", label: "Flap Selector Position Name", visible: false },
   api_rudder_position: { api: "api_rudder_position", label: "Rudder Position", visible: false },
   api_aileron_trim_position: { api: "api_aileron_trim_position", label: "Aileron Trim Position", visible: false },
   api_elevator_trim_position: { api: "api_elevator_trim_position", label: "Elevator Trim Position", visible: false },
-  api_rudder_trim_position:  { api: "api_rudder_trim_position", label: "Rudder Trim Position", visible: false },
+  api_rudder_trim_position: { api: "api_rudder_trim_position", label: "Rudder Trim Position", visible: false },
   api_ias_speed_knots: { api: "api_ias_speed_knots", label: "IAS Speed", visible: false },
   api_heading_deg: { api: "api_heading_deg", label: "Heading", visible: false },
   api_pitch_deg: { api: "api_pitch_deg", label: "Pitch", visible: false },
   api_bank_deg: { api: "api_bank_deg", label: "Bank", visible: false },
-  api_sideslip_deg: {api: "api_sideslip_deg", label: "Side Slip", visible: false},
-  api_pitch_dot_deg: {api: "api_pitch_dot_deg", label: "Pitch Change Rate", visible: false },
-  api_bank_dot_deg: {api: "api_bank_dot_deg", label: "Bank Change Rate", visible: false },
-  api_heading_dot_deg: {api: "api_heading_dot_deg", label: "Heading Change Rate", visible: false },
+  api_sideslip_deg: { api: "api_sideslip_deg", label: "Side Slip", visible: false },
+  api_pitch_dot_deg: { api: "api_pitch_dot_deg", label: "Pitch Change Rate", visible: false },
+  api_bank_dot_deg: { api: "api_bank_dot_deg", label: "Bank Change Rate", visible: false },
+  api_heading_dot_deg: { api: "api_heading_dot_deg", label: "Heading Change Rate", visible: false },
   api_simulation_pause: { api: "api_simulation_pause", label: "Simulation Pause", visible: false },
   api_autopilot: { api: "api_autopilot", label: "Autopilot Master Switch", visible: false },
   api_heading_hold: { api: "api_heading_hold", label: "Heading Hold", visible: false },
@@ -121,8 +125,8 @@ export const simulationDataDisplay: SimulationDataDisplay = {
   api_mach_speed_hold: { api: "api_mach_speed_hold", label: "Mach Speed Hold", visible: false },
   api_altitude_hold: { api: "api_altitude_hold", label: "Altitude Hold", visible: false },
   api_vertical_speed_hold: { api: "api_vertical_speed_hold", label: "Vertical Speed Hold", visible: false },
-  api_yaw_damper: { api: "api_yaw_damper", label: "Yaw Damper", visible: false},
-  api_turn_coordinator: { api: "api_turn_coordinator", label: "Turn Coordinator", visible: false},
+  api_yaw_damper: { api: "api_yaw_damper", label: "Yaw Damper", visible: false },
+  api_turn_coordinator: { api: "api_turn_coordinator", label: "Turn Coordinator", visible: false },
   api_target_heading_deg: { api: "api_target_heading_deg", label: "Target Heading", visible: false },
   api_target_bank_deg: { api: "api_target_bank_deg", label: "Target Bank", visible: false },
   api_target_pitch_deg: { api: "api_target_pitch_deg", label: "Target Pitch", visible: false },
@@ -131,25 +135,17 @@ export const simulationDataDisplay: SimulationDataDisplay = {
   api_target_speed: { api: "api_target_speed", label: "Target Speed", visible: false },
   api_target_true_speed: { api: "api_target_true_speed", label: "Target True Speed", visible: false },
   api_target_mach_speed: { api: "api_target_mach_speed", label: "Target Mach Speed", visible: false },
-  api_atmosphere_sea_level_temperature: {
-    api: "api_atmosphere_sea_level_temperature",
-    label: "Sea Level Temperature",
-    visible: false,
-  },
-  api_atmosphere_sea_level_density: {
-    api: "api_atmosphere_sea_level_density",
-    label: "Sea Level Density",
-    visible: false,
-  },
+  api_atmosphere_sea_level_temperature: { api: "api_atmosphere_sea_level_temperature", label: "Sea Level Temperature", visible: false },
+  api_atmosphere_sea_level_density: { api: "api_atmosphere_sea_level_density", label: "Sea Level Density", visible: false },
+  api_atmosphere_wind_direction_deg: { api: "api_atmosphere_wind_direction_deg", label: "Wind Direction", visible: false },
+  api_atmosphere_wind_speed_knots: { api: "api_atmosphere_wind_speed_knots", label: "Wind Speed", visible: false },
+  api_atmosphere_turbulence_level: { api: "api_atmosphere_turbulence_level", label: "Turbulence Level", visible: false },
+  api_atmosphere_turbulence_intervals: { api: "api_atmosphere_turbulence_intervals", label: "Turbulence Intervals", visible: false },
   api_wing_area: { api: "api_wing_area", label: "Wing Area", visible: false },
   api_true_speed_knots: { api: "api_true_speed_knots", label: "True Airspeed", visible: false },
   api_mach: { api: "api_mach", label: "Mach", visible: false },
   api_vstall_speed_knots: { api: "api_vstall_speed_knots", label: "Vstall Speed", visible: false },
-  api_atmosphere_temperature: {
-    api: "api_atmosphere_temperature",
-    label: "Atmosphere Temperature",
-    visible: false,
-  },
+  api_atmosphere_temperature: { api: "api_atmosphere_temperature", label: "Atmosphere Temperature", visible: false },
   api_atmosphere_density: { api: "api_atmosphere_density", label: "Atmosphere Density", visible: false },
   api_drag: { api: "api_drag", label: "Drag", visible: false },
   api_lift: { api: "api_lift", label: "Lift", visible: false },
@@ -157,7 +153,7 @@ export const simulationDataDisplay: SimulationDataDisplay = {
   api_cl: { api: "api_cl", label: "Lift Coefficient", visible: false },
   api_aoa_deg: { api: "api_aoa_deg", label: "Angle of Attack", visible: false },
   api_cdi: { api: "api_cdi", label: "Induced Drag Coefficient", visible: false },
-  api_cl0:  {api: 'api_cl0', label: 'Cl0', visible: false},
+  api_cl0: { api: "api_cl0", label: "Cl0", visible: false },
   api_latitude: { api: "api_latitude", label: "Latitude", visible: false },
   api_longitude: { api: "api_longitude", label: "Longitude", visible: false },
   api_cdo: { api: "api_cdo", label: "Parasitic Drag Coefficient", visible: false },
@@ -209,6 +205,10 @@ let ptrApiTargetTrueSpeed: number = 0;
 let ptrApiTargetMachSpeed: number = 0;
 let ptrApiAtmosphereSeaLevelTemperature: number = 0;
 let ptrApiAtmosphereSeaLevelDensity: number = 0;
+let ptrAtmosphereWindDirectionDeg: number = 0;
+let ptrAtmosphereWindSpeedKnots: number = 0;
+let ptrAtmosphereTurbulenceLevel : number = 0;
+let ptrAtmosphereTurbulenceIntervals : number = 0;
 let ptrApiSimulationPause: number = 0;
 let ptrApiSimulationSpeed: number = 0;
 let ptrApiCl0: number = 0;
@@ -328,6 +328,10 @@ function init(module: MainModule) {
   ptrApiVstallSpeedKnots = module._api_vstall_speed_knots() >> 2;
   ptrApiAtmosphereTemperature = module._api_atmosphere_temperature() >> 2;
   ptrApiAtmosphereDensity = module._api_atmosphere_density() >> 2;
+  ptrAtmosphereWindDirectionDeg = module._api_atmosphere_wind_direction_deg() >> 2;
+  ptrAtmosphereWindSpeedKnots = module._api_atmosphere_wind_speed_knots() >> 2;
+  ptrAtmosphereTurbulenceLevel = module._api_atmosphere_turbulence_level() >> 2;
+  ptrAtmosphereTurbulenceIntervals = module._api_atmosphere_turbulence_intervals() >> 2;
   PtrApiDrag = module._api_drag() >> 2;
   ptrApiLift = module._api_lift() >> 2;
   ptrApiThrust = module._api_thrust() >> 2;
@@ -372,8 +376,8 @@ export async function fetchSimData(module: MainModule, payload: SimData) {
   payload.api_aileron_trim_position = round(module.HEAPF32[ptrApiAileronTrimPosition], 2);
   payload.api_elevator_trim_position = round(module.HEAPF32[ptrApiElevatorTrimPosition], 2);
   payload.api_rudder_trim_position = round(module.HEAPF32[ptrApiRudderTrimPosition], 2);
-  payload.api_aileron_position = round(module.HEAPF32[ptrApiAileronPosition], 3);
-  payload.api_throttle = round(module.HEAPF32[ptrApiThrottle], 3);
+  payload.api_aileron_position = round(module.HEAPF32[ptrApiAileronPosition], 2);
+  payload.api_throttle = round(module.HEAPF32[ptrApiThrottle], 2);
   payload.api_ias_speed_knots = round(module.HEAPF32[ptrApiIasSpeedKnots], 0);
   payload.api_heading_deg = round(module.HEAPF32[ptrApiHeadingDeg], 0);
   payload.api_pitch_deg = round(module.HEAPF32[ptrApiPitchDeg], 0);
@@ -411,6 +415,11 @@ export async function fetchSimData(module: MainModule, payload: SimData) {
     module.HEAPF32[ptrApiAtmosphereSeaLevelDensity],
     6,
   );
+
+  payload.api_atmosphere_wind_direction_deg = module.HEAP32[ptrAtmosphereWindDirectionDeg]
+  payload.api_atmosphere_wind_speed_knots = module.HEAP32[ptrAtmosphereWindSpeedKnots]
+  payload.api_atmosphere_turbulence_level = round(module.HEAPF32[ptrAtmosphereTurbulenceLevel],2)
+  payload.api_atmosphere_turbulence_intervals = round(module.HEAPF32[ptrAtmosphereTurbulenceIntervals],2)
   payload.api_cl0 = round(module.HEAPF32[ptrApiCl0], 4);
   payload.api_cdo = round(module.HEAPF32[ptrApiCdo], 4);
   payload.api_wing_area = round(module.HEAPF32[ptrApiWingArea], 0);
@@ -669,7 +678,7 @@ export function getSimulationParameters(
         step: 0.01,
       },
         {
-        label: "Aileron Position",
+        label: "Aileron",
         inputValue: payload.api_aileron_position,
         setterFunc: (newVal: string) =>
           module.api_set_aileron_position(Number(newVal)),
@@ -681,7 +690,7 @@ export function getSimulationParameters(
         step: 0.01,
       },
       {
-        label: "Elevator Position",
+        label: "Elevator",
         inputValue: payload.api_elevator_position,
         setterFunc: (newVal: string) =>
           module.api_set_elevator_position(Number(newVal)),
@@ -693,7 +702,7 @@ export function getSimulationParameters(
         step: 0.01,
       },
       {
-        label: "Rudder Position",
+        label: "Rudder",
         inputValue: payload.api_rudder_position,
         setterFunc: (newVal: string) =>
           module.api_set_rudder_position(Number(newVal)),
@@ -705,7 +714,7 @@ export function getSimulationParameters(
         step: 0.01,
       },
       {
-        label: "Aileron Trim Position",
+        label: "Aileron Trim",
         inputValue: payload.api_aileron_trim_position,
         setterFunc: (newVal: string) =>
           module.api_set_aileron_trim_position(Number(newVal)),
@@ -717,7 +726,7 @@ export function getSimulationParameters(
         step: 0.01,
       },
       {
-        label: "Elevator Trim Position",
+        label: "Elevator Trim",
         inputValue: payload.api_elevator_trim_position,
         setterFunc: (newVal: string) =>
           module.api_set_elevator_trim_position(Number(newVal)),
@@ -729,7 +738,7 @@ export function getSimulationParameters(
         step: 0.01,
       },
       {
-        label: "Rudder Trim Position",
+        label: "Rudder Trim",
         inputValue: payload.api_rudder_trim_position,
         setterFunc: (newVal: string) =>
           module.api_set_rudder_trim_position(Number(newVal)),
@@ -832,6 +841,54 @@ export function getSimulationParameters(
         max: 1.8,
         step: 0.001,
       },
-    ],
-  };
+      {
+        label: "Atmosphere Wind Speed",
+        unit: "knots",
+        inputValue: payload.api_atmosphere_wind_speed_knots,
+        setterFunc: (newVal: string) => {
+          module.api_set_atmosphere_wind_speed(Number(newVal))
+        },
+        setterFuncStr: (newVal: string) => `api_set_atmosphere_wind_speed(${newVal})`,
+        min: 0,
+        max: 400,
+        step: 1.0,
+      },
+
+      {
+        label: "Atmosphere Wind Direction",
+        unit: "°",
+        inputValue: payload.api_atmosphere_wind_direction_deg,
+        setterFunc: (newVal: string) =>
+          module.api_set_atmosphere_wind_direction(Number(newVal)),
+        setterFuncStr: (newVal: string) => `api_set_atmosphere_wind_direction(${newVal})`,
+        min: 0,
+        max: 360,
+        step: 1,
+      },
+
+      {
+        label: "Atmosphere Turbulence Level",
+        unit: "",
+        inputValue: payload.api_atmosphere_turbulence_level,
+        setterFunc: (newVal: string) =>
+          module.api_set_atmosphere_turbulence_level(Number(newVal)),
+        setterFuncStr: (newVal: string) => `api_set_atmosphere_turbulence_level(${newVal})`,
+        min: 0,
+        max: 1,
+        step: 0.01,
+      },
+
+      {
+        label: "Atmosphere Turbulence Intervals",
+        unit: "minutes",
+        inputValue: payload.api_atmosphere_turbulence_intervals,
+        setterFunc: (newVal: string) =>
+          module.api_set_atmosphere_turbulence_intervals(Number(newVal)),
+        setterFuncStr: (newVal: string) => `api_set_atmosphere_turbulence_intervals(${newVal})`,
+        min: 0,
+        max: 1,
+        step: 0.01,
+      }
+    ]
+  }
 }
