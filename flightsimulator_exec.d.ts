@@ -200,6 +200,10 @@ interface WasmModule {
   _api_atmosphere_sea_level_density(): number;
   _api_atmosphere_temperature(): number;
   _api_atmosphere_density(): number;
+  _api_atmosphere_wind_speed_knots(): number;
+  _api_atmosphere_wind_direction_deg(): number;
+  _api_atmosphere_turbulence_level(): number;
+  _api_atmosphere_turbulence_intervals(): number;
   _api_latitude(): number;
   _api_longitude(): number;
 }
@@ -220,6 +224,10 @@ interface EmbindModule {
   api_set_altitude_hold(_0: boolean): void;
   api_set_atmosphere_sea_level_density(_0: number): void;
   api_set_atmosphere_sea_level_temperature(_0: number): void;
+  api_set_atmosphere_wind_speed(_0: number): void;
+  api_set_atmosphere_wind_direction(_0: number): void;
+  api_set_atmosphere_turbulence_level(_0: number): void;
+  api_set_atmosphere_turbulence_intervals(_0: number): void;
   api_set_autopilot(_0: boolean): void;
   api_set_bank_hold(_0: boolean): void;
   api_set_pitch_hold(_0: boolean): void;
