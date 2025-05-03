@@ -1,76 +1,85 @@
 <template>
   <div class="flex h-full w-full text-white">
-    <!-- Sidebar -->
-    <div class="w-2/5 border-r border-slate-700 flex flex-col">
-      <!-- Header -->
-      <div class="px-4 mb-1 border-b border-slate-700 text-xs font-semibold">
-        {{ ModuleTitle || "Select a Module" }}
-      </div>
-
-      <!-- File Tree -->
-      <div class="flex-1 overflow-y-auto p-2">
-        <ul>
-          <li v-for="(folder, folderName) in fileTree" :key="folderName">
-            <div
-              @click="toggleFolder(folderName)"
-              class="cursor-pointer font-semibold text-secondary hover:text-white mt-1"
-            >
-              📁 {{ folderName }}
-            </div>
-            <ul v-show="openFolders[folderName]" class="ml-4">
-              <li
-                v-for="file in folder"
-                :key="file.name"
-                class="cursor-pointer rounded hover:bg-slate-700"
-                :class="{
-                  'text-blue-400': ModuleTitle !== file.name,
-                  'text-green-400 bg-slate-700': ModuleTitle === file.name,
-                }"
-                @click="loadFileContent(file)"
-              >
-                📄 {{ file.name }}
-              </li>
-            </ul>
-          </li>
-        </ul>
-      </div>
+  <!-- Sidebar -->
+  <div
+    class="transition-all duration-50 border-r border-slate-700 flex flex-col"
+    :class="isEditing === false ? 'w-3/5' : 'w-1/5'"
+    @click="isEditing = false"
+  >
+    <!-- Header -->
+    <div class="px-4 mb-1 border-b border-slate-700 text-xs font-semibold">
+      {{ ModuleTitle || "Select a Module" }}
     </div>
 
-    <!-- Editor + Controls -->
-    <div class="flex flex-col flex-1 min-w-0">
-      <!-- Monaco Editor -->
-      <div class="flex-1">
-        <MonacoEditor
-          theme="vs-dark"
-          :options="options"
-          language="typescript"
-          v-model:value="code"
-          @editorDidMount="setupMonaco"
-        />
-      </div>
-
-      <!-- Controls -->
-      <div
-        class="flex items-center gap-1 px-1 py-1 border-t border-slate-700 bg-[#1e1e2f]"
-      >
-        <button
-          class="px-4 border border-green-500 text-green-400 hover:bg-green-500/10 transition"
-          @click="executeCode"
-        >
-          ▶ Run
-        </button>
-        <button
-          class="px-4 border border-red-500 text-red-400 hover:bg-red-500/10 transition"
-          @click="reset"
-        >
-          ■ Stop
-        </button>
-        <span v-if="executionResult" class="ml-auto truncate text-slate-300">
-          <span class="opacity-60">Result:</span> {{ executionResult }}
-        </span>
-      </div>
+    <!-- File Tree -->
+    <div class="flex-1 overflow-y-auto p-2">
+      <ul>
+        <li v-for="(folder, folderName) in fileTree" :key="folderName">
+          <div
+            @click.stop="toggleFolder(folderName); isEditing = false"
+            class="cursor-pointer font-semibold text-secondary hover:text-white mt-1"
+          >
+            📁 {{ folderName }}
+          </div>
+          <ul v-show="openFolders[folderName]" class="ml-4">
+            <li
+              v-for="file in folder"
+              :key="file.name"
+              class="cursor-pointer rounded hover:bg-slate-700"
+              :class="{
+                'text-blue-400': ModuleTitle !== file.name,
+                'text-green-400 bg-slate-700': ModuleTitle === file.name,
+              }"
+              @click.stop="loadFileContent(file); isEditing = false"
+            >
+              📄 {{ file.name }}
+            </li>
+          </ul>
+        </li>
+      </ul>
     </div>
   </div>
+
+  <!-- Editor -->
+  <div
+    class="flex flex-col min-w-0 transition-all duration-300"
+    :class="isEditing === true ? 'w-4/5' : 'w-2/5'"
+  >
+    <!-- Monaco Editor -->
+    <div class="flex-1">
+      <MonacoEditor
+        theme="vs-dark"
+        :options="options"
+        language="typescript"
+        v-model:value="code"
+        @editorDidMount="setupMonaco"
+        @click="isEditing = true"
+      />
+    </div>
+
+    <!-- Controls -->
+    <div
+      class="flex items-center gap-1 px-1 py-1 border-t border-slate-700 bg-[#1e1e2f]"
+    >
+      <button
+        class="px-4 border border-green-500 text-green-400 hover:bg-green-500/10 transition"
+        @click="executeCode"
+      >
+        ▶ Run
+      </button>
+      <button
+        class="px-4 border border-red-500 text-red-400 hover:bg-red-500/10 transition"
+        @click="reset"
+      >
+        ■ Stop
+      </button>
+      <span v-if="executionResult" class="ml-auto truncate text-slate-300">
+        <span class="opacity-60">Result:</span> {{ executionResult }}
+      </span>
+    </div>
+  </div>
+</div>
+
 </template>
 
 <script setup lang="ts">
@@ -93,6 +102,7 @@ import tsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker"
 const isScriptRunning = ref(false);
 const ModuleTitle = ref("");
 const selectedFile = ref<string | null>(null);
+let isEditing = ref(false);
 // let monacoEditor: monaco.editor.IStandaloneCodeEditor | null = null;
 
 // Define the event emitter
@@ -183,12 +193,28 @@ const setupMonaco = (_editor: monaco.editor.IStandaloneCodeEditor) => {
     SimDataStr = regexMatch[0].replace("class", "interface");
   }
 
+  // match SimulationDataDisplay from simDataTypes
+  regexMatch = simDataTypes.match(
+    /SimulationDataDisplay\s*\{([^}]*)\}/g,
+  );
+  let SimulationDataDisplayStr;
+  if (!regexMatch) {
+    console.log(
+      "// Error while parsing the api types. Autocompletion will not be available",
+    );
+  } else {
+    SimulationDataDisplayStr = regexMatch[0].replace("class", "interface");
+  }
+
+
+
   monaco.languages.typescript.typescriptDefaults.addExtraLib(
-    `${EmbindModuleStr}; ${SimDataStr}
+    `${EmbindModuleStr}; ${SimDataStr}; ${SimulationDataDisplayStr}
     // Declare types here for autocompletion
     const simControls : EmbindModule = {};
     const simData : SimData = {}
-    declare const waitForCondition: (conditionFunction: (...args: any[], number) => boolean) => Promise<unknown>;
+    const displayData : SimulationDataDisplay = {};
+    declare const waitForCondition: (conditionFunction: (...args: any[], number, number) => boolean) => Promise<unknown>;
     declare const waitFor: (ms: number) => Promise<unknown>;
     `,
   );
