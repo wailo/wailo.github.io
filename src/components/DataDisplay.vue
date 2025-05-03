@@ -32,11 +32,7 @@
   <div
     v-for="item in Object.values(searchResults)"
     :key="item.api"
-    class="cursor-pointer p-1 transition"
-    :class="{
-      'bg-green-100 font-semibold': recentlyAddedKey === item.api,
-      'hover:bg-gray-100': recentlyAddedKey !== item.api,
-    }"
+    class="cursor-pointer p-1 transition hover:bg-primary"
     @click="showItem(item.api)"
   >
     {{ item.label }}
@@ -83,7 +79,6 @@ const props = defineProps<{
 
 const searchQuery = ref('')
 const isFocused = ref(false)
-const recentlyAddedKey = ref<string | null>(null)
 
 // Search setup
 const fuse = computed(() => new Fuse(Object.values(items.value), {
@@ -106,8 +101,6 @@ function showItem(key: SimDataKeys) {
   const item = items.value[key];
   if (item && !item.visible) {
     item.visible = true
-    recentlyAddedKey.value = key
-    setTimeout(() => (recentlyAddedKey.value = null), 1000)
   }
   searchQuery.value = ''
   isFocused.value = false
