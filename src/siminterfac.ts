@@ -885,8 +885,8 @@ export function getSimulationParameters(
         setterFunc: (newVal: string) =>
           module.api_set_atmosphere_turbulence_intervals(Number(newVal)),
         setterFuncStr: (newVal: string) => `api_set_atmosphere_turbulence_intervals(${newVal})`,
-        min: 0,
-        max: 1,
+        min: 0.01,
+        max: 0.99,
         step: 0.01,
       }
     ]
