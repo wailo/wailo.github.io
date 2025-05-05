@@ -388,7 +388,7 @@ onMounted(async () => {
     .then((module) => {
       FlightSimModule = module;
       FlightSimModule.GLFW.requestFullscreen = toggleFullscreen; // Replace with custom implementation
-      sim_data = reactive(FlightSimModule.simData)
+
       autopilotControlsButtons = computed(() =>
         getAutopilotProperties(FlightSimModule, sim_data).filter(item => item.inputValue === undefined),
       );
