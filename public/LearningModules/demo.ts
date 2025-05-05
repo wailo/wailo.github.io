@@ -161,3 +161,5 @@ advanceSchedule(
   "Now you may try to fly the simulator manually.\n\n",
   "Wrap-up"
 );
+
+await waitFor(20000);
