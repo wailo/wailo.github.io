@@ -41,7 +41,7 @@
       :max="inputMax"
       :step="inputStep"
       @input="onInput"
-      @blur="onBlur"
+      @change="onChange"
     />
   </div>
 </template>
@@ -112,8 +112,9 @@ function onInput(event: Event) {
   }
 }
 
-// Only commit on blur
-function onBlur() {
+// Only commit on Change
+// Change happens when the user hit enter, blur or change with keyboard
+function onChange() {
   if (!isNaN(localValue.value as number)) {
     props.inputChange?.(localValue.value as number)
   }
