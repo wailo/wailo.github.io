@@ -253,7 +253,7 @@
       >
       <template #Prompt>
           <MarkDown
-          class="w-full h-full"
+          class="w-full h-full p-1"
           :content="userPromptText"
           />
     </template>
