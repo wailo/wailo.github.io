@@ -443,8 +443,8 @@ export async function fetchSimData(module: MainModule, payload: SimData) {
   payload.api_cdi = round(module.HEAPF32[ptrApiCdi], 4);
   payload.api_ground_collision = module.HEAP8[ptrApiGroundCollision] !== 0;
 
-  payload.api_latitude =  module.HEAPF32[ptrApiLatitude];
-  payload.api_longitude =  module.HEAPF32[ptrApiLongitude];
+  payload.api_latitude =  round(module.HEAPF32[ptrApiLatitude], 2);
+  payload.api_longitude =  round(module.HEAPF32[ptrApiLongitude], 2);
 }
 
 export function getAutopilotProperties(
