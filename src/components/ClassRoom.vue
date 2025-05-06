@@ -392,7 +392,7 @@ const connectToPeer = async (remotePeerId: string) => {
 const send = (data: any) => {
   // Send data to all peers
   Object.entries(incomingConns.value).forEach(([, conn]) => {
-    trace(`Sending data to ${conn.peer}:  ${data}`);
+    trace(`Sending data to ${conn.peer}:  ${JSON.stringify(data)}`);
     conn.send(data);
   });
 };

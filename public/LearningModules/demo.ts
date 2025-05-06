@@ -69,7 +69,7 @@ displayData.api_landing_gear_selector_position_name.visible = true;
 await waitFor(300);
 
 // Flaps + Throttle
-simControls.api_set_flaps_selector_position(simControls.FlapSelector.TWENTY);
+simControls.api_set_flaps_selector_position(simControls.FlapSelector.TWENTY.value);
 simControls.api_set_autopilot(true);
 await waitFor(300);
 simControls.api_set_target_speed(180);
@@ -97,7 +97,7 @@ await waitFor(3000);
 await waitForCondition(() => simData.api_vertical_speed > 400, 5000);
 advanceSchedule("Retracting landing gear", "Retract Gear");
 simControls.api_set_pitch_hold(true);
-simControls.api_set_landing_gear_selector_position(simControls.GearSelector.UP);
+simControls.api_set_landing_gear_selector_position(simControls.GearSelector.UP.value);
 await waitFor(3000);
 simControls.api_set_engine_throttle_value(0.85)
 
@@ -111,19 +111,19 @@ simControls.api_set_engine_throttle_value(0.80)
 
 await waitForCondition(() => simData.api_altitude >= 1000 && simData.api_ias_speed_knots >= 210);
 advanceSchedule("Retracting to Flaps 10", "Flaps to 10");
-simControls.api_set_flaps_selector_position(simControls.FlapSelector.TEN);
+simControls.api_set_flaps_selector_position(simControls.FlapSelector.TEN.value);
 
 await waitForCondition(() => simData.api_altitude >= 1500 && simData.api_ias_speed_knots >= 220);
 advanceSchedule("Retracting to Flaps 5", "Flaps to 5");
-simControls.api_set_flaps_selector_position(simControls.FlapSelector.FIVE);
+simControls.api_set_flaps_selector_position(simControls.FlapSelector.FIVE.value);
 
 await waitForCondition(() => simData.api_altitude >= 2000 && simData.api_ias_speed_knots >= 235);
 advanceSchedule("Retracting to Flaps 1", "Flaps to 1");
-simControls.api_set_flaps_selector_position(simControls.FlapSelector.ONE);
+simControls.api_set_flaps_selector_position(simControls.FlapSelector.ONE.value);
 
 await waitForCondition(() => simData.api_altitude >= 2500 && simData.api_ias_speed_knots >= 245);
 advanceSchedule("Clean configuration achieved (Flaps 0)", "Flaps Up");
-simControls.api_set_flaps_selector_position(simControls.FlapSelector.ZERO);
+simControls.api_set_flaps_selector_position(simControls.FlapSelector.ZERO.value);
 
 
 

@@ -78,18 +78,12 @@
           :buttonClick="
             () => {
               input.toggleFunc?.();
-              if (input.toggleFuncStr) {
-                broadcast(input.toggleFuncStr());
-              }
             }
           "
           :textInput="input.inputValue"
           :inputChange="
             (newVal: number) => {
               input.setterFunc?.(newVal);
-              if (input.setterFuncStr) {
-                broadcast(input.setterFuncStr(String(newVal)));
-              }
             }
           "
           :button-state="input.stateValue"
@@ -143,17 +137,11 @@
       :buttonClick="
         () => {
           input.toggleFunc?.();
-          if (input.toggleFuncStr) {
-            broadcast(input.toggleFuncStr());
-          }
         }
       "
       :inputChange="
         (newVal: number) => {
           input.setterFunc?.(newVal);
-          if (input.setterFuncStr) {
-            broadcast(input.setterFuncStr(String(newVal)));
-          }
         }
       "
       :buttonState="input.stateValue"
@@ -173,17 +161,11 @@
       :buttonClick="
         () => {
           input.toggleFunc?.();
-          if (input.toggleFuncStr) {
-            broadcast(input.toggleFuncStr());
-          }
         }
       "
       :inputChange="
         (newVal: number) => {
           input.setterFunc?.(newVal);
-          if (input.setterFuncStr) {
-            broadcast(input.setterFuncStr(String(newVal)));
-          }
         }
       "
       :buttonState="input.stateValue"
@@ -217,9 +199,6 @@
             :inputChange="
               (newVal: number) => {
                 input.setterFunc?.(newVal);
-                if (input.setterFuncStr) {
-                  broadcast(input.setterFuncStr(String(newVal)));
-                }
               }
             "
             :inputMin="input.min"
@@ -239,7 +218,7 @@
       <template #ClassRoom>
 
       <ClassRoom
-        @api-data-event="(receivedApiCall: PeerData) => executeCode(receivedApiCall?.api)"
+        @api-data-event="(receivedApiCall: PeerData) => executeIncomingApiCode(receivedApiCall?.api)"
         ref="classroomComponentRef"
         @status-changed="(newStatus) => (classRoomComponentState = newStatus)"
     />
@@ -268,6 +247,7 @@ import ButtonSwitch from "./ButtonSwitch.vue";
 import ClassRoom from "./ClassRoom.vue";
 import SimDataDisplay from './DataDisplay.vue'
 import MarkDown from "./MarkDown.vue";
+import { RemoteCallManager, RemoteCall, RemoteEvent } from '../RemoteCallManager';
 
 //import PeerData from "./ClassRoom.vue";
 // import NacaAirfoil from "./NacaAirfoil.vue";
@@ -320,18 +300,8 @@ function notifyUser(title: string, message: string, _time: number) {
 
     }
 
-const executeCode = (_code: string) => {
-  return
-  // if (typeof code === "string" && /^[a-zA-Z0-9_.$]+$/.test(code)) {
-  //   const func = code.split('.').reduce((obj, key) => obj?.[key], FlightSimModule);
-  //   if (typeof func === "function") {
-  //     func();
-  //   } else {
-  //     console.error("Invalid function or property in code:", code);
-  //   }
-  // } else {
-  //   console.error("Invalid or unsafe code:", code);
-  // }
+const executeIncomingApiCode = (code: string) => {
+  manager.handleIncomingMessage(code);
 };
 
 // Logic to reset components, triggered with simulation module is reset
@@ -373,8 +343,8 @@ let simulationProps: ReturnType<
 >;
 
 const simulationDisplayData = ref(simulationDataDisplay)
-
 let simUpdateInterval: number | undefined;
+let manager: RemoteCallManager;
 
 // Lifecycle hooks
 onMounted(async () => {
@@ -386,7 +356,8 @@ onMounted(async () => {
     notifyUser: notifyUser
   })
     .then((module) => {
-      FlightSimModule = module;
+      manager = new RemoteCallManager((call: RemoteCall | RemoteEvent) =>   broadcast(JSON.stringify(call)), module);
+      FlightSimModule = manager.createMirroredProxy([], module);
       FlightSimModule.GLFW.requestFullscreen = toggleFullscreen; // Replace with custom implementation
 
       autopilotControlsButtons = computed(() =>
@@ -418,12 +389,10 @@ onMounted(async () => {
       window.removeEventListener("blur", FlightSimModule.GLFW.onBlur, true);
       const canvas = document.getElementById("canvas");
       canvas?.focus();
-      canvas?.addEventListener("keydown", FlightSimModule.GLFW.onKeydown, true);
-      canvas?.addEventListener(
-        "keypress",
-        FlightSimModule.GLFW.onKeyPress,
-        true,
-      );
+      canvas?.addEventListener("keydown", (e) => {
+        manager.sendKeyMirror(e)
+        FlightSimModule.GLFW.onKeydown(e)}
+        , true);
       canvas?.addEventListener("keyup", FlightSimModule.GLFW.onKeyup, true);
 
       function isTextInput() {

@@ -1,5 +1,5 @@
 <template>
-  <div class="flex h-full w-full text-white">
+  <div class="flex h-full w-full">
   <!-- Sidebar -->
   <div
     class="transition-all duration-50 border-r border-slate-700 flex flex-col"

@@ -37,7 +37,7 @@
   });
 
   // Landing gear up
-  simControls.api_set_landing_gear_selector_position(simControls.GearSelector.UP);
+  simControls.api_set_landing_gear_selector_position(simControls.GearSelector.UP.value);
 
   // Wait until the altitude crosses 300
   await waitForCondition(() => {
