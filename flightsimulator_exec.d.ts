@@ -251,6 +251,8 @@ interface EmbindModule {
   api_set_target_speed(_0: number): void;
   api_set_target_mach_speed(_0: number): void;
   api_set_target_vertical_speed(_0: number): void;
+  api_set_landing_gear_selector_position(_0: number): boolean;
+  api_set_flaps_selector_position(_0: number): boolean;
   api_set_update_rate(_0: number): void;
   api_set_vertical_speed_hold(_0: boolean): void;
   api_set_wing_area(_0: number): boolean;
@@ -261,9 +263,7 @@ interface EmbindModule {
   api_set_aileron_trim_position(_0: number): void;
   api_set_rudder_trim_position(_0: number): void;
   api_set_elevator_trim_position(_0: number): void;
-  api_set_landing_gear_selector_position(_0: GearSelector): boolean;
   GearSelector: {OFF: GearSelectorValue<0>, UP: GearSelectorValue<1>, DOWN: GearSelectorValue<2>};
-  api_set_flaps_selector_position(_0: FlapSelector): boolean;
   FlapSelector: {ZERO: FlapSelectorValue<0>, ONE: FlapSelectorValue<1>, FIVE: FlapSelectorValue<5>, TEN: FlapSelectorValue<10>, TWENTY: FlapSelectorValue<20>, TWENTFIVE: FlapSelectorValue<25>, THIRTY: FlapSelectorValue<30>};
 }
 
