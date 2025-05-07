@@ -39,8 +39,8 @@ export class RemoteCallManager {
         if (typeof value === "function") {
           const propStr = prop.toString();
           const isAllowed =
-            value.name.startsWith("api_set") ||
-            value.name.startsWith("notifyUser");
+            propStr.startsWith("api_set") ||
+            propStr.startsWith("notifyUser");
 
           if (isAllowed) {
             return this.wrapFunction(value, [...path, propStr]);

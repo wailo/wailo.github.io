@@ -219,9 +219,6 @@ onMounted(() => {
       createAnJoinPeer(myPeerId.value);
     }
   }
-  else if (isDevelopment) {
-    createAnJoinPeer(myPeerId.value);
-  }
 
 });
 
@@ -281,7 +278,7 @@ const onConnectionClose = (peerId: string) => {
 };
 
 const onData = (data: PeerData, conn: PeerJS.DataConnection) => {
-  trace(`Received ${data} from ${conn.peer}`);
+  trace(`Received ${JSON.stringify(data)} from ${conn.peer}`);
   if (data.api) {
     emit("apiDataEvent", data );
   } else {

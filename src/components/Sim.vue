@@ -294,7 +294,6 @@ function notifyUser(title: string, message: string, _time: number) {
   // set Prompt status to New for 3 seconds then revert to empty
   userPromptActive.value = true;
   setTimeout(() => {
-
     userPromptActive.value = false
   }, 200);
 
