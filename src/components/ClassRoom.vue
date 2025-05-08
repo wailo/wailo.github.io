@@ -299,7 +299,7 @@ const createAnJoinPeer = (targetPeerId: string) => {
 
   // Auto genrate display name
   displayname.value =
-    displayname.value || Math.random().toString(36).substr(2, 5).toUpperCase();
+    displayname.value || Math.random().toString(36).substring(2, 7).toUpperCase();
 
   const hostConfig: PeerJS.PeerOptions = {};
   if (isDevelopment) {
