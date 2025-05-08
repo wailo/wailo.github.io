@@ -49,7 +49,7 @@ watchEffect(() => {
     <!-- panel-header -->
     <div
       :class="[
-        'max-h-1/6 text-sm font-medium h-5 box-border justify-between border-b pb-0 flex items-center',
+        'max-h-1/6 text-sm font-medium h-5 box-border justify-between border-b pb-0 flex items-center bg-panelHeaderBackground',
         props.active ? 'border-panelActive' : 'border-panelBorder',
       ]"
     >
