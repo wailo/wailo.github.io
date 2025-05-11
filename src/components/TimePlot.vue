@@ -62,9 +62,7 @@ onMounted(async () => {
   createPlots();
 
   intervalId = setInterval(() => {
-   if (props.pause === true || !props.sources.length) return;
-
-    // const now = Date.now();
+   if (props.pause === true || props.sources.length < 1) return;
 
     props.sources.forEach(source => {
       const value = source.ref.value;
@@ -89,7 +87,10 @@ function createPlots() {
       width: el.offsetWidth,
       height: el.offsetHeight,
       scales: {
-        x: { time: false },
+        x: {
+          time: false,
+          range: () => [0, MAX_POINTS],
+        },
         y: {
           auto: true,
           // range: (_u, min, max) => {
