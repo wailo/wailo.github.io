@@ -49,16 +49,28 @@
     <!-- Panel 2 -->
     <Panel
       :status="`${1000 / update_interval_ms} HZ`"
-      class="panel-2"
+      class="panel-2 gap-1"
     >
-    <template #Real-Time-Data display="Real Time Data">
-      <SimDataDisplay
+         <template #Real-Time-Data display="Real Time Data">
+       <SimDataDisplay
     ref="displayRef"
     v-model:items="simulationDisplayData"
     :sim-data="sim_data"
     v-if="sim_module_loaded"
-  />
-
+  /> 
+</template>
+    <template #Plot display="Plot Graph">
+    <TimePlot
+      ref="TimePlotRef"
+      :pause="sim_data.api_simulation_pause"
+      v-if="sim_module_loaded"
+      :sources="Object.values(simulationDisplayData)
+        .filter((sim_object) => sim_object.visible && typeof sim_data[sim_object.api] === 'number')
+        .map((visible_sim_object) => ({
+          name: visible_sim_object.label,
+          ref: ref(sim_data[visible_sim_object.api]) as Ref<number>
+        }))"
+    />
       </template>
     </Panel>
     <!-- Panel 3 -->
@@ -241,13 +253,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, onBeforeMount } from "vue";
+import { ref, Ref, reactive, computed, onMounted, onUnmounted, onBeforeMount } from "vue";
 import Panel from "./Panel.vue";
 import ButtonSwitch from "./ButtonSwitch.vue";
 import ClassRoom from "./ClassRoom.vue";
 import SimDataDisplay from './DataDisplay.vue'
 import MarkDown from "./MarkDown.vue";
 import { RemoteCallManager, RemoteCall, RemoteEvent } from '../RemoteCallManager';
+import TimePlot from './TimePlot.vue'
 
 //import PeerData from "./ClassRoom.vue";
 // import NacaAirfoil from "./NacaAirfoil.vue";
@@ -307,10 +320,14 @@ const executeIncomingApiCode = (code: string) => {
 const resetComponents = () => {
   // Called when user invoke reset from a button, still can't tell if keyboard is pressed.
   console.log("Resetting components");
-  if (editorComponentRef.value)
-  {
-    editorComponentRef.value.reset();
-  }
+    editorComponentRef.value?.reset();
+    // classroomComponentRef.value?.reset();
+    // displayRef.value?.reset();
+    TimePlotRef.value?.reset();
+    // markdownRef.value?.reset();
+    Object.values(simulationDisplayData.value).forEach((item) => {
+      item.visible = false;
+    });
 };
 
 let FlightSimModule: ExtendedMainModule;
@@ -327,6 +344,9 @@ const isFullscreen = ref(false);
 // Components refs
 const classroomComponentRef = ref<InstanceType<typeof ClassRoom> | null>(null); // Use the ClassRoom component type
 const editorComponentRef = ref<InstanceType<typeof Editor> | null>(null); // Use the Editor component type
+const displayRef = ref<InstanceType<typeof SimDataDisplay> | null>(null); // Use the SimDataDisplay component type
+const TimePlotRef = ref<InstanceType<typeof TimePlot> | null>(null); // Use the TimePlot component type
+// const markdownRef = ref<InstanceType<typeof MarkDown> | null>(null); // Use the MarkDown component type
 
 let autopilotControlsButtons: ReturnType<
   typeof computed<ReturnType<typeof getAutopilotProperties>>
