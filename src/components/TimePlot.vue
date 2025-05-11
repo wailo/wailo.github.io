@@ -1,7 +1,7 @@
 <template>
   <div class="w-full h-full grid overflow-none" :style="{ gridTemplateRows: gridRows }">
     <div
-      v-for="(source, idx) in props.sources"
+      v-for="(source, idx) in props.sources.slice(0, MAX_PLOTS)"
       :key="source.name"
       :ref="el => plotRefs[idx] = el as HTMLElement"
       class="w-full h-full"
@@ -20,65 +20,64 @@ interface SourceVar {
 }
 
 const props = defineProps<{
-  sources: SourceVar[],
+  sources: SourceVar[]
   pause: boolean
 }>()
 
-// ❗ Optional control exposed to parent
+// ❗ Public methods
 defineExpose({ reset })
 
-// Configuration constants
-const MAX_DURATION = 1 * 60 * 1000; // 2 minutes
-const PLOT_INTERVAL = 1000; // in ms
-const MAX_POINTS = Math.ceil(MAX_DURATION / PLOT_INTERVAL);
+// Configuration
+const MAX_DURATION = 2 * 60 * 1000  // 2 minutes
+const PLOT_INTERVAL = 1000          // in ms
+const MAX_POINTS = Math.ceil(MAX_DURATION / PLOT_INTERVAL)
+const MAX_PLOTS = 3                // ✅ limit to 4 plots max
 
-// Circular buffer structure
+// Types
 interface CircularBuffer {
-  x: Float64Array;
-  y: Float64Array;
-  index: number;       // current write position
-  full: boolean;       // whether buffer has wrapped around
+  x: Float64Array
+  y: Float64Array
+  index: number
+  full: boolean
 }
 
-const dataBuffers = new Map<string, CircularBuffer>();
+// State
+const dataBuffers = new Map<string, CircularBuffer>()
 const plots = new Map<string, uPlot>()
 const plotRefs = ref<HTMLElement[]>([])
 
-const gridRows = computed(() => `repeat(${props.sources.length}, 1fr)`)
+const gridRows = computed(() => `repeat(${Math.min(props.sources.length, MAX_PLOTS)}, 1fr)`)
 
-
-// Plotting logic
+// Lifecycle
 onMounted(async () => {
-  props.sources.forEach(source => {
+  props.sources.slice(0, MAX_PLOTS).forEach(source => {
     dataBuffers.set(source.name, {
       x: new Float64Array(MAX_POINTS),
       y: new Float64Array(MAX_POINTS),
       index: 0,
       full: false,
-    });
-  });
+    })
+  })
 
-  await nextTick();
-  createPlots();
+  await nextTick()
+  createPlots()
 
   intervalId = setInterval(() => {
-   if (props.pause === true || props.sources.length < 1) return;
+    if (props.pause || props.sources.length < 1) return
 
-    props.sources.forEach(source => {
-      const value = source.ref.value;
-      const buf = dataBuffers.get(source.name)!;
-
-      buf.y[buf.index] = value;
-      buf.index = (buf.index + 1) % MAX_POINTS;
-      if (buf.index === 0) buf.full = true;
-
-      updatePlot(source.name, buf);
-    });
-  }, PLOT_INTERVAL);
-});
+    props.sources.slice(0, MAX_PLOTS).forEach(source => {
+      const value = source.ref.value
+      const buf = dataBuffers.get(source.name)!
+      buf.y[buf.index] = value
+      buf.index = (buf.index + 1) % MAX_POINTS
+      if (buf.index === 0) buf.full = true
+      updatePlot(source.name, buf)
+    })
+  }, PLOT_INTERVAL)
+})
 
 function createPlots() {
-  props.sources.forEach((source, idx) => {
+  props.sources.slice(0, MAX_PLOTS).forEach((source, idx) => {
     const el = plotRefs.value[idx]
     if (!el) return
 
@@ -89,18 +88,14 @@ function createPlots() {
       scales: {
         x: {
           time: false,
-          range: () => [0, MAX_POINTS],
+          range: () => [0, MAX_POINTS - 1] // ✅ fixed X range
         },
         y: {
           auto: true,
-          // range: (_u, min, max) => {
-          //   const pad = 0.05 * (max - min || 1)
-          //   return [min - pad, max + pad]
-          // },
         },
       },
       axes: [
-        {show:false}, // ❌ No X-axis
+        { show: false }, // ❌ no X axis
         {
           label: source.name,
           stroke: 'white',
@@ -108,11 +103,11 @@ function createPlots() {
         },
       ],
       series: [
-        { show: false}, // ❌ X series hidden
+        { show: false }, // X series
         {
           stroke: 'red',
           width: 1,
-          points: { show: false }, // 🔥 NO dots
+          points: { show: false }, // ❌ no dots
         },
       ],
       hooks: {
@@ -136,34 +131,33 @@ function createPlots() {
 }
 
 function updatePlot(name: string, buf: CircularBuffer) {
-  const u = plots.get(name);
-  if (!u) return;
+  const u = plots.get(name)
+  if (!u) return
 
-  let dataX, dataY;
+  let dataX: number[], dataY: number[]
 
   if (!buf.full) {
-    dataY = Array.from(buf.y.slice(0, buf.index));
-    dataX = dataY.map((_, i) => i);
+    dataY = Array.from(buf.y.slice(0, buf.index))
+    dataX = dataY.map((_, i) => i)
   } else {
-    // Rotate arrays to make data chronologically ordered
-    dataY = Array.from(buf.y.slice(buf.index)).concat(Array.from(buf.y.slice(0, buf.index)));
-    dataX = dataY.map((_, i) => i);
+    dataY = Array.from(buf.y.slice(buf.index)).concat(Array.from(buf.y.slice(0, buf.index)))
+    dataX = dataY.map((_, i) => i)
   }
 
-  u.setData([dataX, dataY]);
+  u.setData([dataX, dataY])
 }
 
 function reset() {
-  props.sources.forEach(source => {
-    const buf = dataBuffers.get(source.name);
+  props.sources.slice(0, MAX_PLOTS).forEach(source => {
+    const buf = dataBuffers.get(source.name)
     if (buf) {
-      buf.index = 0;
-      buf.full = false;
-      buf.x.fill(0);
-      buf.y.fill(0);
+      buf.index = 0
+      buf.full = false
+      buf.x.fill(0)
+      buf.y.fill(0)
     }
-    plots.get(source.name)?.setData([[], []]);
-  });
+    plots.get(source.name)?.setData([[], []])
+  })
 }
 
 let intervalId: ReturnType<typeof setInterval> | null = null
