@@ -230,17 +230,13 @@ let ptrApiLatitude: number = 0;
 let ptrApiLongitude: number = 0;
 
 
-export type ExtendedMainModule = MainModule & { simData: SimData; simDataDisplay: SimulationDataDisplay;
-  simulationProperties: {[key: string]: SimulationProperties[]}; autopilotProperties: SimulationProperties[]} & {
+export type ExtendedMainModule = MainModule & { simData: SimData; simDataDisplay: SimulationDataDisplay;} & {
  };
 export async function initializeModule(options: any): Promise<ExtendedMainModule> {
   const module: MainModule = await MainModuleFactory(options);
   const simData = new SimData();
   const simDataDisplay = simulationDataDisplay;
-  const simulationProperties = getSimulationParameters(module, simData, () => {});
-  const autopilotProperties = getAutopilotProperties(module, simData);
-  // Extend the module with additional properties
-  const extendedModule = Object.assign(module, { simData, simDataDisplay, simulationProperties, autopilotProperties});
+  const extendedModule = Object.assign(module, { simData, simDataDisplay});
 
   // Convert to value - string for quick lookup.
   FlapSelectorKeys = Object.entries(module.FlapSelector).slice(2).reduce((acc: { [key: number]: string }, v: [string, { value: number }]) => {
@@ -345,137 +341,136 @@ function round(value: number, decimals: number) {
   return Number(Math.round(Number(`${value}e${decimals}`)) + `e-${decimals}`);
 }
 
-export async function fetchSimData(module: MainModule, payload: SimData) {
-  if (!payload || !module) {
+export async function fetchSimData(module: ExtendedMainModule) {
+  if (!module) {
     return;
   }
   // Detect sim reset and update memory addresses
   if (ptrApiWeight !== module._api_weight() >> 2) {
-    payload.api_version = module.VERSION_STRING.toString();
+    module.simData.api_version = module.VERSION_STRING.toString();
     init(module);
   }
 
-  payload.api_fps = round(module.HEAP32[ptrApiFps], 0);
-  payload.api_ups = round(module.HEAP32[ptrApiUps], 0);
-  payload.api_simulation_speed = round(
+  module.simData.api_fps = round(module.HEAP32[ptrApiFps], 0);
+  module.simData.api_ups = round(module.HEAP32[ptrApiUps], 0);
+  module.simData.api_simulation_speed = round(
     module.HEAPF32[ptrApiSimulationSpeed],
     1,
   );
-  payload.api_weight = round(module.HEAPF32[ptrApiWeight], 2);
-  payload.api_empty_weight = round(module.HEAPF32[ptrApiEmptyWeight], 2);
-  payload.api_altitude = round(module.HEAPF32[ptrApiAltitude], 0);
-  payload.api_vertical_speed = round(module.HEAPF32[ptrApiVerticalSpeed], 0);
-  payload.api_elevator_position = round(module.HEAPF32[ptrApiElevatorPosition], 3);
-  payload.api_landing_gear_selector_position = module.HEAP32[ptrApiLandingGearSelectorPosition]
-  payload.api_landing_gear_selector_position_name = GearSelectorKeys[module.HEAP32[ptrApiLandingGearSelectorPosition]]
-  payload.api_flaps_selector_position = module.HEAP32[ptrApiFlapSelectorPosition];
-  payload.api_flaps_selector_position_name = FlapSelectorKeys[module.HEAP32[ptrApiFlapSelectorPosition]];
-  payload.api_rudder_position = round(module.HEAPF32[ptrApiRudderPosition], 2);
-  payload.api_aileron_trim_position = round(module.HEAPF32[ptrApiAileronTrimPosition], 2);
-  payload.api_elevator_trim_position = round(module.HEAPF32[ptrApiElevatorTrimPosition], 2);
-  payload.api_rudder_trim_position = round(module.HEAPF32[ptrApiRudderTrimPosition], 2);
-  payload.api_aileron_position = round(module.HEAPF32[ptrApiAileronPosition], 2);
-  payload.api_throttle = round(module.HEAPF32[ptrApiThrottle], 2);
-  payload.api_ias_speed_knots = round(module.HEAPF32[ptrApiIasSpeedKnots], 0);
-  payload.api_heading_deg = round(module.HEAPF32[ptrApiHeadingDeg], 0);
-  payload.api_pitch_deg = round(module.HEAPF32[ptrApiPitchDeg], 0);
-  payload.api_bank_deg = round(module.HEAPF32[ptrApiBankDeg], 0);
-  payload.api_sideslip_deg =  round(module.HEAPF32[ptrApiSideSlipDeg], 0);
-  payload.api_pitch_dot_deg = round(module.HEAPF32[ptrApiPitchDotDeg], 0);
-  payload.api_bank_dot_deg = round(module.HEAPF32[ptrApiBankDotDeg], 0);
-  payload.api_heading_dot_deg =  round(module.HEAPF32[ptrApiHeadingDotDeg], 2);
-  payload.api_simulation_pause = module.HEAP8[ptrApiSimulationPause] !== 0;
-  payload.api_autopilot = module.HEAP8[ptrApiAutopilot] !== 0;
-  payload.api_heading_hold = module.HEAP8[ptrApiHeadingHold] !== 0;
-  payload.api_pitch_hold = module.HEAP8[ptrApiPitchHold] !== 0;
-  payload.api_bank_hold = module.HEAP8[ptrApiBankHold] !== 0;
-  payload.api_yaw_damper = module.HEAP8[ptrApiYawDamper] !== 0;
-  payload.api_turn_coordinator = module.HEAP8[ptrApiTurnCoordinator] !== 0;
-  // payload.api_level_hold = module.HEAP8[ptrApiLevelHold] !== 0;
-  payload.api_speed_hold = module.HEAP8[ptrApiSpeedHold] !== 0;
-  payload.api_true_speed_hold = module.HEAP8[ptrApiTrueSpeedHold] !== 0;
-  payload.api_mach_speed_hold = module.HEAP8[ptrApiMachSpeedHold] !== 0;
-  payload.api_altitude_hold = module.HEAP8[ptrApiAltitudeHold] !== 0;
-  payload.api_vertical_speed_hold = module.HEAP8[ptrApiVerticalSpeedHold] !== 0;
-  payload.api_target_heading_deg = module.HEAP32[ptrApiTargetHeadingDeg];
-  payload.api_target_pitch_deg = module.HEAP32[ptrApiTargetPitchDeg];
-  payload.api_target_bank_deg = module.HEAP32[ptrApiTargetBankDeg];
-  payload.api_target_altitude = module.HEAP32[ptrApiTargetAltitude];
-  payload.api_target_vertical_speed = module.HEAP32[ptrApiTargetVerticalSpeed];
-  payload.api_target_speed = module.HEAP32[ptrApiTargetSpeed]
-  payload.api_target_true_speed = module.HEAP32[ptrApiTargetTrueSpeed]
-  payload.api_target_mach_speed = module.HEAP32[ptrApiTargetMachSpeed]
-  payload.api_atmosphere_sea_level_temperature = round(
+  module.simData.api_weight = round(module.HEAPF32[ptrApiWeight], 2);
+  module.simData.api_empty_weight = round(module.HEAPF32[ptrApiEmptyWeight], 2);
+  module.simData.api_altitude = round(module.HEAPF32[ptrApiAltitude], 0);
+  module.simData.api_vertical_speed = round(module.HEAPF32[ptrApiVerticalSpeed], 0);
+  module.simData.api_elevator_position = round(module.HEAPF32[ptrApiElevatorPosition], 3);
+  module.simData.api_landing_gear_selector_position = module.HEAP32[ptrApiLandingGearSelectorPosition]
+  module.simData.api_landing_gear_selector_position_name = GearSelectorKeys[module.HEAP32[ptrApiLandingGearSelectorPosition]]
+  module.simData.api_flaps_selector_position = module.HEAP32[ptrApiFlapSelectorPosition];
+  module.simData.api_flaps_selector_position_name = FlapSelectorKeys[module.HEAP32[ptrApiFlapSelectorPosition]];
+  module.simData.api_rudder_position = round(module.HEAPF32[ptrApiRudderPosition], 2);
+  module.simData.api_aileron_trim_position = round(module.HEAPF32[ptrApiAileronTrimPosition], 2);
+  module.simData.api_elevator_trim_position = round(module.HEAPF32[ptrApiElevatorTrimPosition], 2);
+  module.simData.api_rudder_trim_position = round(module.HEAPF32[ptrApiRudderTrimPosition], 2);
+  module.simData.api_aileron_position = round(module.HEAPF32[ptrApiAileronPosition], 2);
+  module.simData.api_throttle = round(module.HEAPF32[ptrApiThrottle], 2);
+  module.simData.api_ias_speed_knots = round(module.HEAPF32[ptrApiIasSpeedKnots], 0);
+  module.simData.api_heading_deg = round(module.HEAPF32[ptrApiHeadingDeg], 0);
+  module.simData.api_pitch_deg = round(module.HEAPF32[ptrApiPitchDeg], 0);
+  module.simData.api_bank_deg = round(module.HEAPF32[ptrApiBankDeg], 0);
+  module.simData.api_sideslip_deg =  round(module.HEAPF32[ptrApiSideSlipDeg], 0);
+  module.simData.api_pitch_dot_deg = round(module.HEAPF32[ptrApiPitchDotDeg], 0);
+  module.simData.api_bank_dot_deg = round(module.HEAPF32[ptrApiBankDotDeg], 0);
+  module.simData.api_heading_dot_deg =  round(module.HEAPF32[ptrApiHeadingDotDeg], 2);
+  module.simData.api_simulation_pause = module.HEAP8[ptrApiSimulationPause] !== 0;
+  module.simData.api_autopilot = module.HEAP8[ptrApiAutopilot] !== 0;
+  module.simData.api_heading_hold = module.HEAP8[ptrApiHeadingHold] !== 0;
+  module.simData.api_pitch_hold = module.HEAP8[ptrApiPitchHold] !== 0;
+  module.simData.api_bank_hold = module.HEAP8[ptrApiBankHold] !== 0;
+  module.simData.api_yaw_damper = module.HEAP8[ptrApiYawDamper] !== 0;
+  module.simData.api_turn_coordinator = module.HEAP8[ptrApiTurnCoordinator] !== 0;
+  // module.simData.api_level_hold = module.HEAP8[ptrApiLevelHold] !== 0;
+  module.simData.api_speed_hold = module.HEAP8[ptrApiSpeedHold] !== 0;
+  module.simData.api_true_speed_hold = module.HEAP8[ptrApiTrueSpeedHold] !== 0;
+  module.simData.api_mach_speed_hold = module.HEAP8[ptrApiMachSpeedHold] !== 0;
+  module.simData.api_altitude_hold = module.HEAP8[ptrApiAltitudeHold] !== 0;
+  module.simData.api_vertical_speed_hold = module.HEAP8[ptrApiVerticalSpeedHold] !== 0;
+  module.simData.api_target_heading_deg = module.HEAP32[ptrApiTargetHeadingDeg];
+  module.simData.api_target_pitch_deg = module.HEAP32[ptrApiTargetPitchDeg];
+  module.simData.api_target_bank_deg = module.HEAP32[ptrApiTargetBankDeg];
+  module.simData.api_target_altitude = module.HEAP32[ptrApiTargetAltitude];
+  module.simData.api_target_vertical_speed = module.HEAP32[ptrApiTargetVerticalSpeed];
+  module.simData.api_target_speed = module.HEAP32[ptrApiTargetSpeed]
+  module.simData.api_target_true_speed = module.HEAP32[ptrApiTargetTrueSpeed]
+  module.simData.api_target_mach_speed = module.HEAP32[ptrApiTargetMachSpeed]
+  module.simData.api_atmosphere_sea_level_temperature = round(
     module.HEAPF32[ptrApiAtmosphereSeaLevelTemperature],
     2,
   );
-  payload.api_atmosphere_sea_level_density = round(
+  module.simData.api_atmosphere_sea_level_density = round(
     module.HEAPF32[ptrApiAtmosphereSeaLevelDensity],
     6,
   );
 
-  payload.api_atmosphere_wind_direction_deg = module.HEAP32[ptrAtmosphereWindDirectionDeg]
-  payload.api_atmosphere_wind_speed_knots = module.HEAP32[ptrAtmosphereWindSpeedKnots]
-  payload.api_atmosphere_turbulence_level = round(module.HEAPF32[ptrAtmosphereTurbulenceLevel],2)
-  payload.api_atmosphere_turbulence_intervals = round(module.HEAPF32[ptrAtmosphereTurbulenceIntervals],2)
-  payload.api_cl0 = round(module.HEAPF32[ptrApiCl0], 4);
-  payload.api_cdo = round(module.HEAPF32[ptrApiCdo], 4);
-  payload.api_wing_area = round(module.HEAPF32[ptrApiWingArea], 0);
-  payload.api_true_speed_knots = round(module.HEAPF32[ptrApiTrueSpeedKnots], 0);
-  payload.api_mach = round(module.HEAPF32[ptrApiMach], 2);
-  payload.api_vstall_speed_knots = round(
+  module.simData.api_atmosphere_wind_direction_deg = module.HEAP32[ptrAtmosphereWindDirectionDeg]
+  module.simData.api_atmosphere_wind_speed_knots = module.HEAP32[ptrAtmosphereWindSpeedKnots]
+  module.simData.api_atmosphere_turbulence_level = round(module.HEAPF32[ptrAtmosphereTurbulenceLevel],2)
+  module.simData.api_atmosphere_turbulence_intervals = round(module.HEAPF32[ptrAtmosphereTurbulenceIntervals],2)
+  module.simData.api_cl0 = round(module.HEAPF32[ptrApiCl0], 4);
+  module.simData.api_cdo = round(module.HEAPF32[ptrApiCdo], 4);
+  module.simData.api_wing_area = round(module.HEAPF32[ptrApiWingArea], 0);
+  module.simData.api_true_speed_knots = round(module.HEAPF32[ptrApiTrueSpeedKnots], 0);
+  module.simData.api_mach = round(module.HEAPF32[ptrApiMach], 2);
+  module.simData.api_vstall_speed_knots = round(
     module.HEAPF32[ptrApiVstallSpeedKnots],
     2,
   );
-  payload.api_atmosphere_temperature = round(
+  module.simData.api_atmosphere_temperature = round(
     module.HEAPF32[ptrApiAtmosphereTemperature],
     2,
   );
-  payload.api_atmosphere_density = round(
+  module.simData.api_atmosphere_density = round(
     module.HEAPF32[ptrApiAtmosphereDensity],
     6,
   );
-  payload.api_drag = round(module.HEAPF32[PtrApiDrag], 2);
-  payload.api_lift = round(module.HEAPF32[ptrApiLift], 2);
-  payload.api_thrust = round(module.HEAPF32[ptrApiThrust], 2);
-  payload.api_cl = round(module.HEAPF32[ptrApiCl], 4);
-  payload.api_aoa_deg = round(module.HEAPF32[ptrApiAoaDeg], 2);
-  payload.api_cdi = round(module.HEAPF32[ptrApiCdi], 4);
-  payload.api_ground_collision = module.HEAP8[ptrApiGroundCollision] !== 0;
+  module.simData.api_drag = round(module.HEAPF32[PtrApiDrag], 2);
+  module.simData.api_lift = round(module.HEAPF32[ptrApiLift], 2);
+  module.simData.api_thrust = round(module.HEAPF32[ptrApiThrust], 2);
+  module.simData.api_cl = round(module.HEAPF32[ptrApiCl], 4);
+  module.simData.api_aoa_deg = round(module.HEAPF32[ptrApiAoaDeg], 2);
+  module.simData.api_cdi = round(module.HEAPF32[ptrApiCdi], 4);
+  module.simData.api_ground_collision = module.HEAP8[ptrApiGroundCollision] !== 0;
 
-  payload.api_latitude =  round(module.HEAPF32[ptrApiLatitude], 2);
-  payload.api_longitude =  round(module.HEAPF32[ptrApiLongitude], 2);
+  module.simData.api_latitude =  round(module.HEAPF32[ptrApiLatitude], 2);
+  module.simData.api_longitude =  round(module.HEAPF32[ptrApiLongitude], 2);
 }
 
 export function getAutopilotProperties(
-  module: MainModule,
-  payload: SimData,
+  module: ExtendedMainModule,
 ): SimulationProperties[] {
   return [
     {
       id: "masterAP",
       label: "MASTER AP",
-      stateValue: payload.api_autopilot,
-      toggleFunc: () => module.api_set_autopilot(!payload.api_autopilot),
+      stateValue: module.simData.api_autopilot,
+      toggleFunc: () => module.api_set_autopilot(!module.simData.api_autopilot),
     },
     {
       id: "yawDamper",
       label: "YAW DAMPER",
-      stateValue: payload.api_yaw_damper,
-      toggleFunc: () => module.api_set_yaw_damper(!payload.api_yaw_damper),
+      stateValue: module.simData.api_yaw_damper,
+      toggleFunc: () => module.api_set_yaw_damper(!module.simData.api_yaw_damper),
     },
     {
       id: "turnCoordinator",
       label: "TURN COORDINATOR",
-      stateValue: payload.api_turn_coordinator,
-      toggleFunc: () => module.api_set_turn_coordinator(!payload.api_turn_coordinator),
+      stateValue: module.simData.api_turn_coordinator,
+      toggleFunc: () => module.api_set_turn_coordinator(!module.simData.api_turn_coordinator),
     },
     {
       id: "headingHold",
       label: "HEADING",
-      inputValue: payload.api_target_heading_deg,
-      stateValue: payload.api_heading_hold,
-      toggleFunc: () => module.api_set_heading_hold(!payload.api_heading_hold),
+      inputValue: module.simData.api_target_heading_deg,
+      stateValue: module.simData.api_heading_hold,
+      toggleFunc: () => module.api_set_heading_hold(!module.simData.api_heading_hold),
       setterFunc: (newVal: string) => module.api_set_target_heading_deg(Number(newVal)),
       unit: "°",
       min: 0,
@@ -485,9 +480,9 @@ export function getAutopilotProperties(
     {
       id: "bankHold",
       label: "BANK",
-      inputValue: payload.api_target_bank_deg,
-      stateValue: payload.api_bank_hold,
-      toggleFunc: () => module.api_set_bank_hold(!payload.api_bank_hold),
+      inputValue: module.simData.api_target_bank_deg,
+      stateValue: module.simData.api_bank_hold,
+      toggleFunc: () => module.api_set_bank_hold(!module.simData.api_bank_hold),
       setterFunc: (newVal: string) =>
         module.api_set_target_bank_deg(Number(newVal)),
       unit: "°",
@@ -498,9 +493,9 @@ export function getAutopilotProperties(
     {
       id: "pitchHold",
       label: "PITCH",
-      inputValue: payload.api_target_pitch_deg,
-      stateValue: payload.api_pitch_hold,
-      toggleFunc: () => module.api_set_pitch_hold(!payload.api_pitch_hold),
+      inputValue: module.simData.api_target_pitch_deg,
+      stateValue: module.simData.api_pitch_hold,
+      toggleFunc: () => module.api_set_pitch_hold(!module.simData.api_pitch_hold),
       setterFunc: (newVal: string) =>
         module.api_set_target_pitch_deg(Number(newVal)),
       unit: "°",
@@ -511,9 +506,9 @@ export function getAutopilotProperties(
     {
       id: "altitudeHold",
       label: "ALT",
-      inputValue: payload.api_target_altitude,
-      stateValue: payload.api_altitude_hold,
-      toggleFunc: () => module.api_set_altitude_hold(!payload.api_altitude_hold),
+      inputValue: module.simData.api_target_altitude,
+      stateValue: module.simData.api_altitude_hold,
+      toggleFunc: () => module.api_set_altitude_hold(!module.simData.api_altitude_hold),
       setterFunc: (newVal: string) => module.api_set_target_altitude(Number(newVal)),
       unit: "ft",
       min: 0,
@@ -523,9 +518,9 @@ export function getAutopilotProperties(
     {
       id: "verticalSpeedHold",
       label: "VERT SPD",
-      inputValue: payload.api_target_vertical_speed,
-      stateValue: payload.api_vertical_speed_hold,
-      toggleFunc: () => module.api_set_vertical_speed_hold(!payload.api_vertical_speed_hold),
+      inputValue: module.simData.api_target_vertical_speed,
+      stateValue: module.simData.api_vertical_speed_hold,
+      toggleFunc: () => module.api_set_vertical_speed_hold(!module.simData.api_vertical_speed_hold),
       setterFunc: (newVal: string) => module.api_set_target_vertical_speed(Number(newVal)),
       unit: "fpm",
       min: -6000,
@@ -535,9 +530,9 @@ export function getAutopilotProperties(
     {
       id: "speedHold",
       label: "SPD",
-      inputValue: payload.api_target_speed,
-      stateValue: payload.api_speed_hold,
-      toggleFunc: () => module.api_set_speed_hold(!payload.api_speed_hold),
+      inputValue: module.simData.api_target_speed,
+      stateValue: module.simData.api_speed_hold,
+      toggleFunc: () => module.api_set_speed_hold(!module.simData.api_speed_hold),
       setterFunc: (newVal: string) => module.api_set_target_speed(Number(newVal)),
       unit: "kt",
       min: 0,
@@ -547,9 +542,9 @@ export function getAutopilotProperties(
     {
       id: "speedHold",
       label: "TRUE SPD",
-      inputValue: payload.api_target_true_speed,
-      stateValue: payload.api_true_speed_hold,
-      toggleFunc: () => module.api_set_true_speed_hold(!payload.api_true_speed_hold),
+      inputValue: module.simData.api_target_true_speed,
+      stateValue: module.simData.api_true_speed_hold,
+      toggleFunc: () => module.api_set_true_speed_hold(!module.simData.api_true_speed_hold),
       setterFunc: (newVal: string) => module.api_set_target_true_speed(Number(newVal)),
       unit: "kt",
       min: 0,
@@ -559,9 +554,9 @@ export function getAutopilotProperties(
     {
       id: "machHold",
       label: "MACH",
-      inputValue: payload.api_target_mach_speed / 1000,
-      stateValue: payload.api_mach_speed_hold,
-      toggleFunc: () => module.api_set_mach_speed_hold(!payload.api_mach_speed_hold),
+      inputValue: module.simData.api_target_mach_speed / 1000,
+      stateValue: module.simData.api_mach_speed_hold,
+      toggleFunc: () => module.api_set_mach_speed_hold(!module.simData.api_mach_speed_hold),
       setterFunc: (newVal: string) => module.api_set_target_mach_speed(Number(newVal)),
       unit: "M",
       min: 0,
@@ -572,18 +567,17 @@ export function getAutopilotProperties(
 }
 
 export function getSimulationParameters(
-  module: MainModule,
-  payload: SimData,
+  module: ExtendedMainModule,
   resetCallback: () => void
 ): { [key: string]: SimulationProperties[] } {
   return {
     Simulation: [
       {
-        label: payload.api_simulation_pause ? "Resume" : "Pause",
+        label: module.simData.api_simulation_pause ? "Resume" : "Pause",
         toggleFunc: () =>
-          module.api_set_simulation_pause(!payload.api_simulation_pause),
-        icon: payload.api_simulation_pause ? "play-fill" : "pause-fill",
-        stateValue: payload.api_simulation_pause,
+          module.api_set_simulation_pause(!module.simData.api_simulation_pause),
+        icon: module.simData.api_simulation_pause ? "play-fill" : "pause-fill",
+        stateValue: module.simData.api_simulation_pause,
       },
       {
         label: "Reset",
@@ -601,7 +595,7 @@ export function getSimulationParameters(
 
       {
         label: "Simulation Speed",
-        inputValue: payload.api_simulation_speed,
+        inputValue: module.simData.api_simulation_speed,
         setterFunc: (newVal: string) =>
           module.api_set_simulation_speed(Number(newVal)),
         toggleFunc: () => { module.api_set_simulation_speed(1);},
@@ -624,7 +618,7 @@ export function getSimulationParameters(
     Aircraft: [
       {
         label: "Engine Throttle",
-        inputValue: payload.api_throttle,
+        inputValue: module.simData.api_throttle,
         setterFunc: (newVal: string) => module.api_set_engine_throttle_value(Number(newVal)),
         unit: "%",
         min: 0,
@@ -633,7 +627,7 @@ export function getSimulationParameters(
       },
         {
         label: "Aileron",
-        inputValue: payload.api_aileron_position,
+        inputValue: module.simData.api_aileron_position,
         setterFunc: (newVal: string) =>
           module.api_set_aileron_position(Number(newVal)),
         unit: "°",
@@ -643,7 +637,7 @@ export function getSimulationParameters(
       },
       {
         label: "Elevator",
-        inputValue: payload.api_elevator_position,
+        inputValue: module.simData.api_elevator_position,
         setterFunc: (newVal: string) => module.api_set_elevator_position(Number(newVal)),
         unit: "°",
         min: -1,
@@ -652,7 +646,7 @@ export function getSimulationParameters(
       },
       {
         label: "Rudder",
-        inputValue: payload.api_rudder_position,
+        inputValue: module.simData.api_rudder_position,
         setterFunc: (newVal: string) => module.api_set_rudder_position(Number(newVal)),
         unit: "°",
         min: -1,
@@ -661,7 +655,7 @@ export function getSimulationParameters(
       },
       {
         label: "Aileron Trim",
-        inputValue: payload.api_aileron_trim_position,
+        inputValue: module.simData.api_aileron_trim_position,
         setterFunc: (newVal: string) => module.api_set_aileron_trim_position(Number(newVal)),
         unit: "°",
         min: -1,
@@ -670,7 +664,7 @@ export function getSimulationParameters(
       },
       {
         label: "Elevator Trim",
-        inputValue: payload.api_elevator_trim_position,
+        inputValue: module.simData.api_elevator_trim_position,
         setterFunc: (newVal: string) => module.api_set_elevator_trim_position(Number(newVal)),
         unit: "°",
         min: -1,
@@ -679,7 +673,7 @@ export function getSimulationParameters(
       },
       {
         label: "Rudder Trim",
-        inputValue: payload.api_rudder_trim_position,
+        inputValue: module.simData.api_rudder_trim_position,
         setterFunc: (newVal: string) => module.api_set_rudder_trim_position(Number(newVal)),
         unit: "°",
         min: -1,
@@ -707,7 +701,7 @@ export function getSimulationParameters(
       // },
       {
         label: "Empty Weight",
-        inputValue: payload.api_empty_weight,
+        inputValue: module.simData.api_empty_weight,
         setterFunc: (newVal: string) => module.api_set_empty_weight(Number(newVal)),
         min: 0.0,
         max: 500000,
@@ -715,7 +709,7 @@ export function getSimulationParameters(
       },
       {
         label: "Wing Area",
-        inputValue: payload.api_wing_area,
+        inputValue: module.simData.api_wing_area,
         setterFunc: (newVal: string) => module.api_set_wing_area(Number(newVal)),
         unit: "Ft²",
         min: 10,
@@ -726,7 +720,7 @@ export function getSimulationParameters(
     Aerodynamics: [
       {
         label: "Lift Cofficient Slope",
-        inputValue: payload.api_cl0,
+        inputValue: module.simData.api_cl0,
         setterFunc: (newVal: string) => module.api_set_dcl(Number(newVal)),
         min: 0.01,
         max: 5,
@@ -745,7 +739,7 @@ export function getSimulationParameters(
       {
         label: "Sea Level Temperature",
         unit: "R",
-        inputValue: payload.api_atmosphere_sea_level_temperature,
+        inputValue: module.simData.api_atmosphere_sea_level_temperature,
         setterFunc: (newVal: string) => module.api_set_atmosphere_sea_level_temperature(Number(newVal)),
         min: 311,
         max: 672,
@@ -754,7 +748,7 @@ export function getSimulationParameters(
       {
         label: "Sea Level Density",
         unit: "kg/m³",
-        inputValue: payload.api_atmosphere_sea_level_density,
+        inputValue: module.simData.api_atmosphere_sea_level_density,
         setterFunc: (newVal: string) => module.api_set_atmosphere_sea_level_density(Number(newVal)),
         min: 0.001,
         max: 1.8,
@@ -763,7 +757,7 @@ export function getSimulationParameters(
       {
         label: "Atmosphere Wind Speed",
         unit: "knots",
-        inputValue: payload.api_atmosphere_wind_speed_knots,
+        inputValue: module.simData.api_atmosphere_wind_speed_knots,
         setterFunc: (newVal: string) => module.api_set_atmosphere_wind_speed(Number(newVal)),
         min: 0,
         max: 400,
@@ -773,7 +767,7 @@ export function getSimulationParameters(
       {
         label: "Atmosphere Wind Direction",
         unit: "°",
-        inputValue: payload.api_atmosphere_wind_direction_deg,
+        inputValue: module.simData.api_atmosphere_wind_direction_deg,
         setterFunc: (newVal: string) => module.api_set_atmosphere_wind_direction(Number(newVal)),
         min: 0,
         max: 360,
@@ -783,7 +777,7 @@ export function getSimulationParameters(
       {
         label: "Atmosphere Turbulence Level",
         unit: "",
-        inputValue: payload.api_atmosphere_turbulence_level,
+        inputValue: module.simData.api_atmosphere_turbulence_level,
         setterFunc: (newVal: string) => module.api_set_atmosphere_turbulence_level(Number(newVal)),
         min: 0,
         max: 1,
@@ -793,7 +787,7 @@ export function getSimulationParameters(
       {
         label: "Atmosphere Turbulence Intervals",
         unit: "minutes",
-        inputValue: payload.api_atmosphere_turbulence_intervals,
+        inputValue: module.simData.api_atmosphere_turbulence_intervals,
         setterFunc: (newVal: string) => module.api_set_atmosphere_turbulence_intervals(Number(newVal)),
         min: 0.01,
         max: 0.99,

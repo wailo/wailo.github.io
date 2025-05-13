@@ -84,8 +84,7 @@
 
 <script setup lang="ts">
 import { ref, PropType, onMounted } from "vue";
-import { MainModule } from "../../public/flightsimulator_exec";
-import { SimData, SimulationDataDisplay } from "../siminterfac.ts";
+import { ExtendedMainModule, SimulationDataDisplay } from "../siminterfac.ts";
 import simApiTypes from "../../public/flightsimulator_exec.d.ts?raw";
 import simDataTypes from "../siminterfac.ts?raw";
 
@@ -134,11 +133,7 @@ window.MonacoEnvironment = {
 
 const props = defineProps({
   contextObject: {
-    type: Object as PropType<MainModule>,
-    required: true,
-  },
-  dataObject: {
-    type: Object as PropType<SimData>,
+    type: Object as PropType<ExtendedMainModule>,
     required: true,
   },
   displayData: {
@@ -252,14 +247,13 @@ const executeCode = async () => {
     // Create a function with context binding
     const userScriptFunc = new Function(`
 const simControls = arguments[0];
-const simData = arguments[1];
-const displayData = arguments[2];
+const displayData = arguments[1];
+const simData = simControls.simData;
 ${coreCode}
 resetTimeouts();
 return async function () {${code.value}};
     `);
-
-    userScriptFunc(props.contextObject, props.dataObject, props.displayData)()
+    userScriptFunc(props.contextObject, props.displayData)()
       .then(() => {
         emit("reset");
       })

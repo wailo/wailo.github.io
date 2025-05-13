@@ -1,13 +1,13 @@
 <template>
-  <div class="container max-w-full h-screen gap-2 p-5 bg-simBackground">
+  <div  class="container max-w-full h-screen gap-2 p-5 bg-simBackground">
     <!-- Panel 1 -->
     <Panel
       :status="
-        sim_data.api_ground_collision
+        FlightSimModule?.simData?.api_ground_collision
           ? 'Collision'
-          : `${sim_data.api_fps} FPS`
+          : `${FlightSimModule?.simData?.api_fps} FPS`
       "
-      :flash="sim_data.api_ground_collision"
+      :flash="FlightSimModule?.simData?.api_ground_collision"
       class="panel-1"
     >
     <template #Cockpit>
@@ -28,7 +28,7 @@
       <SimDataDisplay
     ref="displayRef"
     v-model:items="simulationDisplayData"
-    :sim-data="sim_data"
+    :sim-data="FlightSimModule.simData"
     v-if="sim_module_loaded"
   />
     </div>
@@ -55,29 +55,30 @@
        <SimDataDisplay
     ref="displayRef"
     v-model:items="simulationDisplayData"
-    :sim-data="sim_data"
+    :sim-data="FlightSimModule.simData"
     v-if="sim_module_loaded"
   /> 
 </template>
     <template #Plot display="Plot Graph">
     <TimePlot
       ref="TimePlotRef"
-      :pause="sim_data.api_simulation_pause"
+      :pause="FlightSimModule.simData.api_simulation_pause"
       v-if="sim_module_loaded"
       :sources="Object.values(simulationDisplayData)
-        .filter((sim_object) => sim_object.visible && typeof sim_data[sim_object.api] === 'number')
+        .filter((sim_object) => sim_object.visible && typeof FlightSimModule.simData[sim_object.api] === 'number')
         .map((visible_sim_object) => ({
           name: visible_sim_object.label,
-          ref: ref(sim_data[visible_sim_object.api]) as Ref<number>
+          ref: ref(FlightSimModule.simData[visible_sim_object.api]) as Ref<number>
         }))"
     />
       </template>
     </Panel>
     <!-- Panel 3 -->
     <Panel
-      :status="sim_data.api_simulation_speed == 1 ? `RUNNING` :`${sim_data.api_simulation_speed}x`"
-      :active="sim_data.api_simulation_speed != 1"
-      :flash="sim_data.api_simulation_pause"
+    v-if="sim_module_loaded"
+      :status="FlightSimModule.simData.api_simulation_speed == 1 ? `RUNNING` :`${FlightSimModule.simData.api_simulation_speed}x`"
+      :active="FlightSimModule.simData.api_simulation_speed != 1"
+      :flash="FlightSimModule.simData.api_simulation_pause"
       class="panel-3"
     >
     <template #Simulation>
@@ -116,7 +117,6 @@
       <Editor
         v-if="sim_module_loaded"
         :context-object="FlightSimModule"
-        :data-object="sim_data"
         :display-data="simulationDisplayData"
         @start="(_code) => {
           scriptComponentStatus = 'IN-PROGRESS';
@@ -133,7 +133,8 @@
   </Panel>
     <!-- Panel 5 -->
     <Panel
-      :status="sim_data.api_autopilot ? 'Engaged' : 'Disengaged'"
+    v-if="sim_module_loaded"
+      :status="FlightSimModule.simData.api_autopilot ? 'Engaged' : 'Disengaged'"
       class="panel-5"
     >
     <template #Autopilot>
@@ -331,7 +332,6 @@ const resetComponents = () => {
 };
 
 let FlightSimModule: ExtendedMainModule;
-let sim_data = reactive(new SimData());
 let sim_module_loaded = ref(false);
 let classRoomComponentState = ref(false);
 let scriptComponentStatus = ref<ScriptStatus>("IDLE");
@@ -375,19 +375,20 @@ onMounted(async () => {
     notifyUser: notifyUser
   })
     .then((module) => {
-      manager = new RemoteCallManager((call: RemoteCall | RemoteEvent) =>   broadcast(JSON.stringify(call)), module);
+      module.simData = reactive(new SimData());
+      manager = new RemoteCallManager((call: RemoteCall | RemoteEvent) => broadcast(JSON.stringify(call)), module);
       FlightSimModule = manager.createMirroredProxy([], module);
       FlightSimModule.GLFW.requestFullscreen = toggleFullscreen; // Replace with custom implementation
 
       autopilotControlsButtons = computed(() =>
-        getAutopilotProperties(FlightSimModule, sim_data).filter(item => item.inputValue === undefined),
+        getAutopilotProperties(FlightSimModule).filter(item => item.inputValue === undefined),
       );
       autopilotControlsButtonsInputs = computed(() =>
-        getAutopilotProperties(FlightSimModule, sim_data).filter(item => item.inputValue !== undefined),
+        getAutopilotProperties(FlightSimModule).filter(item => item.inputValue !== undefined),
       );
 
       simulationProps = computed(() =>
-        getSimulationParameters(FlightSimModule, sim_data, resetComponents),
+        getSimulationParameters(FlightSimModule, resetComponents),
       );
 
 
@@ -439,7 +440,7 @@ onMounted(async () => {
 
       document.addEventListener('fullscreenchange', () => isFullscreen.value = document.fullscreenElement !== null);
       simUpdateInterval = setInterval(() => {
-        fetchSimData(FlightSimModule, sim_data);
+        fetchSimData(FlightSimModule);
       }, update_interval_ms);
     })
     .catch(console.error);

@@ -31,30 +31,51 @@ export class RemoteCallManager {
     private contextRoot: Record<string, any>
   ) {}
 
-  public createMirroredProxy(path: string[], target: any): any {
-    return new Proxy(target, {
-      get: (obj, prop) => {
-        const value = obj[prop as keyof typeof obj];
+  private proxyCache = new WeakMap<object, any>();
 
-        if (typeof value === "function") {
-          const propStr = prop.toString();
-          const isAllowed =
-            propStr.startsWith("api_set") ||
-            propStr.startsWith("notifyUser");
+public createMirroredProxy(path: string[], target: any): any {
+  return new Proxy(target, {
+    set(target, prop, value) {
+      return Reflect.set(target, prop, value);
+    },
 
-          if (isAllowed) {
-            return this.wrapFunction(value, [...path, propStr]);
-          }
+    get: (obj, prop, receiver) => {
+      const value = Reflect.get(obj, prop, receiver);
+
+      if (typeof value === 'function') {
+        const propStr = prop.toString();
+        const isAllowed =
+          propStr.startsWith('api_set') ||
+          propStr.startsWith('notifyUser');
+
+        if (isAllowed) {
+          return this.wrapFunction(value.bind(obj), [...path, propStr]);
+        }
+      }
+
+      if (value && typeof value === 'object' && this.isPlainObject(value)) {
+        if (this.proxyCache.has(value)) {
+          return this.proxyCache.get(value);
         }
 
-        if (typeof value === "object" && value !== null) {
-          return this.createMirroredProxy([...path, prop.toString()], value);
-        }
+        const proxied = this.createMirroredProxy([...path, prop.toString()], value);
+        this.proxyCache.set(value, proxied);
+        return proxied;
+      }
 
-        return value;
-      },
-    });
-  }
+      return value;
+    },
+
+    has(target, prop) {
+      return Reflect.has(target, prop);
+    },
+  });
+}
+
+private isPlainObject(val: any): val is Record<string, any> {
+  return Object.prototype.toString.call(val) === '[object Object]';
+}
+
 
   public sendKeyMirror(e: KeyboardEvent) {
     const call: RemoteEvent = {
