@@ -1,3 +1,5 @@
+import {simControls, simData, simProps, waitFor, waitForCondition, plotView, dataView, notifyUser} from "./core"
+
 // 🛠️ Helper: Flight Schedule Tracker
 let currentStep = 0;
 
@@ -36,7 +38,7 @@ function showSchedule(highlightIndex, title, optionalText = "") {
     optionalText ? `\n${optionalText}` : ""
   ].join("\n");
 
-  simControls.notifyUser("🗓️ Demo Schedule", scheduleMarkdown);
+  notifyUser("🗓️ Demo Schedule", scheduleMarkdown);
 }
 
 // 📜 Simulator Demo Script
@@ -53,61 +55,60 @@ simControls.api_set_simulation_reset();
 await waitFor(1000);
 
 // Display key data
-displayData.api_altitude.visible = true;
+dataView(simProps.pitch_deg, true);
 await waitFor(300);
-displayData.api_ias_speed_knots.visible = true;
+dataView(simProps.bank_deg, true);
 await waitFor(300);
-displayData.api_pitch_deg.visible = true;
+dataView(simProps.heading_deg, true);
 await waitFor(300);
-displayData.api_bank_deg.visible = true;
+dataView(simProps.flaps_selector_position, true);
 await waitFor(300);
-displayData.api_heading_deg.visible = true;
+dataView(simProps.landing_gear_selector_position, true);
 await waitFor(300);
-displayData.api_flaps_selector_position_name.visible = true;
+plotView(simProps.altitude, true);
 await waitFor(300);
-displayData.api_landing_gear_selector_position_name.visible = true;
-await waitFor(300);
+plotView(simProps.ias_speed_knots, true);
 
 // Flaps + Throttle
 simControls.api_set_flaps_selector_position(simControls.FlapSelector.TWENTY.value);
 simControls.api_set_autopilot(true);
 await waitFor(300);
-simControls.api_set_target_speed(180);
+simControls.api_set_autopilot_ias_speed_target(180);
 await waitFor(300);
-simControls.api_set_target_altitude(18000);
+simControls.api_set_autopilot_altitude_target(18000);
 await waitFor(300);
-simControls.api_set_target_heading_deg(270);
+simControls.api_set_autopilot_heading_target(270);
 await waitFor(300);
-simControls.api_set_target_vertical_speed(1500);
+simControls.api_set_autopilot_vertical_speed_target(1500);
 await waitFor(300);
-simControls.api_set_target_pitch_deg(10);
+simControls.api_set_autopilot_pitch_target(10);
 await waitFor(2000)
 
 advanceSchedule("", "Engine throttle to 90%.");
-simControls.api_set_engine_throttle_value(0.90);
+simControls.api_set_engine_throttle_position(0.90);
 await waitFor(7000)
 
 advanceSchedule("", "Wait to reach 150 KT IAS");
 await waitForCondition(() => simData.api_ias_speed_knots >= 150);
 advanceSchedule("Initiate Climbing", "Rotate");
 simControls.api_set_elevator_position(-0.25);
-// simControls.api_set_speed_hold(true);
+// simControls.api_set_autopilot_ias_speed_hold(true);
 await waitFor(3000);
 
 await waitForCondition(() => simData.api_vertical_speed > 400, 5000);
 advanceSchedule("Retracting landing gear", "Retract Gear");
-simControls.api_set_pitch_hold(true);
+simControls.api_set_autopilot_pitch_hold(true);
 simControls.api_set_landing_gear_selector_position(simControls.GearSelector.UP.value);
 await waitFor(3000);
-simControls.api_set_engine_throttle_value(0.85)
+simControls.api_set_engine_throttle_position(0.85)
 
 await waitForCondition(() => simData.api_altitude > 1000);
 advanceSchedule("Activate Vertical Speed Hold to 1500 ft/min, heading hold to 270", "Engaging VS and heading hold");
-simControls.api_set_pitch_hold(false);
-simControls.api_set_vertical_speed_hold(true);
-simControls.api_set_heading_hold(true);
+simControls.api_set_autopilot_pitch_hold(false);
+simControls.api_set_autopilot_vertical_speed_hold(true);
+simControls.api_set_autopilot_heading_hold(true);
 await waitFor(5000);
-simControls.api_set_engine_throttle_value(0.80)
+simControls.api_set_engine_throttle_position(0.80)
 
 await waitForCondition(() => simData.api_altitude >= 1000 && simData.api_ias_speed_knots >= 210);
 advanceSchedule("Retracting to Flaps 10", "Flaps to 10");
@@ -130,10 +131,10 @@ simControls.api_set_flaps_selector_position(simControls.FlapSelector.ZERO.value)
 // simControls.api_set_simulation_speed(2);
 // await waitForCondition(() => simData.api_altitude >= 3000 && simData.api_heading_deg === 270);
 
-simControls.api_set_vertical_speed_hold(false);
-simControls.api_set_altitude_hold(true);
-simControls.api_set_target_speed(250);
-simControls.api_set_speed_hold(true)
+simControls.api_set_autopilot_vertical_speed_hold(false);
+simControls.api_set_autopilot_altitude_hold(true);
+simControls.api_set_autopilot_ias_speed_target(250);
+simControls.api_set_autopilot_ias_speed_hold(true)
 await waitFor(4000);
 
 advanceSchedule("Climbing to FL180 using 100x speed", "Climb to FL180");
@@ -142,8 +143,8 @@ simControls.api_set_simulation_speed(100);
 
 // Wait until corssing FL100
 await waitForCondition(() => simData.api_altitude >= 10000);
-simControls.api_set_target_mach_speed(0.6);
-simControls.api_set_mach_speed_hold(true)
+simControls.api_set_autopilot_mach_speed_target(0.6);
+simControls.api_set_autopilot_mach_speed_hold(true)
 
 
 await waitForCondition(() => simData.api_altitude >= 18000);

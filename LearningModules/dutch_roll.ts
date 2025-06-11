@@ -1,10 +1,12 @@
+import {repositionWithAutopilot, simControls, simData, simProps, waitFor, waitForCondition, plotView, dataView, notifyUser } from "./core"
+
 // Define target altitude, speed, and heading
-const targetAltitude = 30000; // in feet
+const targetAltitude = 3000; // in feet
 const targetSpeed = 180; // in knots
-const targetHeading = 0; // in degrees
+const targetHeading = 90; // in degrees
 
 // Demonstrate dutch roll mode
-simControls.notifyUser(
+notifyUser(
     "**Dutch Roll Mode**",
     `Observe the aircraft's oscillation in *yaw* and *roll*.
 
@@ -18,19 +20,20 @@ simControls.notifyUser(
 );
 
 await waitFor(5000);
-await reposition_with_autopilot(targetAltitude, targetSpeed, targetHeading);
+await repositionWithAutopilot(targetAltitude, targetSpeed, targetHeading);
 simControls.api_set_autopilot(false);
-displayData.api_rudder_position.visible = true;
-displayData.api_aileron_position.visible = true;
-displayData.api_sideslip_deg.visible = true;
-displayData.api_pitch_deg.visible = true;
-displayData.api_bank_deg.visible = true;
-displayData.api_ias_speed_knots.visible = true;
+// plotView(simProps.api_aileron_position, true);
+plotView(simProps.rudder_position, true);
+plotView(simProps.sideslip_deg, true);
+plotView(simProps.bank_deg, true);
+plotView(simProps.heading_deg, true);
+// plotView(simProps.pitch_deg, true);
+// plotView(simProps.ias_speed_knots, true);
 simControls.api_set_aileron_position(0.0);
 simControls.api_set_rudder_position(0.0);
 await waitFor(5000);
 
-simControls.notifyUser(
+notifyUser(
     "**Initiating Dutch Roll Mode**",
     `Applying step rudder input for **2.5 seconds** in each direction, then returning to neutral position.`
 );
@@ -41,7 +44,7 @@ simControls.api_set_rudder_position(1.0);
 await waitFor(3000);
 simControls.api_set_rudder_position(0.0);
 
-simControls.notifyUser(
+notifyUser(
     "**Dutch Roll Mode**",
     `We will observe the Dutch Roll in **slow motion**.
 
@@ -54,10 +57,10 @@ simControls.notifyUser(
   - **Heading Indicator**	Heading slowly wobbles back and forth.
 `
 );
-simControls.api_set_simulation_speed(0.5);
+simControls.api_set_simulation_speed(1.0);
 await waitFor(40000);
 
-simControls.notifyUser(
+notifyUser(
     "**Dutch Roll Mode**",
     `By now, the Dutch Roll mode oscillation is almost damped.
 This marks the end of the Dutch Roll mode demonstration.`

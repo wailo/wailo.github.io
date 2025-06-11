@@ -1,7 +1,8 @@
+import {repositionWithAutopilot, simControls, simData, simProps, waitFor, waitForCondition, plotView, dataView, notifyUser } from "./core"
 // =========================
 // 📘 Introduction
 // =========================
-simControls.notifyUser(
+notifyUser(
     "📘 Lesson: Effect of Aircraft Weight",
     "⚖️ In this lesson, you'll explore how aircraft weight affects flight dynamics.\n\n" +
     "🎯 Objectives:\n" +
@@ -12,15 +13,15 @@ simControls.notifyUser(
   );
   
   // ✈️ Reposition and stabilize at level flight
-  await reposition_with_autopilot(12000, 270, 180);
-  simControls.notifyUser("⚖️ Weight Adjustment", "We'll now modify aircraft weight and observe the effects.");
+  await repositionWithAutopilot(12000, 270, 180);
+  notifyUser("⚖️ Weight Adjustment", "We'll now modify aircraft weight and observe the effects.");
   
   // 🧪 Record current weight
   const initialWeight = simData.api_weight;
   
   // 🔓 Disable altitude and speed hold to allow natural response
-  simControls.api_set_altitude_hold(false);
-  simControls.api_set_speed_hold(false);
+  simControls.api_set_autopilot_altitude_hold(false);
+  simControls.api_set_autopilot_ias_speed_hold(false);
   
   // ⏳ Wait before adjustments
   await waitFor(2000);
@@ -30,12 +31,12 @@ simControls.notifyUser(
     const weight = simData.api_weight.toFixed(0);
     const speed = simData.api_ias_speed_knots.toFixed(1);
     const pitch = simData.api_pitch_deg.toFixed(1);
-    simControls.notifyUser("📈 Live Data", `⚖️ Weight: ${weight} kg\n💨 Speed: ${speed} knots\n🧭 Pitch: ${pitch}°`);
+    notifyUser("📈 Live Data", `⚖️ Weight: ${weight} kg\n💨 Speed: ${speed} knots\n🧭 Pitch: ${pitch}°`);
   };
   
   // 🔼 Increase weight by 20%
   simControls.api_set_empty_weight(initialWeight * 1.2);
-  simControls.notifyUser("🔼 Increasing Weight", "Weight increased by 20%. Observe performance.");
+  notifyUser("🔼 Increasing Weight", "Weight increased by 20%. Observe performance.");
   for (let i = 0; i < 3; i++) {
     await waitFor(5000);
     notifyWeightFlightData();
@@ -43,7 +44,7 @@ simControls.notifyUser(
   
   // 🔽 Decrease weight to 80% of original
   simControls.api_set_empty_weight(initialWeight * 0.8);
-  simControls.notifyUser("🔽 Decreasing Weight", "Weight reduced by 20%. Observe changes.");
+  notifyUser("🔽 Decreasing Weight", "Weight reduced by 20%. Observe changes.");
   for (let i = 0; i < 3; i++) {
     await waitFor(5000);
     notifyWeightFlightData();
@@ -51,7 +52,7 @@ simControls.notifyUser(
   
   // 🔁 Reset to original weight
   simControls.api_set_empty_weight(initialWeight);
-  simControls.notifyUser("🔁 Weight Restored", "Aircraft weight reset. Observe return to initial performance.");
+  notifyUser("🔁 Weight Restored", "Aircraft weight reset. Observe return to initial performance.");
   await waitFor(3000);
   notifyWeightFlightData();
   
@@ -61,7 +62,7 @@ simControls.notifyUser(
   await waitFor(8000);
   
   // ❓ Question 1
-  simControls.notifyUser(
+  notifyUser(
     "🧠 Assessment - Q1",
     "📊 What happens to pitch and climb when aircraft weight is increased?\n" +
     "A. Pitch increases, harder to climb\n" +
@@ -72,7 +73,7 @@ simControls.notifyUser(
   
   // ❓ Question 2
   await waitFor(8000);
-  simControls.notifyUser(
+  notifyUser(
     "🧠 Assessment - Q2",
     "⚖️ How does reduced weight affect aircraft performance?\n" +
     "A. Higher acceleration and easier climb\n" +
@@ -83,7 +84,7 @@ simControls.notifyUser(
   
 // ❓ Question 3
 await waitFor(8000);
-simControls.notifyUser(
+notifyUser(
   "🧠 Assessment - Q3",
   "🚀 When does aircraft weight naturally decrease during flight?\n" +
   "A. As fuel is burned over time\n" +
@@ -94,7 +95,7 @@ simControls.notifyUser(
 
 // ❓ Question 4
 await waitFor(8000);
-simControls.notifyUser(
+notifyUser(
   "🧠 Assessment - Q4",
   "🧐 Can you think of a situation where the aircraft weight increases during flight?\n" +
   "💬 This is an open-ended question — think of real-world scenarios (hint: something being added to the aircraft)."
