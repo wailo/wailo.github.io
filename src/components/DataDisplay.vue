@@ -1,4 +1,5 @@
 <template>
+  <div class="flex flex-col w-full h-full">
   <div ref="wrapper" class="w-full space-y-2">
     <!-- Input + Buttons Row -->
     <div class="flex gap-2">
@@ -19,41 +20,52 @@
 
     <!-- Dropdown -->
     <div
-  v-if="isDropdownVisible"
-  class="border rounded shadow max-h-48 overflow-auto"
->
-  <div class="flex justify-end p-1 border-b">
-    <button
-      @click="isFocused = false"
+      v-if="isDropdownVisible"
+      class="border rounded shadow max-h-48 overflow-auto"
     >
-      ✖ Close
-    </button>
-  </div>
-  <div
-    v-for="item in Object.values(searchResults)"
-    :key="item.api"
-    class="cursor-pointer p-1 transition hover:bg-primary"
-    @click="showItem(item.api)"
-  >
-    {{ item.label }}
-  </div>
-</div>
-
+      <div class="flex justify-end p-1 border-b">
+        <button @click="isFocused = false">✖ Close</button>
+      </div>
+      <div
+        v-for="item in Object.values(searchResults)"
+        :key="item.id"
+        class="cursor-pointer p-1 transition hover:bg-primary"
+        @click="setDataView(item, true )"
+      >
+        {{ item.label }}
+      </div>
+    </div>
 
     <!-- Visible Items Table -->
     <table class="flex w-full h-full">
       <tbody class="w-full">
         <tr
           class="flex w-full border-b border-simElementBorder items-center"
-          v-for="item in visibleItems"
-          :key="item.api"
+          v-for="item in displayedItems"
+          :key="item.id"
         >
           <td class="font-medium w-3/5">{{ item.label }}</td>
-          <td class="w-1/5">{{ props.simData[item.api] }}</td>
-          <td class="w-1/5 text-right">
+          <td class="w-1/5">{{ item.inputValue }}</td>
+          <td class="w-1/5 text-right flex justify-end items-center gap-2">
             <button
-              @click="hideItem(item.api)"
-              class=" hover:text-red-700 transition"
+              :class="[
+                'rounded-full text-xs hover:font-bold transition',
+                plottedIds.has(item.id)
+                  ? 'text-green-500'
+                  : 'text-secondary',
+                plottedIds.size >= 4 && !plottedIds.has(item.id)
+                  ? 'opacity-50 cursor-not-allowed'
+                  : ''
+              ]"
+              @click="togglePlot(item.id)"
+              :disabled="plottedIds.size >= 4 && !plottedIds.has(item.id)"
+              title="Toggle Plot"
+            >
+              ⦿
+            </button>
+            <button
+              @click="setDataView(item, false)"
+              class="hover:text-red-700 transition"
               title="Remove"
             >
               ⅹ
@@ -63,83 +75,145 @@
       </tbody>
     </table>
   </div>
+      <!-- Plot Component -->
+    <TimePlot
+      ref="timePlotRef"
+      :pause="props.plotPause"
+      :update_intervals="props.plotUpdateIntervals"
+      :sources="props.simProps"
+      @add="(propId:string ) => plottedIds.add(propId)"
+      @remove="(propId:string ) => plottedIds.delete(propId)"
+    />
+     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { SimulationDataDisplay, SimDataKeys } from '../siminterfac'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, PropType } from 'vue'
 import Fuse from 'fuse.js'
+import type { SimulationProperties } from '../siminterfac'
+import TimePlot from './TimePlot.vue'
 
-// v-model:items binding
-const items = defineModel<SimulationDataDisplay>('items', { required: true })
+// Props
+const props = defineProps({
+  simProps: {
+    type: Object as PropType<Record<string, SimulationProperties>>,
+    required: true
+  },
+  plotPause: {
+    type: Boolean as PropType<Boolean>,
+    required: true
+  },
+  plotUpdateIntervals: {
+    type: Number,
+    required: true
+  }
+})
 
-const props = defineProps<{
-  simData: Record<string, any>
-}>()
-
+// UI state
 const searchQuery = ref('')
 const isFocused = ref(false)
+const wrapper = ref<HTMLElement | null>(null)
+const timePlotRef = ref<InstanceType<typeof TimePlot> | null>(null)
 
-// Search setup
-const fuse = computed(() => new Fuse(Object.values(items.value), {
-  keys: ['label'],
-  threshold: 0.4,
+// Sets
+const visibleItems = reactive(new Set<string>())
+const plottedIds = reactive(new Set<string>())
+
+// Computed
+const displayedItems = computed(() =>
+  Array.from(visibleItems).map((id) => props.simProps[id])
+)
+
+const fuse = computed(() => new Fuse(Object.values(props.simProps), {
+  keys: ['group', 'label'],
+  threshold: 0.4
 }))
 
 const searchResults = computed(() => {
   const query = searchQuery.value.trim()
   if (query) return fuse.value.search(query).map((r) => r.item)
-  if (isFocused.value) return Object.values(items.value)
+  if (isFocused.value) return Object.values(props.simProps)
   return []
 })
 
 const isDropdownVisible = computed(() => isFocused.value && searchResults.value.length > 0)
-const visibleItems = computed(() => Object.values(items.value).filter((item => item.visible)))
 
-// Show single item by key
-function showItem(key: SimDataKeys) {
-  const item = items.value[key];
-  if (item && !item.visible) {
-    item.visible = true
+// Functions
+function setDataView(item: SimulationProperties, state: boolean) {
+  if (!item || !item.id) return
+  const id = item.id.toLowerCase();
+  if (state) {
+    visibleItems.add(id)
+    searchQuery.value = ''
+    isFocused.value = false
+  } else {
+    visibleItems.delete(id)
+    timePlotRef.value?.removePlot(id)
   }
-  searchQuery.value = ''
-  isFocused.value = false
 }
 
-// Hide single item by key
-function hideItem(key: SimDataKeys) {
-  const item = items.value[key];
-  if (item) item.visible = false
+function togglePlot(id: string) {
+  if (plottedIds.has(id)) {
+    timePlotRef.value?.removePlot(id)
+  } else if (plottedIds.size < 4) {
+    timePlotRef.value?.addPlot(id)
+  }
 }
 
-// Show all
 function showAll() {
-  Object.values(items.value).forEach(i => (i.visible = true))
+  Object.keys(props.simProps).forEach((key) => visibleItems.add(key))
 }
 
-// Hide all
 function hideAll() {
-  Object.values(items.value).forEach(i => (i.visible = false))
+  visibleItems.clear()
+  timePlotRef.value?.reset?.()
 }
 
-// Close dropdown when clicking outside
-const wrapper = ref<HTMLElement | null>(null)
+
+// Externally callable method
+function setPlotView(item: SimulationProperties, state: boolean) {
+    if (!item || !item.id) return
+  const id = item.id.toLowerCase();
+  if (state) {
+    if (!plottedIds.has(id) && plottedIds.size < 4) {
+      timePlotRef.value?.addPlot(id)
+    }
+  } else {
+    if (plottedIds.has(id)) {
+      timePlotRef.value?.removePlot(id)
+    }
+  }
+}
+
+function tickPlot() {
+  timePlotRef.value?.tick()
+}
+
 function handleClickOutside(e: MouseEvent) {
   if (wrapper.value && !wrapper.value.contains(e.target as Node)) {
     isFocused.value = false
   }
 }
 
-onMounted(() => document.addEventListener('click', handleClickOutside))
-onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 
-// Expose methods for parent access
-defineExpose({ showItem, hideItem, showAll, hideAll })
+// Expose to parent
+defineExpose({
+  showAll,
+  hideAll,
+  tickPlot,
+  setDataView,
+  setPlotView
+})
 </script>
 
 <style scoped>
 .bg-green-100 {
   transition: background-color 0.3s ease;
 }
-
 </style>

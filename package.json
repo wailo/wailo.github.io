@@ -12,7 +12,7 @@
     "preview": "vite preview",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist -b master",
-    "build:emscripten": "git -C node_modules/Compact-Flight-Simulator checkout c5b7098 && git -C node_modules/Compact-Flight-Simulator submodule update --init --recursive && ./node_modules/Compact-Flight-Simulator/build_wasm.sh && cp -a node_modules/Compact-Flight-Simulator/build_wasm_*/bin/flightsimulator* public/",
+    "build:emscripten": "git -C node_modules/Compact-Flight-Simulator checkout 5cec179 && git -C node_modules/Compact-Flight-Simulator submodule update --init --recursive && ./node_modules/Compact-Flight-Simulator/build_wasm.sh && cp -a node_modules/Compact-Flight-Simulator/build_wasm_*/bin/flightsimulator* public/",
     "preinstall": "[ -z \"$ACCESS_TOKEN\" ] && set -a && . .env && set +a; git clone --recursive https://oauth2:$ACCESS_TOKEN@github.com/wailo/Compact-Flight-Simulator.git node_modules/Compact-Flight-Simulator"
   },
   "dependencies": {
@@ -26,15 +26,15 @@
     "vue-router": "^4.5.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^5.0.5",
+    "@vitejs/plugin-vue": "^5.2.4",
     "autoprefixer": "^10.4.19",
     "gh-pages": "^6.3.0",
     "postcss": "^8.4.39",
     "prettier": "3.3.2",
     "tailwindcss": "^3.4.4",
     "typescript": "^5.2.2",
-    "vite": "^5.3.1",
-    "vite-plugin-checker": "^0.9.1",
+    "vite": "^6.3.5",
+    "vite-plugin-checker": "^0.9.3",
     "vue-tsc": "^2.0.21"
   }
 }

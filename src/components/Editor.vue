@@ -84,9 +84,14 @@
 
 <script setup lang="ts">
 import { ref, PropType, onMounted } from "vue";
-import { ExtendedMainModule, SimulationDataDisplay } from "../siminterfac.ts";
+import { ExtendedMainModule, SimulationProperties} from "../siminterfac.ts";
+import simDataTypesRaw from "../../public/flightsimulator_exec_meta.ts?raw";
 import simApiTypes from "../../public/flightsimulator_exec.d.ts?raw";
-import simDataTypes from "../siminterfac.ts?raw";
+
+// core.ts converted to js
+import coreSimJs from 'virtual:transpiled-core-js';
+// core.ts types converted to d.ts
+import coreSimTsTypesRaw from 'virtual:transpiled-core-dts';
 
 // Monaco Editor
 declare module "monaco-editor-vue3";
@@ -136,11 +141,33 @@ const props = defineProps({
     type: Object as PropType<ExtendedMainModule>,
     required: true,
   },
-  displayData: {
-    type: Object as PropType<SimulationDataDisplay>,
+  simProps: {
+    type: Object as PropType<Record<string, SimulationProperties>>,
     required: true,
-  }
+  },
+  notifyUserFunc: {
+    type: Function as PropType<(title: string, body: string, timeOut: number) => void>,
+    required: true
+  },
+  plotViewFunc: {
+    type: Function as PropType<(item: SimulationProperties, state: boolean) => void>,
+    required: true,
+  },
+    dataViewFunc: {
+    type: Function as PropType<(item: SimulationProperties, state: boolean) => void>,
+    required: true,
+  },
+
 });
+
+// Remove import and declare statements and replace export with a empty string
+  function stripImportsExports(input: string): string {
+    return input
+      .replace(/^\s*export\s+/gm, "")
+      .replace(/^\s*import\s.*?;?\s*$\n/gm, "");
+  }
+
+
 
 const options = {
   automaticLayout: true,
@@ -171,46 +198,30 @@ const setupMonaco = (_editor: monaco.editor.IStandaloneCodeEditor) => {
   let EmbindModuleStr;
   if (!regexMatch) {
     console.log(
-      "// Error while parsing the api types. Autocompletion will not be available",
+      "// Error while parsing EmbindModule api types. Autocompletion will not be available",
     );
   } else {
     EmbindModuleStr = regexMatch[0];
   }
 
-  // Get data interface
-  regexMatch = simDataTypes.match(/class SimData\s*\{([^}]*)\}/g);
-  let SimDataStr;
-  if (!regexMatch) {
-    console.log(
-      "// Error while parsing the api types. Autocompletion will not be available",
-    );
-  } else {
-    SimDataStr = regexMatch[0].replace("class", "interface");
-  }
+  // This regex matches everything between the markers
+const extractRegex = /\/\/\s*@editor-extract-start([\s\S]*?)\/\/\s*@editor-extract-end/g;
+const matches = [...simDataTypesRaw.matchAll(extractRegex)].map(m => m[1].trim());
+const SimPropsStr = matches.join('\n\n').replaceAll("export", "");
 
-  // match SimulationDataDisplay from simDataTypes
-  regexMatch = simDataTypes.match(
-    /SimulationDataDisplay\s*\{([^}]*)\}/g,
-  );
-  let SimulationDataDisplayStr;
-  if (!regexMatch) {
-    console.log(
-      "// Error while parsing the api types. Autocompletion will not be available",
-    );
-  } else {
-    SimulationDataDisplayStr = regexMatch[0].replace("class", "interface");
-  }
-
-
-
+monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+  target: monaco.languages.typescript.ScriptTarget.ES2020,
+  allowNonTsExtensions: true,
+  // moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+  module: monaco.languages.typescript.ModuleKind.ESNext,
+  noEmit: true,
+  strict: true,
+  //typeRoots: ['node_modules/@types'],
+});
   monaco.languages.typescript.typescriptDefaults.addExtraLib(
-    `${EmbindModuleStr}; ${SimDataStr}; ${SimulationDataDisplayStr}
-    // Declare types here for autocompletion
-    const simControls : EmbindModule = {};
-    const simData : SimData = {}
-    const displayData : SimulationDataDisplay = {};
-    declare const waitForCondition: (conditionFunction: (...args: any[], number, number) => boolean) => Promise<unknown>;
-    declare const waitFor: (ms: number) => Promise<unknown>;
+    `${EmbindModuleStr}
+    ${SimPropsStr}
+    ${stripImportsExports(coreSimTsTypesRaw)}
     `,
   );
 };
@@ -235,25 +246,31 @@ defineExpose({ reset });
 // Function to execute code in the context of the provided object
 const executeCode = async () => {
   reset();
-  const res = await fetch("/LearningModules/core.ts?raw");
-  const coreCode = await res.text();
+  let coreCode = coreSimJs;
+  coreCode = stripImportsExports(coreCode);
+  code.value = stripImportsExports(code.value);
 
   executionResult.value = null;
   window.flag = true;
   window.cache = [];
   try {
     isScriptRunning.value = true;
+
     emit("start", code.value);
     // Create a function with context binding
     const userScriptFunc = new Function(`
 const simControls = arguments[0];
-const displayData = arguments[1];
 const simData = simControls.simData;
+const simProps = arguments[1];
+const dataView = arguments[2];
+const plotView = arguments[3];
+const notifyUser = arguments[4]
 ${coreCode}
 resetTimeouts();
-return async function () {${code.value}};
-    `);
-    userScriptFunc(props.contextObject, props.displayData)()
+return async function () {${code.value}
+};`);
+
+    userScriptFunc(props.contextObject, props.simProps, props.dataViewFunc, props.plotViewFunc, props.notifyUserFunc)()
       .then(() => {
         emit("reset");
       })
@@ -292,7 +309,8 @@ const loadFileContent = async (file: ModuleEntry) => {
     ModuleTitle.value = file.name;
     const response = await fetch(file.path);
     const text = await response.text();
-    code.value = text;
+    code.value = stripImportsExports(text);
+
   } catch (error) {
     console.error(error);
     code.value = `// Failed to load ${file.name}`;
@@ -307,11 +325,11 @@ onMounted(() => {
   if (firstFile) {
     loadFileContent(firstFile);
 
-    // if demo mode
-    // wait for 5 seconds then run the code
-    setTimeout(() => {
-      executeCode();
-    }, 5000);
+    // // if demo mode
+    // // wait for 5 seconds then run the code
+    // setTimeout(() => {
+    //   executeCode();
+    // }, 5000);
   }
 });
 </script>

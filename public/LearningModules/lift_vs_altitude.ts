@@ -1,8 +1,9 @@
+import {repositionWithAutopilot, simControls, simData, simProps, waitFor, waitForCondition, plotView, dataView, notifyUser } from "./core"
 simControls.api_set_simulation_pause(true);
 await waitFor(1000);
 
 // 📘 Introduction
-simControls.notifyUser(
+notifyUser(
   "📘 Lesson: Effect of Altitude on Lift",
   "🪂 In this lesson, we'll observe how lift changes with altitude, while maintaining constant Mach number.\n\n" +
     "✈️ Autopilot will maintain altitude and Mach.\n" +
@@ -32,11 +33,11 @@ const getAltitudeLiftSnapshot = async () => {
   const altitude = simData.api_altitude.toFixed(0);
 
   const snapshot = `📍 Altitude: ${altitude} ft\n🧭 Pitch: ${pitch}°\n🎯 AoA: ${aoa}°\n💨 TAS: ${speed} knots\n⚖️ Mach: ${mach}\n🪂 Cl: ${cl}`;
-  simControls.notifyUser("📊 Altitude Snapshot", snapshot);
+  notifyUser("📊 Altitude Snapshot", snapshot);
 
   simControls.api_set_simulation_pause(true);
   await waitFor(1000);
-  simControls.notifyUser(
+  notifyUser(
     "📊 Altitude Snapshot",
     `${snapshot}\n\n⏸ Paused: Review the values above. Resume to continue.`,
   );
@@ -47,10 +48,11 @@ const getAltitudeLiftSnapshot = async () => {
 
 // Function to stabilize at target altitude and Mach
 async function stabilizeAtAltitude(targetAltitude, targetMach) {
-  simControls.api_set_target_altitude(targetAltitude);
-  simControls.api_set_target_mach_speed(targetMach);
-  simControls.api_set_mach_speed_hold(true);
-  simControls.api_set_altitude_hold(true);
+  simControls.api_set_autopilot(true);
+  simControls.api_set_autopilot_altitude_target(targetAltitude);
+  simControls.api_set_autopilot_mach_speed_target(targetMach);
+  simControls.api_set_autopilot_mach_speed_hold(true);
+  simControls.api_set_autopilot_altitude_hold(true);
   await waitFor(2000);
   simControls.api_set_simulation_speed(100);
 
@@ -67,23 +69,23 @@ async function stabilizeAtAltitude(targetAltitude, targetMach) {
 // ⚙️ Configuration
 let targetMach = 0.6;
 // Reposition and start
-await reposition_with_autopilot(10000, 330, 90);
+await repositionWithAutopilot(10000, 330, 90);
 
 
 // Watch key data. Altitude, mach, speed, Pitch Angle, Angle of Attack (AoA), lift coefficient (Cl)
-simControls.notifyUser("Watching Key Data", "Watching key data: Altitude, Mach, Speed, Pitch Angle, AoA, Cl");
+notifyUser("Watching Key Data", "Watching key data: Altitude, Mach, Speed, Pitch Angle, AoA, Cl");
 await waitFor(3000);
-displayData.api_altitude.visible = true;
+dataView(simProps.altitude, true);
 await waitFor(1000);
-displayData.api_pitch_deg.visible = true;
+dataView(simProps.pitch_deg, true);
 await waitFor(1000);
-displayData.api_true_speed_knots.visible = true;
+dataView(simProps.ias_speed_knots, true);
 await waitFor(1000);
-displayData.api_mach.visible = true;
+dataView(simProps.mach, true);
 await waitFor(1000);
-displayData.api_aoa_deg.visible = true;
+dataView(simProps.aoa_deg, true);
 await waitFor(1000);
-displayData.api_cl.visible = true;
+dataView(simProps.cl, true);
 
 
 // 🛬 Low Altitude Snapshot
@@ -103,7 +105,7 @@ highAltSnapshot = await getAltitudeLiftSnapshot();
 await waitFor(2000);
 
 // 🧠 Quiz
-simControls.notifyUser(
+notifyUser(
   "🧠 Quiz Time!",
   "❓ How did Cl (Lift Coefficient) change with altitude?\n" +
     "❓ Did AoA or pitch change noticeably?\n" +

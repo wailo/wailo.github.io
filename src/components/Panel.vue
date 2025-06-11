@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { ref, watchEffect, useSlots } from "vue";
-import { PropType } from "vue";
+import { ref, watchEffect, useSlots, PropType } from "vue";
 
 const props = defineProps({
   status: {

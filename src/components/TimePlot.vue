@@ -1,180 +1,226 @@
 <template>
-  <div class="w-full h-full grid overflow-none" :style="{ gridTemplateRows: gridRows }">
-    <div
-      v-for="(source, idx) in props.sources.slice(0, MAX_PLOTS)"
-      :key="source.name"
-      :ref="el => plotRefs[idx] = el as HTMLElement"
-      class="w-full h-full"
-    />
+<div
+  v-for="name in getPlottableKeys"
+  :key="name"
+  class="relative w-full flex-1 border-b border-simElementBorder last:border-b-0"
+>
+  <!-- Close Button -->
+  <button
+    @click="removePlot(name)"
+    class="absolute top-1 right-1 z-10 bg-black bg-opacity-60 text-white text-xs px-2 py-0.5 rounded hover:bg-red-600"
+  >
+    ✕
+  </button>
+
+  <!-- Custom Label Top-Right -->
+  <div class="absolute top-1 right-7 z-10 text-scondary bg-opacity-50 px-2 py-0.5 rounded">
+    {{ props.sources[name]?.label || name }} {{ props.sources[name]?.unit || '' }}
   </div>
+
+  <!-- uPlot Container -->
+  <div
+    :ref="el => { if (el) plotRefs[name] = el as HTMLElement }"
+    class="w-full h-full"
+  />
+</div>
 </template>
 
+
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, nextTick, type Ref, computed} from "vue";
-import uPlot from "uplot";
-import "uplot/dist/uPlot.min.css";
+import {
+  ref,
+  reactive,
+  computed,
+  onMounted,
+  onBeforeUnmount,
+  nextTick,
+  PropType
+} from 'vue'
+import uPlot from 'uplot'
+import 'uplot/dist/uPlot.min.css'
+import type { SimulationProperties } from '../siminterfac'
 
-interface SourceVar {
-  name: string;
-  ref: Ref<number>;
-}
+// ✅ Props
+const props = defineProps({
+  sources: {
+    type: Object as PropType<Record<string, SimulationProperties>>,
+    required: true
+  },
+  pause: {
+    type: Boolean as PropType<Boolean>,
+    required: true
+    },
+  max_duration_ms: {
+    type: Number,
+    default: 120_000
+  },
+  max_plots: {
+    type: Number,
+    default: 4
+  },
+  update_intervals: {
+    type: Number,
+    required: true
+  }
+})
 
-// fix the logic here to make it Response. Ideally, create an api function to ploy.
-const props = defineProps<{
-  sources: SourceVar[];
-  pause: boolean;
+defineExpose({ addPlot, removePlot, reset, tick })
+
+// add events to be emitted when plots are added or removed
+// Define the event emitter
+const emit = defineEmits<{
+  (event: "add", propId: string): void;
+  (event: "remove", propId: string): void;
+
 }>();
 
-// ❗ Public methods
-defineExpose({ reset });
+// ✅ Reactive State
+const plotRefs = reactive<Record<string, HTMLElement>>({})
+const plots = new Map<string, uPlot>()
+const dataBuffers = new Map<string, CircularBuffer>()
+const selectedKeys = ref<Set<string>>(new Set())
+let MAX_POINTS = 0
 
-// Configuration
-const MAX_DURATION = 2 * 60 * 1000; // 2 minutes
-const PLOT_INTERVAL = 1000; // in ms
-const MAX_POINTS = Math.ceil(MAX_DURATION / PLOT_INTERVAL);
-const MAX_PLOTS = 4; // limit to 4 plots max
+// ✅ Derived Keys
+const getPlottableKeys = computed(() =>
+  Array.from(selectedKeys.value)
+    .filter(k => k in props.sources)
+    .slice(0, props.max_plots)
+)
 
-// Types
 interface CircularBuffer {
-  x: Float64Array;
-  y: Float64Array;
-  index: number;
-  full: boolean;
+  x: Float64Array
+  y: Float64Array
+  index: number
+  full: boolean
 }
 
-// State
-const dataBuffers = new Map<string, CircularBuffer>();
-const plots = new Map<string, uPlot>();
-const plotRefs = ref<HTMLElement[]>([]);
+function addPlot(propId: keyof typeof props.sources) {
+  if (!props.sources[propId]) return
+  if (selectedKeys.value.has(propId)) return
+  if (selectedKeys.value.size >= props.max_plots) return
 
-const gridRows = computed(
-  () => `repeat(${Math.min(props.sources.length, MAX_PLOTS)}, 1fr)`,
-);
+  selectedKeys.value.add(propId)
+  initBuffer(propId)
 
-// Lifecycle
-onMounted(async () => {
-  props.sources.slice(0, MAX_PLOTS).forEach((source) => {
-    dataBuffers.set(source.name, {
-      x: new Float64Array(MAX_POINTS),
-      y: new Float64Array(MAX_POINTS),
-      index: 0,
-      full: false,
-    });
-  });
+    setTimeout(() => {
+    recreateAllPlots()
+  }, 50)
 
-  await nextTick();
-  createPlots();
+  emit('add', propId);
+}
 
-  intervalId = setInterval(() => {
-    if (props.pause || props.sources.length < 1) return;
+function removePlot(propId: string) {
+  if (!selectedKeys.value.has(propId)) return
 
-    props.sources.slice(0, MAX_PLOTS).forEach((source) => {
-      const value = source.ref.value;
-      const buf = dataBuffers.get(source.name)!;
-      buf.y[buf.index] = value;
-      buf.index = (buf.index + 1) % MAX_POINTS;
-      if (buf.index === 0) buf.full = true;
-      updatePlot(source.name, buf);
-    });
-  }, PLOT_INTERVAL);
-});
+  selectedKeys.value.delete(propId)
+  recreateAllPlots()
+  emit('remove', propId);
+}
 
-function createPlots() {
-  props.sources.slice(0, MAX_PLOTS).forEach((source, idx) => {
-    const el = plotRefs.value[idx];
-    if (!el) return;
+// ✅ Recreate all plots from scratch
+async function recreateAllPlots() {
+  // Destroy existing
+  plots.forEach(p => p.destroy())
+  plots.clear()
+  await nextTick()
 
-    const options: uPlot.Options = {
+  getPlottableKeys.value.forEach(id => {
+    const el = plotRefs[id]
+    // const prop = props.sources[id]
+    // const prop_label = prop?.label || id
+    // const prop_unit = prop?.unit || ''
+    // const prop_min = prop.min
+    // const prop_max = prop.max
+
+    if (!el) return
+
+    const plot = new uPlot({
       legend: { show: false },
       width: el.offsetWidth,
       height: el.offsetHeight,
       scales: {
-        x: {
-          time: false,
-          range: () => [0, MAX_POINTS - 1], // fixed X range
-        },
-        y: {
-          auto: true,
-        },
+        x: { time: false, range: () => [0, MAX_POINTS - 1] },
+        y: { auto: true }
       },
       axes: [
-        {
-          show: true,
-          stroke: "white",
-          grid: { show: true, stroke: "#333", width: 1 }, // vertical lines
-        },
-        {
-          label: source.name,
-          stroke: "white",
-          grid: { show: true, stroke: "#333", width: 1 }, // horizontal lines
-        },
+        { show: false, grid: { show: false, stroke: '#333', width: 1 } },
+        { stroke: 'white', grid: { show: false, stroke: '#333', width: 1 }}
       ],
       series: [
-        { show: false }, // X series
-        {
-          stroke: "red",
-          width: 1,
-          points: { show: false }, // no dots
-        },
-      ],
-      hooks: {
-        ready: [
-          (u) => {
-            const resizeObserver = new ResizeObserver(() => {
-              u.setSize({
-                width: el.clientWidth,
-                height: el.clientHeight,
-              });
-            });
-            resizeObserver.observe(el);
-          },
-        ],
-      },
-    };
+        { show: false },
+        { stroke: 'grey', width: 1, points: { show: false }}
+      ]
+    }, [[], []], el)
 
-    const plot = new uPlot(options, [[], []], el);
-    plots.set(source.name, plot);
-  });
+    plots.set(id, plot)
+  })
+}
+
+// ✅ Init buffer if needed
+function initBuffer(name: string) {
+  if (!dataBuffers.has(name)) {
+    dataBuffers.set(name, {
+      x: new Float64Array(MAX_POINTS),
+      y: new Float64Array(MAX_POINTS),
+      index: 0,
+      full: false
+    })
+  }
+}
+
+// ✅ Tick
+function tick() {
+  if (props.pause || getPlottableKeys.value.length < 1) return
+
+  getPlottableKeys.value.forEach(propId => {
+    const buf = dataBuffers.get(propId)!
+    buf.y[buf.index] = props.sources[propId].inputValue || 0
+    buf.index = (buf.index + 1) % MAX_POINTS
+    if (buf.index === 0) buf.full = true
+    updatePlot(propId, buf)
+  })
 }
 
 function updatePlot(name: string, buf: CircularBuffer) {
-  const u = plots.get(name);
-  if (!u) return;
+  const u = plots.get(name)
+  if (!u) return
 
-  let dataX: number[], dataY: number[];
+  let dataX: number[], dataY: number[]
 
   if (!buf.full) {
-    dataY = Array.from(buf.y.slice(0, buf.index));
-    dataX = dataY.map((_, i) => i);
+    dataY = Array.from(buf.y.slice(0, buf.index))
+    dataX = dataY.map((_, i) => i)
   } else {
-    dataY = Array.from(buf.y.slice(buf.index)).concat(
-      Array.from(buf.y.slice(0, buf.index)),
-    );
-    dataX = dataY.map((_, i) => i);
+    dataY = Array.from(buf.y.slice(buf.index)).concat(Array.from(buf.y.slice(0, buf.index)))
+    dataX = dataY.map((_, i) => i)
   }
 
-  u.setData([dataX, dataY]);
+  u.setData([dataX, dataY])
 }
 
+// ✅ Reset data
 function reset() {
-  props.sources.slice(0, MAX_PLOTS).forEach((source) => {
-    const buf = dataBuffers.get(source.name);
+  getPlottableKeys.value.forEach(name => {
+    const buf = dataBuffers.get(name)
     if (buf) {
-      buf.index = 0;
-      buf.full = false;
-      buf.x.fill(0);
-      buf.y.fill(0);
+      buf.index = 0
+      buf.full = false
+      buf.x.fill(0)
+      buf.y.fill(0)
     }
-    plots.get(source.name)?.setData([[], []]);
-  });
+    plots.get(name)?.setData([[], []])
+  })
 }
 
-let intervalId: ReturnType<typeof setInterval> | null = null;
+// ✅ On Mount
+onMounted(() => {
+  MAX_POINTS = Math.ceil(props.max_duration_ms / props.update_intervals)
+})
 
 onBeforeUnmount(() => {
-  if (intervalId) clearInterval(intervalId);
-  plots.forEach((p) => p.destroy());
-});
+  plots.forEach(p => p.destroy())
+})
 </script>
 
 <style scoped>

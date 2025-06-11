@@ -16,7 +16,7 @@ export default {
         bold: "700",
         black: "900",
       },
-      colors_: {
+      colors_bright: {
         primary: "#ffffff",
         secondary: "#130f0c",
         openglCanvasBackground: "#000000",

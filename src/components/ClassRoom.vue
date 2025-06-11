@@ -57,8 +57,8 @@
         >
           <tr>
             <th class="w-3/5">Callsign</th>
-            <th class="w-1/5">Status</th>
-            <th class="w-1/5">Disconnect</th>
+            <th class="flex-1">Status</th>
+            <th class="flex-1">Disconnect</th>
           </tr>
         </thead>
         <tbody>
