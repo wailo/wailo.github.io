@@ -26,6 +26,7 @@ function round(value: number, decimals: number) {
 let ptr_api_aileron_position: number = 0;
 let ptr_api_aileron_trim_position: number = 0;
 let ptr_api_altitude: number = 0;
+let ptr_api_aoa: number = 0;
 let ptr_api_aoa_deg: number = 0;
 let ptr_api_atmosphere_density: number = 0;
 let ptr_api_atmosphere_sea_level_density: number = 0;
@@ -54,7 +55,9 @@ let ptr_api_autopilot_turn_coordinator: number = 0;
 let ptr_api_autopilot_vertical_speed_hold: number = 0;
 let ptr_api_autopilot_vertical_speed_target: number = 0;
 let ptr_api_autopilot_yaw_damper: number = 0;
+let ptr_api_bank: number = 0;
 let ptr_api_bank_deg: number = 0;
+let ptr_api_bank_dot: number = 0;
 let ptr_api_bank_dot_deg: number = 0;
 let ptr_api_cdi: number = 0;
 let ptr_api_cdo: number = 0;
@@ -68,7 +71,9 @@ let ptr_api_engine_throttle_position: number = 0;
 let ptr_api_flaps_selector_position: number = 0;
 let ptr_api_fps: number = 0;
 let ptr_api_ground_collision: number = 0;
+let ptr_api_heading: number = 0;
 let ptr_api_heading_deg: number = 0;
+let ptr_api_heading_dot: number = 0;
 let ptr_api_heading_dot_deg: number = 0;
 let ptr_api_ias_speed_knots: number = 0;
 let ptr_api_landing_gear_selector_position: number = 0;
@@ -76,10 +81,13 @@ let ptr_api_latitude: number = 0;
 let ptr_api_lift: number = 0;
 let ptr_api_longitude: number = 0;
 let ptr_api_mach: number = 0;
+let ptr_api_pitch: number = 0;
 let ptr_api_pitch_deg: number = 0;
+let ptr_api_pitch_dot: number = 0;
 let ptr_api_pitch_dot_deg: number = 0;
 let ptr_api_rudder_position: number = 0;
 let ptr_api_rudder_trim_position: number = 0;
+let ptr_api_sideslip: number = 0;
 let ptr_api_sideslip_deg: number = 0;
 let ptr_api_simulation_pause: number = 0;
 let ptr_api_simulation_speed: number = 0;
@@ -96,6 +104,7 @@ export class SimData {
   api_aileron_position: number = 0;
   api_aileron_trim_position: number = 0;
   api_altitude: number = 0;
+  api_aoa: number = 0;
   api_aoa_deg: number = 0;
   api_atmosphere_density: number = 0;
   api_atmosphere_sea_level_density: number = 0;
@@ -124,7 +133,9 @@ export class SimData {
   api_autopilot_vertical_speed_hold: boolean = false;
   api_autopilot_vertical_speed_target: number = 0;
   api_autopilot_yaw_damper: boolean = false;
+  api_bank: number = 0;
   api_bank_deg: number = 0;
+  api_bank_dot: number = 0;
   api_bank_dot_deg: number = 0;
   api_cdi: number = 0;
   api_cdo: number = 0;
@@ -138,7 +149,9 @@ export class SimData {
   api_flaps_selector_position: number = 0;
   api_fps: number = 0;
   api_ground_collision: boolean = false;
+  api_heading: number = 0;
   api_heading_deg: number = 0;
+  api_heading_dot: number = 0;
   api_heading_dot_deg: number = 0;
   api_ias_speed_knots: number = 0;
   api_landing_gear_selector_position: number = 0;
@@ -146,10 +159,13 @@ export class SimData {
   api_lift: number = 0;
   api_longitude: number = 0;
   api_mach: number = 0;
+  api_pitch: number = 0;
   api_pitch_deg: number = 0;
+  api_pitch_dot: number = 0;
   api_pitch_dot_deg: number = 0;
   api_rudder_position: number = 0;
   api_rudder_trim_position: number = 0;
+  api_sideslip: number = 0;
   api_sideslip_deg: number = 0;
   api_simulation_pause: boolean = false;
   api_simulation_speed: number = 0;
@@ -167,6 +183,7 @@ function init(module: any) {
   ptr_api_aileron_position = module._api_aileron_position() >> 2;
   ptr_api_aileron_trim_position = module._api_aileron_trim_position() >> 2;
   ptr_api_altitude = module._api_altitude() >> 2;
+  ptr_api_aoa = module._api_aoa() >> 2;
   ptr_api_aoa_deg = module._api_aoa_deg() >> 2;
   ptr_api_atmosphere_density = module._api_atmosphere_density() >> 2;
   ptr_api_atmosphere_sea_level_density = module._api_atmosphere_sea_level_density() >> 2;
@@ -195,7 +212,9 @@ function init(module: any) {
   ptr_api_autopilot_vertical_speed_hold = module._api_autopilot_vertical_speed_hold();
   ptr_api_autopilot_vertical_speed_target = module._api_autopilot_vertical_speed_target() >> 2;
   ptr_api_autopilot_yaw_damper = module._api_autopilot_yaw_damper();
+  ptr_api_bank = module._api_bank() >> 2;
   ptr_api_bank_deg = module._api_bank_deg() >> 2;
+  ptr_api_bank_dot = module._api_bank_dot() >> 2;
   ptr_api_bank_dot_deg = module._api_bank_dot_deg() >> 2;
   ptr_api_cdi = module._api_cdi() >> 2;
   ptr_api_cdo = module._api_cdo() >> 2;
@@ -209,7 +228,9 @@ function init(module: any) {
   ptr_api_flaps_selector_position = module._api_flaps_selector_position() >> 2;
   ptr_api_fps = module._api_fps() >> 2;
   ptr_api_ground_collision = module._api_ground_collision();
+  ptr_api_heading = module._api_heading() >> 2;
   ptr_api_heading_deg = module._api_heading_deg() >> 2;
+  ptr_api_heading_dot = module._api_heading_dot() >> 2;
   ptr_api_heading_dot_deg = module._api_heading_dot_deg() >> 2;
   ptr_api_ias_speed_knots = module._api_ias_speed_knots() >> 2;
   ptr_api_landing_gear_selector_position = module._api_landing_gear_selector_position() >> 2;
@@ -217,10 +238,13 @@ function init(module: any) {
   ptr_api_lift = module._api_lift() >> 2;
   ptr_api_longitude = module._api_longitude() >> 2;
   ptr_api_mach = module._api_mach() >> 2;
+  ptr_api_pitch = module._api_pitch() >> 2;
   ptr_api_pitch_deg = module._api_pitch_deg() >> 2;
+  ptr_api_pitch_dot = module._api_pitch_dot() >> 2;
   ptr_api_pitch_dot_deg = module._api_pitch_dot_deg() >> 2;
   ptr_api_rudder_position = module._api_rudder_position() >> 2;
   ptr_api_rudder_trim_position = module._api_rudder_trim_position() >> 2;
+  ptr_api_sideslip = module._api_sideslip() >> 2;
   ptr_api_sideslip_deg = module._api_sideslip_deg() >> 2;
   ptr_api_simulation_pause = module._api_simulation_pause();
   ptr_api_simulation_speed = module._api_simulation_speed() >> 2;
@@ -242,6 +266,7 @@ export async function fetchSimData(module: any) {
   module.simData.api_aileron_position = round(module.HEAPF32[ptr_api_aileron_position], 2);
   module.simData.api_aileron_trim_position = round(module.HEAPF32[ptr_api_aileron_trim_position], 2);
   module.simData.api_altitude = round(module.HEAPF32[ptr_api_altitude], 0);
+  module.simData.api_aoa = round(module.HEAPF32[ptr_api_aoa], 4);
   module.simData.api_aoa_deg = round(module.HEAPF32[ptr_api_aoa_deg], 2);
   module.simData.api_atmosphere_density = round(module.HEAPF32[ptr_api_atmosphere_density], 3);
   module.simData.api_atmosphere_sea_level_density = round(module.HEAPF32[ptr_api_atmosphere_sea_level_density], 3);
@@ -270,7 +295,9 @@ export async function fetchSimData(module: any) {
   module.simData.api_autopilot_vertical_speed_hold = module.HEAP8[ptr_api_autopilot_vertical_speed_hold] !== 0;
   module.simData.api_autopilot_vertical_speed_target = module.HEAP32[ptr_api_autopilot_vertical_speed_target];
   module.simData.api_autopilot_yaw_damper = module.HEAP8[ptr_api_autopilot_yaw_damper] !== 0;
+  module.simData.api_bank = round(module.HEAPF32[ptr_api_bank], 2);
   module.simData.api_bank_deg = round(module.HEAPF32[ptr_api_bank_deg], 0);
+  module.simData.api_bank_dot = round(module.HEAPF32[ptr_api_bank_dot], 4);
   module.simData.api_bank_dot_deg = round(module.HEAPF32[ptr_api_bank_dot_deg], 0);
   module.simData.api_cdi = round(module.HEAPF32[ptr_api_cdi], 4);
   module.simData.api_cdo = round(module.HEAPF32[ptr_api_cdo], 4);
@@ -284,7 +311,9 @@ export async function fetchSimData(module: any) {
   module.simData.api_flaps_selector_position = module.HEAP32[ptr_api_flaps_selector_position];
   module.simData.api_fps = module.HEAP32[ptr_api_fps];
   module.simData.api_ground_collision = module.HEAP8[ptr_api_ground_collision] !== 0;
+  module.simData.api_heading = round(module.HEAPF32[ptr_api_heading], 2);
   module.simData.api_heading_deg = round(module.HEAPF32[ptr_api_heading_deg], 0);
+  module.simData.api_heading_dot = round(module.HEAPF32[ptr_api_heading_dot], 4);
   module.simData.api_heading_dot_deg = round(module.HEAPF32[ptr_api_heading_dot_deg], 0);
   module.simData.api_ias_speed_knots = round(module.HEAPF32[ptr_api_ias_speed_knots], 0);
   module.simData.api_landing_gear_selector_position = module.HEAP32[ptr_api_landing_gear_selector_position];
@@ -292,10 +321,13 @@ export async function fetchSimData(module: any) {
   module.simData.api_lift = round(module.HEAPF32[ptr_api_lift], 0);
   module.simData.api_longitude = round(module.HEAPF32[ptr_api_longitude], 5);
   module.simData.api_mach = round(module.HEAPF32[ptr_api_mach], 2);
+  module.simData.api_pitch = round(module.HEAPF32[ptr_api_pitch], 2);
   module.simData.api_pitch_deg = round(module.HEAPF32[ptr_api_pitch_deg], 0);
+  module.simData.api_pitch_dot = round(module.HEAPF32[ptr_api_pitch_dot], 4);
   module.simData.api_pitch_dot_deg = round(module.HEAPF32[ptr_api_pitch_dot_deg], 0);
   module.simData.api_rudder_position = round(module.HEAPF32[ptr_api_rudder_position], 2);
   module.simData.api_rudder_trim_position = round(module.HEAPF32[ptr_api_rudder_trim_position], 2);
+  module.simData.api_sideslip = round(module.HEAPF32[ptr_api_sideslip], 2);
   module.simData.api_sideslip_deg = round(module.HEAPF32[ptr_api_sideslip_deg], 0);
   module.simData.api_simulation_pause = module.HEAP8[ptr_api_simulation_pause] !== 0;
   module.simData.api_simulation_speed = round(module.HEAPF32[ptr_api_simulation_speed], 1);
@@ -340,6 +372,14 @@ return {
     label: 'Altitude',
     precision: 0,
     unit: 'ft'
+  },
+  aoa:{
+    id: 'aoa',
+    inputValue: module.simData.api_aoa,
+    group: 'aerodynamics',
+    label: 'Angle of Attack',
+    precision: 4,
+    unit: 'rad'
   },
   aoa_deg:{
     id: 'aoa_deg',
@@ -609,6 +649,14 @@ return {
     group: 'autopilot',
     label: 'Yaw Damper'
   },
+  bank:{
+    id: 'bank',
+    inputValue: module.simData.api_bank,
+    group: 'flight',
+    label: 'Bank Angle',
+    precision: 2,
+    unit: 'rad'
+  },
   bank_deg:{
     id: 'bank_deg',
     inputValue: module.simData.api_bank_deg,
@@ -616,6 +664,14 @@ return {
     label: 'Bank Angle',
     precision: 0,
     unit: '°'
+  },
+  bank_dot:{
+    id: 'bank_dot',
+    inputValue: module.simData.api_bank_dot,
+    group: 'flight',
+    label: 'Bank Angle Change Rate',
+    precision: 4,
+    unit: 'rad/sec'
   },
   bank_dot_deg:{
     id: 'bank_dot_deg',
@@ -738,6 +794,14 @@ return {
     group: 'simulation',
     label: 'Ground Collision'
   },
+  heading:{
+    id: 'heading',
+    inputValue: module.simData.api_heading,
+    group: 'flight',
+    label: 'Heading Angle',
+    precision: 2,
+    unit: 'rad'
+  },
   heading_deg:{
     id: 'heading_deg',
     inputValue: module.simData.api_heading_deg,
@@ -745,6 +809,14 @@ return {
     label: 'Heading Angle',
     precision: 0,
     unit: '°'
+  },
+  heading_dot:{
+    id: 'heading_dot',
+    inputValue: module.simData.api_heading_dot,
+    group: 'flight',
+    label: 'Heading Angle Change Rate',
+    precision: 4,
+    unit: 'rad/sec'
   },
   heading_dot_deg:{
     id: 'heading_dot_deg',
@@ -813,6 +885,14 @@ return {
     precision: 2,
     unit: 'M'
   },
+  pitch:{
+    id: 'pitch',
+    inputValue: module.simData.api_pitch,
+    group: 'flight',
+    label: 'Pitch Angle',
+    precision: 2,
+    unit: 'rad'
+  },
   pitch_deg:{
     id: 'pitch_deg',
     inputValue: module.simData.api_pitch_deg,
@@ -820,6 +900,14 @@ return {
     label: 'Pitch Angle',
     precision: 0,
     unit: '°'
+  },
+  pitch_dot:{
+    id: 'pitch_dot',
+    inputValue: module.simData.api_pitch_dot,
+    group: 'flight',
+    label: 'Pitch Angle Change Rate',
+    precision: 4,
+    unit: 'rad/sec'
   },
   pitch_dot_deg:{
     id: 'pitch_dot_deg',
@@ -839,7 +927,7 @@ return {
     min: -1,
     precision: 2,
     step: 0.01,
-    unit: '°'
+    unit: '%'
   },
   rudder_trim_position:{
     id: 'rudder_trim_position',
@@ -851,7 +939,15 @@ return {
     min: -1,
     precision: 2,
     step: 0.01,
-    unit: '°'
+    unit: '%'
+  },
+  sideslip:{
+    id: 'sideslip',
+    inputValue: module.simData.api_sideslip,
+    group: 'flight',
+    label: 'Side Slip Angle (Beta)',
+    precision: 2,
+    unit: 'rad'
   },
   sideslip_deg:{
     id: 'sideslip_deg',
@@ -1102,6 +1198,13 @@ export const apiMetadata = {
     precision: 0,
     unit: 'ft'
   },
+  aoa: {
+    id: 'aoa',
+    group: 'aerodynamics',
+    label: 'Angle of Attack',
+    precision: 4,
+    unit: 'rad'
+  },
   aoa_deg: {
     id: 'aoa_deg',
     group: 'aerodynamics',
@@ -1317,12 +1420,26 @@ export const apiMetadata = {
     group: 'autopilot',
     label: 'Yaw Damper'
   },
+  bank: {
+    id: 'bank',
+    group: 'flight',
+    label: 'Bank Angle',
+    precision: 2,
+    unit: 'rad'
+  },
   bank_deg: {
     id: 'bank_deg',
     group: 'flight',
     label: 'Bank Angle',
     precision: 0,
     unit: '°'
+  },
+  bank_dot: {
+    id: 'bank_dot',
+    group: 'flight',
+    label: 'Bank Angle Change Rate',
+    precision: 4,
+    unit: 'rad/sec'
   },
   bank_dot_deg: {
     id: 'bank_dot_deg',
@@ -1426,12 +1543,26 @@ export const apiMetadata = {
     group: 'simulation',
     label: 'Ground Collision'
   },
+  heading: {
+    id: 'heading',
+    group: 'flight',
+    label: 'Heading Angle',
+    precision: 2,
+    unit: 'rad'
+  },
   heading_deg: {
     id: 'heading_deg',
     group: 'flight',
     label: 'Heading Angle',
     precision: 0,
     unit: '°'
+  },
+  heading_dot: {
+    id: 'heading_dot',
+    group: 'flight',
+    label: 'Heading Angle Change Rate',
+    precision: 4,
+    unit: 'rad/sec'
   },
   heading_dot_deg: {
     id: 'heading_dot_deg',
@@ -1490,12 +1621,26 @@ export const apiMetadata = {
     precision: 2,
     unit: 'M'
   },
+  pitch: {
+    id: 'pitch',
+    group: 'flight',
+    label: 'Pitch Angle',
+    precision: 2,
+    unit: 'rad'
+  },
   pitch_deg: {
     id: 'pitch_deg',
     group: 'flight',
     label: 'Pitch Angle',
     precision: 0,
     unit: '°'
+  },
+  pitch_dot: {
+    id: 'pitch_dot',
+    group: 'flight',
+    label: 'Pitch Angle Change Rate',
+    precision: 4,
+    unit: 'rad/sec'
   },
   pitch_dot_deg: {
     id: 'pitch_dot_deg',
@@ -1512,7 +1657,7 @@ export const apiMetadata = {
     min: -1,
     precision: 2,
     step: 0.01,
-    unit: '°'
+    unit: '%'
   },
   rudder_trim_position: {
     id: 'rudder_trim_position',
@@ -1522,7 +1667,14 @@ export const apiMetadata = {
     min: -1,
     precision: 2,
     step: 0.01,
-    unit: '°'
+    unit: '%'
+  },
+  sideslip: {
+    id: 'sideslip',
+    group: 'flight',
+    label: 'Side Slip Angle (Beta)',
+    precision: 2,
+    unit: 'rad'
   },
   sideslip_deg: {
     id: 'sideslip_deg',

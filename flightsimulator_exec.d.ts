@@ -168,8 +168,16 @@ interface WasmModule {
   _api_sideslip_deg(): number;
   _api_pitch_deg(): number;
   _api_bank_deg(): number;
-  _api_cl(): number;
+  _api_heading(): number;
+  _api_heading_dot(): number;
+  _api_bank_dot(): number;
+  _api_pitch_dot(): number;
+  _api_sideslip(): number;
+  _api_pitch(): number;
+  _api_bank(): number;
   _api_aoa_deg(): number;
+  _api_aoa(): number;
+  _api_cl(): number;
   _api_cdi(): number;
   _api_drag(): number;
   _api_thrust(): number;
