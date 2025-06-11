@@ -34,7 +34,7 @@ export default {
         primary: "#191919",
         secondary: "#d6d6d6",
         openglCanvasBackground: "#000000",
-        panelBorder: "#8a8a8a",
+        panelBorder: "#2c2c2c",
         panelHeaderBackground: "#191919",
         panelStatusBackground: "#dfe4e2",
         panelContentBackground: "#000000",
