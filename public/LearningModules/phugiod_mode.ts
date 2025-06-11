@@ -9,11 +9,12 @@ notifyUser("Phugiod Mode", "Observe the aircraft's oscillation in pitch and alti
     "4. Increase the simulation speed to observe the damping effect\n"
 );
 
-await waitFor(5000)
-await repositionWithAutopilot(8000, 180, 0);
+await repositionWithAutopilot(3000, 180, 0, simControls.FlapSelector.TWENTY);
+await waitFor(2000)
 simControls.api_set_autopilot(false);
 plotView(simProps.elevator_position, true);
-plotView(simProps.pitch_deg, true);
+plotView(simProps.pitch, true);
+plotView(simProps.pitch_dot, true);
 plotView(simProps.ias_speed_knots, true);
 await waitFor(5000)
 

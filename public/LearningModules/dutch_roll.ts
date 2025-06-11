@@ -1,9 +1,9 @@
 import {repositionWithAutopilot, simControls, simData, simProps, waitFor, waitForCondition, plotView, dataView, notifyUser } from "./core"
 
 // Define target altitude, speed, and heading
-const targetAltitude = 3000; // in feet
+const targetAltitude = 5000; // in feet
 const targetSpeed = 180; // in knots
-const targetHeading = 90; // in degrees
+const targetHeading = 0; // in degrees
 
 // Demonstrate dutch roll mode
 notifyUser(
@@ -19,14 +19,14 @@ notifyUser(
 `
 );
 
-await waitFor(5000);
-await repositionWithAutopilot(targetAltitude, targetSpeed, targetHeading);
+await repositionWithAutopilot(targetAltitude, targetSpeed, targetHeading, simControls.FlapSelector.TWENTY);
+await waitFor(2000);
 simControls.api_set_autopilot(false);
 // plotView(simProps.api_aileron_position, true);
+plotView(simProps.heading, true);
+plotView(simProps.heading_dot, true);
+plotView(simProps.sideslip, true);
 plotView(simProps.rudder_position, true);
-plotView(simProps.sideslip_deg, true);
-plotView(simProps.bank_deg, true);
-plotView(simProps.heading_deg, true);
 // plotView(simProps.pitch_deg, true);
 // plotView(simProps.ias_speed_knots, true);
 simControls.api_set_aileron_position(0.0);

@@ -1,4 +1,4 @@
-import type { EmbindModule } from "../flightsimulator_exec"
+import type { EmbindModule, FlapSelector, FlapSelectorValue } from "../flightsimulator_exec"
 import type { SimulationProperties, SimData, getSimulationParameters} from "../../src/siminterfac"
 import { apiMetadata } from "../flightsimulator_exec_meta";
 
@@ -17,7 +17,7 @@ if (!globalScope.__myAppTimeoutCache) {
 const cache: number[] = globalScope.__myAppTimeoutCache;
 
 export async function repositionWithAutopilot(target_altitude: number, target_speed: number,
-     target_heading: number) {
+     target_heading: number, flaps_selector_position?: FlapSelector) {
   // Reset the simulation
   simControls.api_set_simulation_reset();
 
@@ -26,7 +26,7 @@ export async function repositionWithAutopilot(target_altitude: number, target_sp
 
   // Set Simulation speed to 100
   simControls.api_set_simulation_speed(100);
-
+  simControls.api_set_flaps_selector_position(flaps_selector_position?.value || 0);
   simControls.api_set_engine_throttle_position(1);
   // Toggle the autopilot master switch state.
   simControls.api_set_autopilot(true);
