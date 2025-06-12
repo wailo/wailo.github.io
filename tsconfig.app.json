@@ -24,6 +24,6 @@
     "noFallthroughCasesInSwitch": true,
     "types": []
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "public/flightsimulator_exec_meta.ts"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "public/flightsimulator_exec_meta.ts", "public/LearningModules/core.ts"],
 
 }

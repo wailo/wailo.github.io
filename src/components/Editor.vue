@@ -88,6 +88,7 @@ import { ExtendedMainModule, SimulationProperties} from "../siminterfac.ts";
 import simDataTypesRaw from "../../public/flightsimulator_exec_meta.ts?raw";
 import simApiTypes from "../../public/flightsimulator_exec.d.ts?raw";
 
+import {resetTimeouts} from "../../public/LearningModules/core.ts"
 // core.ts converted to js
 import coreSimJs from 'virtual:transpiled-core-js';
 // core.ts types converted to d.ts
@@ -234,12 +235,7 @@ const code = ref(``);
 
 const reset = () => {
   executionResult.value = null;
-  window.flag = false;
-  if (!window.cache) {
-    return;
-  }
-  window.cache.forEach((n) => clearTimeout(n));
-  window.cache.length = 0;
+  resetTimeouts()
   isScriptRunning.value = false;
   emit("reset");
 };
@@ -254,11 +250,8 @@ const executeCode = async () => {
   code.value = stripImportsExports(code.value);
 
   executionResult.value = null;
-  window.flag = true;
-  window.cache = [];
   try {
     isScriptRunning.value = true;
-
     emit("start", code.value);
     // Create a function with context binding
     const userScriptFunc = new Function(`
