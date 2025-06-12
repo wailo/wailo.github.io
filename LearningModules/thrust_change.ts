@@ -1,4 +1,4 @@
-import {repositionWithAutopilot, simControls, simData, simProps, waitFor, waitForCondition, plotView, dataView, notifyUser} from "./core"
+import {repositionWithAutopilot, simControls, simData, waitFor, dataDisplayReset, notifyUser} from "./core"
 // =========================
 // 📘 Introduction
 // =========================
@@ -12,6 +12,7 @@ notifyUser(
     "📢 Watch carefully, as you'll be asked questions at the end!"
   );
   
+  dataDisplayReset();
   // ✈️ Reposition and stabilize at level flight
   await repositionWithAutopilot(10000, 280, 270);
   notifyUser("⚙️ Thrust Adjustment", "We will now increase and reduce thrust to observe effects.");

@@ -1,4 +1,5 @@
-import {repositionWithAutopilot, simControls, simData, simProps, waitFor, waitForCondition, plotView, dataView, notifyUser } from "./core"
+import {repositionWithAutopilot, simControls, simData, simProps, waitFor, waitForCondition, dataView, dataDisplayReset, notifyUser } from "./core"
+dataDisplayReset();
 simControls.api_set_simulation_pause(true);
 await waitFor(1000);
 

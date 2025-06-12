@@ -1,4 +1,4 @@
-import {repositionWithAutopilot, simControls, simData, simProps, waitFor, waitForCondition, plotView, dataView, notifyUser } from "./core"
+import {repositionWithAutopilot, simControls, simData, simProps, waitFor, waitForCondition, dataDisplayReset, notifyUser } from "./core"
 // 📘 Lesson 1: Monitor Lift Generation in Flight
 notifyUser(
   "📘 Lesson: Monitor Lift Generation",
@@ -35,10 +35,8 @@ const getLiftSnapshot = async () => {
 // 🔁 Setup: Reset and reposition at 15,000 ft and 250 knots
 const targetVerticalSpeed = 3000; // feet per minute
 
-simControls.api_set_simulation_reset();
-simControls.api_set_simulation_speed(100);
+dataDisplayReset();
 await repositionWithAutopilot(15000, 250, 90);
-
 
 simControls.api_set_autopilot(true);
 simControls.api_set_autopilot_ias_speed_hold(true);

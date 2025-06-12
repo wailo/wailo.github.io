@@ -1,4 +1,4 @@
-import {repositionWithAutopilot, simControls, simData, simProps, waitFor, waitForCondition, plotView, dataView, notifyUser } from "./core"
+import {repositionWithAutopilot, simControls, simProps, waitFor, plotView, dataDisplayReset, notifyUser } from "./core"
 
 // Define target altitude, speed, and heading
 const targetAltitude = 5000; // in feet
@@ -19,6 +19,7 @@ notifyUser(
 `
 );
 
+dataDisplayReset();
 await repositionWithAutopilot(targetAltitude, targetSpeed, targetHeading, simControls.FlapSelector.TWENTY);
 await waitFor(2000);
 simControls.api_set_autopilot(false);

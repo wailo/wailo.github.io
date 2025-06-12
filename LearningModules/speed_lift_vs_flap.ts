@@ -1,4 +1,4 @@
-import {repositionWithAutopilot, simControls, simData, simProps, waitFor, waitForCondition, plotView, dataView, notifyUser } from "./core"
+import {repositionWithAutopilot, simControls, simProps, waitFor, dataView, dataDisplayReset, notifyUser } from "./core"
 // 📘 Configurations
 const initialAltitude_ft = 4000;
 const initialSpeed_knots = 210;
@@ -15,6 +15,7 @@ const flapStages = [
 notifyUser("📘 Flap Effect", "Observe how changing flap settings affects airspeed, lift, and drag.");
 await waitFor(4000);
 
+dataDisplayReset();
 await repositionWithAutopilot(initialAltitude_ft, initialSpeed_knots, initialHeading_deg);
 await waitFor(2000);
 
