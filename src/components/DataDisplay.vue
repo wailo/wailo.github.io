@@ -32,7 +32,7 @@
         class="cursor-pointer p-1 transition hover:bg-primary"
         @click="setDataView(item, true )"
       >
-        {{ item.label }}
+        {{ `${item.label} (${item.unit})` }}
       </div>
     </div>
 
@@ -126,6 +126,7 @@ const displayedItems = computed(() =>
 
 const fuse = computed(() => new Fuse(Object.values(props.simProps), {
   keys: ['group', 'label'],
+
   threshold: 0.4
 }))
 
