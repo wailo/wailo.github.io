@@ -1,6 +1,7 @@
-import {repositionWithAutopilot, simControls, simData, simProps, waitFor, waitForCondition, plotView, dataView, notifyUser } from "./core"
+import {repositionWithAutopilot, simControls, simData, simProps, waitFor, waitForCondition, dataView, dataDisplayReset, notifyUser } from "./core"
 // ✈️ Level Flight Demonstration with Dynamic Changes
 
+dataDisplayReset();
 const targetAltitude = 4000; // feet
 const targetSpeed = 280;     // knots
 const targetHeading = 270;   // degrees

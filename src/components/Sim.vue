@@ -113,12 +113,13 @@
         :simProps="simulationProps"
         :plotViewFunc="dataDisplayRef?.setPlotView || (() => {})"
         :dataViewFunc="dataDisplayRef?.setDataView || (() => {})"
+        :dataDisplayResetFunc="dataDisplayRef?.reset || (() => {})"
         :notifyUserFunc="notifyUser"
-        @start="(_code) => {
+        @start="(_code: string) => {
           scriptComponentStatus = 'IN-PROGRESS';
         }"
         @reset="scriptComponentStatus = 'IDLE'"
-        @error="(error) => {
+        @error="(error: any) => {
           notifyUser('Editor Error', error, 5000);
           scriptComponentStatus = 'ERROR';
         }"
@@ -275,7 +276,7 @@ import {
   getAutopilotProperties,
   getSimulationParameters,
   ExtendedMainModule
-} from "../siminterfac.js";
+} from "../siminterfac.ts";
 
 import Editor, { ScriptStatus } from "./Editor.vue";
 
@@ -336,14 +337,13 @@ const executeIncomingApiCode = (code: string) => {
   manager.handleIncomingMessage(code);
 };
 
-// todo: complete this implentation
 // // Logic to reset components, triggered with simulation module is reset
 // const resetComponents = () => {
 //   // Called when user invoke reset from a button, still can't tell if keyboard is pressed.
 //   console.log("Resetting components");
 //     editorComponentRef.value?.reset();
 //     // classroomComponentRef.value?.reset();
-//     // displayRef.value?.reset();
+//     displayRef.value?.reset();
 //     // markdownRef.value?.reset();
 // };
 

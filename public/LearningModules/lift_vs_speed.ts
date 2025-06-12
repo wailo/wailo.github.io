@@ -1,4 +1,4 @@
-import {repositionWithAutopilot, simControls, simData, simProps, waitFor, waitForCondition, plotView, dataView, notifyUser } from "./core"
+import {repositionWithAutopilot, simControls, simData, waitFor, waitForCondition, dataDisplayReset, notifyUser } from "./core"
 // 📘 Lesson 2: Increase Airspeed and Observe Lift Changes
 notifyUser(
     "📘 Lesson: Airspeed Effects on Lift",
@@ -29,8 +29,7 @@ notifyUser(
   };
   
   // 🔁 Setup: reset and position at 6000 ft and 230 knots
-  simControls.api_set_simulation_reset();
-  simControls.api_set_simulation_speed(100);
+  dataDisplayReset();
   await repositionWithAutopilot(6000, 230, 90);
   simControls.api_set_autopilot(true);
   

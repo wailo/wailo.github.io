@@ -201,16 +201,20 @@ function updatePlot(name: string, buf: CircularBuffer) {
 
 // ✅ Reset data
 function reset() {
-  getPlottableKeys.value.forEach(name => {
-    const buf = dataBuffers.get(name)
-    if (buf) {
-      buf.index = 0
-      buf.full = false
-      buf.x.fill(0)
-      buf.y.fill(0)
-    }
-    plots.get(name)?.setData([[], []])
-  })
+  // getPlottableKeys.value.forEach(name => {
+  //   const buf = dataBuffers.get(name)
+  //   if (buf) {
+  //     buf.index = 0
+  //     buf.full = false
+  //     buf.x.fill(0)
+  //     buf.y.fill(0)
+  //   }
+  //   plots.get(name)?.setData([[], []])
+  // })
+  selectedKeys.value.clear()
+  plots.clear()
+  dataBuffers.clear()
+
 }
 
 // ✅ On Mount

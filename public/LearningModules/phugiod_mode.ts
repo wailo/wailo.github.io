@@ -1,4 +1,4 @@
-import {repositionWithAutopilot, simControls, simData, simProps, waitFor, waitForCondition, plotView, dataView, notifyUser } from "./core"
+import {repositionWithAutopilot, simControls, simData, simProps, waitFor, plotView, dataDisplayReset, notifyUser } from "./core"
 
 // Demostrate phugoid mode
 notifyUser("Phugiod Mode", "Observe the aircraft's oscillation in pitch and altitude.\n\n" + 
@@ -9,6 +9,7 @@ notifyUser("Phugiod Mode", "Observe the aircraft's oscillation in pitch and alti
     "4. Increase the simulation speed to observe the damping effect\n"
 );
 
+dataDisplayReset();
 await repositionWithAutopilot(3000, 180, 0, simControls.FlapSelector.TWENTY);
 await waitFor(2000)
 simControls.api_set_autopilot(false);

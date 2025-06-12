@@ -7,6 +7,7 @@ export declare let simControls :EmbindModule;
 export declare let simData : SimData;
 export declare function plotView(simPropitem: SimulationProperties, state: boolean): void;
 export declare function dataView(simPropitem: SimulationProperties, state: boolean): void;
+export declare function dataDisplayReset(): void;
 export declare function notifyUser(title: string, body: string, timeOut?: number): void
 
 // Create a global singleton cache

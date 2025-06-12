@@ -1,16 +1,19 @@
-import {repositionWithAutopilot, simControls, simData, simProps, waitFor, waitForCondition, plotView, dataView, notifyUser} from "./core"
+import {repositionWithAutopilot, simControls, simData, simProps, waitFor, waitForCondition, plotView, dataView, dataDisplayReset, notifyUser} from "./core"
 // 📘 Configurations
 const targetAltitude_ft = 5000;
 const targetSpeed_knots = 180;
-const targetHeading_deg = 90;
+const targetHeading_deg = 0;
 const maxAltitudeDeviation_ft = 200;
 const requiredHeadingChange_deg = 180;
 const challengeTimeLimit_ms = 2 * 60 * 1000; // 2 minutes
 
-// 📘 Step 1: Reposition
-notifyUser("📍 **Repositioning**", `Repositioning to **${targetAltitude_ft} ft**, **${targetSpeed_knots} knots**, and **${targetHeading_deg}°**...`);
-await waitFor(3000);
+notifyUser(
+    "🎯 **Coordinated Turn**",
+    "**A coordinated turn** maintains balance between lift, weight, and centrifugal force.\n" +
+    "**No slipping or skidding** — the aircraft turns smoothly while maintaining altitude."
+);
 
+dataDisplayReset();
 await repositionWithAutopilot(targetAltitude_ft, targetSpeed_knots, targetHeading_deg);
 
 simControls.api_set_autopilot(true);  // Enable autopilot again
@@ -19,22 +22,23 @@ simControls.api_set_autopilot_ias_speed_hold(true); // Set speed hold
 simControls.api_set_autopilot_heading_hold(true); // Set heading hold
 
 // 📘 Step 2: Explain Coordinated Turn
-notifyUser(
-    "🎯 **Coordinated Turn**",
-    "**A coordinated turn** maintains balance between lift, weight, and centrifugal force.\n" +
-    "**No slipping or skidding** — the aircraft turns smoothly while maintaining altitude."
-);
-await waitFor(6000);
 
-// 📘 Step 3: Display Relevant Data
+await waitFor(4000);
+
+// 📘 Step 3: Display and Plot Relevant Data
 dataView(simProps.altitude, true);
 await waitFor(300);
-dataView(simProps.heading_deg, true);
+dataView(simProps.heading, true);
 await waitFor(300);
 dataView(simProps.aileron_position, true);
 await waitFor(300);
 dataView(simProps.elevator_position, true);
 await waitFor(300);
+
+plotView(simProps.altitude, true);
+plotView(simProps.heading, true);
+plotView(simProps.aileron_position, true);
+plotView(simProps.elevator_position, true);
 
 // Capture starting values
 const initialAltitude = simData.api_altitude;

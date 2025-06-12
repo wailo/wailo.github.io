@@ -140,6 +140,14 @@ const searchResults = computed(() => {
 const isDropdownVisible = computed(() => isFocused.value && searchResults.value.length > 0)
 
 // Functions
+function reset() {
+  visibleItems.clear()
+  plottedIds.clear()
+  timePlotRef.value?.reset?.()
+  searchQuery.value = ''
+  isFocused.value = false
+}
+
 function setDataView(item: SimulationProperties, state: boolean) {
   if (!item || !item.id) return
   const id = item.id.toLowerCase();
@@ -205,6 +213,7 @@ onBeforeUnmount(() => {
 
 // Expose to parent
 defineExpose({
+  reset,
   showAll,
   hideAll,
   tickPlot,

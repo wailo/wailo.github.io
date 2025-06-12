@@ -157,7 +157,10 @@ const props = defineProps({
     type: Function as PropType<(item: SimulationProperties, state: boolean) => void>,
     required: true,
   },
-
+  dataDisplayResetFunc: {
+    type: Function as PropType<() => void>,
+    required: true,
+  },
 });
 
 // Remove import and declare statements and replace export with a empty string
@@ -264,13 +267,14 @@ const simData = simControls.simData;
 const simProps = arguments[1];
 const dataView = arguments[2];
 const plotView = arguments[3];
-const notifyUser = arguments[4]
+const dataDisplayReset = arguments[4];
+const notifyUser = arguments[5]
 ${coreCode}
 resetTimeouts();
 return async function () {${code.value}
 };`);
 
-    userScriptFunc(props.contextObject, props.simProps, props.dataViewFunc, props.plotViewFunc, props.notifyUserFunc)()
+    userScriptFunc(props.contextObject, props.simProps, props.dataViewFunc, props.plotViewFunc, props.dataDisplayResetFunc, props.notifyUserFunc)()
       .then(() => {
         emit("reset");
       })

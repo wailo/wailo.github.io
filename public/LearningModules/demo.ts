@@ -1,4 +1,4 @@
-import {simControls, simData, simProps, waitFor, waitForCondition, plotView, dataView, notifyUser} from "./core"
+import {simControls, simData, simProps, waitFor, waitForCondition, plotView, dataView, dataDisplayReset, notifyUser} from "./core"
 
 // 🛠️ Helper: Flight Schedule Tracker
 let currentStep = 0;
@@ -51,6 +51,7 @@ advanceSchedule(
   "- **Target Heading**: 270°",
   "Takeoff configuration..."
 );
+dataDisplayReset();
 simControls.api_set_simulation_reset();
 await waitFor(1000);
 
