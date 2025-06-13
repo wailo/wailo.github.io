@@ -342,8 +342,8 @@ const executeIncomingApiCode = (code: string) => {
 //   // Called when user invoke reset from a button, still can't tell if keyboard is pressed.
 //   console.log("Resetting components");
 //     editorComponentRef.value?.reset();
-//     // classroomComponentRef.value?.reset();
-//     displayRef.value?.reset();
+//     classroomComponentRef.value?.reset();
+//     dataDisplayRef.value?.reset();
 //     // markdownRef.value?.reset();
 // };
 
@@ -404,7 +404,6 @@ onMounted(async () => {
         getAutopilotProperties(FlightSimModule).filter(item => item.inputValue !== undefined),
       );
 
-      sim_module_loaded.value = true;
       // key presses are handled inside the canvas only
       window.removeEventListener(
         "keydown",
@@ -450,6 +449,8 @@ onMounted(async () => {
       );
 
       document.addEventListener('fullscreenchange', () => isFullscreen.value = document.fullscreenElement !== null);
+      sim_module_loaded.value = true;
+      notifyUser("Flight Sim", `Version: ${FlightSimModule.FLIGHTMODEL_VERSION}`,2000)
       simUpdateInterval = setInterval(() => {
         fetchSimData(FlightSimModule);
         dataDisplayRef.value?.tickPlot();
