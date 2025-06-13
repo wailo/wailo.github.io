@@ -228,7 +228,7 @@ export interface FlapSelectorValue<T extends number> {
 export type FlapSelector = FlapSelectorValue<0>|FlapSelectorValue<1>|FlapSelectorValue<5>|FlapSelectorValue<10>|FlapSelectorValue<20>|FlapSelectorValue<25>|FlapSelectorValue<30>;
 
 interface EmbindModule {
-  VERSION_STRING: EmbindString;
+  FLIGHTMODEL_VERSION: EmbindString;
   api_set_autopilot_altitude_hold(_0: boolean): void;
   api_set_atmosphere_sea_level_density(_0: number): void;
   api_set_atmosphere_sea_level_temperature(_0: number): void;

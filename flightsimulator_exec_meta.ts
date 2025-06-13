@@ -260,7 +260,6 @@ export async function fetchSimData(module: any) {
   if (!module) { return; }
   // Detect sim reset and update memory addresses
   if (ptr_api_weight !== module._api_weight() >> 2) {
-    module.simData.api_version = module.VERSION_STRING.toString();
     init(module);
   }
   module.simData.api_aileron_position = round(module.HEAPF32[ptr_api_aileron_position], 2);

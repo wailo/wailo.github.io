@@ -1,6 +1,7 @@
-import type { EmbindModule, FlapSelector, FlapSelectorValue } from "../flightsimulator_exec"
-import type { SimulationProperties, SimData, getSimulationParameters} from "../../src/siminterfac"
-import { apiMetadata } from "../flightsimulator_exec_meta";
+import type { EmbindModule, FlapSelector } from "../flightsimulator_exec"
+export type { FlapSelector, FlapSelectorValue, GearSelector, GearSelectorValue } from "../flightsimulator_exec";
+import type { SimulationProperties, SimData} from "../../src/siminterfac"
+// import { apiMetadata } from "../flightsimulator_exec_meta";
 
 export declare const simProps : Record<string, SimulationProperties>;
 export declare let simControls :EmbindModule;
