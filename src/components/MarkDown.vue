@@ -15,6 +15,10 @@
     breaks: true,
   })
   
+  const reset = () => {
+    parsedHtml.value = ''
+}
+
   // Define props with runtime validation and TS typing
   const props = defineProps({
     content: {
@@ -23,6 +27,7 @@
     },
   })
 
+defineExpose({ reset });
 
 const parsedHtml = ref<string>('')
 
@@ -36,7 +41,6 @@ watch(
     },
     { immediate: true }
 )
-
 
   </script>
   

@@ -405,7 +405,18 @@ const sendApiCall = (apiCall: string) => {
   send(data);
 };
 
-defineExpose({ sendApiCall });
+const reset = () => {
+  trace("Resetting classroom");
+  disconnect();
+  if (myPeer) {
+    myPeer.destroy();
+    myPeer = undefined as any;
+  }
+  incomingConns.value = {};
+  outConnection = undefined as any;
+};
+
+defineExpose({ sendApiCall, reset });
 
 const trace = (text: string) => {
   if (isDevelopment === false) {

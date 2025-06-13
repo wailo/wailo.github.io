@@ -337,15 +337,15 @@ const executeIncomingApiCode = (code: string) => {
   manager.handleIncomingMessage(code);
 };
 
-// // Logic to reset components, triggered with simulation module is reset
-// const resetComponents = () => {
-//   // Called when user invoke reset from a button, still can't tell if keyboard is pressed.
-//   console.log("Resetting components");
-//     editorComponentRef.value?.reset();
-//     classroomComponentRef.value?.reset();
-//     dataDisplayRef.value?.reset();
-//     // markdownRef.value?.reset();
-// };
+// Logic to reset components, triggered with simulation module is reset
+const resetComponents = () => {
+  // Called when user invoke reset from a button, still can't tell if keyboard is pressed.
+  console.log("Resetting components");
+    editorComponentRef.value?.reset();
+    classroomComponentRef.value?.reset();
+    dataDisplayRef.value?.reset();
+    markdownRef.value?.reset();
+};
 
 let FlightSimModule: ExtendedMainModule;
 let sim_module_loaded = ref(false);
@@ -361,7 +361,7 @@ const isFullscreen = ref(false);
 const classroomComponentRef = ref<InstanceType<typeof ClassRoom> | null>(null); // Use the ClassRoom component type
 const editorComponentRef = ref<InstanceType<typeof Editor> | null>(null); // Use the Editor component type
 const dataDisplayRef = ref<InstanceType<typeof SimDataDisplay> | null>(null); // Use the SimDataDisplay component type
-// const markdownRef = ref<InstanceType<typeof MarkDown> | null>(null); // Use the MarkDown component type
+const markdownRef = ref<InstanceType<typeof MarkDown> | null>(null); // Use the MarkDown component type
 
 let autopilotControlsButtons: ReturnType<
   typeof computed<ReturnType<typeof getAutopilotProperties>>
@@ -386,6 +386,8 @@ onMounted(async () => {
       const canvas = document.getElementById("canvas");
       return canvas;
     })(),
+    notifyUser: notifyUser, // to be called from c++
+    resetComponents: resetComponents, // to be called from c++
   })
     .then((module) => {
       module.simData = reactive(new SimData());
