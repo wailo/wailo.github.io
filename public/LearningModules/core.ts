@@ -38,7 +38,7 @@ export async function repositionWithAutopilot(target_altitude: number, target_sp
 
   // Wait for speed to cross 180 knots
   await waitForCondition(() => {
-    return simData.api_ias_speed_knots > 180;
+    return simData.api_ias_speed_knots > Math.min(180, target_speed);
   });
 
   // Toggle vertical speed hold
@@ -53,7 +53,7 @@ export async function repositionWithAutopilot(target_altitude: number, target_sp
 
   // Wait until the altitude crosses 300
   await waitForCondition(() => {
-    return simData.api_altitude > 300;
+    return simData.api_altitude >= Math.min(300, target_altitude);
   });
 
   // Landing gear up
