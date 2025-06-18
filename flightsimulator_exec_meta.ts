@@ -81,6 +81,8 @@ let ptr_api_latitude: number = 0;
 let ptr_api_lift: number = 0;
 let ptr_api_longitude: number = 0;
 let ptr_api_mach: number = 0;
+let ptr_api_motion_cues: number = 0;
+let ptr_api_pfd_display: number = 0;
 let ptr_api_pitch: number = 0;
 let ptr_api_pitch_deg: number = 0;
 let ptr_api_pitch_dot: number = 0;
@@ -91,6 +93,7 @@ let ptr_api_sideslip: number = 0;
 let ptr_api_sideslip_deg: number = 0;
 let ptr_api_simulation_pause: number = 0;
 let ptr_api_simulation_speed: number = 0;
+let ptr_api_six_instruments_display: number = 0;
 let ptr_api_thrust: number = 0;
 let ptr_api_true_speed_knots: number = 0;
 let ptr_api_ups: number = 0;
@@ -159,6 +162,8 @@ export class SimData {
   api_lift: number = 0;
   api_longitude: number = 0;
   api_mach: number = 0;
+  api_motion_cues: boolean = false;
+  api_pfd_display: boolean = false;
   api_pitch: number = 0;
   api_pitch_deg: number = 0;
   api_pitch_dot: number = 0;
@@ -169,6 +174,7 @@ export class SimData {
   api_sideslip_deg: number = 0;
   api_simulation_pause: boolean = false;
   api_simulation_speed: number = 0;
+  api_six_instruments_display: boolean = false;
   api_thrust: number = 0;
   api_true_speed_knots: number = 0;
   api_ups: number = 0;
@@ -238,6 +244,8 @@ function init(module: any) {
   ptr_api_lift = module._api_lift() >> 2;
   ptr_api_longitude = module._api_longitude() >> 2;
   ptr_api_mach = module._api_mach() >> 2;
+  ptr_api_motion_cues = module._api_motion_cues();
+  ptr_api_pfd_display = module._api_pfd_display();
   ptr_api_pitch = module._api_pitch() >> 2;
   ptr_api_pitch_deg = module._api_pitch_deg() >> 2;
   ptr_api_pitch_dot = module._api_pitch_dot() >> 2;
@@ -248,6 +256,7 @@ function init(module: any) {
   ptr_api_sideslip_deg = module._api_sideslip_deg() >> 2;
   ptr_api_simulation_pause = module._api_simulation_pause();
   ptr_api_simulation_speed = module._api_simulation_speed() >> 2;
+  ptr_api_six_instruments_display = module._api_six_instruments_display();
   ptr_api_thrust = module._api_thrust() >> 2;
   ptr_api_true_speed_knots = module._api_true_speed_knots() >> 2;
   ptr_api_ups = module._api_ups() >> 2;
@@ -320,6 +329,8 @@ export async function fetchSimData(module: any) {
   module.simData.api_lift = round(module.HEAPF32[ptr_api_lift], 0);
   module.simData.api_longitude = round(module.HEAPF32[ptr_api_longitude], 5);
   module.simData.api_mach = round(module.HEAPF32[ptr_api_mach], 2);
+  module.simData.api_motion_cues = module.HEAP8[ptr_api_motion_cues] !== 0;
+  module.simData.api_pfd_display = module.HEAP8[ptr_api_pfd_display] !== 0;
   module.simData.api_pitch = round(module.HEAPF32[ptr_api_pitch], 4);
   module.simData.api_pitch_deg = round(module.HEAPF32[ptr_api_pitch_deg], 0);
   module.simData.api_pitch_dot = round(module.HEAPF32[ptr_api_pitch_dot], 4);
@@ -330,6 +341,7 @@ export async function fetchSimData(module: any) {
   module.simData.api_sideslip_deg = round(module.HEAPF32[ptr_api_sideslip_deg], 0);
   module.simData.api_simulation_pause = module.HEAP8[ptr_api_simulation_pause] !== 0;
   module.simData.api_simulation_speed = round(module.HEAPF32[ptr_api_simulation_speed], 1);
+  module.simData.api_six_instruments_display = module.HEAP8[ptr_api_six_instruments_display] !== 0;
   module.simData.api_thrust = round(module.HEAPF32[ptr_api_thrust], 2);
   module.simData.api_true_speed_knots = round(module.HEAPF32[ptr_api_true_speed_knots], 0);
   module.simData.api_ups = module.HEAP32[ptr_api_ups];
@@ -884,6 +896,20 @@ return {
     precision: 2,
     unit: 'M'
   },
+  motion_cues:{
+    id: 'motion_cues',
+    inputValue: module.simData.api_motion_cues,
+    toggleFunc: () => module.api_set_motion_cues(!module.simData.api_motion_cues),
+    group: 'simulation',
+    label: 'Motion Cues'
+  },
+  pfd_display:{
+    id: 'pfd_display',
+    inputValue: module.simData.api_pfd_display,
+    toggleFunc: () => module.api_set_pfd_display(!module.simData.api_pfd_display),
+    group: 'simulation',
+    label: 'PFD'
+  },
   pitch:{
     id: 'pitch',
     inputValue: module.simData.api_pitch,
@@ -980,6 +1006,13 @@ return {
     precision: 1,
     step: 0.5,
     unit: 'x'
+  },
+  six_instruments_display:{
+    id: 'six_instruments_display',
+    inputValue: module.simData.api_six_instruments_display,
+    toggleFunc: () => module.api_set_six_instruments_display(!module.simData.api_six_instruments_display),
+    group: 'simulation',
+    label: 'Six Instruments'
   },
   thrust:{
     id: 'thrust',
@@ -1620,6 +1653,16 @@ export const apiMetadata = {
     precision: 2,
     unit: 'M'
   },
+  motion_cues: {
+    id: 'motion_cues',
+    group: 'simulation',
+    label: 'Motion Cues'
+  },
+  pfd_display: {
+    id: 'pfd_display',
+    group: 'simulation',
+    label: 'PFD'
+  },
   pitch: {
     id: 'pitch',
     group: 'flight',
@@ -1701,6 +1744,11 @@ export const apiMetadata = {
     precision: 1,
     step: 0.5,
     unit: 'x'
+  },
+  six_instruments_display: {
+    id: 'six_instruments_display',
+    group: 'simulation',
+    label: 'Six Instruments'
   },
   thrust: {
     id: 'thrust',

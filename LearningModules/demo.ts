@@ -70,6 +70,9 @@ plotView(simProps.altitude, true);
 await waitFor(300);
 plotView(simProps.ias_speed_knots, true);
 
+// Show motions cues
+simControls.api_set_motion_cues(true)
+
 // Flaps + Throttle
 simControls.api_set_flaps_selector_position(simControls.FlapSelector.TWENTY.value);
 simControls.api_set_autopilot(true);
