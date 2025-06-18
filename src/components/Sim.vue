@@ -92,7 +92,7 @@
               input.setterFunc?.(newVal);
             }
           "
-          :button-state="input.stateValue"
+          :button-state="input.toggleFunc && input.inputValue == 1"
           :inputMin="input.min"
           :inputMax="input.max"
           :inputStep="input.step"
