@@ -24,22 +24,82 @@ function advanceSchedule(extraText = "", title = "") {
 }
 
 function showSchedule(highlightIndex, title, optionalText = "") {
+  const lastIndex = steps.length - 1;
+
   const tableRows = steps.map((step, index) => {
-    return index === highlightIndex
-      ? `| <u><b>${index + 1}</b></u> | <u><b>${step.name}</b></u> | <u><b>${step.condition}</b></u> |`
-      : `| ${index + 1} | ${step.name} | ${step.condition} |`;
+    let nameCell = step.name;
+    let conditionCell = step.condition;
+    let indexCell = `${index + 1}`;
+    const isCurrent = index === highlightIndex && index !== lastIndex;
+    const isPrevious = index < highlightIndex;
+
+    if (isCurrent) {
+      indexCell = `<span class="flashing-amber">${index + 1}</span>`;
+      nameCell = `<span class="flashing-amber">${step.name}</span>`;
+      conditionCell = `<span class="flashing-amber">${step.condition}</span>`;
+    } else if (isPrevious) {
+      indexCell = `<span style="color: gray;">${index + 1}</span>`;
+      nameCell = `<span style="color: gray;">${step.name}</span>`;
+      conditionCell = `<span style="color: gray;">${step.condition}</span>`;
+    }
+
+    return `| ${indexCell} | ${nameCell} | ${conditionCell} |`;
   });
+
+  const style = `
+<style>
+  @keyframes flash {
+    0% { opacity: 1; }
+    50% { opacity: 0.3; }
+    100% { opacity: 1; }
+  }
+
+  .flashing-amber {
+    color: orange;
+    animation: flash 2s infinite;
+  }
+
+  .markdown table {
+  border-bottom: 1px solid #aaa;
+    width: 100%;
+  }
+
+  .markdown thead {
+    text-align: left !important;
+    padding: 0 !important;
+    border-bottom: 1px solid #aaa; 
+  }
+
+  .markdown th {
+    border: none !important;
+    border-bottom: 1px solid #aaa !important;
+    padding: 0px 0px !important;
+    margin: 0 !important;
+  }
+
+  .markdown td {
+    border: none !important;
+    padding: 1px !important;
+    margin: 0 !important;
+  }
+</style>
+`;
+
 
   const scheduleMarkdown = [
     `### ${title}`,
     "| # | Step | Condition |",
-    "|---|------|-----------|",
+    "|--|------|-----------|",
     ...tableRows,
     optionalText ? `\n${optionalText}` : ""
   ].join("\n");
 
-  notifyUser("🗓️ Demo Schedule", scheduleMarkdown);
+  notifyUser("🗓️ Demo Schedule", style + scheduleMarkdown);
 }
+
+
+
+
 
 // 📜 Simulator Demo Script
 advanceSchedule(
@@ -100,14 +160,14 @@ simControls.api_set_elevator_position(-0.25);
 await waitFor(3000);
 
 await waitForCondition(() => simData.api_vertical_speed > 400, 5000);
-advanceSchedule("Retracting landing gear", "Retract Gear");
+advanceSchedule("", "Retracting landing gear");
 simControls.api_set_autopilot_pitch_hold(true);
 simControls.api_set_landing_gear_selector_position(simControls.GearSelector.UP.value);
 await waitFor(3000);
 simControls.api_set_engine_throttle_position(0.85)
 
 await waitForCondition(() => simData.api_altitude > 1000);
-advanceSchedule("Activate Vertical Speed Hold to 1500 ft/min, heading hold to 270", "Engaging VS and heading hold");
+advanceSchedule("", "Engaging VS and heading hold");
 simControls.api_set_autopilot_pitch_hold(false);
 simControls.api_set_autopilot_vertical_speed_hold(true);
 simControls.api_set_autopilot_heading_hold(true);
@@ -115,19 +175,19 @@ await waitFor(5000);
 simControls.api_set_engine_throttle_position(0.80)
 
 await waitForCondition(() => simData.api_altitude >= 1000 && simData.api_ias_speed_knots >= 210);
-advanceSchedule("Retracting to Flaps 10", "Flaps to 10");
+advanceSchedule("", "Retracting to Flaps 10");
 simControls.api_set_flaps_selector_position(simControls.FlapSelector.TEN.value);
 
 await waitForCondition(() => simData.api_altitude >= 1500 && simData.api_ias_speed_knots >= 220);
-advanceSchedule("Retracting to Flaps 5", "Flaps to 5");
+advanceSchedule("", "Retracting to Flaps 5");
 simControls.api_set_flaps_selector_position(simControls.FlapSelector.FIVE.value);
 
 await waitForCondition(() => simData.api_altitude >= 2000 && simData.api_ias_speed_knots >= 235);
-advanceSchedule("Retracting to Flaps 1", "Flaps to 1");
+advanceSchedule("", "Retracting to Flaps 1");
 simControls.api_set_flaps_selector_position(simControls.FlapSelector.ONE.value);
 
 await waitForCondition(() => simData.api_altitude >= 2500 && simData.api_ias_speed_knots >= 245);
-advanceSchedule("Clean configuration achieved (Flaps 0)", "Flaps Up");
+advanceSchedule("", "Retracting Flaps to 0");
 simControls.api_set_flaps_selector_position(simControls.FlapSelector.ZERO.value);
 
 

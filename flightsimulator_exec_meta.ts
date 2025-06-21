@@ -18,9 +18,28 @@ export interface SimulationProperties {
   icon?: string;
 }
 
-function round(value: number, decimals: number) {
-  return Number(Math.round(Number(`${value}e${decimals}`)) + `e-${decimals}`);
+
+// Precompute factors
+const roundFactors = Object.freeze([1, 10, 100, 1000, 10000, 100000] as const);
+
+// Supported factors
+type RoundDecimal = 0 | 1 | 2 | 3 | 4 | 5;
+
+function round(value: number, decimals: RoundDecimal): number {
+  const factor = roundFactors[decimals];
+  return Math.round(value * factor) / factor;
 }
+
+// // Optional runtime check version (uncomment if you want runtime safety)
+// function roundSafe(value: number, decimals: number): number {
+//   if (!Number.isInteger(decimals) || decimals < 0 || decimals > 5) {
+//     throw new RangeError("decimals must be an integer between 0 and 5");
+//   }
+//   const factor = roundFactors[decimals as RoundDecimal];
+//   return Math.round(value * factor) / factor;
+// }
+
+
 
 // @editor-extract-end
 let ptr_api_aileron_position: number = 0;
@@ -306,7 +325,7 @@ export async function fetchSimData(module: any) {
   module.simData.api_bank = round(module.HEAPF32[ptr_api_bank], 4);
   module.simData.api_bank_deg = round(module.HEAPF32[ptr_api_bank_deg], 0);
   module.simData.api_bank_dot = round(module.HEAPF32[ptr_api_bank_dot], 4);
-  module.simData.api_bank_dot_deg = round(module.HEAPF32[ptr_api_bank_dot_deg], 0);
+  module.simData.api_bank_dot_deg = round(module.HEAPF32[ptr_api_bank_dot_deg], 2);
   module.simData.api_cdi = round(module.HEAPF32[ptr_api_cdi], 4);
   module.simData.api_cdo = round(module.HEAPF32[ptr_api_cdo], 4);
   module.simData.api_cl = round(module.HEAPF32[ptr_api_cl], 4);
@@ -322,7 +341,7 @@ export async function fetchSimData(module: any) {
   module.simData.api_heading = round(module.HEAPF32[ptr_api_heading], 4);
   module.simData.api_heading_deg = round(module.HEAPF32[ptr_api_heading_deg], 0);
   module.simData.api_heading_dot = round(module.HEAPF32[ptr_api_heading_dot], 4);
-  module.simData.api_heading_dot_deg = round(module.HEAPF32[ptr_api_heading_dot_deg], 0);
+  module.simData.api_heading_dot_deg = round(module.HEAPF32[ptr_api_heading_dot_deg], 2);
   module.simData.api_ias_speed_knots = round(module.HEAPF32[ptr_api_ias_speed_knots], 0);
   module.simData.api_landing_gear_selector_position = module.HEAP32[ptr_api_landing_gear_selector_position];
   module.simData.api_latitude = round(module.HEAPF32[ptr_api_latitude], 5);
@@ -334,7 +353,7 @@ export async function fetchSimData(module: any) {
   module.simData.api_pitch = round(module.HEAPF32[ptr_api_pitch], 4);
   module.simData.api_pitch_deg = round(module.HEAPF32[ptr_api_pitch_deg], 0);
   module.simData.api_pitch_dot = round(module.HEAPF32[ptr_api_pitch_dot], 4);
-  module.simData.api_pitch_dot_deg = round(module.HEAPF32[ptr_api_pitch_dot_deg], 0);
+  module.simData.api_pitch_dot_deg = round(module.HEAPF32[ptr_api_pitch_dot_deg], 2);
   module.simData.api_rudder_position = round(module.HEAPF32[ptr_api_rudder_position], 2);
   module.simData.api_rudder_trim_position = round(module.HEAPF32[ptr_api_rudder_trim_position], 2);
   module.simData.api_sideslip = round(module.HEAPF32[ptr_api_sideslip], 4);
@@ -689,7 +708,7 @@ return {
     inputValue: module.simData.api_bank_dot_deg,
     group: 'flight',
     label: 'Bank Angle Change Rate',
-    precision: 0,
+    precision: 2,
     unit: '°/sec'
   },
   cdi:{
@@ -834,7 +853,7 @@ return {
     inputValue: module.simData.api_heading_dot_deg,
     group: 'flight',
     label: 'Heading Angle Change Rate',
-    precision: 0,
+    precision: 2,
     unit: '°/sec'
   },
   ias_speed_knots:{
@@ -939,7 +958,7 @@ return {
     inputValue: module.simData.api_pitch_dot_deg,
     group: 'flight',
     label: 'Pitch Angle Change Rate',
-    precision: 0,
+    precision: 2,
     unit: '°/sec'
   },
   rudder_position:{
@@ -1477,7 +1496,7 @@ export const apiMetadata = {
     id: 'bank_dot_deg',
     group: 'flight',
     label: 'Bank Angle Change Rate',
-    precision: 0,
+    precision: 2,
     unit: '°/sec'
   },
   cdi: {
@@ -1600,7 +1619,7 @@ export const apiMetadata = {
     id: 'heading_dot_deg',
     group: 'flight',
     label: 'Heading Angle Change Rate',
-    precision: 0,
+    precision: 2,
     unit: '°/sec'
   },
   ias_speed_knots: {
@@ -1688,7 +1707,7 @@ export const apiMetadata = {
     id: 'pitch_dot_deg',
     group: 'flight',
     label: 'Pitch Angle Change Rate',
-    precision: 0,
+    precision: 2,
     unit: '°/sec'
   },
   rudder_position: {
