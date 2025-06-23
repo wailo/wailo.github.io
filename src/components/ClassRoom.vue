@@ -50,7 +50,7 @@
     </div>
 
     <div class="grid grid-flow-row grid-cols-1">
-      <h3>Peers</h3>
+      <h3>Peers [{{ Object.keys(incomingConns).length }}]</h3>
       <table class="table-fixed text-left border">
         <thead
           class="border-b border-t border-simElementBorder bg-panelHeaderBackground"
@@ -120,12 +120,12 @@
     @click.self="() => (isQrPopupOpen = false)"
   >
     <div class="bg-simBackground p-6 rounded-lg shadow-lg w-min text-center">
-      <vue-qr
+      <!-- <vue-qr
         :text="myPeerId ? `${baseUrl}/#sim?roomId=${myPeerId}` : ''"
         :size="150"
         :margin="0"
         backgroundColor="rgba(0,0,0,0)"
-      ></vue-qr>
+      ></vue-qr> -->
 
       <div class="border">
         <b :v-if="myPeerId && myPeerId.length"
@@ -155,7 +155,6 @@ import { ref, onMounted, watch } from "vue";
 import ButtonSwitch from "./ButtonSwitch.vue";
 import * as PeerJS from "peerjs";
 import { DataConnection } from "peerjs";
-
 // import vueQr from "vue-qr/src/packages/vue-qr.vue";
 
 // Define the event emitter
@@ -225,7 +224,7 @@ onMounted(() => {
 const setupConnection = (conn: DataConnection) => {
   // Connection request from remote peer
   trace(`Received a connection data from ${conn.peer}`);
-  
+
    // Data from remote peer
    conn.on("data", (data: unknown) => {
     onData(data as PeerData, conn);
@@ -238,7 +237,7 @@ const setupConnection = (conn: DataConnection) => {
     incomingConns.value[conn.peer] = conn;
   });
 
- 
+
 
   // Lost connection with remote peer
   conn.on("close", () => onConnectionClose(conn.peer));
@@ -302,11 +301,12 @@ const createAnJoinPeer = (targetPeerId: string) => {
     displayname.value || Math.random().toString(36).substring(2, 7).toUpperCase();
 
   const hostConfig: PeerJS.PeerOptions = {};
-  if (isDevelopment) {
-    hostConfig.host = "127.0.0.1";
-    hostConfig.port = 9000;
-    // hostConfig.path = "/myapp";
-  }
+  // if (isDevelopment) {
+    hostConfig.host = "raspberrypi.tail89a8a0.ts.net";
+    hostConfig.port = 443;
+    hostConfig.secure = true ;
+    hostConfig.path = "/peerjs";
+  // }
 
   // Create a new peer
   const peer = new PeerJS.Peer(targetPeerId, hostConfig);

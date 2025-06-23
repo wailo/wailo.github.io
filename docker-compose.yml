@@ -1,44 +1,66 @@
-version: '3.7'
+# version: '3.7'
 
 services:
-  peerServer:
+  peerjs:
     image: peerjs/peerjs-server
     ports:
       - '9000:9000'
 
-  sim01:
-    build: .
-    image: personal
-    # container_name: flightsim
-    # restart: always
+  # sim01:
+  #   build: .
+  #   image: personal
+  #   # container_name: flightsim
+  #   # restart: always
+  #   ports:
+  #     - '3001:3000'
+  #   command: 'sh -c "yarn dev"'
+  #   volumes:
+  #     - type: bind
+  #       source: ./
+  #       target: /app
+  # sim02:
+  #   build: .
+  #   image: personal
+  #   # container_name: flightsim
+  #   # restart: always
+  #   ports:
+  #     - '3002:3000'
+  #   command: 'sh -c "yarn dev"'
+  #   volumes:
+  #     - type: bind
+  #       source: ./
+  #       target: /app
+  # sim03:
+  #   build: .
+  #   image: personal
+  #   # container_name: flightsim
+  #   # restart: always
+  #   ports:
+  #     - '3003:3000'
+  #   command: 'sh -c "yarn dev"'
+  #   volumes:
+  #     - type: bind
+  #       source: ./
+  #       target: /app
+  pocketbase:
+    image: ghcr.io/muchobien/pocketbase:latest
+    container_name: pocketbase
+    restart: unless-stopped
+    command:
+      - --dev
+      - --encryptionEnv # optional
+      - ENCRYPTION # optional
+    environment:
+      ENCRYPTION: $(openssl rand -hex 16) # optional (Ensure this is a 32-character long encryption key https://pocketbase.io/docs/going-to-production/#enable-settings-encryption) 
     ports:
-      - '3001:3000'
-    command: 'sh -c "yarn dev"'
+      - "8090:8090"
     volumes:
-      - type: bind
-        source: ./
-        target: /app
-  sim02:
-    build: .
-    image: personal
-    # container_name: flightsim
-    # restart: always
-    ports:
-      - '3002:3000'
-    command: 'sh -c "yarn dev"'
-    volumes:
-      - type: bind
-        source: ./
-        target: /app
-  sim03:
-    build: .
-    image: personal
-    # container_name: flightsim
-    # restart: always
-    ports:
-      - '3003:3000'
-    command: 'sh -c "yarn dev"'
-    volumes:
-      - type: bind
-        source: ./
-        target: /app
+      - ./pocketbase/pb_data:/pb_data
+      - ./pocketbase/pb_public:/pb_public # optional
+      - ./pocketbase/pb_hooks:/pb_hooks # optional
+      - ./pocketbase/pb_migrations:/pb_migrations
+    healthcheck: # optional, recommended since v0.10.0
+      test: wget --no-verbose --tries=1 --spider http://localhost:8090/api/health || exit 1
+      interval: 120s
+      timeout: 5s
+      retries: 5

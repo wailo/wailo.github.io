@@ -233,12 +233,16 @@
       :active="classRoomComponentState"
       >
       <template #ClassRoom>
-
-      <ClassRoom
-        @api-data-event="(receivedApiCall: PeerData) => executeIncomingApiCode(receivedApiCall?.api)"
-        ref="classroomComponentRef"
-        @status-changed="(newStatus) => (classRoomComponentState = newStatus)"
-    />
+        <div class="flex flex-col h-full w-full">
+          <Accounts class="flex-1"
+          ref="accountsComponentRef" />
+          <ClassRoom
+            class="flex-1"
+            @api-data-event="(receivedApiCall: PeerData) => executeIncomingApiCode(receivedApiCall?.api)"
+            ref="classroomComponentRef"
+            @status-changed="(newStatus) => (classRoomComponentState = newStatus)"
+          />
+        </div>
     </template>
   </Panel>
       <!-- Panel 8 -->
@@ -262,6 +266,7 @@ import { ref, reactive, computed, onMounted, onUnmounted, onBeforeMount } from "
 import Panel from "./Panel.vue";
 import ButtonSwitch from "./ButtonSwitch.vue";
 import ClassRoom from "./ClassRoom.vue";
+import Accounts from "./Accounts.vue";
 import SimDataDisplay from './DataDisplay.vue'
 import MarkDown from "./MarkDown.vue";
 import { RemoteCallManager, RemoteCall, RemoteEvent } from '../RemoteCallManager';
@@ -362,6 +367,7 @@ const classroomComponentRef = ref<InstanceType<typeof ClassRoom> | null>(null); 
 const editorComponentRef = ref<InstanceType<typeof Editor> | null>(null); // Use the Editor component type
 const dataDisplayRef = ref<InstanceType<typeof SimDataDisplay> | null>(null); // Use the SimDataDisplay component type
 const markdownRef = ref<InstanceType<typeof MarkDown> | null>(null); // Use the MarkDown component type
+const accountsComponentRef = ref<InstanceType<typeof Accounts> | null>(null); // Use the Accounts component type
 
 let autopilotControlsButtons: ReturnType<
   typeof computed<ReturnType<typeof getAutopilotProperties>>
