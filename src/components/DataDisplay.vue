@@ -32,7 +32,7 @@
         class="cursor-pointer p-1 transition hover:bg-primary"
         @click="setDataView(item, true )"
       >
-        {{ `${item.label} (${item.unit})` }}
+        {{ `${item.label} ${item.unit? `(${item.unit})` : '' }` }}
       </div>
     </div>
 
