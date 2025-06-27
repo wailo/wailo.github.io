@@ -423,7 +423,7 @@ return {
     id: 'atmosphere_density',
     inputValue: module.simData.api_atmosphere_density,
     group: 'atmosphere',
-    label: 'Atmosphere Density',
+    label: 'Density',
     precision: 3,
     unit: 'kg/m³'
   },
@@ -432,7 +432,7 @@ return {
     inputValue: module.simData.api_atmosphere_sea_level_density,
     setterFunc: (newVal: string) => module.api_set_atmosphere_sea_level_density(Number(newVal)),
     group: 'atmosphere',
-    label: 'Atmosphere Sea Level Density',
+    label: 'Sea Level Density',
     max: 1.8,
     min: 0.001,
     precision: 3,
@@ -444,7 +444,7 @@ return {
     inputValue: module.simData.api_atmosphere_sea_level_temperature,
     setterFunc: (newVal: string) => module.api_set_atmosphere_sea_level_temperature(Number(newVal)),
     group: 'atmosphere',
-    label: 'Atmosphere Sea Level Temperature',
+    label: 'Sea Level Temperature',
     max: 672,
     min: 0,
     precision: 0,
@@ -455,7 +455,7 @@ return {
     id: 'atmosphere_temperature',
     inputValue: module.simData.api_atmosphere_temperature,
     group: 'atmosphere',
-    label: 'Atmosphere Temperature',
+    label: 'Temperature',
     precision: 0,
     unit: 'Kelvin'
   },
@@ -464,7 +464,7 @@ return {
     inputValue: module.simData.api_atmosphere_turbulence_intervals,
     setterFunc: (newVal: string) => module.api_set_atmosphere_turbulence_intervals(Number(newVal)),
     group: 'atmosphere',
-    label: 'Atmosphere Turbulence Intervals',
+    label: 'Turbulence Intervals',
     max: 0.99,
     min: 0.01,
     precision: 2,
@@ -476,7 +476,7 @@ return {
     inputValue: module.simData.api_atmosphere_turbulence_level,
     setterFunc: (newVal: string) => module.api_set_atmosphere_turbulence_level(Number(newVal)),
     group: 'atmosphere',
-    label: 'Atmosphere Turbulence Level',
+    label: 'Turbulence Level',
     max: 1,
     min: 0,
     precision: 2,
@@ -487,7 +487,7 @@ return {
     inputValue: module.simData.api_atmosphere_wind_direction_deg,
     setterFunc: (newVal: string) => module.api_set_atmosphere_wind_direction_deg(Number(newVal)),
     group: 'atmosphere',
-    label: 'Atmosphere Wind Direction',
+    label: 'Wind Direction',
     max: 360,
     min: 0,
     precision: 0,
@@ -499,7 +499,7 @@ return {
     inputValue: module.simData.api_atmosphere_wind_speed_knots,
     setterFunc: (newVal: string) => module.api_set_atmosphere_wind_speed_knots(Number(newVal)),
     group: 'atmosphere',
-    label: 'Atmosphere Wind Speed',
+    label: 'Wind Speed',
     max: 400,
     min: 0,
     precision: 0,
@@ -1038,7 +1038,8 @@ return {
     inputValue: module.simData.api_thrust,
     group: 'flight',
     label: 'Thrust',
-    precision: 2
+    precision: 2,
+    unit: 'N'
   },
   true_speed_knots:{
     id: 'true_speed_knots',
@@ -1266,14 +1267,14 @@ export const apiMetadata = {
   atmosphere_density: {
     id: 'atmosphere_density',
     group: 'atmosphere',
-    label: 'Atmosphere Density',
+    label: 'Density',
     precision: 3,
     unit: 'kg/m³'
   },
   atmosphere_sea_level_density: {
     id: 'atmosphere_sea_level_density',
     group: 'atmosphere',
-    label: 'Atmosphere Sea Level Density',
+    label: 'Sea Level Density',
     max: 1.8,
     min: 0.001,
     precision: 3,
@@ -1283,7 +1284,7 @@ export const apiMetadata = {
   atmosphere_sea_level_temperature: {
     id: 'atmosphere_sea_level_temperature',
     group: 'atmosphere',
-    label: 'Atmosphere Sea Level Temperature',
+    label: 'Sea Level Temperature',
     max: 672,
     min: 0,
     precision: 0,
@@ -1293,14 +1294,14 @@ export const apiMetadata = {
   atmosphere_temperature: {
     id: 'atmosphere_temperature',
     group: 'atmosphere',
-    label: 'Atmosphere Temperature',
+    label: 'Temperature',
     precision: 0,
     unit: 'Kelvin'
   },
   atmosphere_turbulence_intervals: {
     id: 'atmosphere_turbulence_intervals',
     group: 'atmosphere',
-    label: 'Atmosphere Turbulence Intervals',
+    label: 'Turbulence Intervals',
     max: 0.99,
     min: 0.01,
     precision: 2,
@@ -1310,7 +1311,7 @@ export const apiMetadata = {
   atmosphere_turbulence_level: {
     id: 'atmosphere_turbulence_level',
     group: 'atmosphere',
-    label: 'Atmosphere Turbulence Level',
+    label: 'Turbulence Level',
     max: 1,
     min: 0,
     precision: 2,
@@ -1319,7 +1320,7 @@ export const apiMetadata = {
   atmosphere_wind_direction_deg: {
     id: 'atmosphere_wind_direction_deg',
     group: 'atmosphere',
-    label: 'Atmosphere Wind Direction',
+    label: 'Wind Direction',
     max: 360,
     min: 0,
     precision: 0,
@@ -1329,7 +1330,7 @@ export const apiMetadata = {
   atmosphere_wind_speed_knots: {
     id: 'atmosphere_wind_speed_knots',
     group: 'atmosphere',
-    label: 'Atmosphere Wind Speed',
+    label: 'Wind Speed',
     max: 400,
     min: 0,
     precision: 0,
@@ -1773,7 +1774,8 @@ export const apiMetadata = {
     id: 'thrust',
     group: 'flight',
     label: 'Thrust',
-    precision: 2
+    precision: 2,
+    unit: 'N'
   },
   true_speed_knots: {
     id: 'true_speed_knots',
