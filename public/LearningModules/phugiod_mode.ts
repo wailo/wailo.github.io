@@ -9,8 +9,13 @@ notifyUser("Phugiod Mode", "Observe the aircraft's oscillation in pitch and alti
     "4. Increase the simulation speed to observe the damping effect\n"
 );
 
+// Pre-configuration before trimming the aircraft.
+const preConfiguration = () => {
+    simControls.api_set_flaps_selector_position(simControls.FlapSelector.TWENTY.value);
+}
+
 dataDisplayReset();
-await repositionWithAutopilot(3000, 180, 0, simControls.FlapSelector.TWENTY);
+await repositionWithAutopilot(3000, 180, 0, preConfiguration);
 await waitFor(2000)
 simControls.api_set_autopilot(false);
 plotView(simProps.elevator_position, true);
@@ -21,7 +26,7 @@ await waitFor(5000)
 
 notifyUser("Initiating Phugiod mode", "Pulling the control stick for 2 seconds then return to neutral position.\n\n")
 await waitFor(5000)
-simControls.api_set_elevator_position(-0.30)
+simControls.api_set_elevator_position(simData.api_elevator_position - 0.30)
 await waitFor(2000)
 simControls.api_set_elevator_position(0.00)
 await waitFor(5000)
