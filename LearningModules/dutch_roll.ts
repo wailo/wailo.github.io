@@ -20,7 +20,8 @@ notifyUser(
 );
 
 dataDisplayReset();
-await repositionWithAutopilot(targetAltitude, targetSpeed, targetHeading, simControls.FlapSelector.TWENTY);
+const preConfiguration = () => {simControls.api_set_flaps_selector_position(simControls.FlapSelector.TWENTY.value);}
+await repositionWithAutopilot(targetAltitude, targetSpeed, targetHeading, preConfiguration);
 await waitFor(2000);
 simControls.api_set_autopilot(false);
 // plotView(simProps.api_aileron_position, true);
