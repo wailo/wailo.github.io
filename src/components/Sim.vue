@@ -69,35 +69,33 @@
       class="panel-3"
     >
     <template #Simulation>
-      <div class="w-full h-full grid grid-cols-3 gap-1">
-        <ButtonSwitch
-        v-if="sim_module_loaded"
+      <div  v-if="sim_module_loaded" class="w-full h-full grid grid-cols-3 gap-1">
+        <wButton
           class="border border-simElementBorder col-span-1"
           buttonLabel="Focus Mode"
           :buttonClick="toggleFullscreen"
           />
-        <ButtonSwitch
-          v-if="sim_module_loaded"
-          v-for="(input, i) in Object.values(simulationProps).filter(v => v.group === 'simulation' && (v.setterFunc || v.toggleFunc)).sort((a) => a.toggleFunc != undefined ? -1 : 1)"
+          <wButton
+          v-for="(input, i) in Object.values(simulationProps).filter(v => v.group === 'simulation' && v.setterFunc && ['boolean', 'void'].includes(v.type)).sort((a) => a.type == 'boolean' || a.type == 'void' ? -1 : 1)"
           :key="i"
           :buttonLabel="input.label"
-          :buttonClick="
-            () => {
-              input.toggleFunc?.();
-            }
-          "
-          :textInput="input.setterFunc? input.inputValue : undefined"
-          :inputChange="
-            (newVal: number) => {
-              input.setterFunc?.(newVal);
-            }
-          "
-          :button-state="input.toggleFunc && input.inputValue == 1"
+          :buttonClick="() => input.setterFunc?.()"
+          :button-state="input.inputValue == 1"
+          class="border border-simElementBorder"
+          :class="!['boolean', 'void'].includes(input.type) ? 'col-span-3' : ''"
+        />
+        <ButtonSwitch
+        v-for="(input, i) in Object.values(simulationProps).filter(v => v.group === 'simulation' && v.setterFunc && !['boolean', 'void'].includes(v.type)).sort((a) => a.type == 'boolean' || a.type == 'void' ? -1 : 1)"
+          :key="i"
+          :buttonLabel="input.label"
+          :buttonClick="() => input.setterFunc?.()"
+          :textInput="input.inputValue"
+          :inputChange="input.setterFunc"
+          :button-state="input.type === 'boolean' && input.inputValue == 1"
           :inputMin="input.min"
           :inputMax="input.max"
           :inputStep="input.step"
-          class="border border-simElementBorder"
-          :class="input.hasOwnProperty('setterFunc') ? 'col-span-3' : ''"
+          class="border border-simElementBorder col-span-3"
         >
         </ButtonSwitch>
       </div>
@@ -137,28 +135,15 @@
     <template #Autopilot>
   <div class="w-full h-full grid grid-cols-4 gap-1 auto-rows-fr">
     <div class="col-span-1 grid grid-cols-1 gap-1 auto-rows-fr">
-      <button-switch
+      <wButton
       v-if="sim_module_loaded"
       v-for="(input, i) in autopilotControlsButtons"
       :key="i"
       class="border border-simElementBorder w-full h-full"
       :buttonLabel="input.label"
-      :textInput="input.inputValue"
-      :buttonClick="
-        () => {
-          input.toggleFunc?.();
-        }
-      "
-      :inputChange="
-        (newVal: number) => {
-          input.setterFunc?.(newVal);
-        }
-      "
-      :buttonState="input.stateValue"
-      :inputMin="input.min"
-      :inputMax="input.max"
-      :inputStep="input.step"
-    ></button-switch>
+      :buttonClick="() => input.stateCommand.setterFunc()"
+      :buttonState="input.stateCommand.value"
+    ></wButton>
     </div>
   <div class="col-span-3 grid grid-cols-3 gap-1 auto-rows-fr">
     <button-switch
@@ -166,22 +151,23 @@
       v-for="(input, i) in autopilotControlsButtonsInputs"
       :key="i"
       class="border border-simElementBorder w-full h-full"
-      :buttonLabel="input.label.replace('Hold', '').replace('Angle', '').trim()"
-      :textInput="input.inputValue"
+
       :buttonClick="
         () => {
-          input.toggleFunc?.();
+          input.stateCommand.setterFunc();
         }
       "
+      :buttonState="input.stateCommand.value"
+      :buttonLabel="input.label.replace('Hold', '').replace('Angle', '').trim()"
+      :textInput="input.targetCommand?.value"
       :inputChange="
         (newVal: number) => {
-          input.setterFunc?.(newVal);
+          input.targetCommand?.setterFunc(newVal);
         }
       "
-      :buttonState="input.stateValue"
-      :inputMin="input.min"
-      :inputMax="input.max"
-      :inputStep="input.step"
+      :inputMin="input.targetCommand?.min"
+      :inputMax="input.targetCommand?.max"
+      :inputStep="input.targetCommand?.step"
     ></button-switch>
     </div>
   </div>
@@ -206,22 +192,41 @@
             return acc;
           }, {} as Record<string, SimulationProperties[]>)"
         >
-          <h3>{{ sim_group[0].group.toUpperCase() }}</h3>
-          <button-switch
-            class="border border-simElementBorder ml-1"
+          <span class="font-bold">{{ sim_group[0].group.toUpperCase() }}</span>
+          <!-- label + control -->
+          <div
             v-for="sim_prop in Object.values(sim_group)"
-            key="sim_prop.id"
-            :buttonLabel="sim_prop.label"
-            :textInput="sim_prop.inputValue"
-            :inputChange="
-              (newVal: number) => {
-                sim_prop.setterFunc?.(newVal);
-              }
-            "
-            :inputMin="sim_prop.min"
-            :inputMax="sim_prop.max"
-            :inputStep="sim_prop.step"
-          ></button-switch>
+            :key="sim_prop.id"
+            class="flex items-center pl-1 border border-simElementBorder"
+          >
+            <span class="w-3/5">
+              {{ sim_prop.label }} <span v-if="sim_prop.unit">({{ sim_prop.unit }})</span>
+            </span>
+            <wInput
+            v-if="!['boolean', 'void'].includes(sim_prop.type)"
+              type="number"
+              class="bg-simInputBackground border-l border-simElementBorder pl-1 h-full text-secondary w-2/5"
+              :textInput="sim_prop.inputValue"
+              :inputChange="sim_prop.setterFunc"
+              :inputMin="sim_prop.min"
+              :inputMax="sim_prop.max"
+              :inputStep="sim_prop.step"
+            />
+            <wButton
+              v-else-if="['boolean', 'void'].includes(sim_prop.type)"
+              class="border-l border-simElementBorder w-2/5 text-left pl-1"
+              :class="sim_prop.inputValue ? 'bg-simActiveButton text-primary' : 'text-secondary'"
+              :buttonLabel="sim_prop.inputValue ? 'On' : 'Off'"
+              :buttonClick="() => sim_prop.setterFunc?.()"
+              :buttonState="sim_prop.stateValue"
+              />
+
+             <!-- Enum Input -->
+
+
+
+          </div>
+
         </template>
       </div>
       </template>
@@ -234,10 +239,9 @@
       >
       <template #ClassRoom>
         <div class="flex flex-col h-full w-full">
-          <Accounts class="flex-1"
+          <Accounts
           ref="accountsComponentRef" />
           <ClassRoom
-            class="flex-1"
             @api-data-event="(receivedApiCall: PeerData) => executeIncomingApiCode(receivedApiCall?.api)"
             ref="classroomComponentRef"
             @status-changed="(newStatus) => (classRoomComponentState = newStatus)"
@@ -265,6 +269,8 @@
 import { ref, reactive, computed, onMounted, onUnmounted, onBeforeMount } from "vue";
 import Panel from "./Panel.vue";
 import ButtonSwitch from "./ButtonSwitch.vue";
+import wButton from "./wButton.vue"
+import wInput from "./wInput.vue"
 import ClassRoom from "./ClassRoom.vue";
 import Accounts from "./Accounts.vue";
 import SimDataDisplay from './DataDisplay.vue'
@@ -405,11 +411,11 @@ onMounted(async () => {
         getSimulationParameters(FlightSimModule),
       );
 
-         autopilotControlsButtons = computed(() =>
-        getAutopilotProperties(FlightSimModule).filter(item => item.inputValue === undefined),
+      autopilotControlsButtons = computed(() =>
+        getAutopilotProperties(FlightSimModule).filter(item => item.targetCommand === undefined),
       );
       autopilotControlsButtonsInputs = computed(() =>
-        getAutopilotProperties(FlightSimModule).filter(item => item.inputValue !== undefined),
+        getAutopilotProperties(FlightSimModule).filter(item => item.targetCommand !== undefined),
       );
 
       // key presses are handled inside the canvas only

@@ -20,7 +20,7 @@
       >
       </button-switch> -->
 
-      <button-switch
+      <wButton
         id="connect"
         :button-label="isOnline ? 'Disconnect' : 'Start'"
         :button-state="isOnline"
@@ -46,7 +46,7 @@
             />
           </svg>
         </button>
-      </button-switch>
+      </wButton>
     </div>
 
     <div class="grid grid-flow-row grid-cols-1">
@@ -107,7 +107,7 @@
         </tbody>
       </table>
     </div>
-    <button-switch
+    <wButton
       button-label="Follow Mode"
       :button-state="followMode"
       :button-click="() => (followMode = !followMode)"
@@ -152,7 +152,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from "vue";
-import ButtonSwitch from "./ButtonSwitch.vue";
+import wButton from "./wButton.vue";
 import * as PeerJS from "peerjs";
 import { DataConnection } from "peerjs";
 // import vueQr from "vue-qr/src/packages/vue-qr.vue";

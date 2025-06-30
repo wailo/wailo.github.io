@@ -19,8 +19,12 @@ notifyUser(
 `
 );
 
+// Pre-configuration befroe trimming the aircraft.
+const preConfiguration = () => {
+    simControls.api_set_flaps_selector_position(simControls.FlapSelector.TWENTY.value);
+}
+
 dataDisplayReset();
-const preConfiguration = () => {simControls.api_set_flaps_selector_position(simControls.FlapSelector.TWENTY.value);}
 await repositionWithAutopilot(targetAltitude, targetSpeed, targetHeading, preConfiguration);
 await waitFor(2000);
 simControls.api_set_autopilot(false);
