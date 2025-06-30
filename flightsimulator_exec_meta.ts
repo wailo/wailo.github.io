@@ -3,21 +3,44 @@
 // @editor-extract-start
 
 export interface SimulationProperties {
-  id: string;
-  label: string;
-  inputValue?: number;
-  stateValue?: boolean;
-  toggleFunc?: Function;
-  setterFunc?: Function;
-  unit?: string;
-  min?: number;
-  max?: number;
-  step?: number;
-  precision?: number;
-  group: "autopilot" | "atmosphere" | "aerodynamics" | "controls" | "simulation" | "flight" | "systems"| "airframe" | "propulsion";
-  icon?: string;
+  readonly id: string;
+  readonly type: "number" | "boolean" | "void";
+  readonly label: string;
+  readonly inputValue?: number;
+  readonly stateValue?: boolean;
+  readonly setterFunc?: Function;
+  readonly unit?: string;
+  readonly min?: number;
+  readonly max?: number;
+  readonly step?: number;
+  readonly precision?: number;
+  readonly group: "autopilot" | "atmosphere" | "aerodynamics" | "controls" | "simulation" | "flight" | "systems"| "airframe" | "propulsion";
+  readonly icon?: string;
 }
 
+interface AutopilotState {
+  readonly value: boolean;
+  readonly setterFunc: Function;
+}
+
+interface AutopilotCommand {
+  readonly value: number;
+  readonly setterFunc: Function;
+  readonly unit?: string;
+  readonly min: number;
+  readonly max: number;
+  readonly step: number;
+  readonly precision?: number;
+}
+
+
+ interface AutopilotProperties {
+  readonly id: string
+  readonly label: string;
+  readonly stateCommand: AutopilotState,
+  readonly targetCommand?: AutopilotCommand
+  readonly icon?: string;
+}
 
 // Precompute factors
 const roundFactors = Object.freeze([1, 10, 100, 1000, 10000, 100000] as const);
@@ -374,7 +397,8 @@ return {
   aileron_position:{
     id: 'aileron_position',
     inputValue: module.simData.api_aileron_position,
-    setterFunc: (newVal: string) => module.api_set_aileron_position(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_aileron_position,
     group: 'controls',
     label: 'Aileron',
     max: 1,
@@ -386,7 +410,8 @@ return {
   aileron_trim_position:{
     id: 'aileron_trim_position',
     inputValue: module.simData.api_aileron_trim_position,
-    setterFunc: (newVal: string) => module.api_set_aileron_trim_position(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_aileron_trim_position,
     group: 'controls',
     label: 'Aileron Trim',
     max: 1,
@@ -398,6 +423,7 @@ return {
   altitude:{
     id: 'altitude',
     inputValue: module.simData.api_altitude,
+    type: 'number',
     group: 'flight',
     label: 'Altitude',
     precision: 0,
@@ -406,6 +432,7 @@ return {
   aoa:{
     id: 'aoa',
     inputValue: module.simData.api_aoa,
+    type: 'number',
     group: 'aerodynamics',
     label: 'Angle of Attack',
     precision: 4,
@@ -414,6 +441,7 @@ return {
   aoa_deg:{
     id: 'aoa_deg',
     inputValue: module.simData.api_aoa_deg,
+    type: 'number',
     group: 'aerodynamics',
     label: 'Angle of Attack',
     precision: 2,
@@ -422,6 +450,7 @@ return {
   atmosphere_density:{
     id: 'atmosphere_density',
     inputValue: module.simData.api_atmosphere_density,
+    type: 'number',
     group: 'atmosphere',
     label: 'Density',
     precision: 3,
@@ -430,7 +459,8 @@ return {
   atmosphere_sea_level_density:{
     id: 'atmosphere_sea_level_density',
     inputValue: module.simData.api_atmosphere_sea_level_density,
-    setterFunc: (newVal: string) => module.api_set_atmosphere_sea_level_density(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_atmosphere_sea_level_density,
     group: 'atmosphere',
     label: 'Sea Level Density',
     max: 1.8,
@@ -442,7 +472,8 @@ return {
   atmosphere_sea_level_temperature:{
     id: 'atmosphere_sea_level_temperature',
     inputValue: module.simData.api_atmosphere_sea_level_temperature,
-    setterFunc: (newVal: string) => module.api_set_atmosphere_sea_level_temperature(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_atmosphere_sea_level_temperature,
     group: 'atmosphere',
     label: 'Sea Level Temperature',
     max: 672,
@@ -454,6 +485,7 @@ return {
   atmosphere_temperature:{
     id: 'atmosphere_temperature',
     inputValue: module.simData.api_atmosphere_temperature,
+    type: 'number',
     group: 'atmosphere',
     label: 'Temperature',
     precision: 0,
@@ -462,7 +494,8 @@ return {
   atmosphere_turbulence_intervals:{
     id: 'atmosphere_turbulence_intervals',
     inputValue: module.simData.api_atmosphere_turbulence_intervals,
-    setterFunc: (newVal: string) => module.api_set_atmosphere_turbulence_intervals(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_atmosphere_turbulence_intervals,
     group: 'atmosphere',
     label: 'Turbulence Intervals',
     max: 0.99,
@@ -474,7 +507,8 @@ return {
   atmosphere_turbulence_level:{
     id: 'atmosphere_turbulence_level',
     inputValue: module.simData.api_atmosphere_turbulence_level,
-    setterFunc: (newVal: string) => module.api_set_atmosphere_turbulence_level(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_atmosphere_turbulence_level,
     group: 'atmosphere',
     label: 'Turbulence Level',
     max: 1,
@@ -485,7 +519,8 @@ return {
   atmosphere_wind_direction_deg:{
     id: 'atmosphere_wind_direction_deg',
     inputValue: module.simData.api_atmosphere_wind_direction_deg,
-    setterFunc: (newVal: string) => module.api_set_atmosphere_wind_direction_deg(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_atmosphere_wind_direction_deg,
     group: 'atmosphere',
     label: 'Wind Direction',
     max: 360,
@@ -497,7 +532,8 @@ return {
   atmosphere_wind_speed_knots:{
     id: 'atmosphere_wind_speed_knots',
     inputValue: module.simData.api_atmosphere_wind_speed_knots,
-    setterFunc: (newVal: string) => module.api_set_atmosphere_wind_speed_knots(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_atmosphere_wind_speed_knots,
     group: 'atmosphere',
     label: 'Wind Speed',
     max: 400,
@@ -509,21 +545,24 @@ return {
   autopilot:{
     id: 'autopilot',
     inputValue: module.simData.api_autopilot,
-    toggleFunc: () => module.api_set_autopilot(!module.simData.api_autopilot),
+    type: 'boolean',
+    setterFunc: () => module.api_set_autopilot(!module.simData.api_autopilot),
     group: 'autopilot',
     label: 'Master Switch'
   },
   autopilot_altitude_hold:{
     id: 'autopilot_altitude_hold',
     inputValue: module.simData.api_autopilot_altitude_hold,
-    toggleFunc: () => module.api_set_autopilot_altitude_hold(!module.simData.api_autopilot_altitude_hold),
+    type: 'boolean',
+    setterFunc: () => module.api_set_autopilot_altitude_hold(!module.simData.api_autopilot_altitude_hold),
     group: 'autopilot',
     label: 'Altitude Hold'
   },
   autopilot_altitude_target:{
     id: 'autopilot_altitude_target',
     inputValue: module.simData.api_autopilot_altitude_target,
-    setterFunc: (newVal: string) => module.api_set_autopilot_altitude_target(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_autopilot_altitude_target,
     group: 'autopilot',
     label: 'Target Altitude',
     max: 50000,
@@ -535,14 +574,16 @@ return {
   autopilot_bank_hold:{
     id: 'autopilot_bank_hold',
     inputValue: module.simData.api_autopilot_bank_hold,
-    toggleFunc: () => module.api_set_autopilot_bank_hold(!module.simData.api_autopilot_bank_hold),
+    type: 'boolean',
+    setterFunc: () => module.api_set_autopilot_bank_hold(!module.simData.api_autopilot_bank_hold),
     group: 'autopilot',
     label: 'Bank Angle Hold'
   },
   autopilot_bank_target:{
     id: 'autopilot_bank_target',
     inputValue: module.simData.api_autopilot_bank_target,
-    setterFunc: (newVal: string) => module.api_set_autopilot_bank_target(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_autopilot_bank_target,
     group: 'autopilot',
     label: 'Target Bank Angle',
     max: 60,
@@ -554,14 +595,16 @@ return {
   autopilot_heading_hold:{
     id: 'autopilot_heading_hold',
     inputValue: module.simData.api_autopilot_heading_hold,
-    toggleFunc: () => module.api_set_autopilot_heading_hold(!module.simData.api_autopilot_heading_hold),
+    type: 'boolean',
+    setterFunc: () => module.api_set_autopilot_heading_hold(!module.simData.api_autopilot_heading_hold),
     group: 'autopilot',
     label: 'Heading Angle Hold'
   },
   autopilot_heading_target:{
     id: 'autopilot_heading_target',
     inputValue: module.simData.api_autopilot_heading_target,
-    setterFunc: (newVal: string) => module.api_set_autopilot_heading_target(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_autopilot_heading_target,
     group: 'autopilot',
     label: 'Target Heading Angle',
     max: 360,
@@ -573,14 +616,16 @@ return {
   autopilot_ias_speed_hold:{
     id: 'autopilot_ias_speed_hold',
     inputValue: module.simData.api_autopilot_ias_speed_hold,
-    toggleFunc: () => module.api_set_autopilot_ias_speed_hold(!module.simData.api_autopilot_ias_speed_hold),
+    type: 'boolean',
+    setterFunc: () => module.api_set_autopilot_ias_speed_hold(!module.simData.api_autopilot_ias_speed_hold),
     group: 'autopilot',
     label: 'IAS Speed Hold'
   },
   autopilot_ias_speed_target:{
     id: 'autopilot_ias_speed_target',
     inputValue: module.simData.api_autopilot_ias_speed_target,
-    setterFunc: (newVal: string) => module.api_set_autopilot_ias_speed_target(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_autopilot_ias_speed_target,
     group: 'autopilot',
     label: 'Target IAS Speed',
     max: 450,
@@ -592,14 +637,16 @@ return {
   autopilot_mach_speed_hold:{
     id: 'autopilot_mach_speed_hold',
     inputValue: module.simData.api_autopilot_mach_speed_hold,
-    toggleFunc: () => module.api_set_autopilot_mach_speed_hold(!module.simData.api_autopilot_mach_speed_hold),
+    type: 'boolean',
+    setterFunc: () => module.api_set_autopilot_mach_speed_hold(!module.simData.api_autopilot_mach_speed_hold),
     group: 'autopilot',
     label: 'Mach Speed Hold'
   },
   autopilot_mach_speed_target:{
     id: 'autopilot_mach_speed_target',
     inputValue: module.simData.api_autopilot_mach_speed_target,
-    setterFunc: (newVal: string) => module.api_set_autopilot_mach_speed_target(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_autopilot_mach_speed_target,
     group: 'autopilot',
     label: 'Target Mach Speed',
     max: 1.5,
@@ -611,14 +658,16 @@ return {
   autopilot_pitch_hold:{
     id: 'autopilot_pitch_hold',
     inputValue: module.simData.api_autopilot_pitch_hold,
-    toggleFunc: () => module.api_set_autopilot_pitch_hold(!module.simData.api_autopilot_pitch_hold),
+    type: 'boolean',
+    setterFunc: () => module.api_set_autopilot_pitch_hold(!module.simData.api_autopilot_pitch_hold),
     group: 'autopilot',
     label: 'Pitch Angle Hold'
   },
   autopilot_pitch_target:{
     id: 'autopilot_pitch_target',
     inputValue: module.simData.api_autopilot_pitch_target,
-    setterFunc: (newVal: string) => module.api_set_autopilot_pitch_target(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_autopilot_pitch_target,
     group: 'autopilot',
     label: 'Target Pitch Angle',
     max: 40,
@@ -630,14 +679,16 @@ return {
   autopilot_true_speed_hold:{
     id: 'autopilot_true_speed_hold',
     inputValue: module.simData.api_autopilot_true_speed_hold,
-    toggleFunc: () => module.api_set_autopilot_true_speed_hold(!module.simData.api_autopilot_true_speed_hold),
+    type: 'boolean',
+    setterFunc: () => module.api_set_autopilot_true_speed_hold(!module.simData.api_autopilot_true_speed_hold),
     group: 'autopilot',
     label: 'True Airspeed Hold'
   },
   autopilot_true_speed_target:{
     id: 'autopilot_true_speed_target',
     inputValue: module.simData.api_autopilot_true_speed_target,
-    setterFunc: (newVal: string) => module.api_set_autopilot_true_speed_target(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_autopilot_true_speed_target,
     group: 'autopilot',
     label: 'Target True Airspeed',
     max: 800,
@@ -649,21 +700,24 @@ return {
   autopilot_turn_coordinator:{
     id: 'autopilot_turn_coordinator',
     inputValue: module.simData.api_autopilot_turn_coordinator,
-    toggleFunc: () => module.api_set_autopilot_turn_coordinator(!module.simData.api_autopilot_turn_coordinator),
+    type: 'boolean',
+    setterFunc: () => module.api_set_autopilot_turn_coordinator(!module.simData.api_autopilot_turn_coordinator),
     group: 'autopilot',
     label: 'Turn Coordinator'
   },
   autopilot_vertical_speed_hold:{
     id: 'autopilot_vertical_speed_hold',
     inputValue: module.simData.api_autopilot_vertical_speed_hold,
-    toggleFunc: () => module.api_set_autopilot_vertical_speed_hold(!module.simData.api_autopilot_vertical_speed_hold),
+    type: 'boolean',
+    setterFunc: () => module.api_set_autopilot_vertical_speed_hold(!module.simData.api_autopilot_vertical_speed_hold),
     group: 'autopilot',
     label: 'Vertical Speed Hold'
   },
   autopilot_vertical_speed_target:{
     id: 'autopilot_vertical_speed_target',
     inputValue: module.simData.api_autopilot_vertical_speed_target,
-    setterFunc: (newVal: string) => module.api_set_autopilot_vertical_speed_target(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_autopilot_vertical_speed_target,
     group: 'autopilot',
     label: 'Target Vertical Speed',
     max: 6000,
@@ -675,13 +729,15 @@ return {
   autopilot_yaw_damper:{
     id: 'autopilot_yaw_damper',
     inputValue: module.simData.api_autopilot_yaw_damper,
-    toggleFunc: () => module.api_set_autopilot_yaw_damper(!module.simData.api_autopilot_yaw_damper),
+    type: 'boolean',
+    setterFunc: () => module.api_set_autopilot_yaw_damper(!module.simData.api_autopilot_yaw_damper),
     group: 'autopilot',
     label: 'Yaw Damper'
   },
   bank:{
     id: 'bank',
     inputValue: module.simData.api_bank,
+    type: 'number',
     group: 'flight',
     label: 'Bank Angle',
     precision: 4,
@@ -690,6 +746,7 @@ return {
   bank_deg:{
     id: 'bank_deg',
     inputValue: module.simData.api_bank_deg,
+    type: 'number',
     group: 'flight',
     label: 'Bank Angle',
     precision: 0,
@@ -698,6 +755,7 @@ return {
   bank_dot:{
     id: 'bank_dot',
     inputValue: module.simData.api_bank_dot,
+    type: 'number',
     group: 'flight',
     label: 'Bank Angle Change Rate',
     precision: 4,
@@ -706,6 +764,7 @@ return {
   bank_dot_deg:{
     id: 'bank_dot_deg',
     inputValue: module.simData.api_bank_dot_deg,
+    type: 'number',
     group: 'flight',
     label: 'Bank Angle Change Rate',
     precision: 2,
@@ -714,6 +773,7 @@ return {
   cdi:{
     id: 'cdi',
     inputValue: module.simData.api_cdi,
+    type: 'number',
     group: 'aerodynamics',
     label: 'Induced Drag Coefficient',
     precision: 4
@@ -721,6 +781,7 @@ return {
   cdo:{
     id: 'cdo',
     inputValue: module.simData.api_cdo,
+    type: 'number',
     group: 'aerodynamics',
     label: 'Parasite Drag Coefficient',
     precision: 4
@@ -728,6 +789,7 @@ return {
   cl:{
     id: 'cl',
     inputValue: module.simData.api_cl,
+    type: 'number',
     group: 'aerodynamics',
     label: 'Lift Coefficient',
     precision: 4
@@ -735,7 +797,8 @@ return {
   dcl:{
     id: 'dcl',
     inputValue: module.simData.api_dcl,
-    setterFunc: (newVal: string) => module.api_set_dcl(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_dcl,
     group: 'aerodynamics',
     label: 'Lift Coefficient Slop',
     max: 5,
@@ -746,6 +809,7 @@ return {
   drag:{
     id: 'drag',
     inputValue: module.simData.api_drag,
+    type: 'number',
     group: 'aerodynamics',
     label: 'Drag',
     precision: 0,
@@ -754,7 +818,8 @@ return {
   elevator_position:{
     id: 'elevator_position',
     inputValue: module.simData.api_elevator_position,
-    setterFunc: (newVal: string) => module.api_set_elevator_position(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_elevator_position,
     group: 'controls',
     label: 'Elevator',
     max: 1,
@@ -766,7 +831,8 @@ return {
   elevator_trim_position:{
     id: 'elevator_trim_position',
     inputValue: module.simData.api_elevator_trim_position,
-    setterFunc: (newVal: string) => module.api_set_elevator_trim_position(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_elevator_trim_position,
     group: 'controls',
     label: 'Elevator Trim',
     max: 1,
@@ -778,7 +844,8 @@ return {
   empty_weight:{
     id: 'empty_weight',
     inputValue: module.simData.api_empty_weight,
-    setterFunc: (newVal: string) => module.api_set_empty_weight(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_empty_weight,
     group: 'airframe',
     label: 'Empty Weight',
     max: 500000,
@@ -790,8 +857,9 @@ return {
   engine_throttle_position:{
     id: 'engine_throttle_position',
     inputValue: module.simData.api_engine_throttle_position,
-    setterFunc: (newVal: string) => module.api_set_engine_throttle_position(Number(newVal)),
-    group: 'propulsion',
+    type: 'number',
+    setterFunc: module.api_set_engine_throttle_position,
+    group: 'controls',
     label: 'Engine Throttle',
     max: 1,
     min: 0,
@@ -802,7 +870,8 @@ return {
   flaps_selector_position:{
     id: 'flaps_selector_position',
     inputValue: module.simData.api_flaps_selector_position,
-    setterFunc: (newVal: string) => module.api_set_flaps_selector_position(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_flaps_selector_position,
     group: 'systems',
     label: 'Flaps Selector Position',
     max: 6,
@@ -813,6 +882,7 @@ return {
   fps:{
     id: 'fps',
     inputValue: module.simData.api_fps,
+    type: 'number',
     group: 'simulation',
     label: 'Frames per second',
     precision: 0,
@@ -821,12 +891,14 @@ return {
   ground_collision:{
     id: 'ground_collision',
     inputValue: module.simData.api_ground_collision,
+    type: 'boolean',
     group: 'simulation',
     label: 'Ground Collision'
   },
   heading:{
     id: 'heading',
     inputValue: module.simData.api_heading,
+    type: 'number',
     group: 'flight',
     label: 'Heading Angle',
     precision: 4,
@@ -835,6 +907,7 @@ return {
   heading_deg:{
     id: 'heading_deg',
     inputValue: module.simData.api_heading_deg,
+    type: 'number',
     group: 'flight',
     label: 'Heading Angle',
     precision: 0,
@@ -843,6 +916,7 @@ return {
   heading_dot:{
     id: 'heading_dot',
     inputValue: module.simData.api_heading_dot,
+    type: 'number',
     group: 'flight',
     label: 'Heading Angle Change Rate',
     precision: 4,
@@ -851,6 +925,7 @@ return {
   heading_dot_deg:{
     id: 'heading_dot_deg',
     inputValue: module.simData.api_heading_dot_deg,
+    type: 'number',
     group: 'flight',
     label: 'Heading Angle Change Rate',
     precision: 2,
@@ -859,6 +934,7 @@ return {
   ias_speed_knots:{
     id: 'ias_speed_knots',
     inputValue: module.simData.api_ias_speed_knots,
+    type: 'number',
     group: 'flight',
     label: 'IAS Speed',
     precision: 0,
@@ -867,7 +943,8 @@ return {
   landing_gear_selector_position:{
     id: 'landing_gear_selector_position',
     inputValue: module.simData.api_landing_gear_selector_position,
-    setterFunc: (newVal: string) => module.api_set_landing_gear_selector_position(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_landing_gear_selector_position,
     group: 'systems',
     label: 'Landing Gear',
     max: 2,
@@ -878,7 +955,8 @@ return {
   latitude:{
     id: 'latitude',
     inputValue: module.simData.api_latitude,
-    setterFunc: (newVal: string) => module.api_set_latitude(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_latitude,
     group: 'flight',
     label: 'Latitude',
     max: 90,
@@ -890,6 +968,7 @@ return {
   lift:{
     id: 'lift',
     inputValue: module.simData.api_lift,
+    type: 'number',
     group: 'aerodynamics',
     label: 'Lift',
     precision: 0,
@@ -898,7 +977,8 @@ return {
   longitude:{
     id: 'longitude',
     inputValue: module.simData.api_longitude,
-    setterFunc: (newVal: string) => module.api_set_longitude(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_longitude,
     group: 'flight',
     label: 'Longitude',
     max: 180,
@@ -910,6 +990,7 @@ return {
   mach:{
     id: 'mach',
     inputValue: module.simData.api_mach,
+    type: 'number',
     group: 'flight',
     label: 'Mach Speed',
     precision: 2,
@@ -918,20 +999,23 @@ return {
   motion_cues:{
     id: 'motion_cues',
     inputValue: module.simData.api_motion_cues,
-    toggleFunc: () => module.api_set_motion_cues(!module.simData.api_motion_cues),
+    type: 'boolean',
+    setterFunc: () => module.api_set_motion_cues(!module.simData.api_motion_cues),
     group: 'simulation',
     label: 'Motion Cues'
   },
   pfd_display:{
     id: 'pfd_display',
     inputValue: module.simData.api_pfd_display,
-    toggleFunc: () => module.api_set_pfd_display(!module.simData.api_pfd_display),
+    type: 'boolean',
+    setterFunc: () => module.api_set_pfd_display(!module.simData.api_pfd_display),
     group: 'simulation',
     label: 'PFD'
   },
   pitch:{
     id: 'pitch',
     inputValue: module.simData.api_pitch,
+    type: 'number',
     group: 'flight',
     label: 'Pitch Angle',
     precision: 4,
@@ -940,6 +1024,7 @@ return {
   pitch_deg:{
     id: 'pitch_deg',
     inputValue: module.simData.api_pitch_deg,
+    type: 'number',
     group: 'flight',
     label: 'Pitch Angle',
     precision: 0,
@@ -948,6 +1033,7 @@ return {
   pitch_dot:{
     id: 'pitch_dot',
     inputValue: module.simData.api_pitch_dot,
+    type: 'number',
     group: 'flight',
     label: 'Pitch Angle Change Rate',
     precision: 4,
@@ -956,6 +1042,7 @@ return {
   pitch_dot_deg:{
     id: 'pitch_dot_deg',
     inputValue: module.simData.api_pitch_dot_deg,
+    type: 'number',
     group: 'flight',
     label: 'Pitch Angle Change Rate',
     precision: 2,
@@ -964,7 +1051,8 @@ return {
   rudder_position:{
     id: 'rudder_position',
     inputValue: module.simData.api_rudder_position,
-    setterFunc: (newVal: string) => module.api_set_rudder_position(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_rudder_position,
     group: 'controls',
     label: 'Rudder',
     max: 1,
@@ -976,7 +1064,8 @@ return {
   rudder_trim_position:{
     id: 'rudder_trim_position',
     inputValue: module.simData.api_rudder_trim_position,
-    setterFunc: (newVal: string) => module.api_set_rudder_trim_position(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_rudder_trim_position,
     group: 'controls',
     label: 'Rudder Trim',
     max: 1,
@@ -988,6 +1077,7 @@ return {
   sideslip:{
     id: 'sideslip',
     inputValue: module.simData.api_sideslip,
+    type: 'number',
     group: 'flight',
     label: 'Side Slip Angle (Beta)',
     precision: 4,
@@ -996,6 +1086,7 @@ return {
   sideslip_deg:{
     id: 'sideslip_deg',
     inputValue: module.simData.api_sideslip_deg,
+    type: 'number',
     group: 'flight',
     label: 'Side Slip Angle (Beta)',
     precision: 0,
@@ -1004,20 +1095,23 @@ return {
   simulation_pause:{
     id: 'simulation_pause',
     inputValue: module.simData.api_simulation_pause,
-    toggleFunc: () => module.api_set_simulation_pause(!module.simData.api_simulation_pause),
+    type: 'boolean',
+    setterFunc: () => module.api_set_simulation_pause(!module.simData.api_simulation_pause),
     group: 'simulation',
     label: 'Simulation Pause'
   },
   simulation_reset:{
     id: 'simulation_reset',
-    toggleFunc: () => module.api_set_simulation_reset(),
+    type: 'void',
+    setterFunc: () => module.api_set_simulation_reset(),
     group: 'simulation',
     label: 'Simulation Reset'
   },
   simulation_speed:{
     id: 'simulation_speed',
     inputValue: module.simData.api_simulation_speed,
-    setterFunc: (newVal: string) => module.api_set_simulation_speed(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_simulation_speed,
     group: 'simulation',
     label: 'Simulation Speed',
     max: 100,
@@ -1029,13 +1123,15 @@ return {
   six_instruments_display:{
     id: 'six_instruments_display',
     inputValue: module.simData.api_six_instruments_display,
-    toggleFunc: () => module.api_set_six_instruments_display(!module.simData.api_six_instruments_display),
+    type: 'boolean',
+    setterFunc: () => module.api_set_six_instruments_display(!module.simData.api_six_instruments_display),
     group: 'simulation',
     label: 'Six Instruments'
   },
   thrust:{
     id: 'thrust',
     inputValue: module.simData.api_thrust,
+    type: 'number',
     group: 'flight',
     label: 'Thrust',
     precision: 2,
@@ -1044,6 +1140,7 @@ return {
   true_speed_knots:{
     id: 'true_speed_knots',
     inputValue: module.simData.api_true_speed_knots,
+    type: 'number',
     group: 'flight',
     label: 'True Airspeed',
     precision: 0,
@@ -1052,6 +1149,7 @@ return {
   ups:{
     id: 'ups',
     inputValue: module.simData.api_ups,
+    type: 'number',
     group: 'simulation',
     label: 'Update per second',
     precision: 0,
@@ -1060,6 +1158,7 @@ return {
   vertical_speed:{
     id: 'vertical_speed',
     inputValue: module.simData.api_vertical_speed,
+    type: 'number',
     group: 'flight',
     label: 'Vertical Speed',
     precision: 0,
@@ -1068,6 +1167,7 @@ return {
   vstall_speed_knots:{
     id: 'vstall_speed_knots',
     inputValue: module.simData.api_vstall_speed_knots,
+    type: 'number',
     group: 'flight',
     label: 'Stall Speed',
     precision: 0,
@@ -1076,6 +1176,7 @@ return {
   weight:{
     id: 'weight',
     inputValue: module.simData.api_weight,
+    type: 'number',
     group: 'airframe',
     label: 'Weight',
     precision: 0,
@@ -1084,7 +1185,8 @@ return {
   wing_area:{
     id: 'wing_area',
     inputValue: module.simData.api_wing_area,
-    setterFunc: (newVal: string) => module.api_set_wing_area(Number(newVal)),
+    type: 'number',
+    setterFunc: module.api_set_wing_area,
     group: 'airframe',
     label: 'Wing Area',
     max: 7000,
@@ -1094,131 +1196,158 @@ return {
     unit: 'Ft²'
   }}
 };
-export function getAutopilotProperties(module: any): SimulationProperties[] {
+export function getAutopilotProperties(module: any): AutopilotProperties[] {
 return [
   {
+    stateCommand: {
+    value: module.simData.api_autopilot,
+    setterFunc: () => module.api_set_autopilot(!module.simData.api_autopilot)
+    },
     id: 'autopilot',
-    stateValue: module.simData.api_autopilot,
-    toggleFunc: () => module.api_set_autopilot(!module.simData.api_autopilot),
-    group: 'autopilot',
     label: 'Master Switch'
   },
   {
-    id: 'autopilot_altitude_hold',
-    stateValue: module.simData.api_autopilot_altitude_hold,
-    toggleFunc: () => module.api_set_autopilot_altitude_hold(!module.simData.api_autopilot_altitude_hold),
-    inputValue: module.simData.api_autopilot_altitude_target,
-    setterFunc: (newVal: string) => module.api_set_autopilot_altitude_target(Number(newVal)),
+    stateCommand: {
+    value: module.simData.api_autopilot_altitude_hold,
+    setterFunc: () => module.api_set_autopilot_altitude_hold(!module.simData.api_autopilot_altitude_hold)
+    },
+targetCommand: {
+    value: module.simData.api_autopilot_altitude_target,
+    setterFunc: module.api_set_autopilot_altitude_target,
     max: 50000,
     min: 0,
     precision: 0,
     step: 100,
-    group: 'autopilot',
+    },
+    id: 'autopilot_altitude_hold',
     label: 'Altitude Hold'
   },
   {
-    id: 'autopilot_bank_hold',
-    stateValue: module.simData.api_autopilot_bank_hold,
-    toggleFunc: () => module.api_set_autopilot_bank_hold(!module.simData.api_autopilot_bank_hold),
-    inputValue: module.simData.api_autopilot_bank_target,
-    setterFunc: (newVal: string) => module.api_set_autopilot_bank_target(Number(newVal)),
+    stateCommand: {
+    value: module.simData.api_autopilot_bank_hold,
+    setterFunc: () => module.api_set_autopilot_bank_hold(!module.simData.api_autopilot_bank_hold)
+    },
+targetCommand: {
+    value: module.simData.api_autopilot_bank_target,
+    setterFunc: module.api_set_autopilot_bank_target,
     max: 60,
     min: -60,
     precision: 0,
     step: 1,
-    group: 'autopilot',
+    },
+    id: 'autopilot_bank_hold',
     label: 'Bank Angle Hold'
   },
   {
-    id: 'autopilot_heading_hold',
-    stateValue: module.simData.api_autopilot_heading_hold,
-    toggleFunc: () => module.api_set_autopilot_heading_hold(!module.simData.api_autopilot_heading_hold),
-    inputValue: module.simData.api_autopilot_heading_target,
-    setterFunc: (newVal: string) => module.api_set_autopilot_heading_target(Number(newVal)),
+    stateCommand: {
+    value: module.simData.api_autopilot_heading_hold,
+    setterFunc: () => module.api_set_autopilot_heading_hold(!module.simData.api_autopilot_heading_hold)
+    },
+targetCommand: {
+    value: module.simData.api_autopilot_heading_target,
+    setterFunc: module.api_set_autopilot_heading_target,
     max: 360,
     min: 0,
     precision: 0,
     step: 1,
-    group: 'autopilot',
+    },
+    id: 'autopilot_heading_hold',
     label: 'Heading Angle Hold'
   },
   {
-    id: 'autopilot_ias_speed_hold',
-    stateValue: module.simData.api_autopilot_ias_speed_hold,
-    toggleFunc: () => module.api_set_autopilot_ias_speed_hold(!module.simData.api_autopilot_ias_speed_hold),
-    inputValue: module.simData.api_autopilot_ias_speed_target,
-    setterFunc: (newVal: string) => module.api_set_autopilot_ias_speed_target(Number(newVal)),
+    stateCommand: {
+    value: module.simData.api_autopilot_ias_speed_hold,
+    setterFunc: () => module.api_set_autopilot_ias_speed_hold(!module.simData.api_autopilot_ias_speed_hold)
+    },
+targetCommand: {
+    value: module.simData.api_autopilot_ias_speed_target,
+    setterFunc: module.api_set_autopilot_ias_speed_target,
     max: 450,
     min: 0,
     precision: 0,
     step: 1,
-    group: 'autopilot',
+    },
+    id: 'autopilot_ias_speed_hold',
     label: 'IAS Speed Hold'
   },
   {
-    id: 'autopilot_mach_speed_hold',
-    stateValue: module.simData.api_autopilot_mach_speed_hold,
-    toggleFunc: () => module.api_set_autopilot_mach_speed_hold(!module.simData.api_autopilot_mach_speed_hold),
-    inputValue: module.simData.api_autopilot_mach_speed_target,
-    setterFunc: (newVal: string) => module.api_set_autopilot_mach_speed_target(Number(newVal)),
+    stateCommand: {
+    value: module.simData.api_autopilot_mach_speed_hold,
+    setterFunc: () => module.api_set_autopilot_mach_speed_hold(!module.simData.api_autopilot_mach_speed_hold)
+    },
+targetCommand: {
+    value: module.simData.api_autopilot_mach_speed_target,
+    setterFunc: module.api_set_autopilot_mach_speed_target,
     max: 1.5,
     min: 0,
     precision: 2,
     step: .01,
-    group: 'autopilot',
+    },
+    id: 'autopilot_mach_speed_hold',
     label: 'Mach Speed Hold'
   },
   {
-    id: 'autopilot_pitch_hold',
-    stateValue: module.simData.api_autopilot_pitch_hold,
-    toggleFunc: () => module.api_set_autopilot_pitch_hold(!module.simData.api_autopilot_pitch_hold),
-    inputValue: module.simData.api_autopilot_pitch_target,
-    setterFunc: (newVal: string) => module.api_set_autopilot_pitch_target(Number(newVal)),
+    stateCommand: {
+    value: module.simData.api_autopilot_pitch_hold,
+    setterFunc: () => module.api_set_autopilot_pitch_hold(!module.simData.api_autopilot_pitch_hold)
+    },
+targetCommand: {
+    value: module.simData.api_autopilot_pitch_target,
+    setterFunc: module.api_set_autopilot_pitch_target,
     max: 40,
     min: -40,
     precision: 0,
     step: 1,
-    group: 'autopilot',
+    },
+    id: 'autopilot_pitch_hold',
     label: 'Pitch Angle Hold'
   },
   {
-    id: 'autopilot_true_speed_hold',
-    stateValue: module.simData.api_autopilot_true_speed_hold,
-    toggleFunc: () => module.api_set_autopilot_true_speed_hold(!module.simData.api_autopilot_true_speed_hold),
-    inputValue: module.simData.api_autopilot_true_speed_target,
-    setterFunc: (newVal: string) => module.api_set_autopilot_true_speed_target(Number(newVal)),
+    stateCommand: {
+    value: module.simData.api_autopilot_true_speed_hold,
+    setterFunc: () => module.api_set_autopilot_true_speed_hold(!module.simData.api_autopilot_true_speed_hold)
+    },
+targetCommand: {
+    value: module.simData.api_autopilot_true_speed_target,
+    setterFunc: module.api_set_autopilot_true_speed_target,
     max: 800,
     min: 0,
     precision: 0,
     step: 1,
-    group: 'autopilot',
+    },
+    id: 'autopilot_true_speed_hold',
     label: 'True Airspeed Hold'
   },
   {
+    stateCommand: {
+    value: module.simData.api_autopilot_turn_coordinator,
+    setterFunc: () => module.api_set_autopilot_turn_coordinator(!module.simData.api_autopilot_turn_coordinator)
+    },
     id: 'autopilot_turn_coordinator',
-    stateValue: module.simData.api_autopilot_turn_coordinator,
-    toggleFunc: () => module.api_set_autopilot_turn_coordinator(!module.simData.api_autopilot_turn_coordinator),
-    group: 'autopilot',
     label: 'Turn Coordinator'
   },
   {
-    id: 'autopilot_vertical_speed_hold',
-    stateValue: module.simData.api_autopilot_vertical_speed_hold,
-    toggleFunc: () => module.api_set_autopilot_vertical_speed_hold(!module.simData.api_autopilot_vertical_speed_hold),
-    inputValue: module.simData.api_autopilot_vertical_speed_target,
-    setterFunc: (newVal: string) => module.api_set_autopilot_vertical_speed_target(Number(newVal)),
+    stateCommand: {
+    value: module.simData.api_autopilot_vertical_speed_hold,
+    setterFunc: () => module.api_set_autopilot_vertical_speed_hold(!module.simData.api_autopilot_vertical_speed_hold)
+    },
+targetCommand: {
+    value: module.simData.api_autopilot_vertical_speed_target,
+    setterFunc: module.api_set_autopilot_vertical_speed_target,
     max: 6000,
     min: -6000,
     precision: 0,
     step: 100,
-    group: 'autopilot',
+    },
+    id: 'autopilot_vertical_speed_hold',
     label: 'Vertical Speed Hold'
   },
   {
+    stateCommand: {
+    value: module.simData.api_autopilot_yaw_damper,
+    setterFunc: () => module.api_set_autopilot_yaw_damper(!module.simData.api_autopilot_yaw_damper)
+    },
     id: 'autopilot_yaw_damper',
-    stateValue: module.simData.api_autopilot_yaw_damper,
-    toggleFunc: () => module.api_set_autopilot_yaw_damper(!module.simData.api_autopilot_yaw_damper),
-    group: 'autopilot',
     label: 'Yaw Damper'
   }]};
 // @editor-extract-start
@@ -1566,7 +1695,7 @@ export const apiMetadata = {
   },
   engine_throttle_position: {
     id: 'engine_throttle_position',
-    group: 'propulsion',
+    group: 'controls',
     label: 'Engine Throttle',
     max: 1,
     min: 0,
