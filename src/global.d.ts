@@ -6,5 +6,7 @@ interface Window {
   };
 }
 
-// Define a type for the data structure
-type PeerData = { api: string };
+// Define a type for the data structure 
+type PeerApiData = { api: string,  };
+type PeerStatusData = { status: string };
+type PeerData = (PeerApiData | PeerStatusData);

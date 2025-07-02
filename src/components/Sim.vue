@@ -109,10 +109,12 @@
         v-if="sim_module_loaded"
         :context-object="FlightSimModule"
         :simProps="simulationProps"
-        :plotViewFunc="dataDisplayRef?.setPlotView || (() => {})"
-        :dataViewFunc="dataDisplayRef?.setDataView || (() => {})"
-        :dataDisplayResetFunc="dataDisplayRef?.reset || (() => {})"
-        :notifyUserFunc="notifyUser"
+        :utility-funcs="{
+          plotView:dataDisplayRef?.setPlotView || (() => {}),
+          dataView: dataDisplayRef?.setDataView || (() => {}),
+          dataDisplayReset: dataDisplayRef?.reset || (() => {}),
+          notifyUser: notifyUser,
+          checkPoint: (content:string) => classroomComponentRef?.sendStatus(content)}"
         @start="(_code: string) => {
           scriptComponentStatus = 'IN-PROGRESS';
         }"
@@ -242,7 +244,7 @@
           <Accounts
           ref="accountsComponentRef" />
           <ClassRoom
-            @api-data-event="(receivedApiCall: PeerData) => executeIncomingApiCode(receivedApiCall?.api)"
+            @apiDataEvent="(receivedApiCall: PeerApiData) => executeIncomingApiCode(receivedApiCall?.api || '')"
             ref="classroomComponentRef"
             @status-changed="(newStatus) => (classRoomComponentState = newStatus)"
           />

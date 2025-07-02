@@ -146,22 +146,16 @@ const props = defineProps({
     type: Object as PropType<Record<string, SimulationProperties>>,
     required: true,
   },
-  notifyUserFunc: {
-    type: Function as PropType<(title: string, body: string, timeOut: number) => void>,
-    required: true
-  },
-  plotViewFunc: {
-    type: Function as PropType<(item: SimulationProperties, state: boolean) => void>,
+  utilityFuncs: {
+    type: Object as PropType<{
+      notifyUser: (title: string, body: string, timeOut: number) => void;
+      plotView: (item: SimulationProperties, state: boolean) => void;
+      dataView: (item: SimulationProperties, state: boolean) => void;
+      dataDisplayReset: () => void;
+      checkPoint: (content: string) => void;
+    }>,
     required: true,
-  },
-    dataViewFunc: {
-    type: Function as PropType<(item: SimulationProperties, state: boolean) => void>,
-    required: true,
-  },
-  dataDisplayResetFunc: {
-    type: Function as PropType<() => void>,
-    required: true,
-  },
+  }
 });
 
 // Remove import and declare statements and replace export with a empty string
@@ -170,8 +164,6 @@ const props = defineProps({
       .replace(/^\s*export\s+/gm, "")
       .replace(/^\s*import\s.*?;?\s*$\n/gm, "");
   }
-
-
 
 const options = {
   automaticLayout: true,
@@ -248,6 +240,7 @@ const executeCode = async () => {
   let coreCode = coreSimJs;
   coreCode = stripImportsExports(coreCode);
   code.value = stripImportsExports(code.value);
+  const metrics :any[] = [];
 
   executionResult.value = null;
   try {
@@ -262,12 +255,16 @@ const dataView = arguments[2];
 const plotView = arguments[3];
 const dataDisplayReset = arguments[4];
 const notifyUser = arguments[5]
+const checkPoint = arguments[6]
+const metrics = arguments[7];
 ${coreCode}
 resetTimeouts();
 return async function () {${code.value}
 };`);
 
-    userScriptFunc(props.contextObject, props.simProps, props.dataViewFunc, props.plotViewFunc, props.dataDisplayResetFunc, props.notifyUserFunc)()
+const startStime = new Date()
+    userScriptFunc(props.contextObject, props.simProps, props.utilityFuncs.dataView,
+    props.utilityFuncs.plotView, props.utilityFuncs.dataDisplayReset, props.utilityFuncs.notifyUser, props.utilityFuncs.checkPoint, metrics)()
       .then(() => {
         emit("reset");
       })
@@ -277,7 +274,12 @@ return async function () {${code.value}
         emit("error", error);
       })
       .finally(() => {
+        const endTime = new Date()
         isScriptRunning.value = false;
+           submitSession({ scenario: ModuleTitle.value,
+            start_time: startStime,
+            end_time: endTime,
+            raw_metrics: metrics})
       });
   } catch (error: any) {
     console.log(error);
@@ -289,6 +291,9 @@ import {
   moduleTree as importedNModuleTree,
   type ModuleEntry,
 } from "./data/EASAModules";
+
+import { useTrainingSessions } from '../Pocketbase/useTrainingSessions.ts'
+const { submitSession } = useTrainingSessions()
 
 // Reactive copy of the fileTree
 const fileTree = ref(importedNModuleTree);

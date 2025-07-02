@@ -27,7 +27,6 @@ export function useTrainingSessions() {
       return result;
     } catch (error) {
       console.log('Failed to submit session:', error);
-      debugger
       throw error;
     }
   }
