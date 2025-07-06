@@ -106,15 +106,15 @@
 
 <template #Learning-Modules>
       <Editor
-        v-if="sim_module_loaded"
+        v-if="sim_module_loaded && dataDisplayRef && classroomComponentRef"
         :context-object="FlightSimModule"
         :simProps="simulationProps"
         :utility-funcs="{
-          plotView:dataDisplayRef?.setPlotView || (() => {}),
-          dataView: dataDisplayRef?.setDataView || (() => {}),
+          plotView:dataDisplayRef.setPlotView,
+          dataView:dataDisplayRef.setDataView,
           dataDisplayReset: dataDisplayRef?.reset || (() => {}),
           notifyUser: notifyUser,
-          checkPoint: (content:string) => classroomComponentRef?.sendStatus(content)}"
+          checkPoint: classroomComponentRef.sendCheckPoint}"
         @start="(_code: string) => {
           scriptComponentStatus = 'IN-PROGRESS';
         }"
@@ -123,6 +123,7 @@
           notifyUser('Editor Error', error, 5000);
           scriptComponentStatus = 'ERROR';
         }"
+        @broadcastScript="(title:string, content:string) => {classroomComponentRef?.sendScript(title, content)}"
         class="w-full h-full"
         ref="editorComponentRef"
       />
@@ -244,9 +245,20 @@
           <Accounts
           ref="accountsComponentRef" />
           <ClassRoom
+          v-if="dataDisplayRef"
             @apiDataEvent="(receivedApiCall: PeerApiData) => executeIncomingApiCode(receivedApiCall?.api || '')"
+            @apiScriptEvent="(receviedScript: PeerScriptData) => editorComponentRef?.executeExternalCode(receviedScript.tite, receviedScript.script)"
             ref="classroomComponentRef"
-            @status-changed="(newStatus) => (classRoomComponentState = newStatus)"
+            @classroomConnection="(isOnline) => {(classRoomComponentState = isOnline)
+            // if the connection to the server is established, create a proxy object that mirros all aciton
+            if (isOnline === true) {
+                manager = new RemoteCallManager((call: RemoteCall | RemoteEvent) => broadcast(JSON.stringify(call)), FlightSimModule);
+                FlightSimModule = manager.createMirroredProxy([], FlightSimModule);
+                dataDisplayRef = manager.createMirroredProxy([], dataDisplayRef);
+                dataDisplayRef = manager.createMirroredProxy([], dataDisplayRef);
+                classroomComponentRef = manager.createMirroredProxy([], classroomComponentRef);
+              }
+            }"
           />
         </div>
     </template>
@@ -319,20 +331,27 @@ const toggleFullscreen = () => {
       }
     }
 
-function simulationStatus() {
-  if (!FlightSimModule) return "Loading";
-  if (FlightSimModule.simData.api_simulation_pause) return "Paused";
-  if (FlightSimModule.simData.api_ground_collision) {
-      notifyUser("Collision Detected", "The aircraft has collided with the ground.", 5000);
-      return "Collision Detected";
+function simulationStatus(): string {
+  let status: string;
+
+  if (!FlightSimModule) {
+    status = "Loading";
+  } else if (FlightSimModule.simData.api_simulation_pause) {
+    status = "Paused";
+  } else if (FlightSimModule.simData.api_ground_collision) {
+    notifyUser("Collision Detected", "The aircraft has collided with the ground.", 5000);
+    status = "Collision";
+  } else if (FlightSimModule.simData.api_simulation_speed == 1) {
+    status = `${FlightSimModule?.simData?.api_fps} FPS`;
+  } else {
+    status = `${FlightSimModule.simData.api_simulation_speed}x`;
   }
 
-  if (FlightSimModule.simData.api_simulation_speed == 1) {
-    return `${FlightSimModule?.simData?.api_fps} FPS`;
+   if (classroomComponentRef.value) {
+    classroomComponentRef.value.sendStatus(status);
   }
-  else {
-    return `${FlightSimModule.simData.api_simulation_speed}x`;
-  }
+
+  return status;
 }
 function notifyUser(title: string, message: string, time: number = 500) {
   // icon for the notification
@@ -361,6 +380,7 @@ const resetComponents = () => {
 };
 
 let FlightSimModule: ExtendedMainModule;
+// let utilsFuncs: any;
 let sim_module_loaded = ref(false);
 let classRoomComponentState = ref(false);
 let scriptComponentStatus = ref<ScriptStatus>("IDLE");
@@ -405,8 +425,7 @@ onMounted(async () => {
   })
     .then((module) => {
       module.simData = reactive(new SimData());
-      manager = new RemoteCallManager((call: RemoteCall | RemoteEvent) => broadcast(JSON.stringify(call)), module);
-      FlightSimModule = manager.createMirroredProxy([], module);
+      FlightSimModule = module;
       FlightSimModule.GLFW.requestFullscreen = toggleFullscreen; // Replace with custom implementation
 
       simulationProps = computed(() =>
@@ -436,7 +455,7 @@ onMounted(async () => {
       const canvas = document.getElementById("canvas");
       canvas?.focus();
       canvas?.addEventListener("keydown", (e) => {
-        manager.sendKeyMirror(e)
+        manager?.sendKeyMirror(e)
         FlightSimModule.GLFW.onKeydown(e)}
         , true);
       canvas?.addEventListener("keyup", FlightSimModule.GLFW.onKeyup, true);

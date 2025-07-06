@@ -3,7 +3,7 @@
   <!-- Sidebar -->
   <div
     class="transition-all duration-50 border-r border-slate-700 flex flex-col"
-    :class="isEditing === false ? 'w-3/5' : 'w-1/5'"
+    :class="isEditing === false ? 'w-full' : 'w-1/5'"
     @click="isEditing = false"
   >
     <!-- Header -->
@@ -19,21 +19,61 @@
             @click.stop="toggleFolder(folderName); isEditing = false"
             class="cursor-pointer font-semibold text-secondary hover:text-white mt-1"
           >
-            📁 {{ folderName }}
+            - {{ folderName }}
           </div>
           <ul v-show="openFolders[folderName]" class="ml-4">
-            <li
-              v-for="file in folder"
-              :key="file.name"
-              class="cursor-pointer rounded hover:bg-slate-700"
-              :class="{
-                'text-blue-400': ModuleTitle !== file.name,
-                'text-green-400 bg-slate-700': ModuleTitle === file.name,
-              }"
-              @click.stop="loadFileContent(file); isEditing = false"
-            >
-              📄 {{ file.name }}
-            </li>
+<li
+  v-for="file in folder"
+  @click="selectedFile = file.name"
+  :key="file.name"
+  class="flex justify-between items-start rounded hover:bg-slate-700"
+  :class="[
+  'transition-colors duration-200',
+  selectedFile === file.name ? 'bg-simInputBackground' : 'text-secondary',
+  selectedFile === file.name && isScriptRunning ? 'animate-pulse' : '',
+]"
+>
+  <div class="flex-1 cursor-default">
+    + {{ file.name }}
+  </div>
+  
+  <!-- Horizontal Button Row -->
+   <div class="flex flex-row gap-1 whitespace-nowrap items-center">
+    <button
+  class="px-1 rounded text-secondary hover:bg-slate-600 border border-simElementBorder"
+  title="Edit"
+  @click.stop="async () => {
+    await loadFileContent(file);
+    isEditing = true;
+  }"
+>
+  Edit
+</button>
+    <button
+  class="px-1 rounded text-secondary hover:bg-slate-600 border border-simElementBorder"
+  :title="isScriptRunning ? 'Stop' : 'Run'"
+  @click.stop="async () => {
+    await loadFileContent(file);
+    isScriptRunning ? reset() : executeCode();
+  }"
+>
+  {{ isScriptRunning && selectedFile === file.name ? 'Stop' : 'Play' }}
+</button>
+
+<button
+  class="px-1 rounded text-secondary hover:bg-slate-600 border border-simElementBorder"
+  title="Broadcast"
+  @click.stop="async() => {
+    await loadFileContent(file);
+    broadacast(selectedFile, code)
+  }"
+>
+  Broadcast
+</button>
+
+
+  </div>
+</li>
           </ul>
         </li>
       </ul>
@@ -42,8 +82,8 @@
 
   <!-- Editor -->
   <div
-    class="flex flex-col min-w-0 transition-all duration-300"
-    :class="isEditing === true ? 'w-4/5' : 'w-2/5'"
+  v-if="isEditing"
+class="flex flex-col min-w-0 transition-all duration-300 w-4/5"
   >
     <!-- Monaco Editor -->
     <div class="flex-1 overflow-auto">
@@ -62,16 +102,23 @@
       class="flex items-center gap-1 px-1 py-1 border-t border-slate-700 bg-[#1e1e2f]"
     >
       <button
-        class="px-4 border border-green-500 text-green-400 hover:bg-green-500/10 transition"
-        @click="executeCode"
+        class="px-4 border transition"
+        :class="[isScriptRunning ? 'border-red-500 text-red-400 hover:bg-red-500/10' : 'border-green-500 text-green-400 hover:bg-green-500/10']"
+        @click="isScriptRunning === true? reset(): executeCode()"
       >
-        ▶ Run
+        {{isScriptRunning? `■ Stop`:`▶ Run`}}
       </button>
       <button
-        class="px-4 border border-red-500 text-red-400 hover:bg-red-500/10 transition"
-        @click="reset"
+        class="px-4 border  transition"
+        @click="() => broadacast(selectedFile, code)"
       >
-        ■ Stop
+        ◉ Broadcast
+      </button>
+            <button
+        class="px-4 border  transition"
+        @click="isEditing = false"
+      >
+        x Close
       </button>
       <span v-if="executionResult" class="ml-auto truncate text-slate-300">
         <span class="opacity-60">Result:</span> {{ executionResult }}
@@ -106,7 +153,7 @@ import tsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker"
 
 const isScriptRunning = ref(false);
 const ModuleTitle = ref("");
-const selectedFile = ref<string | null>(null);
+const selectedFile = ref<string>("");
 let isEditing = ref(false);
 // let monacoEditor: monaco.editor.IStandaloneCodeEditor | null = null;
 
@@ -115,6 +162,7 @@ const emit = defineEmits<{
   (event: "start", code: string): void;
   (event: "reset"): void;
   (event: "error", error: any): void;
+  (event: "broadcastScript", title: string, content:string): void;
 }>();
 
 export type ScriptStatus = "IN-PROGRESS" | "IDLE" | "ERROR";
@@ -232,7 +280,18 @@ const reset = () => {
   emit("reset");
 };
 
-defineExpose({ reset });
+const broadacast = async (title:string, content: string) => {
+  props.utilityFuncs.notifyUser('Broadcast', `Broadcasting ${title}`, 2000);
+  emit('broadcastScript',title, content);
+}
+
+const executeExternalCode = (title:string, content: string) => {
+  props.utilityFuncs.notifyUser(`Running a script from instrutor`, title, 2000)
+  code.value = content;
+  executeCode();
+}
+
+defineExpose({ reset, executeExternalCode });
 
 // Function to execute code in the context of the provided object
 const executeCode = async () => {

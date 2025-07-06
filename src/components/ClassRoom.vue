@@ -1,17 +1,19 @@
 <template>
   <div class="w-full max-h-full grid grid-flow-row grid-cols-1 gap-2">
     <div class="w-full grid grid-flow-row grid-cols-1 gap-1">
+      <div>
       <input
         v-model="selfPeerId"
         :readonly="isOnline"
         placeholder="Classroom name (optional)"
-        class="pl-1 text-secondary bg-primary w-full border border-simElementBorder"
+        class="pl-1 text-secondary bg-primary w-1/2 border border-simElementBorder"
       />
       <input
         v-model="displayname"
         placeholder="Enter your display name (optional)"
-        class="pl-1 text-secondary bg-primary w-full border border-simElementBorder"
+        class="pl-1 text-secondary bg-primary w-1/2 border border-simElementBorder"
       />
+      </div>
       <!-- <button-switch
         id="share"
         button-label="Share"
@@ -19,45 +21,37 @@
         :buttonClick="() => (isQrPopupOpen = true)"
       >
       </button-switch> -->
-
+      <div>
       <wButton
         id="connect"
         :button-label="isOnline ? 'Disconnect' : 'Start'"
         :button-state="isOnline"
-        class="border border-simElementBorder"
+        class="w-1/2 border border-simElementBorder"
         :buttonClick="
-          () => (isOnline ? disconnect() : createAnJoinPeer(selfPeerId))
+          () => (isOnline ? disconnect() : connectToPeerJsServer(selfPeerId))
         "
       >
-        <button
-          :disabled="!isOnline"
-          button-label=""
-          class="border border-simElementBorder"
-          @click="() => (isQrPopupOpen = true)"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 16 16"
-            fill="currentColor"
-            class="size-3"
-          >
-            <path
-              d="M12 6a2 2 0 1 0-1.994-1.842L5.323 6.5a2 2 0 1 0 0 3l4.683 2.342a2 2 0 1 0 .67-1.342L5.995 8.158a2.03 2.03 0 0 0 0-.316L10.677 5.5c.353.311.816.5 1.323.5Z"
-            />
-          </svg>
-        </button>
+
       </wButton>
+          <wButton
+    v-if="isInstructor"
+      button-label="Broadcast Mode"
+      :button-state="followMode"
+      class="w-1/2 border border-simElementBorder"
+      :button-click="() => (followMode = !followMode)"
+    />
+    </div>
     </div>
 
     <div class="grid grid-flow-row grid-cols-1">
-      <h3>Peers [{{ Object.keys(incomingConns).length }}]</h3>
       <table class="table-fixed text-left border">
         <thead
           class="border-b border-t border-simElementBorder bg-panelHeaderBackground"
         >
           <tr>
-            <th class="w-1/5">Callsign</th>
+            <th class="flex-1">Callsign [{{ Object.keys(incomingConns).length }}]</th>
             <th class="flex-1">Status</th>
+            <th class="flex-1">Message</th>
             <th class="flex-1">Disconnect</th>
           </tr>
         </thead>
@@ -87,6 +81,9 @@
                 </svg> -->
               </button>
             </td>
+            <td class="pl-1 border-l border-simElementBorder">
+{{ peer.conn.metadata.checkPoint}}
+            </td>
             <!-- Disconnect -->
             <td class="pl-1 border-l border-simElementBorder">
               <button @click="peer.conn.close()">
@@ -108,11 +105,6 @@
         </tbody>
       </table>
     </div>
-    <wButton
-      button-label="Follow Mode"
-      :button-state="followMode"
-      :button-click="() => (followMode = !followMode)"
-    />
   </div>
 
   <div
@@ -160,8 +152,9 @@ import { DataConnection } from "peerjs";
 
 // Define the event emitter
 const emit = defineEmits<{
-  (event: "statusChanged", newValue: boolean): void;
+  (event: "classroomConnection", newValue: boolean): void;
   (event: "apiDataEvent", receivedData: PeerApiData ): void;
+  (event: "apiScriptEvent", receivedData: PeerScriptData ): void;
   (event: "error", errorMessage: string): void;
 }>();
 
@@ -169,13 +162,15 @@ const isDevelopment = import.meta.env.MODE === "development"; // env.NODE_ENV ==
 const baseUrl = window.location.origin;
 let selfPeer: PeerJS.Peer;
 let instructorConnection: PeerJS.DataConnection;
-let outConnectionOpen = false;
+let instructorConnectionOpen = false;
 const selfPeerId = ref<string>(isDevelopment ? "EK583838" : "");
+const isInstructor = ref(true);
 let displayname = ref<string>();
 let isOnline = ref(false);
 type ConnectionMeta = {
   displayName?: string;
   status?: string;
+  checkPoint?: string,
   [key: string]: any;
 };
 
@@ -190,18 +185,9 @@ const routeHash = window.location.href;
 const isQrPopupOpen = ref(false);
 const followMode = ref(false);
 
-
-
-// for (let i = 0; i < 10; ++i) {
-//   incomingConns.value[i] = {
-//     peer: i.toString(),
-//     metadata: { displayName: i.toString() },
-//   };
-// }
-
 // Watch the booleanVariable and emit an event when it changes
 watch(isOnline, (newValue: boolean) => {
-  emit("statusChanged", newValue);
+  emit("classroomConnection", newValue);
   followMode.value = true;
 });
 
@@ -227,7 +213,7 @@ onMounted(() => {
   if (match && match[1]) {
     selfPeerId.value = match[1];
     if (selfPeerId.value) {
-      createAnJoinPeer(selfPeerId.value);
+      connectToPeerJsServer(selfPeerId.value);
     }
   }
 
@@ -265,7 +251,7 @@ const setupConnection = (incomingConnection: DataConnection) => {
     if (e.type === "unavailable-id") {
       // if id is taken, it means someone gave us the class-id and we want to join the class.
       // A peer will be created with a random ID.
-      createAnJoinPeer("");
+      connectToPeerJsServer("");
     }
 });
 };
@@ -281,24 +267,43 @@ const onPeerClose = (peerId: string) => {
 };
 
 const onConnectionClose = (peerId: string) => {
-  trace(`Connection closed ${peerId}`);
 
-  // If we close the connection, we are not online anymore.
-  // Not sure if this state ever get triggerred.
+  // Lost connection to the sever
   if (peerId === selfPeerId.value) {
+    trace(`Connection to server closed ${peerId}`);
     isOnline.value = false;
   }
-  delete incomingConns.value[peerId];
+  // Lost connection to the instructor.
+  else if (instructorConnection && peerId == instructorConnection.peer) {
+    trace(`Connection to the instructor closed ${peerId}. Reconnecting`);
+    instructorConnectionOpen = false;
+    instructorConnection.close();
+    // Reconnect reconnect
+    setTimeout(() => connectToPeer(peerId), 3000);
+  }
+  // Lost connection with a peer
+  else {
+    // delete from the list
+    delete incomingConns.value[peerId];
+  }
 };
 
 const onData = (data: PeerData, conn: PeerJS.DataConnection) => {
-  trace(`Received ${JSON.stringify(data)} from ${conn.peer}`);
-  if (data.api) {
+  trace(`Received data from ${conn.peer}`);
+  // trace(`Received ${JSON.stringify(data)} from ${conn.peer}`);
+  if ('api' in data) {
     emit("apiDataEvent", data as PeerApiData );
   }
-  else if (data.status) {
+  else if ('status' in data) {
     // some logic to update the student status.
     incomingConns.value[conn.peer].metadata.status = data.status;
+  }
+    else if ('checkpoint' in data) {
+    // some logic to update the student status.
+    incomingConns.value[conn.peer].metadata.checkPoint = data.checkpoint;
+  }
+  else if ('script' in data) {
+    emit('apiScriptEvent', data)
   }
   else {
     emit("error", `Unknown data: ${data}`);
@@ -310,7 +315,7 @@ const onError = (err: string) => {
   emit("error", err);
 };
 
-const createAnJoinPeer = (targetPeerId: string) => {
+const connectToPeerJsServer = (targetPeerId: string) => {
   trace(`Creating a new peer ${targetPeerId}`);
   if (selfPeer?.id === targetPeerId) {
     return;
@@ -352,7 +357,8 @@ const createAnJoinPeer = (targetPeerId: string) => {
     trace("OPEN: My peer ID is: " + id);
     selfPeer = peerJsServer;
     isOnline.value = true;
-    // If the user entered a peer id
+    isInstructor.value = selfPeerId.value == id;
+    // If the user entered a peer id, that is not same as this id, connecto that was unavilalbe, connect to it
     if (selfPeerId.value.length && id != selfPeerId.value) {
       connectToPeer(selfPeerId.value);
     }
@@ -364,7 +370,7 @@ const createAnJoinPeer = (targetPeerId: string) => {
     if (e.type === "unavailable-id") {
       // if id is taken, it means someone gave us the class-id and we want to join the class.
       // A peer will be created with a random ID.
-      createAnJoinPeer("");
+      connectToPeerJsServer("");
     }
   });
 };
@@ -399,17 +405,17 @@ const connectToPeer = async (remotePeerId: string) => {
     onError(`${e.type} - ${e.name} - ${e.message} - ${e.stack}`),
   );
     instructorConnection.on("close", () => {
-        outConnectionOpen = false
+        instructorConnectionOpen = false
         onConnectionClose(instructorConnection.peer)
         }
     );
 
     instructorConnection.on("open", () => {
-    outConnectionOpen = true;
+    instructorConnectionOpen = true;
     trace(`OPEN Connected to a peer ${remotePeerId}`);
     // Data received from remote peer
     instructorConnection.on("data", (data : unknown) => {
-      onData(data, instructorConnection);
+      onData(data as PeerData, instructorConnection);
     });
   });
 };
@@ -435,14 +441,12 @@ const sendApiCall = (apiCall: string) => {
 
 
 const sendStatus = (status: string) => {
-  debugger
     if (!instructorConnection) {
         return;
     }
-    console.log("sendStatus", status)
 
   // Must be online and mirror mode activated
-  if (!isOnline.value || !followMode.value || !outConnectionOpen) {
+  if (!isOnline.value || !followMode.value || !instructorConnectionOpen) {
     return;
   }
 
@@ -453,6 +457,33 @@ const sendStatus = (status: string) => {
   instructorConnection.send(data)
 
 };
+
+
+const sendCheckPoint = (checkpoint: string) => {
+    if (!instructorConnection) {
+        return;
+    }
+
+  // Must be online and mirror mode activated
+  if (!isOnline.value || !followMode.value || !instructorConnectionOpen) {
+    return;
+  }
+
+  const data = { checkpoint: checkpoint };
+  // Send data to all peers
+  // send(data);
+
+  instructorConnection.send(data)
+
+};
+const sendScript = (title:string, content:string) => {
+ const scriptData = {
+  title: title,
+  script: content };
+
+   send(scriptData);
+}
+
 
 const reset = () => {
   trace("Resetting classroom");
@@ -465,7 +496,7 @@ const reset = () => {
   instructorConnection = undefined as any;
 };
 
-defineExpose({ sendApiCall, sendStatus, reset });
+defineExpose({ sendApiCall, sendStatus, sendScript, sendCheckPoint, reset });
 
 const trace = (text: string) => {
   if (isDevelopment === false) {
