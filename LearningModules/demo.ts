@@ -1,4 +1,4 @@
-import {simControls, simData, simProps, waitFor, waitForCondition, plotView, dataView, dataDisplayReset, notifyUser} from "./core"
+import {simControls, simData, simProps, waitFor, waitForCondition, plotView, dataView, dataDisplayReset, notifyUser, checkPoint} from "./core"
 
 // 🛠️ Helper: Flight Schedule Tracker
 let currentStep = 0;
@@ -21,6 +21,8 @@ const steps = [
 
 function advanceSchedule(extraText = "", title = "") {
   showSchedule(currentStep++, title, extraText);
+  checkPoint(title)
+
 }
 
 function showSchedule(highlightIndex, title, optionalText = "") {
@@ -156,7 +158,6 @@ advanceSchedule("", "Wait to reach 150 KT IAS");
 await waitForCondition(() => simData.api_ias_speed_knots >= 150);
 advanceSchedule("Initiate Climbing", "Rotate");
 simControls.api_set_elevator_position(-0.25);
-
 
 // Wait for positive vertical speed above 400 ft/min for more than 1 second
 await waitForCondition(() => simData.api_vertical_speed > 400, 1000);

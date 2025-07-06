@@ -10,6 +10,7 @@ export declare function plotView(simPropitem: SimulationProperties, state: boole
 export declare function dataView(simPropitem: SimulationProperties, state: boolean): void;
 export declare function dataDisplayReset(): void;
 export declare function notifyUser(title: string, body: string, timeOut?: number): void
+export declare function checkPoint(content: string): void;
 
 // Create a global singleton cache
 const globalScope = globalThis as any;
