@@ -289,7 +289,7 @@ const onConnectionClose = (peerId: string) => {
 };
 
 const onData = (data: PeerData, conn: PeerJS.DataConnection) => {
-  trace(`Received data from ${conn.peer}`);
+  trace(`Received data from ${conn.peer} ${JSON.stringify(data)}`);
   // trace(`Received ${JSON.stringify(data)} from ${conn.peer}`);
   if ('api' in data) {
     emit("apiDataEvent", data as PeerApiData );
