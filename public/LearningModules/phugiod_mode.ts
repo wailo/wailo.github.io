@@ -1,4 +1,4 @@
-import {repositionWithAutopilot, simControls, simData, simProps, waitFor, plotView, dataDisplayReset, notifyUser } from "./core"
+import {repositionWithAutopilot, simControls, simData, simProps, waitFor, plotView, dataDisplayReset, notifyUser, checkPoint } from "./core"
 
 // Demostrate phugoid mode
 notifyUser("Phugiod Mode", "Observe the aircraft's oscillation in pitch and altitude.\n\n" + 
@@ -23,13 +23,14 @@ plotView(simProps.pitch, true);
 plotView(simProps.pitch_dot, true);
 plotView(simProps.ias_speed_knots, true);
 await waitFor(5000)
-
+checkPoint("Initiating Phugiod mode")
 notifyUser("Initiating Phugiod mode", "Pulling the control stick for 2 seconds then return to neutral position.\n\n")
 await waitFor(5000)
 simControls.api_set_elevator_position(simData.api_elevator_position - 0.30)
 await waitFor(2000)
 simControls.api_set_elevator_position(0.00)
 await waitFor(5000)
+checkPoint("Phugiod mode")
 notifyUser("Phugiod mode", "Observe how the aircraft oscillates, Observe change in pitch angle with the speed\n\n")
 await waitFor(30000)
 notifyUser("Phugiod mode", "We will increase the simulation speed gradually.\n\n" + 
@@ -44,7 +45,6 @@ await waitFor(2000)
 simControls.api_set_simulation_speed(simData.api_simulation_speed +2);
 await waitFor(2000)
 simControls.api_set_simulation_speed(simData.api_simulation_speed +2);
-
 notifyUser("Phugiod mode", `The simulation speed is now ${simData.api_simulation_speed}x.\n\n` +
     "Observe the aircraft's oscillation in pitch and altitude.\n\n" +
     "The oscillation is damped, meaning the amplitude of the oscillation decreases over time.\n\n" +
@@ -52,6 +52,7 @@ notifyUser("Phugiod mode", `The simulation speed is now ${simData.api_simulation
 await waitFor(25000)
 notifyUser("Phugiod mode", "By now the Phugiod mode oscillation is almost damped.\n\n" +
     "this mark the end of the phugoid mode demonstration.\n\n")
+checkPoint("End of Phugiod mode")
 await waitFor(10000)
 simControls.api_set_simulation_speed(1);
 // simControls.api_set_autopilot(true);

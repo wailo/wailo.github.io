@@ -41,6 +41,9 @@ export type ModuleEntry = {
     // ],
     "Flight Exercise": [
       { name: "Coordinated Turne Challenge", path: "/LearningModules/coordinated_turn_challenge.ts" },
-        // { name: "Final Exam (Written & Practical)", content: "" }
+    ],
+     "Stick inputs": [
+      { name: "Elevator Step Input", path: "/LearningModules/elevator_step_input.ts" },
+      { name: "Rudder Step Input", path: "/LearningModules/rudder_step_input.ts" }
     ]
 };
