@@ -371,7 +371,7 @@ const simFunctions = {
 notifyUser : function(title: string, message: string, time: number = 500) {
   // icon for the notification
   userPromptStatus.value = "☀︎"
-  userPromptText.value = `## ${title}\n\n${message}`
+  userPromptText.value = `## ${title}\n\n${message || ""}`
   // set Prompt status to New for 3 seconds then revert to empty
   userPromptActive.value = true;
   setTimeout(() => {
