@@ -1,8 +1,8 @@
 import {repositionWithAutopilot, simControls, simData, simProps, waitFor, waitForCondition, plotView, dataView, dataDisplayReset, notifyUser} from "./core"
 // 📘 Configurations
-const targetAltitude_ft = 5000;
-const targetSpeed_knots = 180;
-const targetHeading_deg = 0;
+const initialAltitude_ft = 5000;
+const initialSpeed_knots = 180;
+const initialHeading_deg = 0;
 const maxAltitudeDeviation_ft = 200;
 const requiredHeadingChange_deg = 180;
 const challengeTimeLimit_ms = 2 * 60 * 1000; // 2 minutes
@@ -14,7 +14,7 @@ notifyUser(
 );
 
 dataDisplayReset();
-await repositionWithAutopilot(targetAltitude_ft, targetSpeed_knots, targetHeading_deg);
+await repositionWithAutopilot(initialAltitude_ft, initialSpeed_knots, initialHeading_deg);
 
 simControls.api_set_autopilot(true);  // Enable autopilot again
 simControls.api_set_autopilot_altitude_hold(true); // Set altitude hold
@@ -43,7 +43,16 @@ plotView(simProps.elevator_position, true);
 // Capture starting values
 const initialAltitude = simData.api_altitude;
 const initialHeading = simData.api_heading_deg;
+const initialPitch_deg = simData.api_pitch_deg;
 let altitudeWithinLimits = false;
+
+
+await waitFor(6000);
+simControls.api_set_autopilot(false);
+simControls.api_set_autopilot_altitude_hold(false);
+simControls.api_set_autopilot_ias_speed_hold(false);
+simControls.api_set_autopilot_heading_hold(false);
+await waitFor(1000);
 
 // 📘 Step 4: Start Challenge and Monitor User Action
 notifyUser(
@@ -51,18 +60,24 @@ notifyUser(
     `**Disengaging autopilot now.** Complete the coordinated turn within **${challengeTimeLimit_ms / 1000 / 60} minutes** without exceeding **${maxAltitudeDeviation_ft} ft** in altitude.`
 );
 
-await waitFor(6000);
-simControls.api_set_autopilot(false);
-simControls.api_set_autopilot_altitude_hold(false); 
-simControls.api_set_autopilot_ias_speed_hold(false);
-simControls.api_set_autopilot_heading_hold(false);
-await waitFor(1000);
+let lastHeading = initialHeading;
+let totalHeadingChange_deg = 0;
 // Define success condition
 const success = await waitForCondition(
     () => {
         const currentAltitude = simData.api_altitude;
         const currentHeading = simData.api_heading_deg;
-
+        metrics.push( { timestamp: Date.now(),
+        heading: simData.api_heading_deg,
+        altitude: simData.api_altitude,
+        speed: simData.api_ias_speed_knots,
+        verticalSpeed: simData.api_vertical_speed,
+        turnRate: simData.api_heading_dot_deg,
+        bank: simData.api_bank_deg,
+        pitch: simData.api_pitch_deg,
+        elevator: simData.api_elevator_position,
+        aileron: simData.api_aileron_position
+        })
         // Check altitude deviation first; if false, immediately return failure
         altitudeWithinLimits = Math.abs(currentAltitude - initialAltitude) <= maxAltitudeDeviation_ft;
         if (!altitudeWithinLimits) {
@@ -73,17 +88,13 @@ const success = await waitForCondition(
             return true; // Fail condition immediately if altitude is out of limits
         }
 
-        if (simData.api_autopilot) {
-          // Fail condition if autopilot is engaged during the challenge
-          notifyUser(
-              "❌ **Autopilot Engaged**",
-              "**Autopilot cannot be engaged during the challenge.**"
-          );
-          simControls.api_set_autopilot(false);  // Ensure autopilot is off
-        }
 
         // Continue with heading change check only if altitude is within limits
-        const headingChangedEnough = Math.abs(currentHeading - initialHeading) >= requiredHeadingChange_deg;
+        const headingDiff = Math.abs(currentHeading - lastHeading);
+        lastHeading = currentHeading;
+        totalHeadingChange_deg += headingDiff;
+        const headingChangedEnough = totalHeadingChange_deg >= requiredHeadingChange_deg;
+        console.log(`Heading changed: ${totalHeadingChange_deg}°`);
         return altitudeWithinLimits && headingChangedEnough;
     },
     0,          // confirmation_ms: condition must stay true for 2 seconds
@@ -100,9 +111,26 @@ if (success) {
             `**Altitude deviation exceeded ${maxAltitudeDeviation_ft} ft.**`
         );
     } else {
+        // Scores
+        const averageTurnRate = metrics.reduce((sum, m) => sum + m.turnRate, 0) / metrics.length;
+        const maxAltitudeDeviation_ft = Math.max(...metrics.map(m => Math.abs(m.altitude - initialAltitude)));
+        const timeTaken_sec = (Date.now() - metrics[0].timestamp) / 1000; // in seconds
+        const maxSpeedDeviation_knots = Math.max(...metrics.map(m => Math.abs(m.speed - initialSpeed_knots)));
+        const maxVerticalSpeedDeviation_ft = Math.max(...metrics.map(m => Math.abs(m.verticalSpeed)));
+        const maxBank_deg = Math.max(...metrics.map(m => Math.abs(m.bank)));
+        const maxPitchDeviation_deg = Math.max(...metrics.map(m => Math.abs(m.pitch - initialPitch_deg)));
+
         notifyUser(
             "🏆 **Challenge Complete!**",
             `You performed a coordinated **${requiredHeadingChange_deg}° turn** without major altitude loss or gain. **Well done!**`
+            + `\n**Time Taken:** ${timeTaken_sec.toFixed(2)} seconds, score: ${(100 - (Math.abs(timeTaken_sec - 60) / 10)).toFixed(2)}`
+            + `\n\n**Average Turn Rate:** ${averageTurnRate.toFixed(2)}°/s, score: ${(100 - (Math.abs(averageTurnRate - 3) / 10)).toFixed(2)}`
+            + `\n**Max Vertical Speed Deviation:** ${maxVerticalSpeedDeviation_ft} ft/min, score: ${(100 - (maxVerticalSpeedDeviation_ft / 20)).toFixed(2)}`
+            + `\n**Max Altitude Deviation:** ${maxAltitudeDeviation_ft} ft, score: ${(100 - (maxAltitudeDeviation_ft / 50)).toFixed(2)}`
+            + `\n**Max Speed Deviation:** ${maxSpeedDeviation_knots} knots, score: ${(100 - (maxSpeedDeviation_knots / 5)).toFixed(2)}`
+            + `\n**Max Pitch Deviation:** ${maxPitchDeviation_deg}°, score: ${(100 - (maxPitchDeviation_deg / 2)).toFixed(2)}`
+            + `\n**Max Bank Angle:** ${maxBank_deg}°`
+            + `\n**Score:** ${score.toFixed(2)}`
         );
     }
 } else {
@@ -115,13 +143,13 @@ if (success) {
 await waitFor(10000); // Give the user a moment to read the message
 
 
-// 📘 Step 8: Declare End of Challenge
-notifyUser(
-  "🛑 **Challenge Ended**",
-  "You can run this challenge again anytime."
-);
+// // 📘 Step 8: Declare End of Challenge
+// notifyUser(
+//   "🛑 **Challenge Ended**",
+//   "You can run this challenge again anytime."
+// );
 
-await waitFor(1000); // Give the user a moment to read the message
+// await waitFor(1000); // Give the user a moment to read the message
 
 // 📘 Step 9: Re-engage Autopilot to Stabilize Aircraft
 simControls.api_set_autopilot(true);  // Enable autopilot again
