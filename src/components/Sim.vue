@@ -470,7 +470,7 @@ onMounted(async () => {
         manager?.sendKeyMirror(e)
         FlightSimModule.GLFW.onKeydown(e)}
         , true);
-      canvas?.addEventListener("keyup", FlightSimModule.GLFW.onKeyup, true);
+      canvas?.addEventListener("keyup", (e) => FlightSimModule.GLFW.onKeyup(e), true);
 
       function isTextInput() {
         const activeElement = document.activeElement;
