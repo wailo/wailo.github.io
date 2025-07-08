@@ -210,7 +210,7 @@ const props = defineProps({
   function stripImportsExports(input: string): string {
     return input
       .replace(/^\s*export\s+/gm, "")
-      .replace(/^\s*import\s.*?;?\s*$\n/gm, "");
+      .replace(/^\s*import[\s\S]*?['"].*?['"];?/gm, "").trim();
   }
 
 const options = {
@@ -335,10 +335,11 @@ const startStime = new Date()
       .finally(() => {
         const endTime = new Date()
         isScriptRunning.value = false;
-           submitSession({ scenario: ModuleTitle.value,
+            submitSession({ scenario: ModuleTitle.value,
             start_time: startStime,
             end_time: endTime,
-            raw_metrics: metrics})
+            raw_metrics: metrics}).catch(err => {
+              emit("error", err); });
       });
   } catch (error: any) {
     console.log(error);
