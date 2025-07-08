@@ -158,7 +158,7 @@ const emit = defineEmits<{
   (event: "error", errorMessage: string): void;
 }>();
 
-const isDevelopment = import.meta.env.MODE === "development"; // env.NODE_ENV === "development";
+const isDevelopment = import.meta.env.DEV;
 const baseUrl = window.location.origin;
 let selfPeer: PeerJS.Peer;
 let instructorConnection: PeerJS.DataConnection;
