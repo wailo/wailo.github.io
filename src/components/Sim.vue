@@ -257,7 +257,7 @@
                 // Rationale: student does not send data
                 manager = new RemoteCallManager(broadcast);
                 manager.wrapObject("SimFunctions", simFunctions, ["notifyUser"]);
-                manager.wrapObject("FlightSimModule", FlightSimModule, ["api_set",]);
+                manager.wrapObject("FlightSimModule", FlightSimModule, ["api_set", "onKeydown", "onKeyup"]);
 
                 if (dataDisplayRef) {
                   manager.wrapObject("dataDisplayRef", dataDisplayRef, ["setDataView", "setPlotView", "reset"]);
@@ -467,7 +467,6 @@ onMounted(async () => {
       const canvas = document.getElementById("canvas");
       canvas?.focus();
       canvas?.addEventListener("keydown", (e) => {
-        manager?.sendKeyMirror(e)
         FlightSimModule.GLFW.onKeydown(e)}
         , true);
       canvas?.addEventListener("keyup", (e) => FlightSimModule.GLFW.onKeyup(e), true);

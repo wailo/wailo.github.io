@@ -8,7 +8,7 @@ export type RemoteCall = {
 };
 
 export type RemoteEvent = {
-  type: "key";
+  type: "onKeydown" | "onKeyup";
   key: string;
   code: string;
   keyCode: number;
@@ -67,23 +67,37 @@ export class RemoteCallManager {
   }
 
   private wrapFunction(fn: (...args: any[]) => any, path: string[]): (...args: any[]) => any {
-    return (...args: any[]) => {
-      const fromRemote = args[0]?.__fromRemote;
-      if (!fromRemote) {
-        this.send({
+  return (...args: any[]) => {
+    const fromRemote = args[0]?.__fromRemote;
+
+    if (!fromRemote) {
+      let payload: RemoteCall;
+
+      const functionName = path[path.length - 1]
+      if (["onKeydown", "onKeyup"].includes(functionName) && args[0] instanceof KeyboardEvent) {
+        const e = args[0] as KeyboardEvent;
+        // Send a custom event payload instead
+        this.sendKeyMirror(e, functionName as "onKeydown" | "onKeyup");
+      } else {
+        // Normal API call
+        payload = {
           type: "call",
           path,
           args,
           timestamp: Date.now(),
-        });
-      }
-      return fn(...args);
-    };
-  }
+        };
 
-  public sendKeyMirror(e: KeyboardEvent) {
+        this.send(payload);
+      }
+    }
+
+    return fn(...args);
+  };
+}
+
+  public sendKeyMirror(e: KeyboardEvent, functionName: "onKeydown" | "onKeyup") {
     const call: RemoteEvent = {
-      type: "key",
+      type: functionName,
       key: e.key,
       code: e.code,
       keyCode: e.keyCode,
@@ -111,7 +125,7 @@ export class RemoteCallManager {
 
     if (data.type === "call") {
       this.executeRemoteCall(data);
-    } else if (data.type === "key") {
+    } else if (["onKeydown", "onKeyup"].includes(data.type)) {
       this.regenerateKeyboardEvent(data);
     } else {
       console.warn("Unknown message type");
@@ -157,7 +171,7 @@ export class RemoteCallManager {
       cancelable: true,
     });
 
-    this.contextRoot.GLFW?.onKeydown?.(event);
+    this.contextRoot.FlightSimModule?.GLFW?.[msg.type]?.(event);
   }
 
   private isPlainObject(val: any): val is Record<string, any> {
