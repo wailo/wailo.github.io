@@ -246,6 +246,7 @@ interface EmbindModule {
   api_set_autopilot_yaw_damper(_0: boolean): void;
   api_set_dcl(_0: number): boolean;
   api_set_engine_throttle_position(_0: number): boolean;
+  api_set_auth_token(_0: EmbindString, _1: EmbindString): boolean;
   api_set_simulation_pause(_0: boolean): boolean;
   api_set_pfd_display(_0: boolean): boolean;
   api_set_six_instruments_display(_0: boolean): boolean;
