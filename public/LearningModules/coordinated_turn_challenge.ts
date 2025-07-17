@@ -130,7 +130,6 @@ if (success) {
             + `\n**Max Speed Deviation:** ${maxSpeedDeviation_knots} knots, score: ${(100 - (maxSpeedDeviation_knots / 5)).toFixed(2)}`
             + `\n**Max Pitch Deviation:** ${maxPitchDeviation_deg}°, score: ${(100 - (maxPitchDeviation_deg / 2)).toFixed(2)}`
             + `\n**Max Bank Angle:** ${maxBank_deg}°`
-            + `\n**Score:** ${score.toFixed(2)}`
         );
     }
 } else {
