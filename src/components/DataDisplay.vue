@@ -48,17 +48,8 @@
           <td class="w-1/5">{{ item.inputValue }}</td>
           <td class="w-1/5 text-right flex justify-end items-center gap-2">
             <button
-              :class="[
-                'rounded-full text-xs hover:font-bold transition',
-                plottedIds.has(item.id)
-                  ? 'text-green-500'
-                  : 'text-secondary',
-                plottedIds.size >= 4 && !plottedIds.has(item.id)
-                  ? 'opacity-50 cursor-not-allowed'
-                  : ''
-              ]"
-              @click="togglePlot(item.id)"
-              :disabled="plottedIds.size >= 4 && !plottedIds.has(item.id)"
+              class="rounded-full text-xs hover:font-bold transition text-secondary"
+              @click="plot(item.id)"
               title="Toggle Plot"
             >
               ⦿
@@ -81,8 +72,6 @@
       :pause="props.plotPause"
       :update_intervals="props.plotUpdateIntervals"
       :sources="props.simProps"
-      @add="(propId:string ) => plottedIds.add(propId)"
-      @remove="(propId:string ) => plottedIds.delete(propId)"
     />
      </div>
 </template>
@@ -117,7 +106,6 @@ const timePlotRef = ref<InstanceType<typeof TimePlot> | null>(null)
 
 // Sets
 const visibleItems = reactive(new Set<string>())
-const plottedIds = reactive(new Set<string>())
 
 // Computed
 const displayedItems = computed(() =>
@@ -142,7 +130,6 @@ const isDropdownVisible = computed(() => isFocused.value && searchResults.value.
 // Functions
 function reset() {
   visibleItems.clear()
-  plottedIds.clear()
   timePlotRef.value?.reset?.()
   searchQuery.value = ''
   isFocused.value = false
@@ -161,12 +148,8 @@ function setDataView(item: SimulationProperties, state: boolean) {
   }
 }
 
-function togglePlot(id: string) {
-  if (plottedIds.has(id)) {
-    timePlotRef.value?.removePlot(id)
-  } else if (plottedIds.size < 4) {
-    timePlotRef.value?.addPlot(id)
-  }
+function plot(id: string) {
+  timePlotRef.value?.addPlot(id)
 }
 
 function showAll() {
@@ -181,16 +164,12 @@ function hideAll() {
 
 // Externally callable method
 function setPlotView(item: SimulationProperties, state: boolean) {
-    if (!item || !item.id) return
+  if (!item || !item.id) return
   const id = item.id.toLowerCase();
   if (state) {
-    if (!plottedIds.has(id) && plottedIds.size < 4) {
-      timePlotRef.value?.addPlot(id)
-    }
+    timePlotRef.value?.addPlot(id)
   } else {
-    if (plottedIds.has(id)) {
-      timePlotRef.value?.removePlot(id)
-    }
+    timePlotRef.value?.removePlot(id)
   }
 }
 

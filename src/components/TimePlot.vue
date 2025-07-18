@@ -66,14 +66,6 @@ const props = defineProps({
 
 defineExpose({ addPlot, removePlot, reset, tick })
 
-// add events to be emitted when plots are added or removed
-// Define the event emitter
-const emit = defineEmits<{
-  (event: "add", propId: string): void;
-  (event: "remove", propId: string): void;
-
-}>();
-
 // ✅ Reactive State
 const plotRefs = reactive<Record<string, HTMLElement>>({})
 const plots = new Map<string, uPlot>()
@@ -106,8 +98,6 @@ function addPlot(propId: keyof typeof props.sources) {
     setTimeout(() => {
     recreateAllPlots()
   }, 50)
-
-  emit('add', propId);
 }
 
 function removePlot(propId: string) {
@@ -115,7 +105,6 @@ function removePlot(propId: string) {
 
   selectedKeys.value.delete(propId)
   recreateAllPlots()
-  emit('remove', propId);
 }
 
 // ✅ Recreate all plots from scratch
