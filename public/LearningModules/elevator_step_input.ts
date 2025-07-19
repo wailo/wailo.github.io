@@ -4,7 +4,6 @@ import {
   simProps,
   waitFor,
   plotView,
-  dataDisplayReset,
   notifyUser,
   checkPoint,
 } from "./core";

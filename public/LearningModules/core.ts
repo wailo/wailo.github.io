@@ -20,7 +20,7 @@ if (!globalScope.__myAppTimeoutCache) {
 const cache: number[] = globalScope.__myAppTimeoutCache;
 
 export async function repositionWithAutopilot(target_altitude: number, target_speed: number,
-     target_heading: number, preConfiguration? : Function ) {
+     target_heading: number, timeOut :number = 10000, preConfiguration? : Function ) : Promise<boolean> {
   // Reset the simulation
   simControls.api_set_simulation_reset();
 
@@ -33,10 +33,11 @@ export async function repositionWithAutopilot(target_altitude: number, target_sp
   await waitFor(1000);
 
   // Set Simulation speed to 100
-  simControls.api_set_simulation_speed(100);
+  simControls.api_set_simulation_speed(500);
   simControls.api_set_engine_throttle_position(1);
   // Toggle the autopilot master switch state.
   simControls.api_set_autopilot(true);
+  simControls.api_set_autopilot_auto_trim(true);
   simControls.api_set_autopilot_ias_speed_target(target_speed);
   simControls.api_set_autopilot_altitude_target(target_altitude);
   simControls.api_set_autopilot_heading_target(target_heading);
@@ -65,21 +66,33 @@ export async function repositionWithAutopilot(target_altitude: number, target_sp
   simControls.api_set_landing_gear_selector_position(simControls.GearSelector.UP.value);
 
   // Wait until the altitude crosses 300
-  await waitForCondition(() => {
+  const success = await waitForCondition(() => {
     return Math.abs(simData.api_altitude - target_altitude) < 0.01 &&
     Math.abs(simData.api_ias_speed_knots - target_speed) < 0.01 &&
-    Math.abs(simData.api_heading_deg - target_heading) < 0.1;
-  });
+    Math.abs(simData.api_heading_deg - target_heading) < 0.1 &&
+    Math.abs(simData.api_elevator_position) < 0.001;
+  }, 400, 40, timeOut);
 
-  await waitFor(1000);
+  if (!success) {
+    notifyUser("Reposition Failed", `Failed to reposition to altitude: ${target_altitude} ft, speed: ${target_speed} knots, heading: ${target_heading}° within ${timeOut / 1000} seconds.`);
+    simControls.api_set_simulation_speed(1);
+    simControls.api_set_simulation_pause(true);
+    return false;
+  }
 
+  // Restore Simulation speed to 1
+  simControls.api_set_simulation_speed(1);
+  await waitFor(100);
+
+  // Turn off autopilot
   simControls.api_set_autopilot(false);
+  simControls.api_set_autopilot_auto_trim(false);
   simControls.api_set_autopilot_altitude_hold(false);
   simControls.api_set_autopilot_ias_speed_hold(false );
   simControls.api_set_autopilot_heading_hold(false);
 
-  // Restore Simulation speed to 1
-  simControls.api_set_simulation_speed(1);
+  await waitFor(100);
+  return success
 }
 
 
