@@ -25,7 +25,7 @@ const preConfiguration = () => {
 }
 
 dataDisplayReset();
-await repositionWithAutopilot(targetAltitude, targetSpeed, targetHeading, preConfiguration);
+await repositionWithAutopilot(targetAltitude, targetSpeed, targetHeading, 10000, preConfiguration);
 await waitFor(2000);
 simControls.api_set_autopilot(false);
 // plotView(simProps.api_aileron_position, true);

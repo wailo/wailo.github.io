@@ -81,6 +81,7 @@ let ptr_api_atmosphere_wind_speed_knots: number = 0;
 let ptr_api_autopilot: number = 0;
 let ptr_api_autopilot_altitude_hold: number = 0;
 let ptr_api_autopilot_altitude_target: number = 0;
+let ptr_api_autopilot_auto_trim: number = 0;
 let ptr_api_autopilot_bank_hold: number = 0;
 let ptr_api_autopilot_bank_target: number = 0;
 let ptr_api_autopilot_heading_hold: number = 0;
@@ -162,6 +163,7 @@ export class SimData {
   api_autopilot: boolean = false;
   api_autopilot_altitude_hold: boolean = false;
   api_autopilot_altitude_target: number = 0;
+  api_autopilot_auto_trim: boolean = false;
   api_autopilot_bank_hold: boolean = false;
   api_autopilot_bank_target: number = 0;
   api_autopilot_heading_hold: boolean = false;
@@ -244,6 +246,7 @@ function init(module: any) {
   ptr_api_autopilot = module._api_autopilot();
   ptr_api_autopilot_altitude_hold = module._api_autopilot_altitude_hold();
   ptr_api_autopilot_altitude_target = module._api_autopilot_altitude_target() >> 2;
+  ptr_api_autopilot_auto_trim = module._api_autopilot_auto_trim();
   ptr_api_autopilot_bank_hold = module._api_autopilot_bank_hold();
   ptr_api_autopilot_bank_target = module._api_autopilot_bank_target() >> 2;
   ptr_api_autopilot_heading_hold = module._api_autopilot_heading_hold();
@@ -329,6 +332,7 @@ export async function fetchSimData(module: any) {
   module.simData.api_autopilot = module.HEAP8[ptr_api_autopilot] !== 0;
   module.simData.api_autopilot_altitude_hold = module.HEAP8[ptr_api_autopilot_altitude_hold] !== 0;
   module.simData.api_autopilot_altitude_target = module.HEAP32[ptr_api_autopilot_altitude_target];
+  module.simData.api_autopilot_auto_trim = module.HEAP8[ptr_api_autopilot_auto_trim] !== 0;
   module.simData.api_autopilot_bank_hold = module.HEAP8[ptr_api_autopilot_bank_hold] !== 0;
   module.simData.api_autopilot_bank_target = module.HEAP32[ptr_api_autopilot_bank_target];
   module.simData.api_autopilot_heading_hold = module.HEAP8[ptr_api_autopilot_heading_hold] !== 0;
@@ -570,6 +574,14 @@ return {
     precision: 0,
     step: 100,
     unit: 'ft'
+  },
+  autopilot_auto_trim:{
+    id: 'autopilot_auto_trim',
+    inputValue: module.simData.api_autopilot_auto_trim,
+    type: 'boolean',
+    setterFunc: () => module.api_set_autopilot_auto_trim(!module.simData.api_autopilot_auto_trim),
+    group: 'autopilot',
+    label: 'Auto Trim'
   },
   autopilot_bank_hold:{
     id: 'autopilot_bank_hold',
@@ -1224,6 +1236,14 @@ targetCommand: {
   },
   {
     stateCommand: {
+    value: module.simData.api_autopilot_auto_trim,
+    setterFunc: () => module.api_set_autopilot_auto_trim(!module.simData.api_autopilot_auto_trim)
+    },
+    id: 'autopilot_auto_trim',
+    label: 'Auto Trim'
+  },
+  {
+    stateCommand: {
     value: module.simData.api_autopilot_bank_hold,
     setterFunc: () => module.api_set_autopilot_bank_hold(!module.simData.api_autopilot_bank_hold)
     },
@@ -1485,6 +1505,11 @@ export const apiMetadata = {
     precision: 0,
     step: 100,
     unit: 'ft'
+  },
+  autopilot_auto_trim: {
+    id: 'autopilot_auto_trim',
+    group: 'autopilot',
+    label: 'Auto Trim'
   },
   autopilot_bank_hold: {
     id: 'autopilot_bank_hold',

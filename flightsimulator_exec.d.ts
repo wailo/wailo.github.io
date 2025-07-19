@@ -202,6 +202,7 @@ interface WasmModule {
   _api_autopilot_bank_hold(): number;
   _api_autopilot_yaw_damper(): number;
   _api_autopilot_turn_coordinator(): number;
+  _api_autopilot_auto_trim(): number;
   _api_autopilot_ias_speed_hold(): number;
   _api_autopilot_true_speed_hold(): number;
   _api_autopilot_mach_speed_hold(): number;
@@ -243,6 +244,7 @@ interface EmbindModule {
   api_set_autopilot_bank_hold(_0: boolean): void;
   api_set_autopilot_pitch_hold(_0: boolean): void;
   api_set_autopilot_turn_coordinator(_0: boolean): void;
+  api_set_autopilot_auto_trim(_0: boolean): void;
   api_set_autopilot_yaw_damper(_0: boolean): void;
   api_set_dcl(_0: number): boolean;
   api_set_engine_throttle_position(_0: number): boolean;
