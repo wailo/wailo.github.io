@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 import { pb } from "../Pocketbase/pocketbase";
 import  { type RecordModel } from "pocketbase";
 
@@ -62,6 +62,16 @@ async function toggleAuth() {
     logout();
   }
 }
+
+// login automatically on component mount if the user name and password are set
+  onMounted(() => {
+  if (email.value && password.value) {
+  login(email.value, password.value).catch((error) => {
+    console.error("Auto-login failed:", error);
+    loginFailed.value = true;
+  });
+  }
+  });
 </script>
 
 <template>
