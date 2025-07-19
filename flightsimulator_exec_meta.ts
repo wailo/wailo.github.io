@@ -350,7 +350,7 @@ export async function fetchSimData(module: any) {
   module.simData.api_autopilot_vertical_speed_target = module.HEAP32[ptr_api_autopilot_vertical_speed_target];
   module.simData.api_autopilot_yaw_damper = module.HEAP8[ptr_api_autopilot_yaw_damper] !== 0;
   module.simData.api_bank = round(module.HEAPF32[ptr_api_bank], 4);
-  module.simData.api_bank_deg = round(module.HEAPF32[ptr_api_bank_deg], 0);
+  module.simData.api_bank_deg = round(module.HEAPF32[ptr_api_bank_deg], 2);
   module.simData.api_bank_dot = round(module.HEAPF32[ptr_api_bank_dot], 4);
   module.simData.api_bank_dot_deg = round(module.HEAPF32[ptr_api_bank_dot_deg], 2);
   module.simData.api_cdi = round(module.HEAPF32[ptr_api_cdi], 4);
@@ -366,7 +366,7 @@ export async function fetchSimData(module: any) {
   module.simData.api_fps = module.HEAP32[ptr_api_fps];
   module.simData.api_ground_collision = module.HEAP8[ptr_api_ground_collision] !== 0;
   module.simData.api_heading = round(module.HEAPF32[ptr_api_heading], 4);
-  module.simData.api_heading_deg = round(module.HEAPF32[ptr_api_heading_deg], 0);
+  module.simData.api_heading_deg = round(module.HEAPF32[ptr_api_heading_deg], 2);
   module.simData.api_heading_dot = round(module.HEAPF32[ptr_api_heading_dot], 4);
   module.simData.api_heading_dot_deg = round(module.HEAPF32[ptr_api_heading_dot_deg], 2);
   module.simData.api_ias_speed_knots = round(module.HEAPF32[ptr_api_ias_speed_knots], 0);
@@ -378,13 +378,13 @@ export async function fetchSimData(module: any) {
   module.simData.api_motion_cues = module.HEAP8[ptr_api_motion_cues] !== 0;
   module.simData.api_pfd_display = module.HEAP8[ptr_api_pfd_display] !== 0;
   module.simData.api_pitch = round(module.HEAPF32[ptr_api_pitch], 4);
-  module.simData.api_pitch_deg = round(module.HEAPF32[ptr_api_pitch_deg], 0);
+  module.simData.api_pitch_deg = round(module.HEAPF32[ptr_api_pitch_deg], 2);
   module.simData.api_pitch_dot = round(module.HEAPF32[ptr_api_pitch_dot], 4);
   module.simData.api_pitch_dot_deg = round(module.HEAPF32[ptr_api_pitch_dot_deg], 2);
   module.simData.api_rudder_position = round(module.HEAPF32[ptr_api_rudder_position], 2);
   module.simData.api_rudder_trim_position = round(module.HEAPF32[ptr_api_rudder_trim_position], 2);
   module.simData.api_sideslip = round(module.HEAPF32[ptr_api_sideslip], 4);
-  module.simData.api_sideslip_deg = round(module.HEAPF32[ptr_api_sideslip_deg], 0);
+  module.simData.api_sideslip_deg = round(module.HEAPF32[ptr_api_sideslip_deg], 2);
   module.simData.api_simulation_pause = module.HEAP8[ptr_api_simulation_pause] !== 0;
   module.simData.api_simulation_speed = round(module.HEAPF32[ptr_api_simulation_speed], 1);
   module.simData.api_six_instruments_display = module.HEAP8[ptr_api_six_instruments_display] !== 0;
@@ -761,7 +761,7 @@ return {
     type: 'number',
     group: 'flight',
     label: 'Bank Angle',
-    precision: 0,
+    precision: 2,
     unit: '°'
   },
   bank_dot:{
@@ -922,7 +922,7 @@ return {
     type: 'number',
     group: 'flight',
     label: 'Heading Angle',
-    precision: 0,
+    precision: 2,
     unit: '°'
   },
   heading_dot:{
@@ -1039,7 +1039,7 @@ return {
     type: 'number',
     group: 'flight',
     label: 'Pitch Angle',
-    precision: 0,
+    precision: 2,
     unit: '°'
   },
   pitch_dot:{
@@ -1101,7 +1101,7 @@ return {
     type: 'number',
     group: 'flight',
     label: 'Side Slip Angle (Beta)',
-    precision: 0,
+    precision: 2,
     unit: '°'
   },
   simulation_pause:{
@@ -1637,7 +1637,7 @@ export const apiMetadata = {
     id: 'bank_deg',
     group: 'flight',
     label: 'Bank Angle',
-    precision: 0,
+    precision: 2,
     unit: '°'
   },
   bank_dot: {
@@ -1760,7 +1760,7 @@ export const apiMetadata = {
     id: 'heading_deg',
     group: 'flight',
     label: 'Heading Angle',
-    precision: 0,
+    precision: 2,
     unit: '°'
   },
   heading_dot: {
@@ -1848,7 +1848,7 @@ export const apiMetadata = {
     id: 'pitch_deg',
     group: 'flight',
     label: 'Pitch Angle',
-    precision: 0,
+    precision: 2,
     unit: '°'
   },
   pitch_dot: {
@@ -1896,7 +1896,7 @@ export const apiMetadata = {
     id: 'sideslip_deg',
     group: 'flight',
     label: 'Side Slip Angle (Beta)',
-    precision: 0,
+    precision: 2,
     unit: '°'
   },
   simulation_pause: {
