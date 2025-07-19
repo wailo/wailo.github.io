@@ -1,8 +1,7 @@
 import MainModuleFactory, { type MainModule } from "../public/flightsimulator_exec"
-import { SimData, apiMetadata} from "../public/flightsimulator_exec_meta"
+import { SimData} from "../public/flightsimulator_exec_meta"
 export { SimData, getAutopilotProperties, getSimulationParameters, fetchSimData, type SimulationProperties } from "../public/flightsimulator_exec_meta";
 export type SimDataKeys = keyof SimData;
-export type simPropsKeys = keyof typeof apiMetadata;
 
 export type ExtendedMainModule = MainModule & { simData: SimData} & {
  };
