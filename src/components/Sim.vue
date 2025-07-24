@@ -243,6 +243,7 @@
       <template #ClassRoom>
         <div class="flex flex-col h-full w-full">
           <Accounts
+          v-if="sim_module_loaded"
           @onLogin="(url: string, authToken: string) => {
             FlightSimModule.api_set_auth_token(url, authToken);
           }"
