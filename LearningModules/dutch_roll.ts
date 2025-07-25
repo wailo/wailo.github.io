@@ -26,8 +26,6 @@ const preConfiguration = () => {
 
 dataDisplayReset();
 await repositionWithAutopilot(targetAltitude, targetSpeed, targetHeading, 10000, preConfiguration);
-await waitFor(2000);
-simControls.api_set_autopilot(false);
 // plotView(simProps.api_aileron_position, true);
 plotView(simProps.heading, true);
 plotView(simProps.heading_dot, true);
@@ -43,6 +41,8 @@ notifyUser(
     "**Initiating Dutch Roll Mode**",
     `Applying step rudder input for **2.5 seconds** in each direction, then returning to neutral position.`
 );
+// Show motions cues
+simControls.api_set_motion_cues(true)
 await waitFor(5000);
 simControls.api_set_rudder_position(-1.0);
 await waitFor(2500);
