@@ -15,18 +15,19 @@ const preConfiguration = () => {
 }
 
 dataDisplayReset();
-await repositionWithAutopilot(3000, 180, 0, 10000,  preConfiguration);
-await waitFor(2000)
-simControls.api_set_autopilot(false);
+await repositionWithAutopilot(3000, 180, 0, 10000, preConfiguration);
+// await waitFor(1000)
 plotView(simProps.elevator_position, true);
 plotView(simProps.pitch, true);
 plotView(simProps.pitch_dot, true);
 plotView(simProps.ias_speed_knots, true);
-await waitFor(5000)
+await waitFor(5000);
 checkPoint("Initiating Phugiod mode")
 notifyUser("Initiating Phugiod mode", "Pulling the control stick for 2 seconds then return to neutral position.\n\n")
+// Show motions cues
+simControls.api_set_motion_cues(true)
 await waitFor(5000)
-simControls.api_set_elevator_position(simData.api_elevator_position - 0.30)
+simControls.api_set_elevator_position(simData.api_elevator_position - 0.50)
 await waitFor(2000)
 simControls.api_set_elevator_position(0.00)
 await waitFor(5000)
