@@ -192,7 +192,7 @@ interface WasmModule {
   _api_autopilot_mach_speed_target(): number;
   _api_simulation_speed(): number;
   _api_simulation_pause(): number;
-  _api_pfd_display(_0: number): number;
+  _api_pfd_display(): number;
   _api_six_instruments_display(): number;
   _api_motion_cues(): number;
   _api_ground_collision(): number;
@@ -248,7 +248,7 @@ interface EmbindModule {
   api_set_autopilot_yaw_damper(_0: boolean): void;
   api_set_dcl(_0: number): boolean;
   api_set_engine_throttle_position(_0: number): boolean;
-  api_set_auth_token(_0: EmbindString, _1: EmbindString): boolean;
+  api_check_licence(_0: EmbindString, _1: EmbindString): boolean;
   api_set_simulation_pause(_0: boolean): boolean;
   api_set_pfd_display(_0: boolean): boolean;
   api_set_six_instruments_display(_0: boolean): boolean;
