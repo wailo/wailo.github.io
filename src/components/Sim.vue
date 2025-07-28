@@ -245,10 +245,10 @@
           <Accounts
           v-if="sim_module_loaded"
           @onLogin="(url: string, authToken: string) => {
-            FlightSimModule.api_set_auth_token(url, authToken);
+            FlightSimModule.api_check_licence(url, authToken);
           }"
           @onLogout="() => {
-            FlightSimModule.api_set_auth_token('', '');
+            FlightSimModule.api_check_licence('', '');
           }"
           ref="accountsComponentRef" />
           <ClassRoom
@@ -351,7 +351,6 @@ const toggleFullscreen = () => {
 
 function simulationStatus(): string {
   let status: string;
-
   if (!FlightSimModule) {
     status = "Loading";
   } else if (FlightSimModule.simData.api_simulation_pause) {
@@ -360,7 +359,7 @@ function simulationStatus(): string {
     simFunctions.notifyUser("Collision Detected", "The aircraft has collided with the ground.", 5000);
     status = "Collision";
   } else if (FlightSimModule.simData.api_simulation_speed == 1) {
-    status = `${FlightSimModule?.simData?.api_fps} FPS`;
+    status = isLicenceValid.value ? "Running" : "Trial";
   } else {
     status = `${FlightSimModule.simData.api_simulation_speed}x`;
   }
@@ -401,6 +400,7 @@ resetComponents : function() {
 let FlightSimModule: ExtendedMainModule;
 // let utilsFuncs: any;
 let sim_module_loaded = ref(false);
+let isLicenceValid = ref(false);
 let classRoomComponentState = ref(false);
 let scriptComponentStatus = ref<ScriptStatus>("IDLE");
 const update_interval_ms = 200;
@@ -441,6 +441,7 @@ onMounted(async () => {
     })(),
     notifyUser: simFunctions.notifyUser, // to be called from c++
     resetComponents: simFunctions.resetComponents, // to be called from c++
+    onLicenceState: (LicenceState: boolean) => isLicenceValid.value = LicenceState, // Update licence state
   })
     .then((module) => {
       module.simData = reactive(new SimData());
