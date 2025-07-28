@@ -527,7 +527,6 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr;
   grid-template-rows: repeat(6, 1fr);
-  /* Define grid areas */
   grid-template-areas:
     "panel1 panel8 panel2"
     "panel1 panel8 panel2"
@@ -536,6 +535,46 @@ onUnmounted(() => {
     "panel4 panel7 panel6"
     "panel4 panel7 panel6";
 }
+
+/* Responsive layout for tablets */
+@media (max-width: 640px) {
+  .container {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: repeat(8, minmax(80px, auto));
+    grid-template-areas:
+      "panel1 panel8"
+      "panel1 panel8"
+      "panel1 panel2"
+      "panel3 panel3"
+      "panel5 panel5"
+      "panel4 panel6"
+      "panel4 panel6"
+      "panel4 panel7"
+      "panel4 panel7";
+  }
+}
+
+/* Responsive layout for mobile
+@media (max-width: 640px) {
+  .container {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(8, minmax(60px, auto));
+    grid-template-areas:
+      "panel1"
+      "panel1"
+      "panel8"
+      "panel8"
+      "panel5"
+      "panel3"
+      "panel4"
+      "panel4"
+      "panel2"
+      "panel6"
+      "panel7";
+  }
+
+
+} */
 
 .panel-1 {
   grid-area: panel1;
