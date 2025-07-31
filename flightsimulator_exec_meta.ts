@@ -898,7 +898,7 @@ return {
     group: 'simulation',
     label: 'Frames per second',
     precision: 0,
-    unit: 'hz'
+    unit: 'fps'
   },
   ground_collision:{
     id: 'ground_collision',
@@ -1742,7 +1742,7 @@ export const apiMetadata = {
     group: 'simulation',
     label: 'Frames per second',
     precision: 0,
-    unit: 'hz'
+    unit: 'fps'
   },
   ground_collision: {
     id: 'ground_collision',
