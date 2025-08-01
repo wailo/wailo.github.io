@@ -133,7 +133,7 @@ class="flex flex-col min-w-0 transition-all duration-300 w-4/5"
 import { ref, PropType, onMounted } from "vue";
 import { ExtendedMainModule, SimulationProperties} from "../siminterfac.ts";
 import simDataTypesRaw from "../../public/flightsimulator_exec_meta.ts?raw";
-import simApiTypes from "../../public/flightsimulator_exec.d.ts?raw";
+import simApiTypesRaw from "../../public/flightsimulator_exec.d.ts?raw";
 
 import {resetTimeouts} from "../../public/LearningModules/core.ts"
 // core.ts converted to js
@@ -238,7 +238,7 @@ const setupMonaco = (_editor: monaco.editor.IStandaloneCodeEditor) => {
   // Capture the simulator interface for intellisense
 
   // Get functions interface
-  let regexMatch = simApiTypes.match(/interface EmbindModule\s*\{([^}]*)\}/g);
+  let regexMatch = simApiTypesRaw.match(/interface EmbindModule\s*\{([^}]*)\}/g);
   let EmbindModuleStr;
   if (!regexMatch) {
     console.log(
