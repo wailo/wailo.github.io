@@ -88,13 +88,13 @@ const success = await waitForCondition(
             return true; // Fail condition immediately if altitude is out of limits
         }
 
-
         // Continue with heading change check only if altitude is within limits
-        const headingDiff = Math.abs(currentHeading - lastHeading);
-        lastHeading = currentHeading;
-        totalHeadingChange_deg += headingDiff;
+        // Calculate smallest angular difference (handles wrap-around at 0/360)
+        let diff = Math.abs(currentHeading - lastHeading);
+        if (diff > 180) diff = 360 - diff;
+        totalHeadingChange_deg = totalHeadingChange_deg + diff;
         const headingChangedEnough = totalHeadingChange_deg >= requiredHeadingChange_deg;
-        console.log(`Heading changed: ${totalHeadingChange_deg}°`);
+        lastHeading = currentHeading;
         return altitudeWithinLimits && headingChangedEnough;
     },
     0,          // confirmation_ms: condition must stay true for 2 seconds
