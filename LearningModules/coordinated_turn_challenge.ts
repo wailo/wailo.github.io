@@ -90,10 +90,11 @@ const success = await waitForCondition(
 
         // Continue with heading change check only if altitude is within limits
         // Calculate smallest angular difference (handles wrap-around at 0/360)
-        let diff = Math.abs(currentHeading - lastHeading);
+        let diff = currentHeading - lastHeading;
         if (diff > 180) diff = 360 - diff;
+        else if (diff < -180) diff = 360 + diff;
         totalHeadingChange_deg = totalHeadingChange_deg + diff;
-        const headingChangedEnough = totalHeadingChange_deg >= requiredHeadingChange_deg;
+        const headingChangedEnough = Math.abs(totalHeadingChange_deg) >= requiredHeadingChange_deg;
         lastHeading = currentHeading;
         return altitudeWithinLimits && headingChangedEnough;
     },
