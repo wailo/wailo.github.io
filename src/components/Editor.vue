@@ -13,6 +13,12 @@
 
     <!-- File Tree -->
     <div class="flex-1 overflow-y-auto p-2">
+      <button @click.stop="() => {
+        isEditing = true;
+        code = `// You can write a code, or ask AI to write a code for you\n// example: Reposition to FL150, speed 230 knots, heading 90 degrees\n`}"
+        class="px-1 rounded text-secondary hover:bg-slate-600 border border-simElementBorder">
+        New</button>
+      <hr class="my-2 border-slate-700" />
       <ul>
         <li v-for="(folder, folderName) in fileTree" :key="folderName">
           <div
@@ -36,7 +42,7 @@
   <div class="flex-1 cursor-default">
     + {{ file.name }}
   </div>
-  
+
   <!-- Horizontal Button Row -->
    <div class="flex flex-row gap-1 whitespace-nowrap items-center">
     <button
@@ -70,7 +76,6 @@
 >
   Broadcast
 </button>
-
 
   </div>
 </li>
@@ -114,6 +119,16 @@ class="flex flex-col min-w-0 transition-all duration-300 w-4/5"
       >
         ◉ Broadcast
       </button>
+        <button
+         class="px-4 border transition"
+        :class="[isLLMPending ? 'border-amber-500 text-amber-400 hover:bg-red-500/10' : 'border-secondary text-secondary']"
+  title="AI"
+  @click.stop="async() => {
+    sendToLLM(code)
+  }"
+>
+  Ask AI
+</button>
             <button
         class="px-4 border  transition"
         @click="isEditing = false"
@@ -152,6 +167,7 @@ import htmlWorker from "monaco-editor/esm/vs/language/html/html.worker?worker";
 import tsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker";
 
 const isScriptRunning = ref(false);
+const isLLMPending = ref(false);
 const ModuleTitle = ref("");
 const selectedFile = ref<string>("");
 let isEditing = ref(false);
@@ -364,6 +380,69 @@ const openFolders = ref<Record<string, boolean>>(
 const toggleFolder = (folderName: string) => {
   openFolders.value[folderName] = !openFolders.value[folderName];
 };
+
+const sendToLLM = async (content: string) => {
+  // send a request to ollama ai server https://raspberrypi.tail89a8a0.ts.net/llm/
+  executionResult.value = "Pending AI response...";
+  isLLMPending.value = true;
+  const llm_api_host = import.meta.env.DEV ? "http://localhost:11434/api/chat" : "https://raspberrypi.tail89a8a0.ts.net/llm/api/chat";
+  const response = await fetch(llm_api_host, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "instructor-lesson-planner:latest",
+      messages: [
+        {
+          role: "user",
+          content: `English only, respond to the following prompt: "${content}""`,
+        },
+      ],
+      stream: false
+    }),
+  });
+  if (!response.ok) {
+    executionResult.value = `AI request failed: ${response.statusText}`;
+    isLLMPending.value = false;
+    return;
+}
+
+  if (!response.body) {
+    executionResult.value = "No response body from AI request";
+    isLLMPending.value = false;
+    return;
+  }
+
+  isLLMPending.value = false;
+
+  // Read the response body as text
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let result = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    result += decoder.decode(value, { stream: true });
+  }
+
+  // response is json, extract message content
+  try {
+    const jsonResponse = JSON.parse(result);
+    if (jsonResponse && jsonResponse.message && jsonResponse.message.content) {
+      result = jsonResponse.message.content;
+    } else {
+      throw new Error("Invalid AI response format");
+    }
+  } catch (error) {
+    console.error("Failed to parse AI response:", error);
+      executionResult.value = "Failed to parse AI response:" + error;
+  }
+  // Set the execution result to the AI response
+    executionResult.value = "Done";
+  code.value = `/*\n${code.value}*/\n\n`
+  code.value += result.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+}
 
 const loadFileContent = async (file: ModuleEntry) => {
   try {
