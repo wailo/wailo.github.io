@@ -382,31 +382,55 @@ const toggleFolder = (folderName: string) => {
 };
 
 const sendToLLM = async (content: string) => {
-  // send a request to ollama ai server https://raspberrypi.tail89a8a0.ts.net/llm/
   executionResult.value = "Pending AI response...";
   isLLMPending.value = true;
-  const llm_api_host = import.meta.env.DEV ? "http://localhost:11434/api/chat" : "https://raspberrypi.tail89a8a0.ts.net/llm/api/chat";
-  const response = await fetch(llm_api_host, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "instructor-lesson-planner:latest",
-      messages: [
-        {
-          role: "user",
-          content: `English only, respond to the following prompt: "${content}""`,
-        },
-      ],
-      stream: false
-    }),
-  });
+
+  const llm_api_host = import.meta.env.DEV
+    ? "http://localhost:11434/api/chat"
+    : "https://raspberrypi.tail89a8a0.ts.net/llm/api/chat";
+
+  // Set up timeout using AbortController
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5 minutes
+
+  let response;
+  try {
+    response = await fetch(llm_api_host, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "instructor-lesson-planner:latest",
+        messages: [
+          {
+            role: "user",
+            content: `English only, respond to the following prompt: "${content}"`,
+          },
+        ],
+        stream: false,
+      }),
+      signal: controller.signal,
+    });
+  } catch (err: unknown) {
+    isLLMPending.value = false;
+  if (err instanceof DOMException && err.name === "AbortError") {
+    executionResult.value = "AI request timed out after 5 minutes.";
+  } else if (err instanceof Error) {
+    executionResult.value = `AI request failed: ${err.message}`;
+  } else {
+    executionResult.value = "AI request failed with an unknown error.";
+  }
+    return;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
   if (!response.ok) {
     executionResult.value = `AI request failed: ${response.statusText}`;
     isLLMPending.value = false;
     return;
-}
+  }
 
   if (!response.body) {
     executionResult.value = "No response body from AI request";
@@ -414,9 +438,7 @@ const sendToLLM = async (content: string) => {
     return;
   }
 
-  isLLMPending.value = false;
-
-  // Read the response body as text
+  // Read and decode stream
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let result = "";
@@ -426,23 +448,26 @@ const sendToLLM = async (content: string) => {
     result += decoder.decode(value, { stream: true });
   }
 
-  // response is json, extract message content
+  // Try to parse final JSON
   try {
     const jsonResponse = JSON.parse(result);
-    if (jsonResponse && jsonResponse.message && jsonResponse.message.content) {
+    if (jsonResponse?.message?.content) {
       result = jsonResponse.message.content;
     } else {
       throw new Error("Invalid AI response format");
     }
   } catch (error) {
     console.error("Failed to parse AI response:", error);
-      executionResult.value = "Failed to parse AI response:" + error;
+    executionResult.value = "Failed to parse AI response: " + error;
+    isLLMPending.value = false;
+    return;
   }
-  // Set the execution result to the AI response
-    executionResult.value = "Done";
-  code.value = `/*\n${code.value}*/\n\n`
-  code.value += result.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-}
+
+  isLLMPending.value = false;
+  executionResult.value = "Done";
+  code.value = `/*\n${code.value}*/\n\n` + result.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+};
+
 
 const loadFileContent = async (file: ModuleEntry) => {
   try {
