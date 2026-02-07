@@ -3,7 +3,7 @@ name: Node.js CI
 on:
   push:
     branches:
-      - vuejs3
+      - development
 
 jobs:
   build:
@@ -18,7 +18,7 @@ jobs:
     - name: Checkout page
       uses: actions/checkout@v3
       with:
-        ref: 'vuejs3'
+        ref: 'development'
 
     - name: Setup Node.js
       uses: actions/setup-node@v2
