@@ -1,36 +1,20 @@
 <template>
-  <div  class="container max-w-full h-screen gap-2 p-5 bg-simBackground">
+  <!-- <div  class="container max-w-full h-screen gap-2 p-5 bg-simBackground"> -->
+
+      <div
+    ref="fullscreenContainer"
+    class="container max-w-full h-screen gap-2 p-5 bg-simBackground"
+    :class="`layout-${layout}`">
     <!-- Panel 1 -->
     <Panel
       :status="simulationStatus()"
       :flash="FlightSimModule?.simData?.api_simulation_pause || FlightSimModule?.simData?.api_ground_collision"
       :active="FlightSimModule?.simData?.api_simulation_pause || FlightSimModule?.simData?.api_ground_collision"
-      class="panel-1"
+      class="panel-cockpit"
+      data-layout="focus instructor pilot"
     >
     <template #Cockpit>
       <div id="fullscreen-container" class="flex w-full h-full bg-simBackground">
-  <!-- MarkDown -->
-  <div
-    v-if="isFullscreen"
-    id="overlay"
-    class="flex flex-col w-2/6 min-w-0 overflow-hidden h-full border-r border-Sim border-SimElementBorder p-1"
-  >
-    <!-- Top half -->
-    <div class="flex-1 overflow-y p-2 border-b border-SimElementBorder">
-      <MarkDown :content="userPromptText" />
-    </div>
-
-    <!-- Todo: Add -->
-    <!-- Bottom half -->
-    <!-- <div class="flex-2 overflow-y-auto p-2">
-      <SimDataDisplay
-    :sim-props="getSimulationParameters(FlightSimModule)"
-    :plotPause="FlightSimModule.simData.api_simulation_pause"
-    :plotUpdateIntervals="update_interval_ms"
-    v-if="sim_module_loaded"
-  />
-    </div> -->
-  </div>
 
   <!-- Canvas container -->
   <div id="canvas-container" class="flex-grow h-full">
@@ -47,7 +31,8 @@
     <!-- Panel 2 -->
     <Panel
       :status="`${1000 / update_interval_ms} HZ`"
-      class="panel-2 gap-1"
+      class="panel-realtimedata gap-1"
+      data-layout="focus instructor pilot"
     >
          <template #Real-Time-Data display="Real Time Data">
        <SimDataDisplay
@@ -66,13 +51,14 @@
       :status="FlightSimModule.simData.api_simulation_pause ? `PAUSED` : FlightSimModule.simData.api_simulation_speed == 1 ? `RUNNING` :`${FlightSimModule.simData.api_simulation_speed}x`"
       :active="FlightSimModule.simData.api_simulation_pause || FlightSimModule.simData.api_simulation_speed != 1"
       :flash="FlightSimModule.simData.api_simulation_pause"
-      class="panel-3"
+      class="panel-simulationcontrols"
+      data-layout="focus instructor pilot"
     >
     <template #Simulation>
       <div  v-if="sim_module_loaded" class="w-full h-full grid grid-cols-3 gap-1">
         <wButton
           class="border border-simElementBorder col-span-1"
-          buttonLabel="Focus Mode"
+          buttonLabel="Fullscreen"
           :buttonClick="toggleFullscreen"
           />
           <wButton
@@ -98,11 +84,18 @@
           class="border border-simElementBorder col-span-3"
         >
         </ButtonSwitch>
+        <wButton buttonLabel="Instructor Layout" :button-state="layout == 'instructor'" :buttonClick="() => setLayout('instructor')" />
+        <wButton buttonLabel="Pilot Layout" :button-state="layout == 'pilot'" :buttonClick="() => setLayout('pilot')" />
+        <wButton buttonLabel="Focus Layout" :button-state="layout == 'focus'" :buttonClick="() =>setLayout('focus')" />
       </div>
       </template>
     </Panel>
           <!-- Panel 4 -->
-  <Panel class="panel-4" :status=scriptComponentStatus  :active="scriptComponentStatus != 'IDLE'">
+  <Panel
+  class="panel-learningmodules"
+  data-layout="instructor"
+  :status=scriptComponentStatus
+  :active="scriptComponentStatus != 'IDLE'">
 
 <template #Learning-Modules>
       <Editor
@@ -133,7 +126,8 @@
     <Panel
     v-if="sim_module_loaded"
       :status="FlightSimModule.simData.api_autopilot ? 'Engaged' : 'Disengaged'"
-      class="panel-5"
+      class="panel-autopilot"
+      data-layout="instructor pilot"
     >
     <template #Autopilot>
   <div class="w-full h-full grid grid-cols-4 gap-1 auto-rows-fr">
@@ -178,7 +172,9 @@
 
     </Panel>
     <!-- Panel 6 -->
-    <Panel status="Running" class="panel-6">
+    <Panel status="Running"
+    class="panel-flightmodel"
+    data-layout="instructor pilot">
       <template #Flight-Model>
       <div class="w-full max-h-full grid gap-1">
         <template
@@ -237,7 +233,8 @@
     <!-- Panel 7 -->
     <Panel
       :status="classRoomComponentState ? 'Online' : 'Offline'"
-      class="panel-7"
+      class="panel-classroom"
+      data-layout="instructor pilot"
       :active="classRoomComponentState"
       >
       <template #ClassRoom>
@@ -285,7 +282,8 @@
   <Panel
       :status="userPromptStatus"
       :active="userPromptActive"
-      class="panel-8"
+      class="panel-userprompt"
+      data-layout="focus instructor pilot"
       >
       <template #Prompt>
           <MarkDown
@@ -330,24 +328,30 @@ function broadcast(call: RemoteCall | RemoteEvent) {
   }
 }
 
-const toggleFullscreen = () => {
-      const container = document.getElementById('fullscreen-container');
-      if (!document.fullscreenElement) {
-        // Request fullscreen on the container div
-        container?.requestFullscreen().then(() => {
-          // You can do something once fullscreen is activated (optional)
-        }).catch(err => {
-          console.error('Error attempting to enter fullscreen:', err);
-        });
-      } else {
-        // Exit fullscreen
-        document.exitFullscreen().then(() => {
-          // Optionally handle exiting fullscreen
-        }).catch(err => {
-          console.error('Error attempting to exit fullscreen:', err);
-        });
-      }
-    }
+
+function setLayout(mode: typeof layout.value) {
+  layout.value = mode
+  // delay a resize event to allow components to adjust
+  // This is needed resize event is not dispatched when component size change but the window size stay the same
+  // So the openGL context will not resize.
+  // The delay is to ensure the DOM has updated before the resize event is dispatched
+  setTimeout(() => {
+  window.dispatchEvent(new Event('resize'))
+  }, 20)
+
+}
+
+const toggleFullscreen = async () => {
+  if (!document.fullscreenElement) {
+    await fullscreenContainer.value?.requestFullscreen()
+  } else {
+    await document.exitFullscreen()
+  }
+}
+
+const onFullscreenChange = () => {
+  isFullscreen.value = !!document.fullscreenElement
+}
 
 function simulationStatus(): string {
   let status: string;
@@ -408,6 +412,9 @@ const userPromptText = ref<string>("");
 const userPromptStatus = ref<string>("----");
 const userPromptActive = ref<boolean>(false);
 const isFullscreen = ref(false);
+const fullscreenContainer = ref<HTMLElement | null>(null)
+const layout = ref<'focus' | 'instructor' | 'pilot'>('instructor');
+
 
 // Components refs
 const classroomComponentRef = ref<InstanceType<typeof ClassRoom> | null>(null); // Use the ClassRoom component type
@@ -502,7 +509,7 @@ onMounted(async () => {
         true,
       );
 
-      document.addEventListener('fullscreenchange', () => isFullscreen.value = document.fullscreenElement !== null);
+      document.addEventListener('fullscreenchange', onFullscreenChange)
       sim_module_loaded.value = true;
       simFunctions.notifyUser("Flight Sim", `Version: ${FlightSimModule.FLIGHTMODEL_VERSION}`,2000)
       simUpdateInterval = setInterval(() => {
@@ -519,96 +526,81 @@ onBeforeMount(() => {
 
 onUnmounted(() => {
   clearInterval(simUpdateInterval);
+  document.removeEventListener('fullscreenchange', onFullscreenChange)
 });
 </script>
 
+
+
 <style scoped>
-.container {
+
+/* Hide panels not participating in the active layout */
+.container.layout-focus > *:not([data-layout~="focus"]) {
+  display: none;
+}
+
+.container.layout-instructor > *:not([data-layout~="instructor"]) {
+  display: none;
+}
+
+.container.layout-pilot > *:not([data-layout~="pilot"]) {
+  display: none;
+}
+
+/* ===== Instructor LAYOUT ===== */
+.container.layout-instructor {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr;
   grid-template-rows: repeat(6, 1fr);
   grid-template-areas:
-    "panel1 panel8 panel2"
-    "panel1 panel8 panel2"
-    "panel1 panel8 panel2"
-    "panel5 panel8 panel3"
-    "panel4 panel7 panel6"
-    "panel4 panel7 panel6";
+    "cockpit userprompt realtimedata"
+    "cockpit userprompt realtimedata"
+    "cockpit userprompt realtimedata"
+    "autopilot userprompt simulationcontrols"
+    "learningmodules classroom flightmodel"
+    "learningmodules classroom flightmodel";
 }
 
-/* Responsive layout for tablets */
-@media (max-width: 640px) {
-  .container {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: repeat(8, minmax(80px, auto));
-    grid-template-areas:
-      "panel1 panel8"
-      "panel1 panel8"
-      "panel1 panel2"
-      "panel3 panel3"
-      "panel5 panel5"
-      "panel4 panel6"
-      "panel4 panel6"
-      "panel4 panel7"
-      "panel4 panel7";
-  }
+/* ===== Pilot LAYOUT ===== */
+.container.layout-pilot {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-rows: repeat(6, 1fr);
+  grid-template-areas:
+    "cockpit userprompt realtimedata"
+    "cockpit userprompt realtimedata"
+    "cockpit userprompt realtimedata"
+    "cockpit userprompt simulationcontrols"
+    "cockpit userprompt flightmodel"
+    "autopilot classroom flightmodel"
 }
 
-/* Responsive layout for mobile
-@media (max-width: 640px) {
-  .container {
-    grid-template-columns: 1fr;
-    grid-template-rows: repeat(8, minmax(60px, auto));
-    grid-template-areas:
-      "panel1"
-      "panel1"
-      "panel8"
-      "panel8"
-      "panel5"
-      "panel3"
-      "panel4"
-      "panel4"
-      "panel2"
-      "panel6"
-      "panel7";
-  }
-
-
-} */
-
-.panel-1 {
-  grid-area: panel1;
+/* ===== Focus LAYOUT ===== */
+.container.layout-focus {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  grid-template-rows: repeat(6, 1fr);
+  grid-template-areas:
+    "realtimedata cockpit userprompt"
+    "realtimedata cockpit userprompt"
+    "realtimedata cockpit userprompt"
+    "realtimedata cockpit userprompt"
+    "realtimedata cockpit userprompt"
+    "realtimedata simulationcontrols userprompt";
 }
 
-.panel-2 {
-  grid-area: panel2;
-}
+/* Panel bindings */
+.panel-cockpit { grid-area: cockpit; }
+.panel-realtimedata { grid-area: realtimedata; }
+.panel-simulationcontrols { grid-area: simulationcontrols; }
+.panel-learningmodules { grid-area: learningmodules; }
+.panel-autopilot { grid-area: autopilot; }
+.panel-flightmodel { grid-area: flightmodel; }
+.panel-classroom { grid-area: classroom; }
+.panel-userprompt { grid-area: userprompt; }
 
-.panel-3 {
-  grid-area: panel3;
-}
-
-.panel-4 {
-  grid-area: panel4;
-}
-
-.panel-5 {
-  grid-area: panel5;
-}
-
-.panel-6 {
-  grid-area: panel6;
-}
-
-.panel-7 {
-  grid-area: panel7;
-}
-
-.panel-8 {
-  grid-area: panel8;
-}
- #canvas {
+/* Canvas fit */
+#canvas {
   object-fit: contain;
 }
-
 </style>
