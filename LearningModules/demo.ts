@@ -160,7 +160,7 @@ advanceSchedule("Initiate Climbing", "Rotate");
 simControls.api_set_elevator_position(-0.25);
 
 // Wait for positive vertical speed above 400 ft/min for more than 1 second
-await waitForCondition(() => simData.api_vertical_speed > 400, 1000);
+await waitForCondition(() => simData.api_vertical_speed_ftmin > 400, 1000);
 advanceSchedule("", "Retracting landing gear");
 simControls.api_set_autopilot_pitch_hold(true);
 simControls.api_set_landing_gear_selector_position(simControls.GearSelector.UP.value);
