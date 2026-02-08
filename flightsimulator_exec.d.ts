@@ -139,15 +139,16 @@ declare namespace RuntimeExports {
 }
 interface WasmModule {
   _main(_0: number, _1: number): number;
+  _api_time(): number;
   _api_fps(): number;
   _api_ups(): number;
   _api_weight(): number;
   _api_empty_weight(): number;
   _api_wing_area(): number;
-  _api_dcl(): number;
   _api_cdo(): number;
   _api_altitude(): number;
   _api_vertical_speed(): number;
+  _api_vertical_speed_ftmin(): number;
   _api_elevator_position(): number;
   _api_aileron_position(): number;
   _api_engine_throttle_position(): number;
@@ -246,7 +247,6 @@ interface EmbindModule {
   api_set_autopilot_turn_coordinator(_0: boolean): void;
   api_set_autopilot_auto_trim(_0: boolean): void;
   api_set_autopilot_yaw_damper(_0: boolean): void;
-  api_set_dcl(_0: number): boolean;
   api_set_engine_throttle_position(_0: number): boolean;
   api_check_licence(_0: EmbindString, _1: EmbindString): boolean;
   api_set_simulation_pause(_0: boolean): boolean;

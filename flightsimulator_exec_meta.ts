@@ -105,7 +105,6 @@ let ptr_api_bank_dot_deg: number = 0;
 let ptr_api_cdi: number = 0;
 let ptr_api_cdo: number = 0;
 let ptr_api_cl: number = 0;
-let ptr_api_dcl: number = 0;
 let ptr_api_drag: number = 0;
 let ptr_api_elevator_position: number = 0;
 let ptr_api_elevator_trim_position: number = 0;
@@ -138,9 +137,11 @@ let ptr_api_simulation_pause: number = 0;
 let ptr_api_simulation_speed: number = 0;
 let ptr_api_six_instruments_display: number = 0;
 let ptr_api_thrust: number = 0;
+let ptr_api_time: number = 0;
 let ptr_api_true_speed_knots: number = 0;
 let ptr_api_ups: number = 0;
 let ptr_api_vertical_speed: number = 0;
+let ptr_api_vertical_speed_ftmin: number = 0;
 let ptr_api_vstall_speed_knots: number = 0;
 let ptr_api_weight: number = 0;
 let ptr_api_wing_area: number = 0;
@@ -187,7 +188,6 @@ export class SimData {
   api_cdi: number = 0;
   api_cdo: number = 0;
   api_cl: number = 0;
-  api_dcl: number = 0;
   api_drag: number = 0;
   api_elevator_position: number = 0;
   api_elevator_trim_position: number = 0;
@@ -220,9 +220,11 @@ export class SimData {
   api_simulation_speed: number = 0;
   api_six_instruments_display: boolean = false;
   api_thrust: number = 0;
+  api_time: number = 0;
   api_true_speed_knots: number = 0;
   api_ups: number = 0;
   api_vertical_speed: number = 0;
+  api_vertical_speed_ftmin: number = 0;
   api_vstall_speed_knots: number = 0;
   api_weight: number = 0;
   api_wing_area: number = 0;
@@ -270,7 +272,6 @@ function init(module: any) {
   ptr_api_cdi = module._api_cdi() >> 2;
   ptr_api_cdo = module._api_cdo() >> 2;
   ptr_api_cl = module._api_cl() >> 2;
-  ptr_api_dcl = module._api_dcl() >> 2;
   ptr_api_drag = module._api_drag() >> 2;
   ptr_api_elevator_position = module._api_elevator_position() >> 2;
   ptr_api_elevator_trim_position = module._api_elevator_trim_position() >> 2;
@@ -285,9 +286,9 @@ function init(module: any) {
   ptr_api_heading_dot_deg = module._api_heading_dot_deg() >> 2;
   ptr_api_ias_speed_knots = module._api_ias_speed_knots() >> 2;
   ptr_api_landing_gear_selector_position = module._api_landing_gear_selector_position() >> 2;
-  ptr_api_latitude = module._api_latitude() >> 2;
+  ptr_api_latitude = module._api_latitude() >> 3;
   ptr_api_lift = module._api_lift() >> 2;
-  ptr_api_longitude = module._api_longitude() >> 2;
+  ptr_api_longitude = module._api_longitude() >> 3;
   ptr_api_mach = module._api_mach() >> 2;
   ptr_api_motion_cues = module._api_motion_cues();
   ptr_api_pfd_display = module._api_pfd_display();
@@ -303,9 +304,11 @@ function init(module: any) {
   ptr_api_simulation_speed = module._api_simulation_speed() >> 2;
   ptr_api_six_instruments_display = module._api_six_instruments_display();
   ptr_api_thrust = module._api_thrust() >> 2;
+  ptr_api_time = module._api_time() >> 3;
   ptr_api_true_speed_knots = module._api_true_speed_knots() >> 2;
   ptr_api_ups = module._api_ups() >> 2;
   ptr_api_vertical_speed = module._api_vertical_speed() >> 2;
+  ptr_api_vertical_speed_ftmin = module._api_vertical_speed_ftmin() >> 2;
   ptr_api_vstall_speed_knots = module._api_vstall_speed_knots() >> 2;
   ptr_api_weight = module._api_weight() >> 2;
   ptr_api_wing_area = module._api_wing_area() >> 2;
@@ -356,7 +359,6 @@ export async function fetchSimData(module: any) {
   module.simData.api_cdi = round(module.HEAPF32[ptr_api_cdi], 4);
   module.simData.api_cdo = round(module.HEAPF32[ptr_api_cdo], 4);
   module.simData.api_cl = round(module.HEAPF32[ptr_api_cl], 4);
-  module.simData.api_dcl = round(module.HEAPF32[ptr_api_dcl], 4);
   module.simData.api_drag = round(module.HEAPF32[ptr_api_drag], 0);
   module.simData.api_elevator_position = round(module.HEAPF32[ptr_api_elevator_position], 2);
   module.simData.api_elevator_trim_position = round(module.HEAPF32[ptr_api_elevator_trim_position], 2);
@@ -371,9 +373,9 @@ export async function fetchSimData(module: any) {
   module.simData.api_heading_dot_deg = round(module.HEAPF32[ptr_api_heading_dot_deg], 2);
   module.simData.api_ias_speed_knots = round(module.HEAPF32[ptr_api_ias_speed_knots], 0);
   module.simData.api_landing_gear_selector_position = module.HEAP32[ptr_api_landing_gear_selector_position];
-  module.simData.api_latitude = round(module.HEAPF32[ptr_api_latitude], 5);
+  module.simData.api_latitude = round(module.HEAPF64[ptr_api_latitude], 5);
   module.simData.api_lift = round(module.HEAPF32[ptr_api_lift], 0);
-  module.simData.api_longitude = round(module.HEAPF32[ptr_api_longitude], 5);
+  module.simData.api_longitude = round(module.HEAPF64[ptr_api_longitude], 5);
   module.simData.api_mach = round(module.HEAPF32[ptr_api_mach], 2);
   module.simData.api_motion_cues = module.HEAP8[ptr_api_motion_cues] !== 0;
   module.simData.api_pfd_display = module.HEAP8[ptr_api_pfd_display] !== 0;
@@ -389,9 +391,11 @@ export async function fetchSimData(module: any) {
   module.simData.api_simulation_speed = round(module.HEAPF32[ptr_api_simulation_speed], 1);
   module.simData.api_six_instruments_display = module.HEAP8[ptr_api_six_instruments_display] !== 0;
   module.simData.api_thrust = round(module.HEAPF32[ptr_api_thrust], 2);
+  module.simData.api_time = round(module.HEAPF64[ptr_api_time], 2);
   module.simData.api_true_speed_knots = round(module.HEAPF32[ptr_api_true_speed_knots], 0);
   module.simData.api_ups = module.HEAP32[ptr_api_ups];
-  module.simData.api_vertical_speed = round(module.HEAPF32[ptr_api_vertical_speed], 0);
+  module.simData.api_vertical_speed = round(module.HEAPF32[ptr_api_vertical_speed], 2);
+  module.simData.api_vertical_speed_ftmin = round(module.HEAPF32[ptr_api_vertical_speed_ftmin], 0);
   module.simData.api_vstall_speed_knots = round(module.HEAPF32[ptr_api_vstall_speed_knots], 0);
   module.simData.api_weight = round(module.HEAPF32[ptr_api_weight], 0);
   module.simData.api_wing_area = round(module.HEAPF32[ptr_api_wing_area], 0);
@@ -619,7 +623,7 @@ return {
     setterFunc: module.api_set_autopilot_heading_target,
     group: 'autopilot',
     label: 'Target Heading Angle',
-    max: 360,
+    max: 359,
     min: 0,
     precision: 0,
     step: 1,
@@ -787,7 +791,7 @@ return {
     inputValue: module.simData.api_cdi,
     type: 'number',
     group: 'aerodynamics',
-    label: 'Induced Drag Coefficient',
+    label: 'Induced Drag',
     precision: 4
   },
   cdo:{
@@ -805,18 +809,6 @@ return {
     group: 'aerodynamics',
     label: 'Lift Coefficient',
     precision: 4
-  },
-  dcl:{
-    id: 'dcl',
-    inputValue: module.simData.api_dcl,
-    type: 'number',
-    setterFunc: module.api_set_dcl,
-    group: 'aerodynamics',
-    label: 'Lift Coefficient Slop',
-    max: 5,
-    min: 0.01,
-    precision: 4,
-    step: 0.01
   },
   drag:{
     id: 'drag',
@@ -1149,6 +1141,15 @@ return {
     precision: 2,
     unit: 'N'
   },
+  time:{
+    id: 'time',
+    inputValue: module.simData.api_time,
+    type: 'number',
+    group: 'simulation',
+    label: 'Simulation Time',
+    precision: 2,
+    unit: 'seconds'
+  },
   true_speed_knots:{
     id: 'true_speed_knots',
     inputValue: module.simData.api_true_speed_knots,
@@ -1170,6 +1171,15 @@ return {
   vertical_speed:{
     id: 'vertical_speed',
     inputValue: module.simData.api_vertical_speed,
+    type: 'number',
+    group: 'flight',
+    label: 'Vertical Speed',
+    precision: 2,
+    unit: 'm/s'
+  },
+  vertical_speed_ftmin:{
+    id: 'vertical_speed_ftmin',
+    inputValue: module.simData.api_vertical_speed_ftmin,
     type: 'number',
     group: 'flight',
     label: 'Vertical Speed',
@@ -1266,7 +1276,7 @@ targetCommand: {
 targetCommand: {
     value: module.simData.api_autopilot_heading_target,
     setterFunc: module.api_set_autopilot_heading_target,
-    max: 360,
+    max: 359,
     min: 0,
     precision: 0,
     step: 1,
@@ -1535,7 +1545,7 @@ export const apiMetadata = {
     id: 'autopilot_heading_target',
     group: 'autopilot',
     label: 'Target Heading Angle',
-    max: 360,
+    max: 359,
     min: 0,
     precision: 0,
     step: 1,
@@ -1657,7 +1667,7 @@ export const apiMetadata = {
   cdi: {
     id: 'cdi',
     group: 'aerodynamics',
-    label: 'Induced Drag Coefficient',
+    label: 'Induced Drag',
     precision: 4
   },
   cdo: {
@@ -1671,15 +1681,6 @@ export const apiMetadata = {
     group: 'aerodynamics',
     label: 'Lift Coefficient',
     precision: 4
-  },
-  dcl: {
-    id: 'dcl',
-    group: 'aerodynamics',
-    label: 'Lift Coefficient Slop',
-    max: 5,
-    min: 0.01,
-    precision: 4,
-    step: 0.01
   },
   drag: {
     id: 'drag',
@@ -1931,6 +1932,13 @@ export const apiMetadata = {
     precision: 2,
     unit: 'N'
   },
+  time: {
+    id: 'time',
+    group: 'simulation',
+    label: 'Simulation Time',
+    precision: 2,
+    unit: 'seconds'
+  },
   true_speed_knots: {
     id: 'true_speed_knots',
     group: 'flight',
@@ -1947,6 +1955,13 @@ export const apiMetadata = {
   },
   vertical_speed: {
     id: 'vertical_speed',
+    group: 'flight',
+    label: 'Vertical Speed',
+    precision: 2,
+    unit: 'm/s'
+  },
+  vertical_speed_ftmin: {
+    id: 'vertical_speed_ftmin',
     group: 'flight',
     label: 'Vertical Speed',
     precision: 0,
