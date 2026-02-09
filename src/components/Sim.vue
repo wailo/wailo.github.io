@@ -511,7 +511,8 @@ onMounted(async () => {
 
       document.addEventListener('fullscreenchange', onFullscreenChange)
       sim_module_loaded.value = true;
-      simFunctions.notifyUser("Flight Sim", `Version: ${FlightSimModule.FLIGHTMODEL_VERSION}`,2000)
+      simFunctions.notifyUser("Flight Sim", `SIM: ${FlightSimModule.FLIGHTMODEL_VERSION}
+      FRONTEND: ${import.meta.env.VITE_GIT_SHA}`,2000)
       simUpdateInterval = setInterval(() => {
         fetchSimData(FlightSimModule);
         dataDisplayRef.value?.tickPlot();

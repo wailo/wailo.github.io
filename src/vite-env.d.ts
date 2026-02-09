@@ -11,3 +11,7 @@ declare module 'virtual:transpiled-core-dts' {
   const declaration: string;
   export default declaration;
 }
+
+interface ImportMetaEnv {
+  readonly VITE_GIT_SHA: string
+}
