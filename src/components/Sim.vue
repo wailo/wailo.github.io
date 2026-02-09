@@ -344,6 +344,7 @@ function setLayout(mode: typeof layout.value) {
 const toggleFullscreen = async () => {
   if (!document.fullscreenElement) {
     await fullscreenContainer.value?.requestFullscreen()
+    window.dispatchEvent(new Event('resize'))
   } else {
     await document.exitFullscreen()
   }
