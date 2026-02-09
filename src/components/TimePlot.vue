@@ -54,9 +54,10 @@ const props = defineProps({
     type: Number,
     default: 120_000
   },
+  // Number of plots is calculated based on window height if not provided
   max_plots: {
     type: Number,
-    default: 4
+    default: Math.floor(window.innerHeight / 70)
   },
   update_intervals: {
     type: Number,
