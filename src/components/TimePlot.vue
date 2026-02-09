@@ -2,7 +2,7 @@
 <div
   v-for="name in getPlottableKeys"
   :key="name"
-  class="relative w-full flex-1 border-b border-simElementBorder last:border-b-0"
+  class="relative w-full min-h-0 flex-1 border-b border-simElementBorder last:border-b-0"
 >
   <!-- Close Button -->
   <button
@@ -72,6 +72,7 @@ const plots = new Map<string, uPlot>()
 const dataBuffers = new Map<string, CircularBuffer>()
 const selectedKeys = ref<Set<string>>(new Set())
 let MAX_POINTS = 0
+let plotResizeObserver: ResizeObserver | null = null
 
 // ✅ Derived Keys
 const getPlottableKeys = computed(() =>
@@ -109,8 +110,14 @@ function removePlot(propId: string) {
 
 // ✅ Recreate all plots from scratch
 async function recreateAllPlots() {
-  // Destroy existing
+  // Destroy existing plots
   plots.forEach(p => p.destroy())
+  // remove all resize observers
+  if (plotResizeObserver) {
+    plotResizeObserver.disconnect()
+    plotResizeObserver = null
+  }
+
   plots.clear()
   await nextTick()
 
@@ -144,6 +151,21 @@ async function recreateAllPlots() {
 
     plots.set(id, plot)
   })
+
+  // Re-add resize observer
+    plotResizeObserver = new ResizeObserver(() => {
+    plots.forEach((plot, id) => {
+      const el = plotRefs[id]
+      if (el) {
+        plot.setSize({ width: el.offsetWidth, height: el.offsetHeight })
+      }
+    })
+  })
+
+  const parentEl = Object.values(plotRefs)[0]?.parentElement
+  if (parentEl) {
+    plotResizeObserver.observe(parentEl)
+  }
 }
 
 // ✅ Init buffer if needed
