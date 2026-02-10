@@ -26,13 +26,23 @@
       <div class="flex justify-end p-1 border-b">
         <button @click="isFocused = false">✖ Close</button>
       </div>
+
       <div
-        v-for="item in Object.values(searchResults)"
-        :key="item.id"
-        class="cursor-pointer p-1 transition hover:bg-primary"
-        @click="setDataView(item, true )"
+      v-for="item in Object.values(searchResults)"
+      :key="item.id"
+      class="cursor-pointer p-1 transition hover:bg-primary flex items-center justify-between"
+      @click="setDataView(item, true)"
       >
-        {{ `${item.label} ${item.unit? `(${item.unit})` : '' }` }}
+      <div class="font-semibold">
+        {{ `${item.label} ${item.unit ? `(${item.unit})` : ''}` }}
+      </div>
+      <button
+        class="rounded-full text-xs hover:font-bold transition text-secondary"
+        @click.stop="plot(item.id)"
+        title="Toggle Plot"
+      >
+        ⦿
+      </button>
       </div>
     </div>
 
@@ -144,7 +154,7 @@ function setDataView(item: SimulationProperties, state: boolean) {
     isFocused.value = false
   } else {
     visibleItems.delete(id)
-    timePlotRef.value?.removePlot(id)
+    // timePlotRef.value?.removePlot(id)
   }
 }
 
