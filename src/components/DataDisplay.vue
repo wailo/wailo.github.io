@@ -1,89 +1,69 @@
 <template>
   <div class="flex flex-col w-full h-full">
-  <div ref="wrapper" class="w-full space-y-2">
-    <!-- Input + Buttons Row -->
-    <div class="flex gap-2">
-      <input
-        v-model="searchQuery"
-        type="text"
-        placeholder="Search..."
-        class="w-1/3 border bg-transparent border-simElementBorder p-1"
-        @focus="isFocused = true"
-      />
-      <button @click="showAll" class="w-1/3 border text-secondary">
-        Show All
-      </button>
-      <button @click="hideAll" class="w-1/3 border text-secondary">
-        Clear
-      </button>
-    </div>
-
-    <!-- Dropdown -->
-    <div
-      v-if="isDropdownVisible"
-      class="border rounded shadow max-h-48 overflow-auto"
-    >
-      <div class="flex justify-end p-1 border-b">
-        <button @click="isFocused = false">✖ Close</button>
+    <div ref="wrapper" class="w-full space-y-2">
+      <!-- Input + Buttons Row -->
+      <div class="flex gap-2">
+        <input v-model="searchQuery" type="text" placeholder="Search..."
+          class="w-1/3 border bg-transparent border-simElementBorder p-1" @focus="isFocused = true" />
+        <button @click="showAll" class="w-1/3 border text-secondary">
+          Show All
+        </button>
+        <button @click="hideAll" class="w-1/3 border text-secondary">
+          Clear
+        </button>
       </div>
 
-      <div
-      v-for="item in Object.values(searchResults)"
-      :key="item.id"
-      class="cursor-pointer p-1 transition hover:bg-primary flex items-center justify-between"
-      @click="setDataView(item, true)"
-      >
-      <div class="font-semibold">
-        {{ `${item.label} ${item.unit ? `(${item.unit})` : ''}` }}
-      </div>
-      <button
-        class="rounded-full text-xs hover:font-bold transition text-secondary"
-        @click.stop="plot(item.id)"
-        title="Toggle Plot"
-      >
-        ⦿
-      </button>
-      </div>
-    </div>
+      <!-- Dropdown -->
+      <div v-if="isDropdownVisible" class="border rounded shadow max-h-48 overflow-auto">
+        <div class="flex justify-end p-1 border-b">
+          <button @click="isFocused = false">✖ Close</button>
+        </div>
 
-    <!-- Visible Items Table -->
-    <table class="flex w-full h-full">
-      <tbody class="w-full">
-        <tr
-          class="flex w-full border-b border-simElementBorder items-center"
-          v-for="item in displayedItems"
-          :key="item.id"
-        >
-          <td class="font-medium w-3/5">{{ item.label }}</td>
-          <td class="w-1/5">{{ item.inputValue }}</td>
-          <td class="w-1/5 text-right flex justify-end items-center gap-2">
-            <button
-              class="rounded-full text-xs hover:font-bold transition text-secondary"
-              @click="plot(item.id)"
-              title="Toggle Plot"
-            >
+        <div v-for="item in Object.values(searchResults)" :key="item.id"
+          class="cursor-pointer p-1 transition hover:bg-primary flex items-center justify-between"
+          @click="setDataView(item, true)">
+          <div>
+            {{ `${item.label} ${item.unit ? `(${item.unit})` : ''}` }}
+          </div>
+          <div class="flex gap-2">
+            <button disabled class="text-xs hover:font-bold transition text-secondary" :title="`${item.id}`">
+              i
+            </button>
+            <button class="rounded-full text-xs hover:font-bold transition text-secondary" @click.stop="plot(item.id)"
+              title="Toggle Plot">
               ⦿
             </button>
-            <button
-              @click="setDataView(item, false)"
-              class="hover:text-red-700 transition"
-              title="Remove"
-            >
-              ⅹ
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Visible Items Table -->
+      <table class="flex w-full h-full">
+        <tbody class="w-full">
+          <tr class="flex w-full border-b border-simElementBorder items-center" v-for="item in displayedItems"
+            :key="item.id">
+            <td class="font-medium w-3/5"> {{ `${item.label} ${item.unit ? `(${item.unit})` : ''}` }}</td>
+            <td class="w-1/5">{{ item.inputValue }}</td>
+            <td class="w-1/5 text-right flex justify-end items-center gap-2">
+              <button disabled class="text-xs hover:font-bold transition text-secondary" :title="`${item.id}`">
+                i
+              </button>
+              <button class="rounded-full text-xs hover:font-bold transition text-secondary" @click="plot(item.id)"
+                title="Toggle Plot">
+                ⦿
+              </button>
+              <button @click="setDataView(item, false)" class="hover:text-red-700 transition" title="Remove">
+                ⅹ
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- Plot Component -->
+    <TimePlot ref="timePlotRef" :pause="props.plotPause" :update_intervals="props.plotUpdateIntervals"
+      :sources="props.simProps" />
   </div>
-      <!-- Plot Component -->
-    <TimePlot
-      ref="timePlotRef"
-      :pause="props.plotPause"
-      :update_intervals="props.plotUpdateIntervals"
-      :sources="props.simProps"
-    />
-     </div>
 </template>
 
 <script setup lang="ts">
