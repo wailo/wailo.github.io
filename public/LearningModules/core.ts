@@ -1,9 +1,9 @@
 import type { EmbindModule } from "../flightsimulator_exec"
 export type { FlapSelector, FlapSelectorValue, GearSelector, GearSelectorValue } from "../flightsimulator_exec";
 import type { SimulationProperties, SimData} from "../../src/siminterfac"
-// import { apiMetadata } from "../flightsimulator_exec_meta";
+import { apiMetadata } from "../flightsimulator_exec_meta";
 
-export declare const simProps : Record<string, SimulationProperties>;
+export declare const simProps : Record<keyof typeof apiMetadata, SimulationProperties>;
 export declare let simControls :EmbindModule;
 export declare let simData : SimData;
 export declare function plotView(simPropitem: SimulationProperties, state: boolean): void;
