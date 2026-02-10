@@ -490,6 +490,7 @@ onMounted(async () => {
       function isTextInput() {
         const activeElement = document.activeElement;
         return (
+          activeElement?.role === "textbox" ||
           activeElement?.tagName === "INPUT" ||
           activeElement?.tagName === "TEXTAREA" ||
           (activeElement as HTMLElement)?.isContentEditable

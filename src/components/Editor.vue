@@ -269,16 +269,16 @@ const extractRegex = /\/\/\s*@editor-extract-start([\s\S]*?)\/\/\s*@editor-extra
 const matches = [...simDataTypesRaw.matchAll(extractRegex)].map(m => m[1].trim());
 const SimPropsStr = matches.join('\n\n').replaceAll("export", "");
 
-monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
-  target: monaco.languages.typescript.ScriptTarget.ES2020,
+monaco.typescript.typescriptDefaults.setCompilerOptions({
+  target: monaco.typescript.ScriptTarget.ES2020,
   allowNonTsExtensions: true,
   // moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-  module: monaco.languages.typescript.ModuleKind.ESNext,
+  module: monaco.typescript.ModuleKind.ESNext,
   noEmit: true,
   strict: true,
   //typeRoots: ['node_modules/@types'],
 });
-  monaco.languages.typescript.typescriptDefaults.addExtraLib(
+  monaco.typescript.typescriptDefaults.addExtraLib(
     `${EmbindModuleStr}
     ${SimPropsStr}
     ${stripImportsExports(coreSimTsTypesRaw)}
