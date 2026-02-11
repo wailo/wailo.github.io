@@ -296,7 +296,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, onBeforeMount } from "vue";
+import { ref, reactive, computed, onMounted, onUnmounted, onBeforeMount, ComputedRef } from "vue";
 import Panel from "./Panel.vue";
 import ButtonSwitch from "./ButtonSwitch.vue";
 import wButton from "./wButton.vue"
@@ -424,18 +424,10 @@ const dataDisplayRef = ref<InstanceType<typeof SimDataDisplay> | null>(null); //
 const markdownRef = ref<InstanceType<typeof MarkDown> | null>(null); // Use the MarkDown component type
 const accountsComponentRef = ref<InstanceType<typeof Accounts> | null>(null); // Use the Accounts component type
 
-let autopilotControlsButtons: ReturnType<
-  typeof computed<ReturnType<typeof getAutopilotProperties>>
->;
+let autopilotControlsButtons : ComputedRef<ReturnType<typeof getAutopilotProperties>>;
+let autopilotControlsButtonsInputs : ComputedRef<ReturnType<typeof getAutopilotProperties>>;
+let simulationProps : ComputedRef<ReturnType<typeof getSimulationParameters>>;
 
-let autopilotControlsButtonsInputs: ReturnType<
-  typeof computed<ReturnType<typeof getAutopilotProperties>>
->;
-
-
-let simulationProps: ReturnType<
-  typeof computed<ReturnType<typeof getSimulationParameters>>
->;
 
 let simUpdateInterval: number | undefined;
 let manager: RemoteCallManager;
