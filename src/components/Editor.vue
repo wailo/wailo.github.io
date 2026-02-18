@@ -222,6 +222,54 @@ const props = defineProps({
   }
 });
 
+// ------------------------
+// ts-interface-extractor.ts
+// ------------------------
+import * as ts from "typescript";
+
+/**
+ * Extracts all interface source blocks from the given source text,
+ * excluding a specific interface name (case‑sensitive).
+ *
+ * @param sourceText   The entire file contents as a string.
+ * @param excludeName  Name of an interface to skip, e.g. "WasmModule".
+ * @returns Array of strings – each is the full interface definition.
+ */
+function extractInterfaces(
+  sourceText: string,
+  excludeName: string = "WasmModule"
+): string[] {
+  // Parse the text into a SourceFile AST node
+  const sourceFile = ts.createSourceFile(
+    /*fileName=*/"temp.ts",
+    /*sourceText=*/sourceText,
+    /*languageVersion=*/ts.ScriptTarget.Latest,
+    /*setParentNodes=*/true,
+    /*scriptKind=*/ts.ScriptKind.TS
+  );
+
+  const interfaces: string[] = [];
+
+  // Helper to recurse through the tree
+  function visit(node: ts.Node) {
+    if (ts.isInterfaceDeclaration(node)) {
+      const name = node.name.text;
+      if (name !== excludeName) {
+        // Grab the *exact* text that the compiler considers the interface
+        const { pos, end } = node;
+        const text = sourceText.slice(pos, end);
+        interfaces.push(text);
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+
+  return interfaces;
+}
+
+
 // Remove import and declare statements and replace export with a empty string
   function stripImportsExports(input: string): string {
     return input
@@ -254,15 +302,8 @@ const setupMonaco = (_editor: monaco.editor.IStandaloneCodeEditor) => {
   // Capture the simulator interface for intellisense
 
   // Get functions interface
-  let regexMatch = simApiTypesRaw.match(/interface EmbindModule\s*\{([^}]*)\}/g);
-  let EmbindModuleStr;
-  if (!regexMatch) {
-    console.log(
-      "// Error while parsing EmbindModule api types. Autocompletion will not be available",
-    );
-  } else {
-    EmbindModuleStr = regexMatch[0];
-  }
+  let emscriptenGeneratedInterfaceStr = extractInterfaces(simApiTypesRaw).join('\n\n');
+
 
   // This regex matches everything between the markers
 const extractRegex = /\/\/\s*@editor-extract-start([\s\S]*?)\/\/\s*@editor-extract-end/g;
@@ -279,7 +320,7 @@ monaco.typescript.typescriptDefaults.setCompilerOptions({
   //typeRoots: ['node_modules/@types'],
 });
   monaco.typescript.typescriptDefaults.addExtraLib(
-    `${EmbindModuleStr}
+    `${stripImportsExports(emscriptenGeneratedInterfaceStr)}
     ${SimPropsStr}
     ${stripImportsExports(coreSimTsTypesRaw)}
     `,
