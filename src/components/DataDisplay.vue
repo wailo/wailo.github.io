@@ -69,7 +69,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onBeforeUnmount, PropType } from 'vue'
 import Fuse from 'fuse.js'
-import type { SimulationProperties } from '../siminterfac'
+import { type SimulationProperties } from '../siminterfac'
 import TimePlot from './TimePlot.vue'
 
 // Props

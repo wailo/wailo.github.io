@@ -21,11 +21,13 @@ notifyUser(
 
 // Pre-configuration befroe trimming the aircraft.
 const preConfiguration = () => {
-    simControls.api_set_flaps_selector_position(simControls.FlapSelector.TWENTY.value);
+    flightModel.set_flaps_selector_position(simControls.B747FlapSelector.TWENTY);
 }
 
 dataDisplayReset();
-await repositionWithAutopilot(targetAltitude, targetSpeed, targetHeading, 10000, preConfiguration);
+simControls.simulation.reset_simulation();
+const flightModel = simControls.simulation.set_flight_model_b747();
+await repositionWithAutopilot(flightModel, targetAltitude, targetSpeed, targetHeading, 10000, preConfiguration);
 // plotView(simProps.api_aileron_position, true);
 plotView(simProps.heading, true);
 plotView(simProps.heading_dot, true);
@@ -33,8 +35,8 @@ plotView(simProps.sideslip, true);
 plotView(simProps.rudder_position, true);
 // plotView(simProps.pitch_deg, true);
 // plotView(simProps.ias_speed_knots, true);
-simControls.api_set_aileron_position(0.0);
-simControls.api_set_rudder_position(0.0);
+flightModel.set_aileron_position(0.0);
+flightModel.set_rudder_position(0.0);
 await waitFor(5000);
 
 notifyUser(
@@ -42,13 +44,13 @@ notifyUser(
     `Applying step rudder input for **2.5 seconds** in each direction, then returning to neutral position.`
 );
 // Show motions cues
-simControls.api_set_motion_cues(true)
+simControls.simulation.set_motion_cues(true)
 await waitFor(5000);
-simControls.api_set_rudder_position(-1.0);
+flightModel.set_rudder_position(-1.0);
 await waitFor(2500);
-simControls.api_set_rudder_position(1.0);
+flightModel.set_rudder_position(1.0);
 await waitFor(3000);
-simControls.api_set_rudder_position(0.0);
+flightModel.set_rudder_position(0.0);
 
 notifyUser(
     "**Dutch Roll Mode**",
@@ -63,7 +65,7 @@ notifyUser(
   - **Heading Indicator**	Heading slowly wobbles back and forth.
 `
 );
-simControls.api_set_simulation_speed(1.0);
+simControls.simulation.set_simulation_speed(1.0);
 await waitFor(40000);
 
 notifyUser(
@@ -72,5 +74,4 @@ notifyUser(
 This marks the end of the Dutch Roll mode demonstration.`
 );
 await waitFor(10000);
-simControls.api_set_simulation_speed(1);
-// simControls.api_set_autopilot(true);
+// simControls.fm.set_autopilot(true);

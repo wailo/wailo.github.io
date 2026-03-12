@@ -365,7 +365,6 @@ const executeCode = async () => {
     // Create a function with context binding
     const userScriptFunc = new Function(`
 const simControls = arguments[0];
-const simData = simControls.simData;
 const simProps = arguments[1];
 const dataView = arguments[2];
 const plotView = arguments[3];

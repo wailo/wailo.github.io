@@ -1,15 +1,16 @@
-import type { EmbindModule } from "../flightsimulator_exec"
-export type { FlapSelector, FlapSelectorValue, GearSelector, GearSelectorValue } from "../flightsimulator_exec";
-import type { SimulationProperties, SimData} from "../../src/siminterfac"
-import { apiMetadata } from "../flightsimulator_exec_meta";
+export type { C172FlapSelector,
+  B747FlapSelector,
+  C172GearSelector,
+  B747GearSelector } from "../flightsimulator_exec";
+import  { type ExtendedMainModule, type SimulationProperties, type FlightModelInstance} from "../../src/siminterfac"
+// import { apiMetadata } from "../flightsimulator_exec_meta";
 
-export declare const simProps : Record<keyof typeof apiMetadata, SimulationProperties>;
-export declare let simControls :EmbindModule;
-export declare let simData : SimData;
+// export declare const simProps : Record<keyof typeof apiMetadata, SimulationProperties>;
+export declare let simControls : ExtendedMainModule;
 export declare function plotView(simPropitem: SimulationProperties, state: boolean): void;
 export declare function dataView(simPropitem: SimulationProperties, state: boolean): void;
 export declare function dataDisplayReset(): void;
-export declare function notifyUser(title: string, body: string, timeOut?: number): void
+export declare function notifyUser(title: string, body?: string, timeOut?: number): void
 export declare function checkPoint(content: string): void;
 
 // Create a global singleton cache
@@ -19,10 +20,20 @@ if (!globalScope.__myAppTimeoutCache) {
 }
 const cache: number[] = globalScope.__myAppTimeoutCache;
 
-export async function repositionWithAutopilot(target_altitude: number, target_speed: number,
+export async function repositionWithAutopilot(flightModel : FlightModelInstance, target_altitude: number, target_speed: number,
      target_heading: number, timeOut :number = 10000, preConfiguration? : Function ) : Promise<boolean> {
+
   // Reset the simulation
-  simControls.api_set_simulation_reset();
+  //  simControls.simulation.reset_simulation();
+
+  // Reinitialize the flight model reference after reset
+  const flight_model_type = simControls.simulation.flight_model;
+  if (flight_model_type == simControls.FlightModel.B747) {
+    flightModel = simControls.simulation.set_flight_model_b747()
+  }
+  else if (flight_model_type == simControls.FlightModel.C172) {
+    flightModel = simControls.simulation.set_flight_model_c172()
+  }
 
   // Invoke pre configuration function if provided
    if (preConfiguration) {
@@ -32,64 +43,76 @@ export async function repositionWithAutopilot(target_altitude: number, target_sp
   // Wait for 1000 ms (1 second)
   await waitFor(1000);
 
-  // Set Simulation speed to 100
-  simControls.api_set_simulation_speed(500);
-  simControls.api_set_engine_throttle_position(1);
-  // Toggle the autopilot master switch state.
-  simControls.api_set_autopilot(true);
-  simControls.api_set_autopilot_auto_trim(true);
-  simControls.api_set_autopilot_ias_speed_target(target_speed);
-  simControls.api_set_autopilot_altitude_target(target_altitude);
-  simControls.api_set_autopilot_heading_target(target_heading);
+  // Set Simulation speed to 500
+  simControls.simulation.set_simulation_speed(500);
 
-  // Wait for speed to cross 180 knots
+  flightModel.set_engine_throttle_position(1);
+  // Toggle the autopilot master switch state.
+  flightModel.set_autopilot_master_switch(true);
+  flightModel.set_autopilot_auto_trim(true);
+  flightModel.set_autopilot_speed_indicated_target(target_speed);
+  flightModel.set_autopilot_altitude_target(target_altitude);
+  flightModel.set_autopilot_heading_target(target_heading);
+
+  let min_takeoff_speed = 0;
+
+  if (flight_model_type == simControls.FlightModel.B747) {
+    min_takeoff_speed = 180; // Minimum takeoff speed for B747 in knots (approximate)
+  }
+  else if (flight_model_type == simControls.FlightModel.C172) {
+    min_takeoff_speed = 80; // Minimum takeoff speed for C172 in knots (approximate)
+  }
+
+  // Wait for speed to cross minimum takeoff speed in knots
   await waitForCondition(() => {
-    return simData.api_ias_speed_knots > Math.min(180, target_speed);
+    return flightModel.speed_indicated_knots > Math.max(min_takeoff_speed, target_speed);
   });
 
   // Toggle vertical speed hold
-  // xsimControls.api_set_autopilot_vertical_speed_hold(true)
-  simControls.api_set_autopilot_altitude_hold(true);
+  // xsimControls.simulation.set_autopilot_vertical_speed_hold(true)
+  flightModel.set_autopilot_altitude_hold(true);
 
   // Toggle speed hold
-  simControls.api_set_autopilot_ias_speed_hold(true);
+  flightModel.set_autopilot_speed_indicated_hold(true);
 
   // Toggle Heading hold
-  simControls.api_set_autopilot_heading_hold(true);
+  flightModel.set_autopilot_heading_hold(true);
 
   // Wait until the altitude crosses 300
   await waitForCondition(() => {
-    return simData.api_altitude >= Math.min(300, target_altitude);
+    return flightModel.altitude_ft >= Math.min(300, target_altitude);
   });
 
   // Landing gear up
-  simControls.api_set_landing_gear_selector_position(simControls.GearSelector.UP.value);
+  if (flight_model_type == simControls.FlightModel.B747) {
+    flightModel.set_landing_gear_selector_position(simControls.B747GearSelector.UP);
+  }
 
   // Wait until the altitude crosses 300
   const success = await waitForCondition(() => {
-    return Math.abs(simData.api_altitude - target_altitude) < 0.01 &&
-    Math.abs(simData.api_ias_speed_knots - target_speed) < 0.01 &&
-    Math.abs(simData.api_heading_deg - target_heading) < 0.1 &&
-    Math.abs(simData.api_elevator_position) < 0.001;
+    return Math.abs(flightModel.altitude_ft - target_altitude) < 2 &&
+    Math.abs(flightModel.speed_indicated_knots - target_speed) < 0.1 &&
+    Math.abs(flightModel.heading_deg - target_heading) < 0.1 &&
+    Math.abs(flightModel.elevator_position) < 0.005;
   }, 400, 40, timeOut);
 
   if (!success) {
     notifyUser("Reposition Failed", `Failed to reposition to altitude: ${target_altitude} ft, speed: ${target_speed} knots, heading: ${target_heading}° within ${timeOut / 1000} seconds.`);
-    simControls.api_set_simulation_speed(1);
-    simControls.api_set_simulation_pause(true);
+    simControls.simulation.set_simulation_speed(1);
+    simControls.simulation.set_simulation_pause(true);
     return false;
   }
 
   // Restore Simulation speed to 1
-  simControls.api_set_simulation_speed(1);
+  simControls.simulation.set_simulation_speed(1);
   await waitFor(100);
 
   // Turn off autopilot
-  simControls.api_set_autopilot(false);
-  simControls.api_set_autopilot_auto_trim(false);
-  simControls.api_set_autopilot_altitude_hold(false);
-  simControls.api_set_autopilot_ias_speed_hold(false );
-  simControls.api_set_autopilot_heading_hold(false);
+  flightModel.set_autopilot_master_switch(false);
+  flightModel.set_autopilot_auto_trim(false);
+  flightModel.set_autopilot_altitude_hold(false);
+  flightModel.set_autopilot_speed_indicated_hold(false );
+  flightModel.set_autopilot_heading_hold(false);
 
   await waitFor(100);
   return success

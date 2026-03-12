@@ -1,4 +1,4 @@
-import {repositionWithAutopilot, simControls, simData, waitFor, dataDisplayReset, notifyUser} from "./core"
+import {repositionWithAutopilot, simControls, waitFor, dataDisplayReset, notifyUser} from "./core"
 // =========================
 // 📘 Introduction
 // =========================
@@ -13,29 +13,32 @@ notifyUser(
   );
   
   dataDisplayReset();
+
+  const flightModel = simControls.simulation.set_flight_model_b747()
+
   // ✈️ Reposition and stabilize at level flight
-  await repositionWithAutopilot(10000, 280, 270);
+  await repositionWithAutopilot(flightModel, 10000, 280, 270);
   notifyUser("⚙️ Thrust Adjustment", "We will now increase and reduce thrust to observe effects.");
   
   // 🧪 Capture initial cruise throttle setting
-  const initialThrottle = simData.api_engine_throttle_position;
+  const initialThrottle = flightModel.engine_throttle_position;
   
   // 🔓 Disable autopilot controls to allow natural response to thrust changes
-  simControls.api_set_autopilot_ias_speed_hold(false);
-  simControls.api_set_autopilot_altitude_hold(false);
+  flightModel.set_autopilot_speed_indicated_hold(false);
+  flightModel.set_autopilot_altitude_hold(false);
   
   // ⏳ Wait briefly before adjustments
   await waitFor(2000);
   
   // 🧭 Helper to show current speed and pitch
   const notifyFlightData = () => {
-    const speed = simData.api_ias_speed_knots.toFixed(1);
-    const pitch = simData.api_pitch_deg.toFixed(1);
+    const speed = flightModel.speed_indicated_knots.toFixed(1);
+    const pitch = flightModel.pitch_deg.toFixed(1);
     notifyUser("📈 Live Data", `💨 Speed: ${speed} knots\n🧭 Pitch: ${pitch}°`);
   };
   
   // 🔼 Increase thrust to max
-  simControls.api_set_engine_throttle_position(1);
+  flightModel.set_engine_throttle_position(1);
   notifyUser("🔼 Increasing Thrust", "Throttle set to maximum. Observe speed and pitch.");
   for (let i = 0; i < 5; i++) {
     await waitFor(2000);
@@ -43,7 +46,7 @@ notifyUser(
   }
   
   // 🔽 Reduce thrust to idle
-  simControls.api_set_engine_throttle_position(0);
+  flightModel.set_engine_throttle_position(0);
   notifyUser("🔽 Reducing Thrust", "Throttle set to idle. Observe descent or deceleration.");
   for (let i = 0; i < 5; i++) {
     await waitFor(2000);
@@ -52,7 +55,7 @@ notifyUser(
   
   // 🔁 Restore original cruise throttle
   notifyUser("🔁 Cruise Thrust Restored", `Throttle reset to initial value (${(initialThrottle * 100).toFixed(0)}%). Aircraft will stabilize.`);
-  simControls.api_set_engine_throttle_position(initialThrottle);
+  flightModel.set_engine_throttle_position(initialThrottle);
   
   // =========================
   // 🧠 Post-Lesson Assessment

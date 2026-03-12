@@ -1,4 +1,4 @@
-import {repositionWithAutopilot, simControls, simData, simProps, waitFor, waitForCondition, dataView, dataDisplayReset, notifyUser } from "./core"
+import {repositionWithAutopilot, simControls, simProps, waitFor, waitForCondition, dataView, dataDisplayReset, notifyUser } from "./core"
 // ✈️ Level Flight Demonstration with Dynamic Changes
 
 dataDisplayReset();
@@ -31,7 +31,7 @@ await waitFor(1000);
 notifyUser("🛫 Takeoff and Setup", "Repositioning and setting autopilot for level flight...");
 await waitFor(3000);
 
-await repositionWithAutopilot(targetAltitude, targetSpeed, targetHeading);
+await repositionWithAutopilot(simControls.fm, targetAltitude, targetSpeed, targetHeading);
 
 notifyUser(
   "🛠️ Configuring Autopilot",
@@ -40,22 +40,22 @@ notifyUser(
 await waitFor(4000);
 
 // 🛠 Set target values
-simControls.api_set_autopilot(true);
+simControls.fm.set_autopilot_master_switch(true);
 await waitFor(500);
-simControls.api_set_autopilot_ias_speed_target(targetSpeed);
+simControls.fm.set_autopilot_speed_indicated_target(targetSpeed);
 await waitFor(500);
-simControls.api_set_autopilot_altitude_target(targetAltitude);
+simControls.fm.set_autopilot_altitude_target(targetAltitude);
 await waitFor(500);
-simControls.api_set_autopilot_heading_target(targetHeading);
+simControls.fm.set_autopilot_heading_target(targetHeading);
 await waitFor(500);
 
 // ✅ Now explicitly engage hold modes!
-simControls.api_set_autopilot_altitude_hold(true);
+simControls.fm.set_autopilot_altitude_hold(true);
 await waitFor(500);
-simControls.api_set_autopilot_ias_speed_hold(true);
+simControls.fm.set_autopilot_speed_indicated_hold(true);
 await waitFor(500);
 // (Optional) Heading hold
-simControls.api_set_autopilot_heading_hold(true);
+simControls.fm.set_autopilot_heading_hold(true);
 await waitFor(2000);
 
 // 👀 Observation Mode
@@ -89,10 +89,10 @@ dataView(simProps.drag, true);
 await waitFor(1000);
 
 // 🔧 Set new target speed
-simControls.api_set_autopilot_ias_speed_target(acceleratedSpeed);
+simControls.fm.set_autopilot_speed_indicated_target(acceleratedSpeed);
 
 // ✅ Engage speed hold again to control the new speed
-simControls.api_set_autopilot_ias_speed_hold(true);
+simControls.fm.set_autopilot_speed_indicated_hold(true);
 
 // 🕐 Wait until speed is reached
 notifyUser(
@@ -100,7 +100,7 @@ notifyUser(
   `Waiting until indicated airspeed reaches ${acceleratedSpeed} knots...`
 );
 await waitFor(3000);
-await waitForCondition(() => simData.api_ias_speed_knots >= acceleratedSpeed - 0.01); // small buffer
+await waitForCondition(() => simControls.fm.speed_indicated_knots >= acceleratedSpeed - 0.01); // small buffer
 await waitFor(2000);
 
 // 🛠️ Stabilize at New Speed
@@ -133,10 +133,10 @@ dataView(simProps.weight, true);
 await waitFor(1000);
 
 // 🔧 Set new target altitude
-simControls.api_set_autopilot_altitude_target(climbAltitude);
+simControls.fm.set_autopilot_altitude_target(climbAltitude);
 
 // ✅ Engage altitude hold again after setting new altitude
-simControls.api_set_autopilot_altitude_hold(true);
+simControls.fm.set_autopilot_altitude_hold(true);
 
 // 🕐 Wait until altitude is reached
 notifyUser(
@@ -144,7 +144,7 @@ notifyUser(
   `Waiting until the aircraft climbs to ${climbAltitude} ft... Observe the change in Lift vs Weight.`
 );
 await waitFor(3000);
-await waitForCondition(() => simData.api_altitude >= climbAltitude - 5); // allow a 50 ft buffer
+await waitForCondition(() => simControls.fm.altitude_ft >= climbAltitude - 5); // allow a 50 ft buffer
 await waitFor(2000);
 
 // 🛠️ Stabilize at New Altitude

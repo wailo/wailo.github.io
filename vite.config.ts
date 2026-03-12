@@ -3,6 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import checker from 'vite-plugin-checker'
 import transpileCorePlugin from './vite-plugin-transpile-core';
 import { execSync } from 'child_process'
+import vueDevTools from 'vite-plugin-vue-devtools'
 
 // Execute git command to get the short SHA
 const gitHash = execSync('git rev-parse --short HEAD').toString().trim()
@@ -18,7 +19,7 @@ function getGitSha() {
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [vue(), checker({
+  plugins: [vueDevTools(), vue(), checker({
     // e.g. use TypeScript check
     vueTsc: true,
   }),

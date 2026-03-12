@@ -1,4 +1,4 @@
-import {repositionWithAutopilot, simControls, simData, simProps, waitFor, waitForCondition, dataDisplayReset, notifyUser } from "./core"
+import {repositionWithAutopilot, simControls, simProps, waitFor, waitForCondition, dataDisplayReset, notifyUser } from "./core"
 // 📘 Lesson 1: Monitor Lift Generation in Flight
 notifyUser(
   "📘 Lesson: Monitor Lift Generation",
@@ -16,18 +16,18 @@ let descentMetrics = { pitch: "", aoa: "", speed: "", cl: "" };
 
 // Snapshot function
 const getLiftSnapshot = async () => {
-  const cl = simData.api_cl.toFixed(3);
-  const pitch = simData.api_pitch_deg.toFixed(1);
-  const aoa = simData.api_aoa_deg.toFixed(1);
-  const speed = simData.api_ias_speed_knots.toFixed(1);
+  const cl = simControls.fm.cl.toFixed(3);
+  const pitch = simControls.fm.pitch_deg.toFixed(1);
+  const aoa = simControls.fm.aoa_deg.toFixed(1);
+  const speed = simControls.fm.speed_indicated_knots.toFixed(1);
 
   notifyUser(
     "📊 Snapshot",
     `| **Metric** | **Value** |\n|------------|-----------|\n| 🧭 **Pitch** | ${pitch}° |\n| 🎯 **AoA** | ${aoa}° |\n| 💨 **Speed** | ${speed} knots |\n| 🪂 **Cl** | ${cl} |`
   );
-  simControls.api_set_simulation_pause(true);
+  simControls.simulation.set_simulation_pause(true);
   await waitFor(500);
-  await waitForCondition(() => simData.api_simulation_pause === false);
+  await waitForCondition(() => simControls.simulation.simulation_pause === false);
 
   return { pitch, aoa, speed, cl };
 };
@@ -36,11 +36,11 @@ const getLiftSnapshot = async () => {
 const targetVerticalSpeed = 3000; // feet per minute
 
 dataDisplayReset();
-await repositionWithAutopilot(15000, 250, 90);
+await repositionWithAutopilot(simControls.fm, 15000, 250, 90);
 
-simControls.api_set_autopilot(true);
-simControls.api_set_autopilot_ias_speed_hold(true);
-simControls.api_set_autopilot_altitude_hold(true);
+simControls.fm.set_autopilot_master_switch(true);
+simControls.fm.set_autopilot_speed_indicated_hold(true);
+simControls.fm.set_autopilot_altitude_hold(true);
 
 notifyUser("🛫 Level Flight", "We are now stabilized in straight and level flight.\nObserve Cl, pitch, and AoA.");
 await waitFor(3000);
@@ -48,27 +48,27 @@ levelMetrics = await getLiftSnapshot();
 await waitFor(2000);
 
 // 🔼 Begin Climb
-simControls.api_set_autopilot_vertical_speed_target(targetVerticalSpeed);
-simControls.api_set_autopilot_vertical_speed_hold(true);
+simControls.fm.set_autopilot_vertical_speed_target(targetVerticalSpeed);
+simControls.fm.set_autopilot_vertical_speed_hold(true);
 notifyUser("🔼 Climbing", "We're increasing pitch. Watch how Cl and AoA respond.");
 
-await waitForCondition(() => Math.abs(simData.api_vertical_speed - targetVerticalSpeed) < 500);
+await waitForCondition(() => Math.abs(simControls.fm.vertical_speed - targetVerticalSpeed) < 500);
 await waitFor(3000);
 climbMetrics = await getLiftSnapshot();
 await waitFor(5000);
 
 // 🔽 Begin Descent
 notifyUser("🔽 Descending", "Pitching down. Watch how Cl and AoA change.");
-simControls.api_set_autopilot_vertical_speed_target(-targetVerticalSpeed);
-await waitForCondition(() => Math.abs(simData.api_vertical_speed + targetVerticalSpeed) < 500);
+simControls.fm.set_autopilot_vertical_speed_target(-targetVerticalSpeed);
+await waitForCondition(() => Math.abs(simControls.fm.vertical_speed + targetVerticalSpeed) < 500);
 descentMetrics = await getLiftSnapshot();
 await waitFor(5000);
 
 // 🔁 Return to Level Flight
 notifyUser("🔁 Returning to Level Flight", "Resetting vertical speed to 0.");
-simControls.api_set_simulation_speed(10);
-simControls.api_set_autopilot_vertical_speed_target(0);
-waitForCondition(() => Math.abs(simData.api_vertical_speed) < 1).then(() => simControls.api_set_simulation_speed(1));
+simControls.simulation.set_simulation_speed(10);
+simControls.fm.set_autopilot_vertical_speed_target(0);
+waitForCondition(() => Math.abs(simControls.fm.vertical_speed) < 1).then(() => simControls.simulation.set_simulation_speed(1));
 
 const combinedTable = `
 | **Metric**       | **Level Flight**       | **Climb**             | **Descent**           |
