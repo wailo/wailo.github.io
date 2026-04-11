@@ -65,18 +65,13 @@ export async function repositionWithAutopilot(context: ScriptContext, target_alt
   target_heading: number, timeOut: number = 10000, preConfiguration?: Function): Promise<boolean> {
 
   const simulation = context.controls.simulation;
-  const flightModel = context.controls.flightModel;
+
+  // Reset flight model
+  simulation.reset_flightmodel();
 
   // Reinitialize the flight model reference after reset
+  const flightModel = context.controls.flightModel;
   const flight_model_type = simulation.flight_model;
-
-  // Invoke pre configuration function if provided
-  if (preConfiguration) {
-    preConfiguration();
-  };
-
-  // Wait for 1000 ms (1 second)
-  await waitFor(1000);
 
   // Set Simulation speed to 500
   simulation.set_simulation_speed(500);
@@ -123,6 +118,11 @@ export async function repositionWithAutopilot(context: ScriptContext, target_alt
     // Workaround until reposition is exported.
     simulation.set_flight_model_b747().set_landing_gear_selector_position(context.controls.B747GearSelector.UP);
   }
+
+   // Invoke pre configuration function if provided
+  if (preConfiguration) {
+    preConfiguration();
+  };
 
   // Wait until all condition are met.
   const success = await waitForCondition(() => {
