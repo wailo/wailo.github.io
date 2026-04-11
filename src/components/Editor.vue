@@ -1,160 +1,138 @@
 <template>
   <div class="flex h-full w-full">
-  <!-- Sidebar -->
-  <div
-    class="transition-all duration-50 border-r border-slate-700 flex flex-col"
-    :class="isEditing === false ? 'w-full' : 'w-1/5'"
-    @click="isEditing = false"
-  >
-    <!-- Header -->
-    <div class="px-4 mb-1 border-b border-slate-700 text-xs font-semibold">
-      {{ ModuleTitle || "Select a Module" }}
+    <!-- Sidebar -->
+    <div class="transition-all duration-50 border-r border-slate-700 flex flex-col"
+      :class="isEditing === false ? 'w-full' : 'w-1/5'" @click="isEditing = false">
+      <!-- Header -->
+      <div class="px-4 mb-1 border-b border-slate-700 text-xs font-semibold">
+        {{ ModuleTitle || "Select a Module" }}
+      </div>
+
+      <!-- File Tree -->
+      <div class="flex-1 overflow-y-auto p-2">
+        <button @click.stop="() => {
+          isEditing = true;
+          code = `
+export async function main(context: ScriptContext) {
+      // You can write a code,
+      // or ask AI to write a code for you
+      // example: Reposition to FL150, speed 230 knots, heading 90 degrees
+
+      context.notifyUser('Hello, World!');
+      const simControls = context.controls;
+      const simProps = context.props;
+      const repositionWithAutopilot = context.repositionWithAutopilot;
+      const waitForCondition = context.waitForCondition;
+      const dataView = context.dataView;
+      const plotView = context.plotView;
+      const dataDisplayReset = context.dataDisplayReset;
+      const notifyUser = context.notifyUser;
+      const checkPoint = context.checkPoint;
+      const waitFor = context.waitFor;
+      const flightmodel = simControls.simulation.set_flight_model_b747();
+
+}`}" class="px-1 rounded text-secondary hover:bg-slate-600 border border-simElementBorder">
+          New</button>
+        <hr class="my-2 border-slate-700" />
+        <ul>
+          <li v-for="(folder, folderName) in fileTree" :key="folderName">
+            <div @click.stop="toggleFolder(folderName); isEditing = false"
+              class="cursor-pointer font-semibold text-secondary hover:text-white mt-1">
+              - {{ folderName }}
+            </div>
+            <ul v-show="openFolders[folderName]" class="ml-4">
+              <li v-for="file in folder" @click="selectedFile = file.name" :key="file.name"
+                class="flex justify-between items-start rounded hover:bg-slate-700" :class="[
+                  'transition-colors duration-200',
+                  selectedFile === file.name ? 'bg-simInputBackground' : 'text-secondary',
+                  selectedFile === file.name && isScriptRunning ? 'animate-pulse' : '',
+                ]">
+                <div class="flex-1 cursor-default">
+                  + {{ file.name }}
+                </div>
+
+                <!-- Horizontal Button Row -->
+                <div class="flex flex-row gap-1 whitespace-nowrap items-center">
+                  <button class="px-1 rounded text-secondary hover:bg-slate-600 border border-simElementBorder"
+                    title="Edit" @click.stop="async () => {
+                      await loadFileContent(file);
+                      isEditing = true;
+                    }">
+                    Edit
+                  </button>
+                  <button class="px-1 rounded text-secondary hover:bg-slate-600 border border-simElementBorder"
+                    :title="isScriptRunning ? 'Stop' : 'Run'" @click.stop="async () => {
+                      await loadFileContent(file);
+                      isScriptRunning ? reset() : executeCode();
+                    }">
+                    {{ isScriptRunning && selectedFile === file.name ? 'Stop' : 'Play' }}
+                  </button>
+
+                  <button class="px-1 rounded text-secondary hover:bg-slate-600 border border-simElementBorder"
+                    title="Broadcast" @click.stop="async () => {
+                      await loadFileContent(file);
+                      broadacast(selectedFile, code)
+                    }">
+                    Broadcast
+                  </button>
+
+                </div>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </div>
     </div>
 
-    <!-- File Tree -->
-    <div class="flex-1 overflow-y-auto p-2">
-      <button @click.stop="() => {
-        isEditing = true;
-        code = `// You can write a code, or ask AI to write a code for you\n// example: Reposition to FL150, speed 230 knots, heading 90 degrees\n`}"
-        class="px-1 rounded text-secondary hover:bg-slate-600 border border-simElementBorder">
-        New</button>
-      <hr class="my-2 border-slate-700" />
-      <ul>
-        <li v-for="(folder, folderName) in fileTree" :key="folderName">
-          <div
-            @click.stop="toggleFolder(folderName); isEditing = false"
-            class="cursor-pointer font-semibold text-secondary hover:text-white mt-1"
-          >
-            - {{ folderName }}
-          </div>
-          <ul v-show="openFolders[folderName]" class="ml-4">
-<li
-  v-for="file in folder"
-  @click="selectedFile = file.name"
-  :key="file.name"
-  class="flex justify-between items-start rounded hover:bg-slate-700"
-  :class="[
-  'transition-colors duration-200',
-  selectedFile === file.name ? 'bg-simInputBackground' : 'text-secondary',
-  selectedFile === file.name && isScriptRunning ? 'animate-pulse' : '',
-]"
->
-  <div class="flex-1 cursor-default">
-    + {{ file.name }}
-  </div>
+    <!-- Editor -->
+    <div v-if="isEditing" class="flex flex-col min-w-0 transition-all duration-300 w-4/5">
+      <!-- Monaco Editor -->
+      <div class="flex-1 overflow-auto">
+        <MonacoEditor theme="vs-dark" :options="options" language="typescript" v-model:value="code"
+          @editorWillMount="SetupTypes" @editorDidMount="setupMonaco" @click="isEditing = true" />
+      </div>
 
-  <!-- Horizontal Button Row -->
-   <div class="flex flex-row gap-1 whitespace-nowrap items-center">
-    <button
-  class="px-1 rounded text-secondary hover:bg-slate-600 border border-simElementBorder"
-  title="Edit"
-  @click.stop="async () => {
-    await loadFileContent(file);
-    isEditing = true;
-  }"
->
-  Edit
-</button>
-    <button
-  class="px-1 rounded text-secondary hover:bg-slate-600 border border-simElementBorder"
-  :title="isScriptRunning ? 'Stop' : 'Run'"
-  @click.stop="async () => {
-    await loadFileContent(file);
-    isScriptRunning ? reset() : executeCode();
-  }"
->
-  {{ isScriptRunning && selectedFile === file.name ? 'Stop' : 'Play' }}
-</button>
-
-<button
-  class="px-1 rounded text-secondary hover:bg-slate-600 border border-simElementBorder"
-  title="Broadcast"
-  @click.stop="async() => {
-    await loadFileContent(file);
-    broadacast(selectedFile, code)
-  }"
->
-  Broadcast
-</button>
-
-  </div>
-</li>
-          </ul>
-        </li>
-      </ul>
+      <!-- Controls -->
+      <div class="flex items-center gap-1 px-1 py-1 border-t border-slate-700 bg-[#1e1e2f]">
+        <button class="px-4 border transition"
+          :class="[isScriptRunning ? 'border-red-500 text-red-400 hover:bg-red-500/10' : 'border-green-500 text-green-400 hover:bg-green-500/10']"
+          @click="isScriptRunning === true ? reset() : executeCode()">
+          {{ isScriptRunning ? `■ Stop` : `▶ Run` }}
+        </button>
+        <button class="px-4 border  transition" @click="() => broadacast(selectedFile, code)">
+          ◉ Broadcast
+        </button>
+        <button class="px-4 border transition"
+          :class="[isLLMPending ? 'border-amber-500 text-amber-400 hover:bg-red-500/10' : 'border-secondary text-secondary']"
+          title="AI" @click.stop="async () => {
+            sendToLLM(code)
+          }">
+          Ask AI
+        </button>
+        <button class="px-4 border  transition" @click="isEditing = false">
+          x Close
+        </button>
+        <span v-if="executionResult" class="ml-auto truncate text-slate-300">
+          <span class="opacity-60">Result:</span> {{ executionResult }}
+        </span>
+      </div>
     </div>
   </div>
-
-  <!-- Editor -->
-  <div
-  v-if="isEditing"
-class="flex flex-col min-w-0 transition-all duration-300 w-4/5"
-  >
-    <!-- Monaco Editor -->
-    <div class="flex-1 overflow-auto">
-      <MonacoEditor
-        theme="vs-dark"
-        :options="options"
-        language="typescript"
-        v-model:value="code"
-        @editorDidMount="setupMonaco"
-        @click="isEditing = true"
-      />
-    </div>
-
-    <!-- Controls -->
-    <div
-      class="flex items-center gap-1 px-1 py-1 border-t border-slate-700 bg-[#1e1e2f]"
-    >
-      <button
-        class="px-4 border transition"
-        :class="[isScriptRunning ? 'border-red-500 text-red-400 hover:bg-red-500/10' : 'border-green-500 text-green-400 hover:bg-green-500/10']"
-        @click="isScriptRunning === true? reset(): executeCode()"
-      >
-        {{isScriptRunning? `■ Stop`:`▶ Run`}}
-      </button>
-      <button
-        class="px-4 border  transition"
-        @click="() => broadacast(selectedFile, code)"
-      >
-        ◉ Broadcast
-      </button>
-        <button
-         class="px-4 border transition"
-        :class="[isLLMPending ? 'border-amber-500 text-amber-400 hover:bg-red-500/10' : 'border-secondary text-secondary']"
-  title="AI"
-  @click.stop="async() => {
-    sendToLLM(code)
-  }"
->
-  Ask AI
-</button>
-            <button
-        class="px-4 border  transition"
-        @click="isEditing = false"
-      >
-        x Close
-      </button>
-      <span v-if="executionResult" class="ml-auto truncate text-slate-300">
-        <span class="opacity-60">Result:</span> {{ executionResult }}
-      </span>
-    </div>
-  </div>
-</div>
 
 </template>
 
 <script setup lang="ts">
 import { ref, PropType, onMounted } from "vue";
-import { ExtendedMainModule, SimulationProperties} from "../siminterfac.ts";
-import simDataTypesRaw from "../../public/flightsimulator_exec_meta.ts?raw";
-import simApiTypesRaw from "../../public/flightsimulator_exec.d.ts?raw";
+import { ExtendedMainModule, repositionWithAutopilot, SimulationProperties, waitFor, waitForCondition } from "../core.ts";
+import * as ts_compiler from 'typescript'
 
-import {resetTimeouts} from "../../public/LearningModules/core.ts"
+import modelfile_str from "./../../editortypes.ts?raw";
+import { resetTimeouts } from "../core.ts"
 // core.ts converted to js
 import coreSimJs from 'virtual:transpiled-core-js';
 // core.ts types converted to d.ts
-import coreSimTsTypesRaw from 'virtual:transpiled-core-dts';
+// import coreSimTsTypesRaw from 'virtual:transpiled-core-dts';
+
 
 // Monaco Editor
 declare module "monaco-editor-vue3";
@@ -165,6 +143,8 @@ import jsonWorker from "monaco-editor/esm/vs/language/json/json.worker?worker";
 import cssWorker from "monaco-editor/esm/vs/language/css/css.worker?worker";
 import htmlWorker from "monaco-editor/esm/vs/language/html/html.worker?worker";
 import tsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker";
+import { UserScript, ScriptContext, createScriptContext, runUserScript } from "../ScriptContext.ts";
+import scriptApiTypes from "../ScriptContext.ts?raw";
 
 const isScriptRunning = ref(false);
 const isLLMPending = ref(false);
@@ -178,7 +158,7 @@ const emit = defineEmits<{
   (event: "start", code: string): void;
   (event: "reset"): void;
   (event: "error", error: any): void;
-  (event: "broadcastScript", title: string, content:string): void;
+  (event: "broadcastScript", title: string, content: string): void;
 }>();
 
 export type ScriptStatus = "IN-PROGRESS" | "IDLE" | "ERROR";
@@ -212,7 +192,7 @@ const props = defineProps({
   },
   utilityFuncs: {
     type: Object as PropType<{
-      notifyUser: (title: string, body: string, timeOut: number) => void;
+      notifyUser: (title: string, body?: string, timeOut?: number) => void;
       plotView: (item: SimulationProperties, state: boolean) => void;
       dataView: (item: SimulationProperties, state: boolean) => void;
       dataDisplayReset: () => void;
@@ -225,57 +205,14 @@ const props = defineProps({
 // ------------------------
 // ts-interface-extractor.ts
 // ------------------------
-import * as ts from "typescript";
-
-/**
- * Extracts all interface source blocks from the given source text,
- * excluding a specific interface name (case‑sensitive).
- *
- * @param sourceText   The entire file contents as a string.
- * @param excludeName  Name of an interface to skip, e.g. "WasmModule".
- * @returns Array of strings – each is the full interface definition.
- */
-function extractInterfaces(
-  sourceText: string,
-  excludeName: string = "WasmModule"
-): string[] {
-  // Parse the text into a SourceFile AST node
-  const sourceFile = ts.createSourceFile(
-    /*fileName=*/"temp.ts",
-    /*sourceText=*/sourceText,
-    /*languageVersion=*/ts.ScriptTarget.Latest,
-    /*setParentNodes=*/true,
-    /*scriptKind=*/ts.ScriptKind.TS
-  );
-
-  const interfaces: string[] = [];
-
-  // Helper to recurse through the tree
-  function visit(node: ts.Node) {
-    if (ts.isInterfaceDeclaration(node)) {
-      const name = node.name.text;
-      if (name !== excludeName) {
-        // Grab the *exact* text that the compiler considers the interface
-        const { pos, end } = node;
-        const text = sourceText.slice(pos, end);
-        interfaces.push(text);
-      }
-    }
-    ts.forEachChild(node, visit);
-  }
-
-  visit(sourceFile);
-
-  return interfaces;
-}
-
+// import * as ts from "typescript";
 
 // Remove import and declare statements and replace export with a empty string
-  function stripImportsExports(input: string): string {
-    return input
-      .replace(/^\s*export\s+/gm, "")
-      .replace(/^\s*import[\s\S]*?['"].*?['"];?/gm, "").trim();
-  }
+function stripImportsExports(input: string): string {
+  return input
+    .replace(/^\s*export\s+/gm, "")
+    .replace(/^\s*import[\s\S]*?['"].*?['"];?/gm, "").trim();
+}
 
 const options = {
   automaticLayout: true,
@@ -297,35 +234,39 @@ const options = {
   },
 };
 
+// Set up Monaco Editor with TypeScript definitions from ScriptContext and the generated modelfile
+const SetupTypes = () => {
+  monaco.typescript.typescriptDefaults.addExtraLib(`${stripImportsExports(scriptApiTypes)}\n${modelfile_str}`);
+}
+
 // Define the Monaco Editor configuration
 const setupMonaco = (_editor: monaco.editor.IStandaloneCodeEditor) => {
-  // Capture the simulator interface for intellisense
-
-  // Get functions interface
-  let emscriptenGeneratedInterfaceStr = extractInterfaces(simApiTypesRaw).join('\n\n');
-
-
-  // This regex matches everything between the markers
-const extractRegex = /\/\/\s*@editor-extract-start([\s\S]*?)\/\/\s*@editor-extract-end/g;
-const matches = [...simDataTypesRaw.matchAll(extractRegex)].map(m => m[1].trim());
-const SimPropsStr = matches.join('\n\n').replaceAll("export", "");
-
-monaco.typescript.typescriptDefaults.setCompilerOptions({
-  target: monaco.typescript.ScriptTarget.ES2020,
-  allowNonTsExtensions: true,
-  // moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-  module: monaco.typescript.ModuleKind.ESNext,
-  noEmit: true,
-  strict: true,
-  //typeRoots: ['node_modules/@types'],
-});
-  monaco.typescript.typescriptDefaults.addExtraLib(
-    `${stripImportsExports(emscriptenGeneratedInterfaceStr)}
-    ${SimPropsStr}
-    ${stripImportsExports(coreSimTsTypesRaw)}
-    `,
-  );
+  monaco.typescript.typescriptDefaults.setCompilerOptions({
+    target: monaco.typescript.ScriptTarget.ES2020,
+    allowNonTsExtensions: true,
+    // moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+    module: monaco.typescript.ModuleKind.ESNext,
+    noEmit: true,
+    strict: true,
+    //typeRoots: ['node_modules/@types'],
+  });
 };
+
+function loadUserScript(code: string): UserScript {
+  const fn = new Function(`
+    ${code}
+    return main;
+  `);
+
+  const result = fn();
+
+  if (typeof result !== "function") {
+    props.utilityFuncs.notifyUser("Error", "The script must define a function named 'main'", 3000);
+    throw new Error("Script must define a function named 'main'");
+  }
+
+  return result;
+}
 
 const executionResult = ref<string | null>(null);
 const code = ref(``);
@@ -337,12 +278,12 @@ const reset = () => {
   emit("reset");
 };
 
-const broadacast = async (title:string, content: string) => {
+const broadacast = async (title: string, content: string) => {
   props.utilityFuncs.notifyUser('Broadcast', `Broadcasting ${title}`, 2000);
-  emit('broadcastScript',title, content);
+  emit('broadcastScript', title, content);
 }
 
-const executeExternalCode = (title:string, content: string) => {
+const executeExternalCode = (title: string, content: string) => {
   props.utilityFuncs.notifyUser(`Running a script from instrutor`, title, 2000)
   code.value = content;
   executeCode();
@@ -356,33 +297,40 @@ const executeCode = async () => {
   let coreCode = coreSimJs;
   coreCode = stripImportsExports(coreCode);
   code.value = stripImportsExports(code.value);
-  const metrics :any[] = [];
+  const metrics: any[] = [];
 
   executionResult.value = null;
   try {
     isScriptRunning.value = true;
     emit("start", code.value);
-    // Create a function with context binding
-    const userScriptFunc = new Function(`
-const simControls = arguments[0];
-const simProps = arguments[1];
-const dataView = arguments[2];
-const plotView = arguments[3];
-const dataDisplayReset = arguments[4];
-const notifyUser = arguments[5]
-const checkPoint = arguments[6]
-const metrics = arguments[7];
-${coreCode}
-resetTimeouts();
-return async function () {${code.value}
-};`);
 
-const startStime = new Date()
-    userScriptFunc(props.contextObject, props.simProps, props.utilityFuncs.dataView,
-    props.utilityFuncs.plotView, props.utilityFuncs.dataDisplayReset, props.utilityFuncs.notifyUser, props.utilityFuncs.checkPoint, metrics)()
-      .then(() => {
-        emit("reset");
-      })
+    const deps : ScriptContext = {
+      controls: props.contextObject,
+      props: props.simProps,
+      repositionWithAutopilot: repositionWithAutopilot,
+      waitFor: waitFor,
+      waitForCondition: waitForCondition,
+      notifyUser: props.utilityFuncs.notifyUser,
+      dataView: props.utilityFuncs.dataView,
+      plotView: props.utilityFuncs.plotView,
+      dataDisplayReset: props.utilityFuncs.dataDisplayReset,
+      checkPoint: props.utilityFuncs.checkPoint,
+      metrics: metrics,
+    };
+
+
+    const finalUserCode_js = ts_compiler.transpile(code.value, {
+      target: ts_compiler.ScriptTarget.ES2020,
+      module: ts_compiler.ModuleKind.None
+    })
+
+    const finalUserCode = await loadUserScript(finalUserCode_js);
+    const ctx = createScriptContext(deps);
+
+    const startStime = new Date()
+    runUserScript(finalUserCode, ctx).then(() => {
+      emit("reset");
+    })
       .catch((error: any) => {
         console.log(`Script error: ${error}`);
         executionResult.value = error;
@@ -391,15 +339,18 @@ const startStime = new Date()
       .finally(() => {
         const endTime = new Date()
         isScriptRunning.value = false;
-            submitSession({ scenario: ModuleTitle.value,
-            start_time: startStime,
-            end_time: endTime,
-            raw_metrics: metrics}).catch(err => {
-              emit("error", err); });
+        submitSession({
+          scenario: ModuleTitle.value,
+          start_time: startStime,
+          end_time: endTime,
+          raw_metrics: metrics
+        }).catch(err => {
+          emit("error", err);
+        });
       });
-  } catch (error: any) {
-    console.log(error);
-    executionResult.value = `Error: ${error.message}`;
+
+  } catch (err) {
+    console.error(err);
   }
 };
 
@@ -454,13 +405,13 @@ const sendToLLM = async (content: string) => {
     });
   } catch (err: unknown) {
     isLLMPending.value = false;
-  if (err instanceof DOMException && err.name === "AbortError") {
-    executionResult.value = "AI request timed out after 5 minutes.";
-  } else if (err instanceof Error) {
-    executionResult.value = `AI request failed: ${err.message}`;
-  } else {
-    executionResult.value = "AI request failed with an unknown error.";
-  }
+    if (err instanceof DOMException && err.name === "AbortError") {
+      executionResult.value = "AI request timed out after 5 minutes.";
+    } else if (err instanceof Error) {
+      executionResult.value = `AI request failed: ${err.message}`;
+    } else {
+      executionResult.value = "AI request failed with an unknown error.";
+    }
     return;
   } finally {
     clearTimeout(timeoutId);

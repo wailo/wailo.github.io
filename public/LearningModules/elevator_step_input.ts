@@ -1,14 +1,19 @@
-import {
-  simControls,
-  simProps,
-  waitFor,
-  plotView,
-  notifyUser,
-  checkPoint,
-} from "./core";
+import { ScriptContext } from "../../src/core";
+
+export async function main(context: ScriptContext) {
+  const simControls = context.controls;
+  const simProps = context.props;
+  // const repositionWithAutopilot = context.repositionWithAutopilot;
+  const waitFor = context.waitFor;
+  // const waitForCondition = context.waitForCondition;
+  // const dataView = context.dataView;
+  const plotView = context.plotView;
+  // const dataDisplayReset = context.dataDisplayReset;
+  const notifyUser = context.notifyUser;
+  const checkPoint = context.checkPoint;
 
 
-const flightModel = simControls.fm
+const flightModel = simControls.flightModel
 
 // Demonstrate elevator step input
 notifyUser(
@@ -40,7 +45,7 @@ if (flightModel.autopilot_master_switch) {
 
 const initial_autopilot_state = flightModel.autopilot_master_switch;
 flightModel.set_autopilot_master_switch(false);
-plotView(flightModel.elevator_position, true);
+plotView(simProps.elevator_position, true);
 await waitFor(3000);
 checkPoint("Initiating Step Input");
 
@@ -62,3 +67,4 @@ flightModel.set_autopilot_master_switch(initial_autopilot_state);
 
 checkPoint("End of Elevator Step Input");
 notifyUser("End of Elevator Step Input");
+}

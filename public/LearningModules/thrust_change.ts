@@ -1,4 +1,17 @@
-import {repositionWithAutopilot, simControls, waitFor, dataDisplayReset, notifyUser} from "./core"
+import { ScriptContext } from "../../src/core";
+
+export async function main(context: ScriptContext) {
+  const simControls = context.controls;
+  // const simProps = context.props;
+  const repositionWithAutopilot = context.repositionWithAutopilot;
+  const waitFor = context.waitFor;
+  // const waitForCondition = context.waitForCondition;  
+  // const dataView = context.dataView;
+  // const plotView = context.plotView;
+  const dataDisplayReset = context.dataDisplayReset;
+  const notifyUser = context.notifyUser;
+  // const checkPoint = context.checkPoint;
+
 // =========================
 // 📘 Introduction
 // =========================
@@ -17,7 +30,7 @@ notifyUser(
   const flightModel = simControls.simulation.set_flight_model_b747()
 
   // ✈️ Reposition and stabilize at level flight
-  await repositionWithAutopilot(flightModel, 10000, 280, 270);
+  await repositionWithAutopilot(context, 10000, 280, 270);
   notifyUser("⚙️ Thrust Adjustment", "We will now increase and reduce thrust to observe effects.");
   
   // 🧪 Capture initial cruise throttle setting
@@ -105,3 +118,4 @@ notifyUser(
     "D. Increases drag and makes aircraft sink"
   );
   
+}

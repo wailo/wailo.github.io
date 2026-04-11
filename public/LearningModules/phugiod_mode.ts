@@ -1,4 +1,17 @@
-import {repositionWithAutopilot, simControls, simProps, waitFor, plotView, dataDisplayReset, notifyUser, checkPoint } from "./core"
+import { ScriptContext } from "../../src/core";
+
+export async function main(context: ScriptContext) {
+  const simControls = context.controls;
+  const simProps = context.props;
+  const repositionWithAutopilot = context.repositionWithAutopilot;
+  const waitFor = context.waitFor;
+  // const waitForCondition = context.waitForCondition;
+  // const dataView = context.dataView;
+  const plotView = context.plotView;
+  const dataDisplayReset = context.dataDisplayReset;
+  const notifyUser = context.notifyUser;
+  const checkPoint = context.checkPoint;
+
 
 // Demostrate phugoid mode
 notifyUser("Phugiod Mode", "Observe the aircraft's oscillation in pitch and altitude.\n\n" + 
@@ -19,7 +32,7 @@ const preConfiguration = () => {
 // simControls.simulation.reset_simulation();
 dataDisplayReset();
 
-await repositionWithAutopilot(flightModel, 3000, 180, 0, 10000, preConfiguration);
+await repositionWithAutopilot(context, 3000, 180, 0, 10000, preConfiguration);
 // await waitFor(1000)
 plotView(simProps.elevator_position, true);
 plotView(simProps.pitch, true);
@@ -60,4 +73,5 @@ notifyUser("Phugiod mode", "By now the Phugiod mode oscillation is almost damped
 checkPoint("End of Phugiod mode")
 await waitFor(10000)
 simControls.simulation.set_simulation_speed(1);
-// simControls.fm.set_autopilot(true);
+// simControls.flightModel.set_autopilot(true);
+}

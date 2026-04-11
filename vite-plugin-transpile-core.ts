@@ -3,7 +3,7 @@ import ts from 'typescript';
 import { Plugin } from 'vite';
 
 // Core TypeScript source file
-const inputPath = path.resolve(__dirname, 'public/LearningModules/core.ts');
+const inputPath = path.resolve(__dirname, 'src/core.ts');
 
 // Virtual module IDs
 const virtualModules = {

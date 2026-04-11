@@ -1,4 +1,15 @@
-import {repositionWithAutopilot, simControls, simProps, waitFor, plotView, dataDisplayReset, notifyUser } from "./core"
+import { ScriptContext } from "../../src/core";
+
+export async function main(context: ScriptContext) {
+  const simControls = context.controls;
+  const simProps = context.props;
+  const repositionWithAutopilot = context.repositionWithAutopilot;
+  const waitFor = context.waitFor;
+  // const waitForCondition = context.waitForCondition;
+  // const dataView = context.dataView;
+  const plotView = context.plotView;
+  const dataDisplayReset = context.dataDisplayReset;
+  const notifyUser = context.notifyUser;
 
 // Define target altitude, speed, and heading
 const targetAltitude = 5000; // in feet
@@ -27,7 +38,7 @@ const preConfiguration = () => {
 dataDisplayReset();
 simControls.simulation.reset_simulation();
 const flightModel = simControls.simulation.set_flight_model_b747();
-await repositionWithAutopilot(flightModel, targetAltitude, targetSpeed, targetHeading, 10000, preConfiguration);
+await repositionWithAutopilot(context, targetAltitude, targetSpeed, targetHeading, 10000, preConfiguration);
 // plotView(simProps.api_aileron_position, true);
 plotView(simProps.heading, true);
 plotView(simProps.heading_dot, true);
@@ -75,3 +86,4 @@ This marks the end of the Dutch Roll mode demonstration.`
 );
 await waitFor(10000);
 // simControls.fm.set_autopilot(true);
+}

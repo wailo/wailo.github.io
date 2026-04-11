@@ -1,4 +1,17 @@
-import {repositionWithAutopilot, simControls, simProps, waitFor, waitForCondition, dataView, dataDisplayReset, notifyUser } from "./core"
+import { ScriptContext } from "../../src/core";
+
+export async function main(context: ScriptContext) {
+  const simControls = context.controls;
+  const simProps = context.props;
+  const repositionWithAutopilot = context.repositionWithAutopilot;
+  const waitFor = context.waitFor;
+  const waitForCondition = context.waitForCondition;  
+  const dataView = context.dataView;
+  // const plotView = context.plotView;
+  const dataDisplayReset = context.dataDisplayReset;
+  const notifyUser = context.notifyUser;
+  // const checkPoint = context.checkPoint;
+
 dataDisplayReset();
 simControls.simulation.set_simulation_pause(true);
 await waitFor(1000);
@@ -14,24 +27,17 @@ notifyUser(
 );
 await waitForCondition(() => simControls.simulation.simulation_pause === false);
 
-const cl = simControls.fm.cl.toFixed(3);
-const aoa = simControls.fm.aoa_deg.toFixed(1);
-const pitch = simControls.fm.pitch_deg.toFixed(1);
-const speed = simControls.fm.speed_true_knots.toFixed(1);
-const mach = simControls.fm.speed_mach.toFixed(2);
-const altitude = simControls.fm.altitude_ft.toFixed(0);
-
 // 📊 Snapshot Storage
 let lowAltSnapshot, midAltSnapshot, highAltSnapshot;
 
 // Function to capture and return snapshot
 const getAltitudeLiftSnapshot = async () => {
-  const cl = simControls.fm.cl.toFixed(3);
-  const aoa = simControls.fm.aoa_deg.toFixed(1);
-  const pitch = simControls.fm.pitch_deg.toFixed(1);
-  const speed = simControls.fm.speed_true_knots.toFixed(1);
-  const mach = simControls.fm.speed_mach.toFixed(2);
-  const altitude = simControls.fm.altitude_ft.toFixed(0);
+  const cl = simControls.flightModel.cl.toFixed(3);
+  const aoa = simControls.flightModel.aoa_deg.toFixed(1);
+  const pitch = simControls.flightModel.pitch_deg.toFixed(1);
+  const speed = simControls.flightModel.speed_true_knots.toFixed(1);
+  const mach = simControls.flightModel.speed_mach.toFixed(2);
+  const altitude = simControls.flightModel.altitude_ft.toFixed(0);
 
   const snapshot = `📍 Altitude: ${altitude} ft\n🧭 Pitch: ${pitch}°\n🎯 AoA: ${aoa}°\n💨 TAS: ${speed} knots\n⚖️ Mach: ${mach}\n🪂 Cl: ${cl}`;
   notifyUser("📊 Altitude Snapshot", snapshot);
@@ -49,18 +55,18 @@ const getAltitudeLiftSnapshot = async () => {
 
 // Function to stabilize at target altitude and Mach
 async function stabilizeAtAltitude(targetAltitude : number, targetMach: number) {
-  simControls.fm.set_autopilot_master_switch(true);
-  simControls.fm.set_autopilot_altitude_target(targetAltitude);
-  simControls.fm.set_autopilot_speed_mach_target(targetMach);
-  simControls.fm.set_autopilot_speed_mach_hold(true);
-  simControls.fm.set_autopilot_altitude_hold(true);
+  simControls.flightModel.set_autopilot_master_switch(true);
+  simControls.flightModel.set_autopilot_altitude_target(targetAltitude);
+  simControls.flightModel.set_autopilot_speed_mach_target(targetMach);
+  simControls.flightModel.set_autopilot_speed_mach_hold(true);
+  simControls.flightModel.set_autopilot_altitude_hold(true);
   await waitFor(2000);
   simControls.simulation.set_simulation_speed(100);
 
   await waitForCondition(
     () =>
-      Math.abs(simControls.fm.speed_mach - targetMach) < 0.001 &&
-      Math.abs(simControls.fm.altitude_ft - targetAltitude) < 50,
+      Math.abs(simControls.flightModel.speed_mach - targetMach) < 0.001 &&
+      Math.abs(simControls.flightModel.altitude_ft - targetAltitude) < 50,
   );
 
   simControls.simulation.set_simulation_speed(1);
@@ -70,7 +76,7 @@ async function stabilizeAtAltitude(targetAltitude : number, targetMach: number) 
 // ⚙️ Configuration
 let targetMach = 0.6;
 // Reposition and start
-await repositionWithAutopilot(simControls.fm, 10000, 330, 90);
+await repositionWithAutopilot(context, 10000, 330, 90);
 
 
 // Watch key data. Altitude, mach, speed, Pitch Angle, Angle of Attack (AoA), lift coefficient (Cl)
@@ -116,3 +122,4 @@ notifyUser(
     `📊 Mid Altitude\n${midAltSnapshot}\n\n` +
     `📊 High Altitude\n${highAltSnapshot}\n\n`,
 );
+}

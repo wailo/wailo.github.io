@@ -62,7 +62,7 @@ const props = defineProps({
     default: false,
   },
   textInput: {
-    type: [Number, Boolean] as PropType<number | boolean>,
+    type: [Number, Boolean, String] as PropType<number | boolean | string>,
     required: false
   },
   buttonClick: {

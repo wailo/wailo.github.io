@@ -1,4 +1,17 @@
-import {repositionWithAutopilot, simControls, waitFor, waitForCondition, dataDisplayReset, notifyUser } from "./core"
+import { ScriptContext } from "../../src/core";
+
+export async function main(context: ScriptContext) {
+  const simControls = context.controls;
+  // const simProps = context.props;
+  const repositionWithAutopilot = context.repositionWithAutopilot;
+  const waitFor = context.waitFor;
+  const waitForCondition = context.waitForCondition;  
+  // const dataView = context.dataView;
+  // const plotView = context.plotView;
+  const dataDisplayReset = context.dataDisplayReset;
+  const notifyUser = context.notifyUser;
+  // const checkPoint = context.checkPoint;
+
 // 📘 Lesson 2: Increase Airspeed and Observe Lift Changes
 notifyUser(
     "📘 Lesson: Airspeed Effects on Lift",
@@ -13,10 +26,10 @@ notifyUser(
   
   // Snapshot function
   const getAirspeedLiftSnapshot = async () => {
-    const cl = simControls.fm.cl.toFixed(3);
-    const aoa = simControls.fm.aoa_deg.toFixed(1);
-    const pitch = simControls.fm.pitch_deg.toFixed(1);
-    const speed = simControls.fm.speed_indicated_knots.toFixed(1);
+    const cl = simControls.flightModel.cl.toFixed(3);
+    const aoa = simControls.flightModel.aoa_deg.toFixed(1);
+    const pitch = simControls.flightModel.pitch_deg.toFixed(1);
+    const speed = simControls.flightModel.speed_indicated_knots.toFixed(1);
     const snapshot = `💨 Speed: ${speed} knots\n🧭 Pitch: ${pitch}°\n🎯 AoA: ${aoa}°\n🪂 Cl: ${cl}`;
   
     notifyUser("📊 Airspeed Snapshot", snapshot);
@@ -30,12 +43,12 @@ notifyUser(
   
   // 🔁 Setup: reset and position at 6000 ft and 230 knots
   dataDisplayReset();
-  await repositionWithAutopilot(simControls.fm, 6000, 230, 90);
-  simControls.fm.set_autopilot_master_switch(true);
+  await repositionWithAutopilot(context, 6000, 230, 90);
+  simControls.flightModel.set_autopilot_master_switch(true);
   
   // 🛫 Initial Setup
-  simControls.fm.set_autopilot_altitude_hold(true);
-  simControls.fm.set_autopilot_speed_indicated_hold(true);
+  simControls.flightModel.set_autopilot_altitude_hold(true);
+  simControls.flightModel.set_autopilot_speed_indicated_hold(true);
   simControls.simulation.set_simulation_speed(1);
   notifyUser("🛫 Level Flight", "Holding level flight at 230 knots and 6000 ft.");
   normalSpeedSnapshot = await getAirspeedLiftSnapshot();
@@ -43,18 +56,18 @@ notifyUser(
   
   // 🐢 Reduce speed to 170 knots
   notifyUser("🐢 Slowing Down", "Reducing speed to 170 knots. Watch how AoA changes.");
-  simControls.fm.set_autopilot_speed_indicated_target(170);
+  simControls.flightModel.set_autopilot_speed_indicated_target(170);
   simControls.simulation.set_simulation_speed(4);
-  await waitForCondition(() => Math.abs(simControls.fm.speed_indicated_knots - 170) < 0.5);
+  await waitForCondition(() => Math.abs(simControls.flightModel.speed_indicated_knots - 170) < 0.5);
   simControls.simulation.set_simulation_speed(1);
   lowSpeedSnapshot = await getAirspeedLiftSnapshot();
   await waitFor(2000);
   
   // 💨 Increase speed to 290 knots
   notifyUser("💨 Speeding Up", "Now increasing speed to 290 knots. Observe the AoA and Cl.");
-  simControls.fm.set_autopilot_speed_indicated_target(290);
+  simControls.flightModel.set_autopilot_speed_indicated_target(290);
   simControls.simulation.set_simulation_speed(4);
-  await waitForCondition(() => Math.abs(simControls.fm.speed_indicated_knots - 290) < 0.5);
+  await waitForCondition(() => Math.abs(simControls.flightModel.speed_indicated_knots - 290) < 0.5);
   simControls.simulation.set_simulation_speed(1);
   highSpeedSnapshot = await getAirspeedLiftSnapshot();
   await waitFor(2000);
@@ -73,3 +86,4 @@ notifyUser(
   );
 
   
+}

@@ -76,7 +76,6 @@ const dataBuffers = new Map<string, CircularBuffer>()
 const selectedKeys = ref<Set<string>>(new Set())
 let MAX_POINTS = 0
 let globalIndex = 0
-let bufferFull = false;
 let plotResizeObserver: ResizeObserver | null = null
 let globalXBuffer :Int32Array;
 const renderBuffers = new Map<string, Float64Array>()
@@ -207,7 +206,7 @@ function tick() {
 
   getPlottableKeys.value.forEach(propId => {
     const buf = dataBuffers.get(propId)!
-    buf.y[writeIndex] = props.sources[propId]?.inputValue ?? 0
+    buf.y[writeIndex] = Number(props.sources[propId]?.inputValue)
   })
 
   globalIndex++

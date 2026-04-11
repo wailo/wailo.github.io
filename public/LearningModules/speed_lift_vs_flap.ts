@@ -1,4 +1,17 @@
-import {repositionWithAutopilot, simControls, simProps, waitFor, dataView, plotView, dataDisplayReset, notifyUser } from "./core"
+import { ScriptContext } from "../../src/core";
+
+export async function main(context: ScriptContext) {
+  const simControls = context.controls;
+  const simProps = context.props;
+  const repositionWithAutopilot = context.repositionWithAutopilot;
+  const waitFor = context.waitFor;
+  // const waitForCondition = context.waitForCondition;  
+  const dataView = context.dataView;
+  const plotView = context.plotView;
+  const dataDisplayReset = context.dataDisplayReset;
+  const notifyUser = context.notifyUser;
+  // const checkPoint = context.checkPoint;
+
 // 📘 Configurations
 const initialAltitude_ft = 2000;
 const initialSpeed_knots = 210;
@@ -19,7 +32,7 @@ dataDisplayReset();
 
 const flightModel = simControls.simulation.set_flight_model_b747()
 
-await repositionWithAutopilot(flightModel, initialAltitude_ft, initialSpeed_knots, initialHeading_deg);
+await repositionWithAutopilot(context, initialAltitude_ft, initialSpeed_knots, initialHeading_deg);
 
 
 // Hold the currnet pitch angel
@@ -103,3 +116,4 @@ notifyUser(
   "You’ve completed the Flap Effects demonstration.\nThis module can be repeated anytime from the main panel."
 );
 
+}

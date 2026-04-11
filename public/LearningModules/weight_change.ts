@@ -1,4 +1,17 @@
-import {repositionWithAutopilot, simControls, waitFor, dataDisplayReset, notifyUser } from "./core"
+import { ScriptContext } from "../../src/core";
+
+export async function main(context: ScriptContext) {
+  const simControls = context.controls;
+  // const simProps = context.props;
+  const repositionWithAutopilot = context.repositionWithAutopilot;
+  const waitFor = context.waitFor;
+  // const waitForCondition = context.waitForCondition;
+  // const dataView = context.dataView;
+  // const plotView = context.plotView;
+  const dataDisplayReset = context.dataDisplayReset;
+  const notifyUser = context.notifyUser;
+  // const checkPoint = context.checkPoint;
+
 // =========================
 // 📘 Introduction
 // =========================
@@ -15,7 +28,7 @@ notifyUser(
   dataDisplayReset();
   const flightModel = simControls.simulation.set_flight_model_b747();
   // ✈️ Reposition and stabilize at level flight
-  await repositionWithAutopilot(flightModel, 12000, 270, 180);
+  await repositionWithAutopilot(context, 12000, 270, 180);
   notifyUser("⚖️ Weight Adjustment", "We'll now modify aircraft weight and observe the effects.");
   
   // 🧪 Record current weight
@@ -102,3 +115,4 @@ notifyUser(
   "🧐 Can you think of a situation where the aircraft weight increases during flight?\n" +
   "💬 This is an open-ended question — think of real-world scenarios (hint: something being added to the aircraft)."
 );
+}

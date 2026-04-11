@@ -1,13 +1,18 @@
-import {
-  simControls,
-  simProps,
-  waitFor,
-  plotView,
-  notifyUser,
-  checkPoint,
-} from "./core";
+import { ScriptContext } from "../../src/core";
 
-const flightModel = simControls.fm
+export async function main(context: ScriptContext) {
+  const simControls = context.controls;
+  const simProps = context.props;
+  // const repositionWithAutopilot = context.repositionWithAutopilot;
+  const waitFor = context.waitFor;
+  // const waitForCondition = context.waitForCondition;  
+  // const dataView = context.dataView;
+  const plotView = context.plotView;
+  // const dataDisplayReset = context.dataDisplayReset;
+  const notifyUser = context.notifyUser;
+  const checkPoint = context.checkPoint;
+  
+const flightModel = simControls.flightModel
 
 if (flightModel.autopilot_yaw_damper) {
   notifyUser(
@@ -39,3 +44,4 @@ await waitFor(3000);
 flightModel.set_rudder_position(initial_rudder_position);
 checkPoint("End of Rudder Step Input");
 notifyUser("End of Rudder Step Input");
+}

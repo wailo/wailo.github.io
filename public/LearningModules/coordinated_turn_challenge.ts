@@ -1,4 +1,19 @@
-import { repositionWithAutopilot, simControls, simProps, waitFor, waitForCondition, plotView, dataView, dataDisplayReset, notifyUser } from "./core"
+import { ScriptContext } from "../../src/core";
+
+export async function main(context: ScriptContext) {
+  const simControls = context.controls;
+  const simProps = context.props;
+  const repositionWithAutopilot = context.repositionWithAutopilot;
+  const waitFor = context.waitFor;
+  const waitForCondition = context.waitForCondition;
+  const dataView = context.dataView;
+  const plotView = context.plotView;
+  const dataDisplayReset = context.dataDisplayReset;
+  const notifyUser = context.notifyUser;
+  // const checkPoint = context.checkPoint;
+  const metrics = context.metrics;
+
+
 
 dataDisplayReset();
 simControls.simulation.reset_simulation();
@@ -20,7 +35,7 @@ notifyUser(
 );
 
 
-await repositionWithAutopilot(flightModel, initialAltitude_ft, initialSpeed_knots, initialHeading_deg);
+await repositionWithAutopilot(context, initialAltitude_ft, initialSpeed_knots, initialHeading_deg);
 
 flightModel.set_autopilot_master_switch(true);  // Enable autopilot again
 flightModel.set_autopilot_altitude_hold(true); // Set altitude hold
@@ -156,3 +171,4 @@ if (success) {
 }
 
 await waitFor(10000); // Give the user a moment to read the message
+}
