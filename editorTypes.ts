@@ -287,7 +287,58 @@ type FlightModelInstance = b747 | c172;
     getContext(): graphics;
   }
 
- {simulation : graphics}
+
+
+interface graphics extends ClassHandle {
+  readonly simulation_time: number;
+  readonly flight_model_id: number;
+  readonly fps: number;
+  readonly ups: number;
+  readonly simulation_speed: number;
+  readonly simulation_pause: boolean;
+  readonly pfd_display: boolean;
+  readonly six_instruments_display: boolean;
+  readonly motion_cues: boolean;
+  readonly analog_altimeter_visible: boolean;
+  readonly analog_speed_indicator_visible: boolean;
+  readonly analog_vertical_speed_indicator_visible: boolean;
+  readonly analog_heading_indicator_visible: boolean;
+  readonly analog_attitude_indicator_visible: boolean;
+  readonly analog_turn_coordinator_visible: boolean;
+  readonly pfd_altimeter_visible: boolean;
+  readonly pfd_speed_indicator_visible: boolean;
+  readonly pfd_vertical_speed_indicator_visible: boolean;
+  readonly pfd_heading_indicator_visible: boolean;
+  readonly pfd_attitude_indicator_visible: boolean;
+  readonly pfd_turn_coordinator_visible: boolean;
+  readonly pfd_horizon_visible: boolean;
+  readonly pfd_flight_mode_annunciator_visible: boolean;
+  readonly flight_model: GRAPHICSEFlightModel;
+  set_simulation_pause(_0: boolean): boolean;
+  set_pfd_display(_0: boolean): boolean;
+  set_six_instruments_display(_0: boolean): boolean;
+  set_motion_cues(_0: boolean): boolean;
+  reset_simulation(): void;
+  reset_flightmodel(): void;
+  set_simulation_speed(_0: number): boolean;
+  set_flight_model_c172(): c172;
+  set_flight_model_b747(): b747;
+  set_analog_altimeter_visible(_0: boolean): boolean;
+  set_analog_speed_indicator_visible(_0: boolean): boolean;
+  set_analog_vertical_speed_indicator_visible(_0: boolean): boolean;
+  set_analog_heading_indicator_visible(_0: boolean): boolean;
+  set_analog_attitude_indicator_visible(_0: boolean): boolean;
+  set_analog_turn_coordinator_visible(_0: boolean): boolean;
+  set_pfd_altimeter_visible(_0: boolean): boolean;
+  set_pfd_speed_indicator_visible(_0: boolean): boolean;
+  set_pfd_vertical_speed_indicator_visible(_0: boolean): boolean;
+  set_pfd_heading_indicator_visible(_0: boolean): boolean;
+  set_pfd_attitude_indicator_visible(_0: boolean): boolean;
+  set_pfd_turn_coordinator_visible(_0: boolean): boolean;
+  set_pfd_horizon_visible(_0: boolean): boolean;
+  set_pfd_flight_mode_annunciator_visible(_0: boolean): boolean;
+  set_flight_model(_0: GRAPHICSEFlightModel): boolean;
+}
 
 function notifyUser(title: string, body?: string, timeOut?: number): void
 

@@ -20,7 +20,7 @@ CONFIG
 */
 
 const ENTRY_FILE = "src/core.ts";
-const META_FILE = "public/flightsimulator_exec_meta.ts";
+const META_FILE = "src/wasm/flightsimulator_exec_meta.ts";
 const OUTPUT_FILE = "Modelfile";
 const DTS_OUTPUT_FILE = "editorTypes.ts";
 const MODEL_NAME = "qwen3.5";
@@ -65,7 +65,6 @@ function getNodeName(node: Node) {
     return node.getName();
   }
   else if (Node.isTypeLiteral(node)) {
-    console.log(node.getText());
     const member = node.getMembers()[0]
     const member_type =  member.getType().getApparentType();
     const symbol = member_type.getAliasSymbol() || member_type.getSymbol()

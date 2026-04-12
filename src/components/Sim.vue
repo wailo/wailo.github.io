@@ -312,7 +312,7 @@ import {
 
 import Editor, { ScriptStatus } from "./Editor.vue";
 import WButton from "./wButton.vue";
-import { MainModule } from "../../public/flightsimulator_exec";
+import { MainModule } from "../../src/wasm/flightsimulator_exec";
 
 
 const renderSignal = shallowRef()
@@ -485,6 +485,17 @@ let manager: RemoteCallManager;
 // Lifecycle hooks
 onMounted(async () => {
   initializeModule({
+    locateFile: (path: string, prefix: string) => {
+  if (path.endsWith('.wasm') || path.endsWith('.data')) {
+    // In Vite, files in /public are accessed via the root '/'
+    // use import.meta.env.BASE_URL to handle subdirectories automatically
+    const base = import.meta.env.BASE_URL; // Usually '/'
+    // Remove any leading slash from the path to avoid '//'
+    const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+    return base + cleanPath;
+  }
+  return prefix + path;
+},
     canvas: (() => {
       const canvas = document.getElementById("canvas");
       return canvas;

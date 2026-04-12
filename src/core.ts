@@ -1,8 +1,8 @@
 
-export type { FlightModelInstance, ExtendedMainModule } from "./siminterfac"
+export type { FlightModelInstance, graphics, ExtendedMainModule } from "./siminterfac"
 
-import { SimulationProperties } from "../public/flightsimulator_exec_meta"
-export type { SimulationProperties } from "../public/flightsimulator_exec_meta"
+import { SimulationProperties } from "../src/wasm/flightsimulator_exec_meta"
+export type { SimulationProperties } from "../src/wasm/flightsimulator_exec_meta"
 
 import type { ScriptContext } from "./ScriptContext";
 export type { ScriptContext } from "./ScriptContext"
