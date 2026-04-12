@@ -114,6 +114,9 @@ function removePlot(propId: string) {
   dataBuffers.delete(propId)
   renderBuffers.delete(propId);
   recreateAllPlots()
+  if (dataBuffers.size === 0) {
+    globalIndex = 0
+  }
 }
 
 // ✅ Recreate all plots from scratch
@@ -249,6 +252,7 @@ function reset() {
   plots.clear()
   selectedKeys.value.clear()
   dataBuffers.clear()
+  globalIndex = 0
 }
 
 // ✅ On Mount
