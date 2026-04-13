@@ -579,10 +579,10 @@ onUnmounted(() => {
 });
 
 function initFlightModelParams() {
-  flightModelProps = computed(() => { renderSignal.value; return getFlightModelParameters(FlightSimModule.flightModel); });
-  autopilotControlsButtons = computed(() => { renderSignal.value; return getAutopilotProperties(FlightSimModule.flightModel).filter(item => item.targetCommand === undefined); });
-  autopilotControlsButtonsInputs = computed(() => { renderSignal.value; return getAutopilotProperties(FlightSimModule.flightModel).filter(item => item.targetCommand !== undefined); });
-  simulationControlsProps = computed(() => { renderSignal.value; const base = getSimulationControlsParameters(FlightSimModule); return { ...base, ...layoutControls.value }; });
+  flightModelProps = computed(() => {return getFlightModelParameters(FlightSimModule.flightModel); });
+  autopilotControlsButtons = computed(() => { return getAutopilotProperties(FlightSimModule.flightModel).filter(item => item.targetCommand === undefined); });
+  autopilotControlsButtonsInputs = computed(() => { return getAutopilotProperties(FlightSimModule.flightModel).filter(item => item.targetCommand !== undefined); });
+  simulationControlsProps = computed(() => { const base = getSimulationControlsParameters(FlightSimModule); return { ...base, ...layoutControls.value }; });
 
   groupedSimProps = computed(() => {
   const all = { ...simulationControlsProps.value, ...flightModelProps.value };
