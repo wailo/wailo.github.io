@@ -2,32 +2,59 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Light mode colors (default) */
+:root {
+  --color-primary: 255 255 255;           /* #ffffff */
+  --color-secondary: 19 15 12;            /* #130f0c */
+  --color-panelBorder: 123 128 121;       /* #7b8079 */
+  --color-panelHeaderBackground: 223 228 226; /* #dfe4e2 */
+  --color-panelStatusBackground: 19 15 12;    /* #130f0c */
+  --color-panelContentBackground: 247 247 247; /* #f7f7f7 */
+  --color-simElementBorder: 19 15 12;     /* #130f0c */
+  --color-simInputBackground: 230 230 230;    /* #e6e6e6 */
+  --color-simBackground: 247 247 247;     /* #f7f7f7 */
+  --color-simActiveButton: 185 57 27;     /* #b9391b */
+}
+
+/* Dark mode colors */
+.dark {
+  --color-primary: 25 25 25;              /* #191919 */
+  --color-secondary: 214 214 214;         /* #d6d6d6 */
+  --color-panelBorder: 44 44 44;          /* #2c2c2c */
+  --color-panelHeaderBackground: 25 25 25;    /* #191919 */
+  --color-panelStatusBackground: 223 228 226; /* #dfe4e2 */
+  --color-panelContentBackground: 0 0 0;      /* #000000 */
+  --color-simElementBorder: 89 89 89;     /* #595959 */
+  --color-simInputBackground: 25 25 25;   /* #191919 */
+  --color-simBackground: 0 0 0;           /* #000000 */
+  --color-simActiveButton: 27 185 94;     /* #1bb95e */
+}
 
 @font-face {
   font-family: 'Orbitron';
   src: url('../src/assets/fonts/orbitron/orbitron-light.otf') format('opentype');
-  font-weight: 300; /* Light */
+  font-weight: 300;
   font-style: normal;
 }
 
 @font-face {
   font-family: 'Orbitron';
   src: url('../src/assets/fonts/orbitron/orbitron-medium.otf') format('opentype');
-  font-weight: 500; /* Medium */
+  font-weight: 500;
   font-style: normal;
 }
 
 @font-face {
   font-family: 'Orbitron';
   src: url('../src/assets/fonts/orbitron/orbitron-bold.otf') format('opentype');
-  font-weight: 700; /* Bold */
+  font-weight: 700;
   font-style: normal;
 }
 
 @font-face {
   font-family: 'Orbitron';
   src: url('../src/assets/fonts/orbitron/orbitron-black.otf') format('opentype');
-  font-weight: 900; /* Black */
+  font-weight: 900;
   font-style: normal;
 }
 
@@ -55,43 +82,6 @@ a:hover {
   color: #535bf2;
 }
 
-/* body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-} */
-
-/* h1 { */
-/*   font-size: 3.2em; */
-/*   line-height: 1.1; */
-/* } */
-
-/* button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-.card {
-  padding: 2em;
-} */
-
-/* Reset default margins and paddings */
 * {
   margin: 0;
   padding: 0;

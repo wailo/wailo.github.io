@@ -20,7 +20,7 @@ CONFIG
 */
 
 const ENTRY_FILE = "src/core.ts";
-const META_FILE = "src/wasm/flightsimulator_exec_meta.ts";
+const META_FILE = "src/wasm/generated/flightsimulator_exec_meta.ts";
 const OUTPUT_FILE = "Modelfile";
 const DTS_OUTPUT_FILE = "editorTypes.ts";
 const MODEL_NAME = "qwen3.5";
@@ -602,7 +602,8 @@ function main() {
   const meta = path.resolve(META_FILE);
 
   const metadata = extractMetadata(meta);
-  const contract = extractContract(entry, metadata);
+  // const contract = extractContract(entry, metadata);
+  const contract = extractContract(entry, {});
   const modelfile = generateModelfile(contract);
   
   const contractTs = extractContractTypescript(entry);

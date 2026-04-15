@@ -1,16 +1,19 @@
 <template>
   <div class="flex h-full w-full">
-    <!-- Sidebar -->
-    <div class="transition-all duration-50 border-r border-slate-700 flex flex-col"
-      :class="isEditing === false ? 'w-full' : 'w-1/5'" @click="isEditing = false">
-      <!-- Header -->
-      <div class="px-4 mb-1 border-b border-slate-700 text-xs font-semibold">
-        {{ ModuleTitle || "Select a Module" }}
-      </div>
+  <!-- Sidebar -->
+  <div class="transition-all duration-50 flex flex-col"
+    :class="isEditing === false ? 'w-full' : 'border-r border-simElementBorder w-1/6'" @click="isEditing = false">
 
-      <!-- File Tree -->
-      <div class="flex-1 overflow-y-auto p-2">
-        <button @click.stop="() => {
+    <!-- Header -->
+    <!-- <div class="px-4 py-1 mb-1 border-b border-slate-700 text-xs font-semibold">
+      {{ ModuleTitle || "Select a Module" }}
+    </div> -->
+
+    <!-- File Tree -->
+    <div class="flex-1 overflow-y-auto px-1 py-1">
+      <!-- New -->
+      <button
+        @click.stop="() => {
           isEditing = true;
           code = `
 export async function main(context: ScriptContext) {
@@ -30,89 +33,123 @@ export async function main(context: ScriptContext) {
       const checkPoint = context.checkPoint;
       const waitFor = context.waitFor;
       const flightmodel = simControls.simulation.set_flight_model_b747();
+}`;
+        }"
+        class="m-1 p-1 rounded text-secondary border border-simElementBorder"
+      >
+        Playground
+      </button>
 
-}`}" class="px-1 rounded text-secondary hover:bg-slate-600 border border-simElementBorder">
-          New</button>
-        <hr class="my-2 border-slate-700" />
-        <ul>
-          <li v-for="(folder, folderName) in fileTree" :key="folderName">
-            <div @click.stop="toggleFolder(folderName); isEditing = false"
-              class="cursor-pointer font-semibold text-secondary hover:text-white mt-1">
-              - {{ folderName }}
-            </div>
-            <ul v-show="openFolders[folderName]" class="ml-4">
-              <li v-for="file in folder" @click="selectedFile = file.name" :key="file.name"
-                class="flex justify-between items-start rounded hover:bg-slate-700" :class="[
-                  'transition-colors duration-200',
-                  selectedFile === file.name ? 'bg-simInputBackground' : 'text-secondary',
-                  selectedFile === file.name && isScriptRunning ? 'animate-pulse' : '',
-                ]">
-                <div class="flex-1 cursor-default">
-                  + {{ file.name }}
-                </div>
+      <hr class="mb-2 border-simElementBorder" />
 
-                <!-- Horizontal Button Row -->
-                <div class="flex flex-row gap-1 whitespace-nowrap items-center">
-                  <button class="px-1 rounded text-secondary hover:bg-slate-600 border border-simElementBorder"
-                    title="Edit" @click.stop="async () => {
-                      await loadFileContent(file);
-                      isEditing = true;
-                    }">
-                    Edit
-                  </button>
-                  <button class="px-1 rounded text-secondary hover:bg-slate-600 border border-simElementBorder"
-                    :title="isScriptRunning ? 'Stop' : 'Run'" @click.stop="async () => {
-                      await loadFileContent(file);
-                      isScriptRunning ? reset() : executeCode();
-                    }">
-                    {{ isScriptRunning && selectedFile === file.name ? 'Stop' : 'Play' }}
-                  </button>
+      <ul class="space-y-[2px]">
+        <li v-for="(folder, folderName) in fileTree" :key="folderName">
+          <!-- Folder -->
+          <div
+            @click.stop="toggleFolder(folderName); isEditing = false"
+            class="cursor-pointer font-semibold text-secondary py-[0px] border-b border-panelBorder p-1 rounded flex items-center justify-between"
+          >
+          {{ folderName }}
+          </div>
 
-                  <button class="px-1 rounded text-secondary hover:bg-slate-600 border border-simElementBorder"
-                    title="Broadcast" @click.stop="async () => {
-                      await loadFileContent(file);
-                      broadacast(selectedFile, code)
-                    }">
-                    Broadcast
-                  </button>
+          <!-- Files -->
+          <ul v-show="openFolders[folderName]" class="ml-3 space-y-[0px]">
+            <li
+              v-for="file in folder"
+              @click="selectedFile = file.name"
+              :key="file.name"
+              class="flex items-center justify-between px-2 py-[0px] rounded hover:bg-simInputBackground"
+              :class="[
+                'transition-colors duration-200',
+                selectedFile === file.name ? 'bg-simInputBackground' : 'text-secondary',
+                selectedFile === file.name && isScriptRunning ? 'animate-pulse' : '',
+              ]"
+            >
+              <!-- File name -->
+              <div class="flex-1 truncate pr-3 cursor-default">
+                + {{ file.name }}
+              </div>
 
-                </div>
-              </li>
-            </ul>
-          </li>
-        </ul>
-      </div>
+              <!-- Icon Actions -->
+              <div class="flex items-center gap-[2px]">
+                <!-- Edit -->
+                <button
+                  class="w-5 flex items-center justify-center rounded text-secondary hover:bg-simInputBackground"
+                  title="Edit"
+                  @click.stop="async () => {
+                    await loadFileContent(file);
+                    isEditing = true;
+                  }"
+                >
+                  ✎
+                </button>
+
+                <!-- Play / Stop -->
+                <button
+                  class="w-5 flex items-center justify-center rounded text-secondary hover:bg-simInputBackground"
+                  :title="isScriptRunning ? 'Stop' : 'Run'"
+                  @click.stop="async () => {
+                    await loadFileContent(file);
+                    isScriptRunning ? reset() : executeCode();
+                  }"
+                >
+                  {{ isScriptRunning && selectedFile === file.name ? '■' : '▶' }}
+                </button>
+
+                <!-- Broadcast -->
+                <button
+                  class="w-5 flex items-center justify-center rounded text-secondary hover:bg-simInputBackground"
+                  title="Broadcast"
+                  @click.stop="async () => {
+                    await loadFileContent(file);
+                    broadacast(selectedFile, code)
+                  }"
+                >
+                  ⟡
+                </button>
+              </div>
+            </li>
+          </ul>
+        </li>
+      </ul>
     </div>
+  </div>
+
 
     <!-- Editor -->
-    <div v-if="isEditing" class="flex flex-col min-w-0 transition-all duration-300 w-4/5">
+    <div v-if="isEditing" class="flex flex-col min-w-0 transition-all duration-300 w-5/6">
       <!-- Monaco Editor -->
       <div class="flex-1 overflow-auto">
-        <MonacoEditor theme="vs-dark" :options="options" language="typescript" v-model:value="code"
+
+        <MonacoEditor
+          :theme="isDarkMode ? 'vs-dark' : 'vs-light'"
+          :options="options"
+          language="typescript"
+          v-model:value="code"
           @editorWillMount="SetupTypes" @editorDidMount="setupMonaco" @click="isEditing = true" />
       </div>
 
       <!-- Controls -->
-      <div class="flex items-center gap-1 px-1 py-1 border-t border-slate-700 bg-[#1e1e2f]">
+      <div class="flex items-center gap-1 px-1 py-1 bg-panelContentBackground">
         <button class="px-4 border transition"
           :class="[isScriptRunning ? 'border-red-500 text-red-400 hover:bg-red-500/10' : 'border-green-500 text-green-400 hover:bg-green-500/10']"
           @click="isScriptRunning === true ? reset() : executeCode()">
           {{ isScriptRunning ? `■ Stop` : `▶ Run` }}
         </button>
-        <button class="px-4 border  transition" @click="() => broadacast(selectedFile, code)">
+        <button class="px-4 border border-simElementBorder transition" @click="() => broadacast(selectedFile, code)">
           ◉ Broadcast
         </button>
         <button class="px-4 border transition"
-          :class="[isLLMPending ? 'border-amber-500 text-amber-400 hover:bg-red-500/10' : 'border-secondary text-secondary']"
+          :class="[isLLMPending ? 'border-amber-500 text-amber-400 hover:bg-red-500/10' : 'border-simElementBorder text-secondary']"
           title="AI" @click.stop="async () => {
             sendToLLM(code)
           }">
           Ask AI
         </button>
-        <button class="px-4 border  transition" @click="isEditing = false">
+        <button class="px-4 border border-simElementBorder transition" @click="isEditing = false">
           x Close
         </button>
-        <span v-if="executionResult" class="ml-auto truncate text-slate-300">
+        <span v-if="executionResult" class="ml-auto truncate text-secondary bo">
           <span class="opacity-60">Result:</span> {{ executionResult }}
         </span>
       </div>
@@ -189,6 +226,10 @@ const props = defineProps({
   simProps: {
     type: Object as PropType<Record<string, SimulationProperties>>,
     required: true,
+  },
+  isDarkMode: {
+    type: Boolean,
+    default: false,
   },
   utilityFuncs: {
     type: Object as PropType<{

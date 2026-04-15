@@ -12,8 +12,8 @@
     "preview": "vite preview",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist -b master",
-    "copy:emscripten":"src=node_modules/Compact-Flight-Simulator/build_wasm_5.0.1/bin && cp -a \"$src\"/flightsimulator_exec.{data,wasm} ~/sandbox/vue/flight_simulator_app/public/ && cp -a \"$src\"/flightsimulator_exec*{js,d.ts,meta.ts} ~/sandbox/vue/flight_simulator_app/src/wasm/",
-    "build:emscripten": "git -C node_modules/Compact-Flight-Simulator checkout a95c20b && ./node_modules/Compact-Flight-Simulator/build_wasm.sh && npm run copy:emscripten",
+    "copy:emscripten":"src=node_modules/Compact-Flight-Simulator/build_wasm_5.0.1/bin && mkdir -p src/wasm/generated && cp -a \"$src\"/flightsimulator_exec.{data,wasm} ~/sandbox/vue/flight_simulator_app/public/ && cp -a \"$src\"/flightsimulator_exec*{js,d.ts,meta.ts} ~/sandbox/vue/flight_simulator_app/src/wasm/generated/",
+    "build:emscripten": "git -C node_modules/Compact-Flight-Simulator checkout 3b91740 && ./node_modules/Compact-Flight-Simulator/build_wasm.sh && npm run copy:emscripten",
     "preinstall": "[ -z \"$ACCESS_TOKEN\" ] && set -a && . .env && set +a; git clone https://oauth2:$ACCESS_TOKEN@github.com/wailo/Compact-Flight-Simulator.git node_modules/Compact-Flight-Simulator",
     "generate-modelfile": "node dist/generate-modelfile.js",
     "dev:modelfile": "tsx src/generate-modelfile.ts && ollama create flightsimModel -f Modelfile"

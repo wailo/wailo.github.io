@@ -40,7 +40,7 @@ watchEffect(() => {
   <!-- panel frame -->
   <div
     :class="[
-      'flex flex-col border-2 w-full h-full box-border min-w-0 min-h-0 rounded overflow-hidden',
+      'flex flex-col border w-full h-full box-border min-w-0 min-h-0 rounded overflow-hidden',
       props.active ? 'border-panelActive' : 'border-panelBorder',
       { 'animate-pulse': props.flash },
     ]"
@@ -48,18 +48,18 @@ watchEffect(() => {
     <!-- panel-header -->
     <div
       :class="[
-        'max-h-1/6 text-sm font-medium h-5 box-border justify-between border-b pb-0 flex items-center bg-panelHeaderBackground',
+        'max-h-1/6 text-xs font-medium h-5 box-border justify-between border-b pb-0 flex items-center bg-panelHeaderBackground',
         props.active ? 'border-panelActive' : 'border-panelBorder',
       ]"
     >
       <!-- TABS -->
-      <div class="flex h-full gap-2  text-secondary">
+      <div class="flex h-full gap-1 text-secondary">
         <button
           v-for="tab in tabMap"
           :key="tab.name"
           @click="activeTab = tab.name"
           :class="[
-            'px-2 rounded-t',
+            'px-1 rounded-t flex items-center',
             tabMap.length > 1 ? activeTab === tab.name
               ? 'bg-panelActive'
               : 'text-xs' : '',
@@ -72,7 +72,7 @@ watchEffect(() => {
       <!-- panel-status -->
       <span
         :class="[
-          'inline-block w-3/12 h-full pl-2 text-nowrap text-primary border-panelBorder border-l-1',
+          'inline-block w-3/12 h-full pl-2 text-nowrap text-primary border-panelBorder border-l-1 flex items-center',
           props.active ? 'bg-panelActive' : 'bg-panelStatusBackground',
         ]"
       >

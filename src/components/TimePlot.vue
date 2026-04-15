@@ -40,7 +40,7 @@ import {
 } from 'vue'
 import uPlot from 'uplot'
 import 'uplot/dist/uPlot.min.css'
-import type { SimulationProperties } from '../siminterfac'
+import type { SimulationProperties } from '../wasm/siminterface'
 
 // ✅ Props
 const props = defineProps({

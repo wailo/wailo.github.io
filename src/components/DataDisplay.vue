@@ -4,11 +4,11 @@
       <!-- Input + Buttons Row -->
       <div class="flex gap-2">
         <input v-model="searchQuery" type="text" placeholder="Search..."
-          class="w-1/3 border bg-transparent border-simElementBorder p-1" @focus="isFocused = true" />
-        <button @click="showAll" class="w-1/3 border text-secondary">
+          class="w-1/3 text-secondary bg-transparent border border-simElementBorder p-1" @focus="isFocused = true" />
+        <button @click="showAll" class="w-1/3 border border-simElementBorder text-secondary">
           Show All
         </button>
-        <button @click="hideAll" class="w-1/3 border text-secondary">
+        <button @click="hideAll" class="w-1/3 border border-simElementBorder text-secondary">
           Clear
         </button>
       </div>
@@ -69,7 +69,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onBeforeUnmount, PropType } from 'vue'
 import Fuse from 'fuse.js'
-import { type SimulationProperties } from '../siminterfac'
+import { type SimulationProperties } from '../wasm/siminterface'
 import TimePlot from './TimePlot.vue'
 
 // Props

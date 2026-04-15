@@ -1,8 +1,8 @@
 
-export type { FlightModelInstance, graphics, ExtendedMainModule } from "./siminterfac"
+export type { FlightModelInstance, graphics, ExtendedMainModule } from "./wasm/siminterface"
 
-import { SimulationProperties } from "../src/wasm/flightsimulator_exec_meta"
-export type { SimulationProperties } from "../src/wasm/flightsimulator_exec_meta"
+import { SimulationProperties } from "../src/wasm/generated/flightsimulator_exec_meta"
+export type { SimulationProperties } from "../src/wasm/generated/flightsimulator_exec_meta"
 
 import type { ScriptContext } from "./ScriptContext";
 export type { ScriptContext } from "./ScriptContext"
@@ -65,13 +65,13 @@ export async function repositionWithAutopilot(context: ScriptContext, target_alt
   target_heading: number, timeOut: number = 10000, preConfiguration?: Function): Promise<boolean> {
 
   const simulation = context.controls.simulation;
+  const flight_model_type = simulation.flight_model;
 
-  // Reset flight model
+  // Force Reset flight model
   simulation.reset_flightmodel();
 
   // Reinitialize the flight model reference after reset
   const flightModel = context.controls.flightModel;
-  const flight_model_type = simulation.flight_model;
 
   // Set Simulation speed to 500
   simulation.set_simulation_speed(500);

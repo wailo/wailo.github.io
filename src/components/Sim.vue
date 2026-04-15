@@ -3,7 +3,7 @@
 
       <div
     ref="fullscreenContainer"
-    class="container max-w-full h-screen gap-2 p-5 bg-simBackground"
+    class="container max-w-full h-screen gap-1 p-1 bg-simBackground"
     :class="`layout-${layout}`">
     {{ renderSignal }}
     <!-- Panel 1 -->
@@ -53,14 +53,14 @@
       :active="FlightSimModule.simulation.simulation_pause || FlightSimModule.simulation.simulation_speed != 1"
       :flash="FlightSimModule.simulation.simulation_pause"
       class="panel-simulationcontrols"
-      data-layout="focus instructor pilot"
+      data-layout="focus pilot"
     >
     <template #Simulation>
       <div  v-if="sim_module_loaded" class="w-full h-full grid grid-cols-3 gap-1">
           <wButton
-          v-for="(input, i) in Object.values(simulationControlsProps)
-  .flatMap(arr => arr).filter(v => v.group === 'simulation' && v.setterFunc && ['boolean', 'void'].includes(v.type)).sort((a) => a.type == 'boolean' || a.type == 'void' ? -1 : 1)"
-          :key="i"
+          v-for="(input) in Object.values(simulationControlsProps)
+  .flatMap(arr => arr).filter((v: SimulationProperties) => v.group === 'simulation' && v.setterFunc && ['boolean', 'void'].includes(v.type)).sort((a: SimulationProperties) => a.type == 'boolean' || a.type == 'void' ? -1 : 1)"
+          :key="input.id"
           :buttonLabel="input.label"
           :buttonClick="() => input.setterFunc?.()"
           :button-state="input?.inputValue as boolean"
@@ -68,8 +68,8 @@
           :class="!['boolean', 'void'].includes(input.type) ? 'col-span-3' : ''"
         />
         <ButtonSwitch
-        v-for="(input, i) in Object.values(simulationControlsProps).filter(v => v.setterFunc && !['boolean', 'void'].includes(v.type)).sort((a) => a.type == 'boolean' || a.type == 'void' ? -1 : 1)"
-          :key="i"
+        v-for="input in Object.values(simulationControlsProps).filter(v => v.setterFunc && !['boolean', 'void'].includes(v.type)).sort((a) => a.type == 'boolean' || a.type == 'void' ? -1 : 1)"
+          :key="input.id"
           :buttonLabel="input.label"
           :buttonClick="() => input.setterFunc?.()"
           :textInput="input?.inputValue"
@@ -97,6 +97,7 @@
         v-if="sim_module_loaded && dataDisplayRef && classroomComponentRef"
         :context-object="FlightSimModule"
         :simProps="flightModelProps"
+        :is-dark-mode="isDarkMode"
         :utility-funcs="{
           plotView:dataDisplayRef.setPlotView,
           dataView:dataDisplayRef.setDataView,
@@ -121,28 +122,18 @@
     <Panel
     v-if="sim_module_loaded"
       :status="FlightSimModule.flightModel.autopilot_master_switch ? 'Engaged' : 'Disengaged'"
+      :active="FlightSimModule.flightModel.autopilot_master_switch"
       class="panel-autopilot"
       data-layout="instructor pilot"
     >
     <template #Autopilot>
-  <div class="w-full h-full grid grid-cols-4 gap-1 auto-rows-fr">
-    <div class="col-span-1 grid grid-cols-1 gap-1 auto-rows-fr">
-      <wButton
-      v-if="sim_module_loaded"
-      v-for="(input, i) in autopilotControlsButtons"
-      :key="i"
-      class="border border-simElementBorder w-full h-full"
-      :buttonLabel="input.label"
-      :buttonClick="(input.stateCommand.setterFunc as (() => void) | undefined) || (() => {})"
-      :buttonState="input.stateCommand.inputValue as boolean"
-    ></wButton>
-    </div>
-  <div class="col-span-3 grid grid-cols-3 gap-1 auto-rows-fr">
+  <div class="w-full h-full">
+  <div class="col-span-1 grid grid-cols-4 gap-1">
     <button-switch
       v-if="sim_module_loaded"
-      v-for="(input) in autopilotControlsButtonsInputs"
-      :key="input.id"
-      class="border border-simElementBorder w-full h-full"
+      v-for="(input, i) in autopilotControls"
+      :key="i"
+      class="border border-simElementBorder w-full"
 
       :buttonClick="(_e: MouseEvent) => input.stateCommand.setterFunc?.()"
       :buttonState="input.stateCommand?.inputValue as boolean"
@@ -304,15 +295,16 @@ import {
   initializeModule,
   fetchSimData,
   SimulationProperties,
+  AutopilotProperties,
   getFlightModelParameters,
   getSimulationControlsParameters,
   getAutopilotProperties,
   ExtendedMainModule,
-} from "../siminterfac.ts";
+} from "../wasm/siminterface.ts";
 
 import Editor, { ScriptStatus } from "./Editor.vue";
 import WButton from "./wButton.vue";
-import { MainModule } from "../../src/wasm/flightsimulator_exec";
+import { MainModule } from "../../src/wasm/generated/flightsimulator_exec";
 
 
 const renderSignal = shallowRef()
@@ -415,6 +407,28 @@ const userPromptActive = ref<boolean>(false);
 const isFullscreen = ref(false);
 const fullscreenContainer = ref<HTMLElement | null>(null)
 const layout = ref<'focus' | 'instructor' | 'pilot'>('instructor');
+const isDarkMode = ref(false);
+
+// Initialize theme from localStorage
+const initializeTheme = () => {
+  const savedTheme = localStorage.getItem('theme') || 'light';
+  isDarkMode.value = savedTheme === 'dark';
+  applyTheme(isDarkMode.value);
+};
+
+const applyTheme = (dark: boolean) => {
+  if (dark) {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
+  localStorage.setItem('theme', dark ? 'dark' : 'light');
+};
+
+const toggleTheme = () => {
+  isDarkMode.value = !isDarkMode.value;
+  applyTheme(isDarkMode.value);
+};
 
 
 // Components refs
@@ -457,10 +471,16 @@ const layoutControls = computed(() => ({
     setterFunc: () => setLayout('focus'),
     group: 'simulation',
   },
+  toggle_theme: {
+    id: 'toggle_theme',
+    type: 'void' as const,
+    label: isDarkMode.value ? 'Light' : 'Dark',
+    setterFunc: () => toggleTheme(),
+    group: 'simulation',
+  },
 }));
 
-let autopilotControlsButtons : ComputedRef<ReturnType<typeof getAutopilotProperties>>;
-let autopilotControlsButtonsInputs : ComputedRef<ReturnType<typeof getAutopilotProperties>>;
+let autopilotControls : ComputedRef<ReturnType<typeof getAutopilotProperties>>;
 let flightModelProps : ComputedRef<ReturnType<typeof getFlightModelParameters>>;
 let simulationControlsProps : ComputedRef<ReturnType<typeof getSimulationControlsParameters>>;
 let groupedSimProps: ComputedRef<Record<string, SimulationProperties[]>>;
@@ -483,6 +503,10 @@ let simUpdateInterval: ReturnType<typeof setInterval>;
 let manager: RemoteCallManager;
 
 // Lifecycle hooks
+onBeforeMount(() => {
+  initializeTheme();
+});
+
 onMounted(async () => {
   initializeModule({
     locateFile: (path: string, prefix: string) => {
@@ -569,9 +593,6 @@ onMounted(async () => {
     .catch(console.error);
 });
 
-onBeforeMount(() => {
-  document.removeEventListener('fullscreenchange', () => isFullscreen.value = document.fullscreenElement !== null);;
-});
 
 onUnmounted(() => {
   clearInterval(simUpdateInterval);
@@ -580,13 +601,12 @@ onUnmounted(() => {
 
 function initFlightModelParams() {
   flightModelProps = computed(() => {return getFlightModelParameters(FlightSimModule.flightModel); });
-  autopilotControlsButtons = computed(() => { return getAutopilotProperties(FlightSimModule.flightModel).filter(item => item.targetCommand === undefined); });
-  autopilotControlsButtonsInputs = computed(() => { return getAutopilotProperties(FlightSimModule.flightModel).filter(item => item.targetCommand !== undefined); });
+  autopilotControls = computed(() => { return getAutopilotProperties(FlightSimModule.flightModel).sort((a: AutopilotProperties, b: AutopilotProperties) => (a.targetCommand === undefined ? 0 : 1) - (b.targetCommand === undefined ? 0 : 1));});
   simulationControlsProps = computed(() => { const base = getSimulationControlsParameters(FlightSimModule); return { ...base, ...layoutControls.value }; });
 
   groupedSimProps = computed(() => {
   const all = { ...simulationControlsProps.value, ...flightModelProps.value };
-  return Object.values(all).filter(v => v.setterFunc !== undefined).reduce((acc: Record<string, SimulationProperties[]>, item: SimulationProperties) => {
+  return Object.values(all).filter((v: SimulationProperties) => v.setterFunc !== undefined).reduce((acc: Record<string, SimulationProperties[]>, item: SimulationProperties) => {
     // Group by group
     const parentKey = item.group;
     if (!acc[parentKey]) {
@@ -621,12 +641,16 @@ function initFlightModelParams() {
 .container.layout-instructor {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr;
-  grid-template-rows: repeat(6, 1fr);
+  grid-template-rows: repeat(8, 1fr);
   grid-template-areas:
     "cockpit userprompt realtimedata"
     "cockpit userprompt realtimedata"
     "cockpit userprompt realtimedata"
-    "autopilot userprompt simulationcontrols"
+    "cockpit userprompt realtimedata"
+    "autopilot userprompt realtimedata"
+    "learningmodules classroom flightmodel"
+    "learningmodules classroom flightmodel"
+    "learningmodules classroom flightmodel"
     "learningmodules classroom flightmodel"
     "learningmodules classroom flightmodel";
 }
@@ -635,12 +659,14 @@ function initFlightModelParams() {
 .container.layout-pilot {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr;
-  grid-template-rows: repeat(6, 1fr);
+  grid-template-rows: repeat(8, 1fr);
   grid-template-areas:
     "cockpit userprompt realtimedata"
     "cockpit userprompt realtimedata"
     "cockpit userprompt realtimedata"
     "cockpit userprompt simulationcontrols"
+    "cockpit userprompt simulationcontrols"
+    "cockpit userprompt flightmodel"
     "cockpit userprompt flightmodel"
     "autopilot classroom flightmodel"
 }
@@ -649,8 +675,10 @@ function initFlightModelParams() {
 .container.layout-focus {
   display: grid;
   grid-template-columns: 1fr 2fr 1fr;
-  grid-template-rows: repeat(6, 1fr);
+  grid-template-rows: repeat(8, 1fr);
   grid-template-areas:
+    "realtimedata cockpit userprompt"
+    "realtimedata cockpit userprompt"
     "realtimedata cockpit userprompt"
     "realtimedata cockpit userprompt"
     "realtimedata cockpit userprompt"
