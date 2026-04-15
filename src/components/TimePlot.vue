@@ -152,7 +152,7 @@ async function recreateAllPlots() {
       },
       axes: [
 
-        { show: true, stroke: 'white', border :{show: true, stroke: 'grey'}, grid: { show: false, stroke: '#333', width: 1 },
+        { show: false, stroke: 'white', border :{show: true, stroke: 'grey'}, grid: { show: false, stroke: '#333', width: 1 },
           values: (_self, ticks) => ticks.map(i => (i / (1000/props.update_intervals)).toFixed(1)), },
         { show: true, stroke: 'white', border :{show: true, stroke: 'grey'}, grid: { show: false, stroke: '#333', width: 1 },
         ticks: {show: true, stroke: "rgba(1,0,0,1)" }}],
