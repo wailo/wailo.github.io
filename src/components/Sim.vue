@@ -150,7 +150,8 @@
 
     </Panel>
     <!-- Panel 6 -->
-    <Panel status="Running"
+    <Panel :status="FlightSimModule.flightModel.name"
+    v-if="sim_module_loaded"
     class="panel-flightmodel"
     data-layout="instructor pilot">
       <template #Flight-Model>
@@ -159,7 +160,7 @@
           v-if="sim_module_loaded"
           v-for="sim_group in groupedSimProps"
         >
-          <span class="font-bold">{{ sim_group[0].group.toUpperCase() }}</span>
+          <span class="font-bold text-secondary">{{ sim_group[0].group.toUpperCase() }}</span>
           <!-- label + control -->
           <div
             v-for="sim_prop in Object.values(sim_group)"
@@ -170,24 +171,30 @@
               {{ sim_prop.label }} <span v-if="sim_prop.unit">({{ sim_prop.unit }})</span>
             </span>
             <wInput
-            v-if="['number'].includes(sim_prop.type)"
+            v-if="sim_prop.type === 'number'"
               type="number"
               class="bg-simInputBackground border-l border-simElementBorder pl-1 h-full text-secondary w-2/5"
-              :textInput="sim_prop.inputValue as number|boolean"
+              :textInput="sim_prop.inputValue as number"
               :inputChange="sim_prop.setterFunc"
               :inputMin="sim_prop.min"
               :inputMax="sim_prop.max"
               :inputStep="sim_prop.step"
             />
             <wButton
-              v-else-if="['boolean', 'void'].includes(sim_prop.type)"
+              v-else-if="sim_prop.type === 'boolean'"
               class="border-l border-simElementBorder w-2/5 text-left pl-1"
               :class="sim_prop.inputValue ? 'bg-simActiveButton text-primary' : 'text-secondary'"
               :buttonLabel="sim_prop.inputValue ? 'On' : 'Off'"
               :buttonClick="() => sim_prop.setterFunc?.()"
               :buttonState="sim_prop.inputValue as boolean"
               />
-
+   <wButton
+              v-else-if="sim_prop.type === 'void'"
+              class="border-l border-simElementBorder w-2/5 text-left pl-1"
+              :class="sim_prop.inputValue ? 'bg-simActiveButton text-primary' : 'text-secondary'"
+              buttonLabel="▶"
+              :buttonClick="() => sim_prop.setterFunc?.()"
+              />
              <!-- Enum Input -->
         <select
     v-else-if="sim_prop.type === 'enum' && sim_prop.enumValues"
@@ -356,7 +363,7 @@ function simulationStatus(): string {
   //   status = "Collision";
   // }
   else if (FlightSimModule.simulation.simulation_speed == 1) {
-    status = isLicenceValid.value ? `${FlightSimModule.flightModel.name}-Running` : "Trial";
+    status = isLicenceValid.value ? `Running` : "Trial";
   } else {
     status = `${FlightSimModule.simulation.simulation_speed}x`;
   }
