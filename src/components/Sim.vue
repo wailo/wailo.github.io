@@ -53,7 +53,7 @@
       :active="FlightSimModule.simulation.simulation_pause || FlightSimModule.simulation.simulation_speed != 1"
       :flash="FlightSimModule.simulation.simulation_pause"
       class="panel-simulationcontrols"
-      data-layout="focus pilot"
+      data-layout="focus"
     >
     <template #Simulation>
       <div  v-if="sim_module_loaded" class="w-full h-full grid grid-cols-3 gap-1">
@@ -671,8 +671,8 @@ function initFlightModelParams() {
     "cockpit userprompt realtimedata"
     "cockpit userprompt realtimedata"
     "cockpit userprompt realtimedata"
-    "cockpit userprompt simulationcontrols"
-    "cockpit userprompt simulationcontrols"
+    "cockpit userprompt realtimedata"
+    "cockpit userprompt flightmodel"
     "cockpit userprompt flightmodel"
     "cockpit userprompt flightmodel"
     "autopilot classroom flightmodel"
