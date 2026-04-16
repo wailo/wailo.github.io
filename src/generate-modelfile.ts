@@ -20,9 +20,9 @@ CONFIG
 */
 
 const ENTRY_FILE = "src/core.ts";
-const META_FILE = "src/wasm/generated/flightsimulator_exec_meta.ts";
-const OUTPUT_FILE = "Modelfile";
-const DTS_OUTPUT_FILE = "editorTypes.ts";
+// const META_FILE = "src/wasm/generated/flightsimulator_exec_meta.ts";
+const OUTPUT_FILE = "src/wasm/generated/Modelfile";
+const DTS_OUTPUT_FILE = "src/wasm/generated/editorTypes.txt";
 const MODEL_NAME = "qwen3.5";
 
 /*
@@ -363,7 +363,8 @@ function toGrammar(node: Node, metadata: {}) {
 /*
 CONTRACT METADATA
 */
-
+// ignore typescript unused error
+// @ts-ignore
 function extractMetadata(entryFile: string): { c172: Record<string, string>; b747: Record<string, string>; graphics: Record<string, string> } {
   const source = project.getSourceFileOrThrow(entryFile);
   let c172_meta = {};
@@ -599,9 +600,9 @@ MAIN
 
 function main() {
   const entry = path.resolve(ENTRY_FILE);
-  const meta = path.resolve(META_FILE);
+  // const meta = path.resolve(META_FILE);
 
-  const metadata = extractMetadata(meta);
+  // const metadata = extractMetadata(meta);
   // const contract = extractContract(entry, metadata);
   const contract = extractContract(entry, {});
   const modelfile = generateModelfile(contract);

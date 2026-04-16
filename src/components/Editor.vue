@@ -162,8 +162,7 @@ export async function main(context: ScriptContext) {
 import { ref, PropType, onMounted } from "vue";
 import { ExtendedMainModule, repositionWithAutopilot, SimulationProperties, waitFor, waitForCondition } from "../core.ts";
 import * as ts_compiler from 'typescript'
-
-import modelfile_str from "./../../editortypes.ts?raw";
+import types_definitions from "./../../src/wasm/generated/editorTypes.txt?raw";
 import { resetTimeouts } from "../core.ts"
 // core.ts converted to js
 import coreSimJs from 'virtual:transpiled-core-js';
@@ -277,7 +276,7 @@ const options = {
 
 // Set up Monaco Editor with TypeScript definitions from ScriptContext and the generated modelfile
 const SetupTypes = () => {
-  monaco.typescript.typescriptDefaults.addExtraLib(`${stripImportsExports(scriptApiTypes)}\n${modelfile_str}`);
+  monaco.typescript.typescriptDefaults.addExtraLib(`${stripImportsExports(scriptApiTypes)}\n${types_definitions}`);
 }
 
 // Define the Monaco Editor configuration

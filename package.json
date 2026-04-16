@@ -3,20 +3,19 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "wasmTag": "v0.1.0",
   "scripts": {
     "docker:up": "docker compose up -d",
     "check": "vue-tsc -b",
     "docker:down": "docker compose down || true",
     "dev": "npm run dev:modelfile && npm run docker:up && 'npm run docker:down' EXIT; vite",
-    "build": "npm run build:emscripten && vue-tsc -b && vite build",
+    "preinstall": "tsx scripts/fetch-wasm-binary.ts && npm run generate-modelfile",
+    "build": "npm run check && vite build",
     "preview": "vite preview",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist -b master",
-    "copy:emscripten":"src=node_modules/Compact-Flight-Simulator/build_wasm_5.0.1/bin && mkdir -p src/wasm/generated && cp -a \"$src\"/flightsimulator_exec.{data,wasm} ~/sandbox/vue/flight_simulator_app/public/ && cp -a \"$src\"/flightsimulator_exec*{js,d.ts,meta.ts} ~/sandbox/vue/flight_simulator_app/src/wasm/generated/",
-    "build:emscripten": "git -C node_modules/Compact-Flight-Simulator checkout 3b91740 && ./node_modules/Compact-Flight-Simulator/build_wasm.sh && npm run copy:emscripten",
-    "preinstall": "[ -z \"$ACCESS_TOKEN\" ] && set -a && . .env && set +a; git clone https://oauth2:$ACCESS_TOKEN@github.com/wailo/Compact-Flight-Simulator.git node_modules/Compact-Flight-Simulator",
-    "generate-modelfile": "node dist/generate-modelfile.js",
-    "dev:modelfile": "tsx src/generate-modelfile.ts && ollama create flightsimModel -f Modelfile"
+    "generate-modelfile": "tsx src/generate-modelfile.ts",
+    "dev:modelfile": "tsx src/generate-modelfile.ts && ollama create flightsimModel -f src/wasm/generated/Modelfile"
   },
   "dependencies": {
     "fuse.js": "^7.1.0",
@@ -31,7 +30,7 @@
     "vue-router": "^4.5.0"
   },
   "devDependencies": {
-    "@types/node": "^25.5.2",
+    "@types/node": "^25.6.0",
     "@vitejs/plugin-vue": "^5.2.4",
     "autoprefixer": "^10.4.19",
     "gh-pages": "^6.3.0",
