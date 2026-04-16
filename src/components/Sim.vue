@@ -414,7 +414,7 @@ const userPromptActive = ref<boolean>(false);
 const isFullscreen = ref(false);
 const fullscreenContainer = ref<HTMLElement | null>(null)
 const layout = ref<'focus' | 'instructor' | 'pilot'>('instructor');
-const isDarkMode = ref(false);
+const isDarkMode = ref(true);
 
 // Initialize theme from localStorage
 const initializeTheme = () => {
