@@ -1,4 +1,16 @@
-import {simControls, simData, simProps, waitFor, waitForCondition, plotView, dataView, dataDisplayReset, notifyUser, checkPoint} from "./core"
+import { ScriptContext } from "../../src/core";
+
+export async function main(context: ScriptContext) {
+  const simControls = context.controls;
+  const simProps = context.props;
+  // const repositionWithAutopilot = context.repositionWithAutopilot;
+  const waitFor = context.waitFor;
+  const waitForCondition = context.waitForCondition;
+  const dataView = context.dataView;
+  const plotView = context.plotView;
+  const dataDisplayReset = context.dataDisplayReset;
+  const notifyUser = context.notifyUser;
+  const checkPoint = context.checkPoint;
 
 // 🛠️ Helper: Flight Schedule Tracker
 let currentStep = 0;
@@ -25,7 +37,7 @@ function advanceSchedule(extraText = "", title = "") {
 
 }
 
-function showSchedule(highlightIndex, title, optionalText = "") {
+function showSchedule(highlightIndex : number, title: string, optionalText = "") {
   const lastIndex = steps.length - 1;
 
   const tableRows = steps.map((step, index) => {
@@ -69,7 +81,7 @@ function showSchedule(highlightIndex, title, optionalText = "") {
   .markdown thead {
     text-align: left !important;
     padding: 0 !important;
-    border-bottom: 1px solid #aaa; 
+    border-bottom: 1px solid #aaa;
   }
 
   .markdown th {
@@ -114,7 +126,8 @@ advanceSchedule(
   "Takeoff configuration..."
 );
 dataDisplayReset();
-simControls.api_set_simulation_reset();
+simControls.simulation.reset_simulation();
+const flightmodel = simControls.simulation.set_flight_model_b747();
 await waitFor(1000);
 
 // Display key data
@@ -133,90 +146,90 @@ await waitFor(300);
 plotView(simProps.ias_speed_knots, true);
 
 // Show motions cues
-simControls.api_set_motion_cues(true)
+simControls.simulation.set_motion_cues(true)
 
 // Flaps + Throttle
-simControls.api_set_flaps_selector_position(simControls.FlapSelector.TWENTY.value);
-simControls.api_set_autopilot(true);
+flightmodel.set_flaps_selector_position(simControls.B747FlapSelector.TWENTY);
+flightmodel.set_autopilot_master_switch(true);
 await waitFor(300);
-simControls.api_set_autopilot_ias_speed_target(180);
+flightmodel.set_autopilot_speed_indicated_target(180);
 await waitFor(300);
-simControls.api_set_autopilot_altitude_target(18000);
+flightmodel.set_autopilot_altitude_target(18000);
 await waitFor(300);
-simControls.api_set_autopilot_heading_target(270);
+flightmodel.set_autopilot_heading_target(270);
 await waitFor(300);
-simControls.api_set_autopilot_vertical_speed_target(1500);
+flightmodel.set_autopilot_vertical_speed_target(1500);
 await waitFor(300);
-simControls.api_set_autopilot_pitch_target(10);
+flightmodel.set_autopilot_pitch_target(10);
 await waitFor(2000)
 
 advanceSchedule("", "Engine throttle to 90%.");
-simControls.api_set_engine_throttle_position(0.90);
+flightmodel.set_engine_throttle_position(0.90);
 await waitFor(7000)
 
 advanceSchedule("", "Wait to reach 150 KT IAS");
-await waitForCondition(() => simData.api_ias_speed_knots >= 150);
+await waitForCondition(() => flightmodel.speed_indicated_knots >= 150);
 advanceSchedule("Initiate Climbing", "Rotate");
-simControls.api_set_elevator_position(-0.25);
+flightmodel.set_elevator_position(-0.25);
 
 // Wait for positive vertical speed above 400 ft/min for more than 1 second
-await waitForCondition(() => simData.api_vertical_speed_ftmin > 400, 1000);
+await waitForCondition(() => flightmodel.vertical_speed_ftmin > 400, 1000);
 advanceSchedule("", "Retracting landing gear");
-simControls.api_set_autopilot_pitch_hold(true);
-simControls.api_set_landing_gear_selector_position(simControls.GearSelector.UP.value);
+flightmodel.set_autopilot_pitch_hold(true);
+flightmodel.set_landing_gear_selector_position(simControls.B747GearSelector.UP);
 await waitFor(3000);
-simControls.api_set_engine_throttle_position(0.85)
+flightmodel.set_engine_throttle_position(0.85)
 
-await waitForCondition(() => simData.api_altitude > 1000);
+await waitForCondition(() => flightmodel.altitude_ft > 1000);
 advanceSchedule("", "Engaging VS and heading hold");
-simControls.api_set_autopilot_pitch_hold(false);
-simControls.api_set_autopilot_vertical_speed_hold(true);
-simControls.api_set_autopilot_heading_hold(true);
+flightmodel.set_autopilot_pitch_hold(false);
+flightmodel.set_autopilot_vertical_speed_hold(true);
+flightmodel.set_autopilot_heading_hold(true);
 await waitFor(5000);
-simControls.api_set_engine_throttle_position(0.80)
+flightmodel.set_engine_throttle_position(0.80)
 
-await waitForCondition(() => simData.api_altitude >= 1000 && simData.api_ias_speed_knots >= 210);
+await waitForCondition(() => flightmodel.altitude_ft >= 1000 && flightmodel.speed_indicated_knots >= 210);
 advanceSchedule("", "Retracting to Flaps 10");
-simControls.api_set_flaps_selector_position(simControls.FlapSelector.TEN.value);
+flightmodel.set_flaps_selector_position(simControls.B747FlapSelector.TEN);
 
-await waitForCondition(() => simData.api_altitude >= 1500 && simData.api_ias_speed_knots >= 220);
+await waitForCondition(() => flightmodel.altitude_ft >= 1500 && flightmodel.speed_indicated_knots >= 220);
 advanceSchedule("", "Retracting to Flaps 5");
-simControls.api_set_flaps_selector_position(simControls.FlapSelector.FIVE.value);
+flightmodel.set_flaps_selector_position(simControls.B747FlapSelector.FIVE);
 
-await waitForCondition(() => simData.api_altitude >= 2000 && simData.api_ias_speed_knots >= 235);
+await waitForCondition(() => flightmodel.altitude_ft >= 2000 && flightmodel.speed_indicated_knots >= 235);
 advanceSchedule("", "Retracting to Flaps 1");
-simControls.api_set_flaps_selector_position(simControls.FlapSelector.ONE.value);
+flightmodel.set_flaps_selector_position(simControls.B747FlapSelector.ONE);
 
-await waitForCondition(() => simData.api_altitude >= 2500 && simData.api_ias_speed_knots >= 245);
+await waitForCondition(() => flightmodel.altitude_ft >= 2500 && flightmodel.speed_indicated_knots >= 245);
 advanceSchedule("", "Retracting Flaps to 0");
-simControls.api_set_flaps_selector_position(simControls.FlapSelector.ZERO.value);
+flightmodel.set_flaps_selector_position(simControls.B747FlapSelector.ZERO);
 
 
 
 // simControls.api_set_simulation_speed(2);
-// await waitForCondition(() => simData.api_altitude >= 3000 && simData.api_heading_deg === 270);
+// await waitForCondition(() => flightmodel.altitude_ft >= 3000 && flightmodel.api_heading_deg === 270);
 
-simControls.api_set_autopilot_vertical_speed_hold(false);
-simControls.api_set_autopilot_altitude_hold(true);
-simControls.api_set_autopilot_ias_speed_target(250);
-simControls.api_set_autopilot_ias_speed_hold(true)
+flightmodel.set_autopilot_vertical_speed_hold(false);
+flightmodel.set_autopilot_altitude_hold(true);
+flightmodel.set_autopilot_speed_indicated_target(250);
+flightmodel.set_autopilot_speed_indicated_hold(true)
 await waitFor(4000);
 
 advanceSchedule("Climbing to FL180 using 100x speed", "Climb to FL180");
 await waitFor(5000);
-simControls.api_set_simulation_speed(100);
+simControls.simulation.set_simulation_speed(100);
 
 // Wait until corssing FL100
-await waitForCondition(() => simData.api_altitude >= 10000);
-simControls.api_set_autopilot_mach_speed_target(0.6);
-simControls.api_set_autopilot_mach_speed_hold(true)
+  await waitForCondition(() => flightmodel.altitude_ft >= 10000);
+flightmodel.set_autopilot_speed_mach_target(0.6);
+flightmodel.set_autopilot_speed_mach_hold(true)
 
 
-await waitForCondition(() => simData.api_altitude >= 18000);
+await waitForCondition(() => flightmodel.altitude_ft >= 18000);
 advanceSchedule("Returning to normal speed, disabling autopilot", "Cruise");
 await waitFor(5000);
-simControls.api_set_simulation_speed(1);
-simControls.api_set_autopilot(false);
+simControls.simulation.set_simulation_speed(1);
+flightmodel.set_autopilot_master_switch(false);
 
 advanceSchedule(
   "We have demonstrated:\n" +
@@ -227,5 +240,4 @@ advanceSchedule(
   "Now you may try to fly the simulator manually.\n\n",
   "Wrap-up"
 );
-
-await waitFor(20000);
+}

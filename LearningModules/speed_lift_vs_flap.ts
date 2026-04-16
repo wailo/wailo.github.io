@@ -1,14 +1,27 @@
-import {repositionWithAutopilot, simControls, simProps, waitFor, dataView, dataDisplayReset, notifyUser } from "./core"
+import { ScriptContext } from "../../src/core";
+
+export async function main(context: ScriptContext) {
+  const simControls = context.controls;
+  const simProps = context.props;
+  const repositionWithAutopilot = context.repositionWithAutopilot;
+  const waitFor = context.waitFor;
+  // const waitForCondition = context.waitForCondition;  
+  const dataView = context.dataView;
+  const plotView = context.plotView;
+  const dataDisplayReset = context.dataDisplayReset;
+  const notifyUser = context.notifyUser;
+  // const checkPoint = context.checkPoint;
+
 // 📘 Configurations
-const initialAltitude_ft = 4000;
+const initialAltitude_ft = 2000;
 const initialSpeed_knots = 210;
 const initialHeading_deg = 0;
 
 const flapStages = [
-  { angle: 0, label: "Flaps Up (Clean)", pause: true },
-  { angle: 10, label: "Flaps 10°", pause: true },
-  { angle: 20, label: "Flaps 20°", pause: true },
-  { angle: 30, label: "Flaps Full", pause: true },
+  { angle: simControls.B747FlapSelector.ZERO, label: "Flaps Up (Clean)", pause: true },
+  { angle: simControls.B747FlapSelector.TEN, label: "Flaps 10°", pause: true },
+  { angle: simControls.B747FlapSelector.TWENTFIVE, label: "Flaps 20°", pause: true },
+  { angle: simControls.B747FlapSelector.THIRTY, label: "Flaps Full", pause: true },
 ];
 
 // 📘 Step 1: Introduction
@@ -16,23 +29,42 @@ notifyUser("📘 Flap Effect", "Observe how changing flap settings affects airsp
 await waitFor(4000);
 
 dataDisplayReset();
-await repositionWithAutopilot(initialAltitude_ft, initialSpeed_knots, initialHeading_deg);
-await waitFor(2000);
+
+const flightModel = simControls.simulation.set_flight_model_b747()
+
+await repositionWithAutopilot(context, initialAltitude_ft, initialSpeed_knots, initialHeading_deg);
+
+
+// Hold the currnet pitch angel
+flightModel.set_autopilot_pitch_target(flightModel.pitch_deg);
+flightModel.set_autopilot_pitch_hold(true);
+// hold the current speed
+flightModel.set_autopilot_speed_indicated_target(initialSpeed_knots);
+flightModel.set_autopilot_speed_indicated_hold(true);
+
+flightModel.set_autopilot_master_switch(true);
 
 // 📘 Step 2: Enable Key Visuals
-dataView(simProps.altitude, true);
 dataView(simProps.ias_speed_knots, true);
 dataView(simProps.flaps_selector_position, true);
 dataView(simProps.lift, true);
 dataView(simProps.drag, true);
 dataView(simProps.thrust, true);
 dataView(simProps.aoa_deg, true);
-await waitFor(500);
+
+plotView(simProps.ias_speed_knots, true);
+plotView(simProps.flaps_selector_position, true);
+plotView(simProps.lift, true);
+plotView(simProps.drag, true);
+// plotView(simProps.aoa_deg, true);
+await waitFor(2000);
+
+await waitFor(500)
 
 // 📘 Step 3: Iterate Through Flap Stages
 for (const stage of flapStages) {
   notifyUser(`🔧 ${stage.label}`, `Deploying flaps to ${stage.angle}°...`);
-  simControls.api_set_flaps_selector_position(stage.angle);
+  flightModel.set_flaps_selector_position(stage.angle);
   await waitFor(3000);
 
   notifyUser(
@@ -71,16 +103,17 @@ notifyUser(
 await waitFor(4000);
 
 // 📘 Step 7: Cleanup and Re-engage Autopilot
-simControls.api_set_flaps_selector_position(0);
+flightModel.set_flaps_selector_position(0);
 await waitFor(1000);
 
-simControls.api_set_autopilot(true);
-simControls.api_set_autopilot_altitude_hold(true);
-simControls.api_set_autopilot_ias_speed_hold(true);
-simControls.api_set_autopilot_heading_hold(true);
+flightModel.set_autopilot_master_switch(true);
+flightModel.set_autopilot_altitude_hold(true);
+flightModel.set_autopilot_speed_indicated_hold(true);
+flightModel.set_autopilot_heading_hold(true);
 
 notifyUser(
   "🛑 Module Complete",
   "You’ve completed the Flap Effects demonstration.\nThis module can be repeated anytime from the main panel."
 );
 
+}

@@ -1,6 +1,19 @@
-import {repositionWithAutopilot, simControls, simData, simProps, waitFor, waitForCondition, dataView, dataDisplayReset, notifyUser } from "./core"
+import { ScriptContext } from "../../src/core";
+
+export async function main(context: ScriptContext) {
+  const simControls = context.controls;
+  const simProps = context.props;
+  const repositionWithAutopilot = context.repositionWithAutopilot;
+  const waitFor = context.waitFor;
+  const waitForCondition = context.waitForCondition;  
+  const dataView = context.dataView;
+  // const plotView = context.plotView;
+  const dataDisplayReset = context.dataDisplayReset;
+  const notifyUser = context.notifyUser;
+  // const checkPoint = context.checkPoint;
+
 dataDisplayReset();
-simControls.api_set_simulation_pause(true);
+simControls.simulation.set_simulation_pause(true);
 await waitFor(1000);
 
 // 📘 Introduction
@@ -12,65 +25,58 @@ notifyUser(
     "👀 Watch how lift coefficient (Cl) changes, even though speed (Mach) remains constant.\n" +
     "⏱ After each observation, the simulation will pause.\n▶️ Click resume when you're ready to continue.",
 );
-await waitForCondition(() => simData.api_simulation_pause === false);
-
-const cl = simData.api_cl.toFixed(3);
-const aoa = simData.api_aoa_deg.toFixed(1);
-const pitch = simData.api_pitch_deg.toFixed(1);
-const speed = simData.api_true_speed_knots.toFixed(1);
-const mach = simData.api_mach.toFixed(2);
-const altitude = simData.api_altitude.toFixed(0);
+await waitForCondition(() => simControls.simulation.simulation_pause === false);
 
 // 📊 Snapshot Storage
 let lowAltSnapshot, midAltSnapshot, highAltSnapshot;
 
 // Function to capture and return snapshot
 const getAltitudeLiftSnapshot = async () => {
-  const cl = simData.api_cl.toFixed(3);
-  const aoa = simData.api_aoa_deg.toFixed(1);
-  const pitch = simData.api_pitch_deg.toFixed(1);
-  const speed = simData.api_true_speed_knots.toFixed(1);
-  const mach = simData.api_mach.toFixed(2);
-  const altitude = simData.api_altitude.toFixed(0);
+  const cl = simControls.flightModel.cl.toFixed(3);
+  const aoa = simControls.flightModel.aoa_deg.toFixed(1);
+  const pitch = simControls.flightModel.pitch_deg.toFixed(1);
+  const speed = simControls.flightModel.speed_true_knots.toFixed(1);
+  const mach = simControls.flightModel.speed_mach.toFixed(2);
+  const altitude = simControls.flightModel.altitude_ft.toFixed(0);
 
   const snapshot = `📍 Altitude: ${altitude} ft\n🧭 Pitch: ${pitch}°\n🎯 AoA: ${aoa}°\n💨 TAS: ${speed} knots\n⚖️ Mach: ${mach}\n🪂 Cl: ${cl}`;
   notifyUser("📊 Altitude Snapshot", snapshot);
 
-  simControls.api_set_simulation_pause(true);
+  simControls.simulation.set_simulation_pause(true);
   await waitFor(1000);
   notifyUser(
     "📊 Altitude Snapshot",
     `${snapshot}\n\n⏸ Paused: Review the values above. Resume to continue.`,
   );
-  await waitForCondition(() => simData.api_simulation_pause === false);
+  await waitForCondition(() => simControls.simulation.simulation_pause === false);
 
   return snapshot;
 };
 
 // Function to stabilize at target altitude and Mach
-async function stabilizeAtAltitude(targetAltitude, targetMach) {
-  simControls.api_set_autopilot(true);
-  simControls.api_set_autopilot_altitude_target(targetAltitude);
-  simControls.api_set_autopilot_mach_speed_target(targetMach);
-  simControls.api_set_autopilot_mach_speed_hold(true);
-  simControls.api_set_autopilot_altitude_hold(true);
+async function stabilizeAtAltitude(targetAltitude : number, targetMach: number) {
+  simControls.flightModel.set_autopilot_master_switch(true);
+  simControls.flightModel.set_autopilot_altitude_target(targetAltitude);
+  simControls.flightModel.set_autopilot_speed_mach_target(targetMach);
+  simControls.flightModel.set_autopilot_speed_mach_hold(true);
+  simControls.flightModel.set_autopilot_altitude_hold(true);
   await waitFor(2000);
-  simControls.api_set_simulation_speed(100);
+  simControls.simulation.set_simulation_speed(100);
 
   await waitForCondition(
     () =>
-      Math.abs(simData.api_mach - targetMach) < 0.001 &&
-      Math.abs(simData.api_altitude - targetAltitude) < 50,
+      Math.abs(simControls.flightModel.speed_mach - targetMach) < 0.001 &&
+      Math.abs(simControls.flightModel.altitude_ft - targetAltitude) < 50,
   );
 
-  simControls.api_set_simulation_speed(1);
+  simControls.simulation.set_simulation_speed(1);
   await waitFor(2000);
 }
 
 // ⚙️ Configuration
 let targetMach = 0.6;
 // Reposition and start
-await repositionWithAutopilot(10000, 330, 90);
+await repositionWithAutopilot(context, 10000, 330, 90);
 
 
 // Watch key data. Altitude, mach, speed, Pitch Angle, Angle of Attack (AoA), lift coefficient (Cl)
@@ -116,3 +122,4 @@ notifyUser(
     `📊 Mid Altitude\n${midAltSnapshot}\n\n` +
     `📊 High Altitude\n${highAltSnapshot}\n\n`,
 );
+}

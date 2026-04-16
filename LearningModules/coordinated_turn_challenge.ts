@@ -1,28 +1,48 @@
-import {repositionWithAutopilot, simControls, simData, simProps, waitFor, waitForCondition, plotView, dataView, dataDisplayReset, notifyUser} from "./core"
-// 📘 Configurations
-const initialAltitude_ft = 5000;
-const initialSpeed_knots = 180;
+import { ScriptContext } from "../../src/core";
+
+export async function main(context: ScriptContext) {
+  const simControls = context.controls;
+  const simProps = context.props;
+  const repositionWithAutopilot = context.repositionWithAutopilot;
+  const waitFor = context.waitFor;
+  const waitForCondition = context.waitForCondition;
+  const dataView = context.dataView;
+  const plotView = context.plotView;
+  const dataDisplayReset = context.dataDisplayReset;
+  const notifyUser = context.notifyUser;
+  // const checkPoint = context.checkPoint;
+  const metrics = context.metrics;
+
+
+
+dataDisplayReset();
+simControls.simulation.reset_simulation();
+
+const flightModel = simControls.simulation.set_flight_model_c172();
+
+// 📘 Configurations for Cessna 172
+const initialAltitude_ft = 5000; // Typical cruising altitude
+const initialSpeed_knots = 100; // Cruise speed (120 knots)
 const initialHeading_deg = 0;
-const maxAltitudeDeviation_ft = 200;
-const requiredHeadingChange_deg = 180;
-const challengeTimeLimit_ms = 2 * 60 * 1000; // 2 minutes
+const maxAltitudeDeviation_ft = 100; // Tighter deviation
+const requiredHeadingChange_deg = 180; // Full 180° turn
+const challengeTimeLimit_ms = 60 * 1000; // 1 minute
 
 notifyUser(
-    "🎯 **Coordinated Turn**",
+    "🎯 **Coordinated Turn (Cessna 172)**",
     "**A coordinated turn** maintains balance between lift, weight, and centrifugal force.\n" +
     "**No slipping or skidding** — the aircraft turns smoothly while maintaining altitude."
 );
 
-dataDisplayReset();
-await repositionWithAutopilot(initialAltitude_ft, initialSpeed_knots, initialHeading_deg);
 
-simControls.api_set_autopilot(true);  // Enable autopilot again
-simControls.api_set_autopilot_altitude_hold(true); // Set altitude hold
-simControls.api_set_autopilot_ias_speed_hold(true); // Set speed hold
-simControls.api_set_autopilot_heading_hold(true); // Set heading hold
+await repositionWithAutopilot(context, initialAltitude_ft, initialSpeed_knots, initialHeading_deg);
+
+flightModel.set_autopilot_master_switch(true);  // Enable autopilot again
+flightModel.set_autopilot_altitude_hold(true); // Set altitude hold
+flightModel.set_autopilot_speed_indicated_hold(true); // Set speed hold
+flightModel.set_autopilot_heading_hold(true); // Set heading hold
 
 // 📘 Step 2: Explain Coordinated Turn
-
 await waitFor(4000);
 
 // 📘 Step 3: Display and Plot Relevant Data
@@ -41,17 +61,16 @@ plotView(simProps.aileron_position, true);
 plotView(simProps.elevator_position, true);
 
 // Capture starting values
-const initialAltitude = simData.api_altitude;
-const initialHeading = simData.api_heading_deg;
-const initialPitch_deg = simData.api_pitch_deg;
+const initialAltitude = flightModel.altitude_ft;
+const initialHeading = flightModel.heading_deg;
+const initialPitch_deg = 3; // Cessna 172 typical pitch for coordinated turn
 let altitudeWithinLimits = false;
 
-
 await waitFor(6000);
-simControls.api_set_autopilot(false);
-simControls.api_set_autopilot_altitude_hold(false);
-simControls.api_set_autopilot_ias_speed_hold(false);
-simControls.api_set_autopilot_heading_hold(false);
+flightModel.set_autopilot_master_switch(false);
+flightModel.set_autopilot_altitude_hold(false);
+flightModel.set_autopilot_speed_indicated_hold(false);
+flightModel.set_autopilot_heading_hold(false);
 await waitFor(1000);
 
 // 📘 Step 4: Start Challenge and Monitor User Action
@@ -65,19 +84,30 @@ let totalHeadingChange_deg = 0;
 // Define success condition
 const success = await waitForCondition(
     () => {
-        const currentAltitude = simData.api_altitude;
-        const currentHeading = simData.api_heading_deg;
+        const currentAltitude = flightModel.altitude_ft;
+        const currentHeading = flightModel.heading_deg;
         metrics.push( { timestamp: Date.now(),
-        heading: simData.api_heading_deg,
-        altitude: simData.api_altitude,
-        speed: simData.api_ias_speed_knots,
-        verticalSpeed: simData.api_vertical_speed,
-        turnRate: simData.api_heading_dot_deg,
-        bank: simData.api_bank_deg,
-        pitch: simData.api_pitch_deg,
-        elevator: simData.api_elevator_position,
-        aileron: simData.api_aileron_position
+        heading: flightModel.heading_deg,
+        altitude: flightModel.altitude_ft,
+        speed: flightModel.speed_indicated_knots,
+        verticalSpeed: flightModel.vertical_speed,
+        turnRate: flightModel.heading_dot_deg,
+        bank: flightModel.bank_deg,
+        pitch: flightModel.pitch_deg,
+        elevator: flightModel.elevator_position,
+        aileron: flightModel.aileron_position
         })
+
+        // Engaging autopilot is not allowed, disengage if detected
+        if (flightModel.autopilot_master_switch) {
+            notifyUser(
+                "❌ **Autopilot Engaged**",
+                "You engaged the autopilot. Disengaging autopilot now."
+            );
+            flightModel.set_autopilot_master_switch(false);
+            return false; // Fail condition if autopilot is engaged
+        }
+
         // Check altitude deviation first; if false, immediately return failure
         altitudeWithinLimits = Math.abs(currentAltitude - initialAltitude) <= maxAltitudeDeviation_ft;
         if (!altitudeWithinLimits) {
@@ -99,8 +129,8 @@ const success = await waitForCondition(
         return altitudeWithinLimits && headingChangedEnough;
     },
     0,          // confirmation_ms: condition must stay true for 2 seconds
-    400,        // poll every 400ms
-    challengeTimeLimit_ms,  // timeout after 2 minutes
+    400,        // poll every 40 ms
+    challengeTimeLimit_ms,  // Hard timeout
     false       // don't throw if timeout
 );
 
@@ -141,18 +171,4 @@ if (success) {
 }
 
 await waitFor(10000); // Give the user a moment to read the message
-
-
-// // 📘 Step 8: Declare End of Challenge
-// notifyUser(
-//   "🛑 **Challenge Ended**",
-//   "You can run this challenge again anytime."
-// );
-
-// await waitFor(1000); // Give the user a moment to read the message
-
-// 📘 Step 9: Re-engage Autopilot to Stabilize Aircraft
-simControls.api_set_autopilot(true);  // Enable autopilot again
-simControls.api_set_autopilot_altitude_hold(true); // Set altitude hold
-simControls.api_set_autopilot_ias_speed_hold(true); // Set speed hold
-simControls.api_set_autopilot_bank_hold(true); // Set bank hold
+}

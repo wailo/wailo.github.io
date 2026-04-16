@@ -1,4 +1,17 @@
-import {repositionWithAutopilot, simControls, simData, waitFor, dataDisplayReset, notifyUser } from "./core"
+import { ScriptContext } from "../../src/core";
+
+export async function main(context: ScriptContext) {
+  const simControls = context.controls;
+  // const simProps = context.props;
+  const repositionWithAutopilot = context.repositionWithAutopilot;
+  const waitFor = context.waitFor;
+  // const waitForCondition = context.waitForCondition;
+  // const dataView = context.dataView;
+  // const plotView = context.plotView;
+  const dataDisplayReset = context.dataDisplayReset;
+  const notifyUser = context.notifyUser;
+  // const checkPoint = context.checkPoint;
+
 // =========================
 // 📘 Introduction
 // =========================
@@ -13,31 +26,31 @@ notifyUser(
   );
   
   dataDisplayReset();
-
+  const flightModel = simControls.simulation.set_flight_model_b747();
   // ✈️ Reposition and stabilize at level flight
-  await repositionWithAutopilot(12000, 270, 180);
+  await repositionWithAutopilot(context, 12000, 270, 180);
   notifyUser("⚖️ Weight Adjustment", "We'll now modify aircraft weight and observe the effects.");
   
   // 🧪 Record current weight
-  const initialWeight = simData.api_weight;
+  const initialWeight = flightModel.weight;
   
   // 🔓 Disable altitude and speed hold to allow natural response
-  simControls.api_set_autopilot_altitude_hold(false);
-  simControls.api_set_autopilot_ias_speed_hold(false);
+  flightModel.set_autopilot_altitude_hold(false);
+  flightModel.set_autopilot_speed_indicated_hold(false);
   
   // ⏳ Wait before adjustments
   await waitFor(2000);
   
   // 📊 Function to display flight data
   const notifyWeightFlightData = () => {
-    const weight = simData.api_weight.toFixed(0);
-    const speed = simData.api_ias_speed_knots.toFixed(1);
-    const pitch = simData.api_pitch_deg.toFixed(1);
+    const weight = flightModel.weight.toFixed(0);
+    const speed = flightModel.speed_indicated_knots.toFixed(1);
+    const pitch = flightModel.pitch_deg.toFixed(1);
     notifyUser("📈 Live Data", `⚖️ Weight: ${weight} kg\n💨 Speed: ${speed} knots\n🧭 Pitch: ${pitch}°`);
   };
   
   // 🔼 Increase weight by 20%
-  simControls.api_set_empty_weight(initialWeight * 1.2);
+  flightModel.set_empty_weight(initialWeight * 1.2);
   notifyUser("🔼 Increasing Weight", "Weight increased by 20%. Observe performance.");
   for (let i = 0; i < 3; i++) {
     await waitFor(5000);
@@ -45,7 +58,7 @@ notifyUser(
   }
   
   // 🔽 Decrease weight to 80% of original
-  simControls.api_set_empty_weight(initialWeight * 0.8);
+  flightModel.set_empty_weight(initialWeight * 0.8);
   notifyUser("🔽 Decreasing Weight", "Weight reduced by 20%. Observe changes.");
   for (let i = 0; i < 3; i++) {
     await waitFor(5000);
@@ -53,7 +66,7 @@ notifyUser(
   }
   
   // 🔁 Reset to original weight
-  simControls.api_set_empty_weight(initialWeight);
+  flightModel.set_empty_weight(initialWeight);
   notifyUser("🔁 Weight Restored", "Aircraft weight reset. Observe return to initial performance.");
   await waitFor(3000);
   notifyWeightFlightData();
@@ -102,3 +115,4 @@ notifyUser(
   "🧐 Can you think of a situation where the aircraft weight increases during flight?\n" +
   "💬 This is an open-ended question — think of real-world scenarios (hint: something being added to the aircraft)."
 );
+}
