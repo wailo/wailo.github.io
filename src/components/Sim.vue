@@ -54,34 +54,66 @@
       class="panel-simulationcontrols"
       data-layout="focus"
     >
-    <template #Simulation>
-      <div  v-if="sim_module_loaded" class="w-full h-full grid grid-cols-3 gap-1">
-          <wButton
-          v-for="(input) in Object.values(simulationControlsProps)
-  .flatMap(arr => arr).filter((v: SimulationProperties) => v.group === 'simulation' && v.setterFunc && ['boolean', 'void'].includes(v.type)).sort((a: SimulationProperties) => a.type == 'boolean' || a.type == 'void' ? -1 : 1)"
-          :key="input.id"
-          :buttonLabel="input.label"
-          :buttonClick="() => input.setterFunc?.()"
-          :button-state="input?.inputValue as boolean"
-          class="border border-simElementBorder"
-          :class="!['boolean', 'void'].includes(input.type) ? 'col-span-3' : ''"
-        />
-        <ButtonSwitch
-        v-for="input in Object.values(simulationControlsProps).filter(v => v.setterFunc && !['boolean', 'void'].includes(v.type)).sort((a) => a.type == 'boolean' || a.type == 'void' ? -1 : 1)"
-          :key="input.id"
-          :buttonLabel="input.label"
-          :buttonClick="() => input.setterFunc?.()"
-          :textInput="input?.inputValue"
-          :inputChange="input.setterFunc"
-          :button-state="input.type === 'boolean' && input?.inputValue == 1"
-          :inputMin="input.min"
-          :inputMax="input.max"
-          :inputStep="input.step"
-          class="border border-simElementBorder col-span-3"
-        >
-        </ButtonSwitch>
-      </div>
-      </template>
+   <template #Simulation>
+  <div v-if="sim_module_loaded" class="w-full h-full grid grid-cols-3 gap-1">
+
+    <template
+      v-for="input in Object.values(simulationControlsProps)
+        .flatMap(arr => arr)
+        .filter((v: SimulationProperties) => v.group === 'simulation' && v.setterFunc)
+        .sort((a: SimulationProperties) =>
+          ['boolean', 'void'].includes(a.type) ? -1 : 1
+        )"
+      :key="input.id"
+    >
+
+      <!-- Boolean & Void -->
+      <wButton
+        v-if="['boolean', 'void'].includes(input.type)"
+        :buttonLabel="input.label"
+        :buttonClick="() => input.setterFunc?.()"
+        :button-state="input?.inputValue as boolean"
+        class="border border-simElementBorder"
+      />
+
+      <!-- Everything else -->
+      <ButtonSwitch
+        v-if="['string', 'number'].includes(input.type)"
+        :buttonLabel="input.label"
+        :buttonClick="() => input.setterFunc?.()"
+        :textInput="input?.inputValue"
+        :inputChange="input.setterFunc"
+        :button-state="input.type === 'boolean' && input?.inputValue == 1"
+        :inputMin="input.min"
+        :inputMax="input.max"
+        :inputStep="input.step"
+        class="border border-simElementBorder"
+      />
+   <select
+  v-else-if="input.type === 'enum' && input.enumValues"
+  class="border border-simElementBorder bg-simInputBackground text-secondary"
+  :value="input.inputValue"
+  @change="(e) => {
+    const value = (e.target as HTMLSelectElement).value
+    const selected = input.enumValues?.find(
+      v => String(v.enumValue) === value
+    )
+    input.setterFunc?.(selected?.enumValue)
+  }"
+>
+  <option
+    v-for="value in input.enumValues"
+    :key="value.enumName"
+    :value="String(value.enumValue)"
+  >
+    {{ value.enumName }}
+  </option>
+</select>
+
+    </template>
+
+  </div>
+</template>
     </Panel>
 
            <!-- Panel 2 -->
@@ -195,27 +227,26 @@
               :buttonClick="() => sim_prop.setterFunc?.()"
               />
              <!-- Enum Input -->
-        <select
-    v-else-if="sim_prop.type === 'enum' && sim_prop.enumValues"
+  <select
+  v-else-if="sim_prop.type === 'enum' && sim_prop.enumValues"
     class="bg-simInputBackground border-l border-simElementBorder pl-1 h-full text-secondary w-2/5"
-    :value="sim_prop.inputValue"
+  :value="sim_prop.inputValue"
   @change="(e) => {
-    const num = Number((e.target as HTMLSelectElement).value)
-    const selected = sim_prop.enumValues?.find(v => v.enumValue === num)
+    const value = (e.target as HTMLSelectElement).value
+    const selected = sim_prop.enumValues?.find(
+      v => String(v.enumValue) === value
+    )
     sim_prop.setterFunc?.(selected?.enumValue)
   }"
+>
+  <option
+    v-for="value in sim_prop.enumValues"
+    :key="value.enumName"
+    :value="String(value.enumValue)"
   >
-    <option
-      v-for="value in sim_prop.enumValues"
-      :key="value.enumValue"
-      :value="value.enumValue"
-    >
-      {{ value.enumName }}
-    </option>
-  </select>
-
-
-
+    {{ value.enumName }}
+  </option>
+</select>
           </div>
 
         </template>
@@ -325,7 +356,20 @@ function broadcast(call: RemoteCall | RemoteEvent) {
 
 
 function setLayout(mode: typeof layout.value) {
-  layout.value = mode
+  switch(mode) {
+    case LayoutTypes.INSTRUCTOR:
+      layout.value = "instructor";
+      break;
+    case LayoutTypes.PILOT:
+      layout.value = "pilot";
+      break;
+    case LayoutTypes.FOCUS:
+      layout.value = "focus";
+      break;
+    default:
+      layout.value = "instructor";
+  }
+
   // delay a resize event to allow components to adjust
   // This is needed resize event is not dispatched when component size change but the window size stay the same
   // So the openGL context will not resize.
@@ -411,8 +455,13 @@ const userPromptStatus = ref<string>("----");
 const userPromptActive = ref<boolean>(false);
 const isFullscreen = ref(false);
 const fullscreenContainer = ref<HTMLElement | null>(null)
-const layout = ref<'focus' | 'instructor' | 'pilot'>('instructor');
-const isDarkMode = ref(true);
+  const isDarkMode = ref(true);
+  enum LayoutTypes {
+    INSTRUCTOR = "instructor",
+    PILOT = "pilot",
+    FOCUS = "focus",
+  }
+  const layout = ref<"instructor" | "pilot" | "focus">("instructor");
 
 // Initialize theme from localStorage
 const initializeTheme = () => {
@@ -444,7 +493,7 @@ const markdownRef = ref<InstanceType<typeof MarkDown> | null>(null); // Use the 
 // const accountsComponentRef = ref<InstanceType<typeof Accounts> | null>(null); // Use the Accounts component type
 
 // Layout controls as computed
-const layoutControls = computed(() => ({
+const layoutControls: ComputedRef<Record<string, SimulationProperties>> = computed(() => ({
   toggle_fullscreen: {
     id: 'fullscreen',
     type: 'void' as const,
@@ -452,35 +501,26 @@ const layoutControls = computed(() => ({
     setterFunc: () => toggleFullscreen(),
     group: 'simulation'
   },
-  instructor_layout: {
-    id: 'instructor_layout',
-    type: 'void' as const,
-    label: 'Instructor Layout',
-    inputValue: layout.value === 'instructor',
-    setterFunc: () => setLayout('instructor'),
-    group: 'simulation',
-  },
-  pilot_layout: {
-    id: 'pilot_layout',
-    type: 'void' as const,
-    label: 'Pilot Layout',
-    inputValue: layout.value === 'pilot',
-    setterFunc: () => setLayout('pilot'),
-    group: 'simulation',
-  },
-  focus_layout: {
-    id: 'focus_layout',
-    type: 'void' as const,
-    label: 'Focus Layout',
-    inputValue: layout.value === 'focus',
-    setterFunc: () => setLayout('focus'),
-    group: 'simulation',
-  },
+
+  layout: {
+       id: 'layout',
+      type: 'enum',
+      label: 'Layout',
+      inputValue: layout.value === 'instructor' ? LayoutTypes.INSTRUCTOR : layout.value === 'pilot' ? LayoutTypes.PILOT : LayoutTypes.FOCUS,
+      group: 'simulation',
+      enumValues: [
+        { enumName: 'Instructor', enumValue: LayoutTypes.INSTRUCTOR },
+        { enumName: 'Pilot', enumValue: LayoutTypes.PILOT },
+        { enumName: 'Focus', enumValue: LayoutTypes.FOCUS },
+      ],
+      setterFunc: (val: string ) => setLayout(val as LayoutTypes)
+    },
   toggle_theme: {
     id: 'toggle_theme',
-    type: 'void' as const,
-    label: isDarkMode.value ? 'Light' : 'Dark',
+    type: 'boolean',
+    label: 'Dark Theme',
     setterFunc: () => toggleTheme(),
+    inputValue: isDarkMode.value,
     group: 'simulation',
   },
 }));
@@ -489,20 +529,6 @@ let autopilotControls : ComputedRef<ReturnType<typeof getAutopilotProperties>>;
 let flightModelProps : ComputedRef<ReturnType<typeof getFlightModelParameters>>;
 let simulationControlsProps : ComputedRef<ReturnType<typeof getSimulationControlsParameters>>;
 let groupedSimProps: ComputedRef<Record<string, SimulationProperties[]>>;
-//
-// groupedSimProps = computed(() => {
-//   const all = { ...simulationControlsProps.value, ...flightModelProps.value };
-//   return Object.values(all).filter(v => v.setterFunc !== undefined).reduce((acc: Record<string, SimulationProperties[]>, item: SimulationProperties) => {
-//     // Group by group
-//     const parentKey = item.group;
-//     if (!acc[parentKey]) {
-//       acc[parentKey] = [];
-//     }
-//     // Push the item to the corresponding group
-//     acc[parentKey].push(item);
-//     return acc;
-//   }, {} as Record<string, SimulationProperties[]>);
-// });
 
 let simUpdateInterval: ReturnType<typeof setInterval>;
 let manager: RemoteCallManager;
