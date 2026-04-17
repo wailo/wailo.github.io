@@ -5,7 +5,6 @@
     ref="fullscreenContainer"
     class="container max-w-full h-screen gap-1 p-1 bg-simBackground"
     :class="`layout-${layout}`">
-    {{ renderSignal }}
     <!-- Panel 1 -->
     <Panel
       :status="simulationStatus()"
@@ -287,7 +286,7 @@
 </template>
 
 <script setup lang="ts">
-import { ComputedRef, computed, shallowRef, triggerRef, ref, onMounted, onUnmounted, onBeforeMount } from "vue";
+import { ComputedRef, computed, ref, onMounted, onUnmounted, onBeforeMount } from "vue";
 import Panel from "./Panel.vue";
 import ButtonSwitch from "./ButtonSwitch.vue";
 import wButton from "./wButton.vue"
@@ -310,11 +309,10 @@ import {
 } from "../wasm/siminterface.ts";
 
 import Editor, { ScriptStatus } from "./Editor.vue";
-import WButton from "./wButton.vue";
 import { MainModule } from "../../src/wasm/generated/flightsimulator_exec";
 
 
-const renderSignal = shallowRef()
+const renderSignal = ref(0);
 
 
 
@@ -592,7 +590,7 @@ onMounted(async () => {
       simFunctions.notifyUser("Flight Sim", `SIM: ${FlightSimModule.FLIGHTMODEL_VERSION}
       UI: ${import.meta.env.VITE_GIT_SHA}`,2000)
       simUpdateInterval = setInterval(() => {
-        triggerRef(renderSignal);
+        renderSignal.value++;
         fetchSimData(FlightSimModule, initFlightModelParams);
         dataDisplayRef.value?.tickPlot();
       }, update_interval_ms);
@@ -607,9 +605,9 @@ onUnmounted(() => {
 });
 
 function initFlightModelParams() {
-  flightModelProps = computed(() => {return getFlightModelParameters(FlightSimModule.flightModel); });
-  autopilotControls = computed(() => { return getAutopilotProperties(FlightSimModule.flightModel).sort((a: AutopilotProperties, b: AutopilotProperties) => (a.targetCommand === undefined ? 0 : 1) - (b.targetCommand === undefined ? 0 : 1));});
-  simulationControlsProps = computed(() => { const base = getSimulationControlsParameters(FlightSimModule); return { ...base, ...layoutControls.value }; });
+  flightModelProps = computed(() => {renderSignal.value; return getFlightModelParameters(FlightSimModule.flightModel); });
+  autopilotControls = computed(() => { renderSignal.value; return getAutopilotProperties(FlightSimModule.flightModel).sort((a: AutopilotProperties, b: AutopilotProperties) => (a.targetCommand === undefined ? 0 : 1) - (b.targetCommand === undefined ? 0 : 1));});
+  simulationControlsProps = computed(() => { renderSignal.value; const base = getSimulationControlsParameters(FlightSimModule); return { ...base, ...layoutControls.value }; });
 
   groupedSimProps = computed(() => {
   const all = { ...simulationControlsProps.value, ...flightModelProps.value };
