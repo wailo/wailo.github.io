@@ -7,9 +7,9 @@
     :class="`layout-${layout}`">
     <!-- Panel 1 -->
     <Panel
-      :status="simulationStatus()"
-      :flash="FlightSimModule?.simulation.simulation_pause"
-      :active="FlightSimModule?.simulation.simulation_pause"
+      :status="simulationStatus"
+      :flash="FlightSimModule?.simulation.simulation_pause || FlightSimModule?.flightModel.is_damaged"
+      :active="FlightSimModule?.simulation.simulation_pause || FlightSimModule?.flightModel.is_damaged"
       class="panel-cockpit"
       data-layout="focus instructor pilot"
     >
@@ -317,7 +317,7 @@
 </template>
 
 <script setup lang="ts">
-import { ComputedRef, computed, ref, onMounted, onUnmounted, onBeforeMount } from "vue";
+import { watch, ComputedRef, computed, ref, onMounted, onUnmounted, onBeforeMount } from "vue";
 import Panel from "./Panel.vue";
 import ButtonSwitch from "./ButtonSwitch.vue";
 import wButton from "./wButton.vue"
@@ -344,7 +344,6 @@ import { MainModule } from "../../src/wasm/generated/flightsimulator_exec";
 
 
 const renderSignal = ref(0);
-
 
 
 // Define a decorator function
@@ -393,29 +392,17 @@ const onFullscreenChange = () => {
   isFullscreen.value = !!document.fullscreenElement
 }
 
-function simulationStatus(): string {
-  let status: string;
-  if (!FlightSimModule) {
-    status = "Loading";
-  } else if (FlightSimModule.simulation.simulation_pause) {
-    status = "Paused";
+const simulationStatus = computed(() => {
+  renderSignal.value; // depend on render signal to update when sim data is fetched
+  if (!FlightSimModule) return "Loading";
+  if (FlightSimModule.simulation.simulation_pause) return "Paused";
+  if (FlightSimModule.flightModel.is_damaged) return "Structural Damage";
+  if (FlightSimModule.simulation.simulation_speed === 1) {
+    return isLicenceValid.value ? "Running" : "Trial";
   }
-  // else if (FlightSimModule.api_ground_collision) {
-  //   simFunctions.notifyUser("Collision Detected", "The aircraft has collided with the ground.", 5000);
-  //   status = "Collision";
-  // }
-  else if (FlightSimModule.simulation.simulation_speed == 1) {
-    status = isLicenceValid.value ? `Running` : "Trial";
-  } else {
-    status = `${FlightSimModule.simulation.simulation_speed}x`;
-  }
+  return `${FlightSimModule.simulation.simulation_speed}x`;
+});
 
-   if (classroomComponentRef.value) {
-    classroomComponentRef.value.sendStatus(status);
-  }
-
-  return status;
-}
 
 // These functions will be mirrored to the clients
 // They need to be inside an object to have a path.
@@ -615,6 +602,13 @@ onMounted(async () => {
       sim_module_loaded.value = true;
       simFunctions.notifyUser("Flight Sim", `SIM: ${FlightSimModule.FLIGHTMODEL_VERSION}
       UI: ${import.meta.env.VITE_GIT_SHA}`,2000)
+
+      watch(simulationStatus, (newStatus) => {
+  if (classroomComponentRef.value) {
+    classroomComponentRef.value.sendStatus(newStatus);
+  }
+});
+
       simUpdateInterval = setInterval(() => {
         renderSignal.value++;
         fetchSimData(FlightSimModule, initFlightModelParams);
