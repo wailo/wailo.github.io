@@ -542,9 +542,11 @@ onMounted(async () => {
       const canvas = document.getElementById("canvas");
       return canvas;
     })(),
-    notifyUser: simFunctions.notifyUser, // to be called from c++
-    resetComponents: simFunctions.resetComponents, // to be called from c++
+    // Functions to be called from C++
+    notifyUser: simFunctions.notifyUser,
+    resetComponents: simFunctions.resetComponents,
     onLicenceState: (LicenceState: boolean) => isLicenceValid.value = LicenceState, // Update licence state
+    syncFlightModel: () => fetchSimData(FlightSimModule, initFlightModelParams) // Sync flightmodel
   })
     .then((modules) => {
       GLFWModule = modules[0]
