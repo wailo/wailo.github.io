@@ -602,7 +602,7 @@ onMounted(async () => {
 
       document.addEventListener('fullscreenchange', onFullscreenChange)
       sim_module_loaded.value = true;
-      simFunctions.notifyUser("Flight Sim", `SIM: ${FlightSimModule.FLIGHTMODEL_VERSION}
+      simFunctions.notifyUser("Flight Sim", `SIM: ${FlightSimModule.FLIGHTMODEL_VERSION} ${FlightSimModule.FLIGHTMODEL_BUILD_TIMESTAMP}
       UI: ${import.meta.env.VITE_GIT_SHA}`,2000)
 
       watch(simulationStatus, (newStatus) => {
