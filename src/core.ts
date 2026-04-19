@@ -133,7 +133,7 @@ export async function repositionWithAutopilot(context: ScriptContext, target_alt
   }, 400, 40, timeOut);
 
   if (!success) {
-    notifyUser("Reposition Failed", `Failed to reposition to altitude: ${target_altitude} ft, speed: ${target_speed} knots, heading: ${target_heading}° within ${timeOut / 1000} seconds.`);
+    context.notifyUser("Reposition Failed", `Failed to reposition to altitude: ${target_altitude} ft, speed: ${target_speed} knots, heading: ${target_heading}° within ${timeOut / 1000} seconds.`);
     simulation.set_simulation_speed(1);
     simulation.set_simulation_pause(true);
     return false;
