@@ -134,7 +134,7 @@
           dataView:dataDisplayRef.setDataView,
           dataDisplayReset: dataDisplayRef.reset,
           notifyUser: simFunctions.notifyUser,
-          checkPoint: classroomComponentRef.sendCheckPoint}"
+          checkPoint: classroomComponentRef.sendCheckPoint}",
         @start="(_code: string) => {
           scriptComponentStatus = 'IN-PROGRESS';
         }"
@@ -338,31 +338,6 @@ function broadcast(call: RemoteCall | RemoteEvent) {
 }
 
 
-function setLayout(mode: typeof layout.value) {
-  switch(mode) {
-    case LayoutTypes.INSTRUCTOR:
-      layout.value = "instructor";
-      break;
-    case LayoutTypes.PILOT:
-      layout.value = "pilot";
-      break;
-    case LayoutTypes.FOCUS:
-      layout.value = "focus";
-      break;
-    default:
-      layout.value = "instructor";
-  }
-
-  // delay a resize event to allow components to adjust
-  // This is needed resize event is not dispatched when component size change but the window size stay the same
-  // So the openGL context will not resize.
-  // The delay is to ensure the DOM has updated before the resize event is dispatched
-  setTimeout(() => {
-  window.dispatchEvent(new Event('resize'))
-  }, 20)
-
-}
-
 const toggleFullscreen = async () => {
   if (!document.fullscreenElement) {
     await fullscreenContainer.value?.requestFullscreen()
@@ -410,6 +385,33 @@ resetComponents : function() {
     classroomComponentRef.value?.reset();
     dataDisplayRef.value?.reset();
     markdownRef.value?.reset();
+},
+setPlotView: function(item: SimulationProperties, state: boolean) {
+  dataDisplayRef.value?.setPlotView(item, state );
+},
+setLayout: function setLayout(mode: typeof layout.value) {
+  switch(mode) {
+    case LayoutTypes.INSTRUCTOR:
+      layout.value = "instructor";
+      break;
+    case LayoutTypes.PILOT:
+      layout.value = "pilot";
+      break;
+    case LayoutTypes.FOCUS:
+      layout.value = "focus";
+      break;
+    default:
+      layout.value = "instructor";
+  }
+
+  // delay a resize event to allow components to adjust
+  // This is needed resize event is not dispatched when component size change but the window size stay the same
+  // So the openGL context will not resize.
+  // The delay is to ensure the DOM has updated before the resize event is dispatched
+  setTimeout(() => {
+  window.dispatchEvent(new Event('resize'))
+  }, 20)
+
 }
 }
 
@@ -484,7 +486,7 @@ const layoutControls: ComputedRef<Record<string, SimulationProperties>> = comput
         { enumName: 'Pilot', enumValue: LayoutTypes.PILOT },
         { enumName: 'Focus', enumValue: LayoutTypes.FOCUS },
       ],
-      setterFunc: (val: string ) => setLayout(val as LayoutTypes)
+      setterFunc: (val: string ) => simFunctions.setLayout(val as LayoutTypes)
     },
   toggle_theme: {
     id: 'toggle_theme',
@@ -637,7 +639,7 @@ function createRemoteManager(FlightSimModule : ExtendedMainModule) {
                   // todo, enable broadcast only if instructor
                 // Rationale: student does not send data
                 const remoteManager = new RemoteCallManager(broadcast);
-                remoteManager.wrapObject("SimFunctions", simFunctions, ["notifyUser", "resetComponents", "setPlotView"]);
+                remoteManager.wrapObject("simFunctions", simFunctions, ["notifyUser", "resetComponents", "setPlotView", "setLayout"]);
                 remoteManager.wrapObject("FlightSimModule", FlightSimModule, ["onKeydown", "onKeyup"]);
                 remoteManager.wrapObject("FlightSimModule.simulation", FlightSimModule.simulation, ["set", "reset"]);
                 remoteManager.wrapObject("FlightSimModule.flightModel", FlightSimModule.flightModel, ["set"]);
