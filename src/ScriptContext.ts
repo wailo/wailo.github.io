@@ -54,15 +54,12 @@ export function createScriptContext(deps: {
     controls: deps.controls,
     props: deps.props,
     repositionWithAutopilot: deps.repositionWithAutopilot,
-
     waitFor: deps.waitFor,
     waitForCondition: deps.waitForCondition,
-
     notifyUser: deps.notifyUser,
     dataView: deps.dataView,
     plotView: deps.plotView,
     dataDisplayReset: deps.dataDisplayReset,
-
     checkPoint: deps.checkPoint,
     metrics: deps.metrics,
   };
