@@ -24,7 +24,17 @@ export type RemoteEvent = {
   timestamp?: number;
 };
 
+const getAllKeys = (obj: any) => {
+  const ownKeys = Object.keys(obj);
+  const proto = Object.getPrototypeOf(obj);
 
+  if (!proto) return ownKeys;
+
+  const protoKeys = Object.getOwnPropertyNames(proto)
+    .filter(k => k !== "constructor");
+
+  return [...new Set([...ownKeys, ...protoKeys])];
+};
 
 export class RemoteCallManager {
   // private proxyCache = new WeakMap<object, any>();
@@ -35,8 +45,9 @@ export class RemoteCallManager {
     private send: (call: RemoteCall | RemoteEvent) => void
   ) {}
 
+
   // Updated: Takes a name to register in contextRoot
-  public wrapObject(name: string, obj: Record<string, any>, allowedFnPrefixes: string[]): void {
+  public wrapObject(name: string, obj: any, allowedFnPrefixes: string[]): void {
     this.contextRoot[name] = obj;
     this.allowedPrefixes.set(obj, allowedFnPrefixes);
 
@@ -46,11 +57,11 @@ export class RemoteCallManager {
       if (!this.isPlainObject(target) || visited.has(target)) return;
       visited.add(target);
 
-      for (const key of Object.keys(target)) {
+      for (const key of getAllKeys(target)) {
         const value = target[key];
         const currentPath = [...path, key];
 
-        if (typeof value === "function" && this.isAllowed(obj, key)) {
+        if (typeof value === "function" && this.isAllowed(target,key)) {
           target[key] = this.wrapFunction(value.bind(target), currentPath);
         } else if (this.isPlainObject(value)) {
           recurse(value, currentPath);
@@ -69,7 +80,6 @@ export class RemoteCallManager {
   private wrapFunction(fn: (...args: any[]) => any, path: string[]): (...args: any[]) => any {
   return (...args: any[]) => {
     const fromRemote = args[0]?.__fromRemote;
-
     if (!fromRemote) {
       let payload: RemoteCall;
 

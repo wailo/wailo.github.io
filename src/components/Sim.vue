@@ -276,23 +276,7 @@
               classRoomComponentState = isOnline;
               // if the connection to the server is established, create a proxy object that mirrors all actions
               if (isOnline === true) {
-                // todo, enable broadcast only if instructor
-                // Rationale: student does not send data
-                manager = new RemoteCallManager(broadcast);
-                manager.wrapObject("SimFunctions", simFunctions, ["notifyUser"]);
-                manager.wrapObject("FlightSimModule", FlightSimModule, ["onKeydown", "onKeyup"]);
-                manager.wrapObject("FlightSimModule.simulation", FlightSimModule.simulation, ["set", "reset"]);
-                manager.wrapObject("FlightSimModule.flightModel", FlightSimModule.flightModel, ["set"]);
-
-                if (dataDisplayRef) {
-                  manager.wrapObject("dataDisplayRef", dataDisplayRef, ["setDataView", "setPlotView", "reset"]);
-                }
-                if (editorComponentRef) {
-                manager.wrapObject("editorComponentRef", editorComponentRef, ["reset"]);
-                }
-
-                // Dont mirror checkPoint, it defies its purpose. checkpoint is meant to be used as indicator when a simulaton
-                // manager.wrapObject("classroomComponentRef", classroomComponentRef, ["sendCheckPoint"])
+                manager = createRemoteManager(FlightSimModule);
               }
             }'
           />
@@ -643,7 +627,37 @@ function initFlightModelParams() {
     acc[parentKey].push(item);
     return acc;
   }, {} as Record<string, SimulationProperties[]>);
-});
+  });
+
+  manager = createRemoteManager(FlightSimModule);
+}
+
+function createRemoteManager(FlightSimModule : ExtendedMainModule) {
+
+                  // todo, enable broadcast only if instructor
+                // Rationale: student does not send data
+                const remoteManager = new RemoteCallManager(broadcast);
+                remoteManager.wrapObject("SimFunctions", simFunctions, ["notifyUser", "resetComponents", "setPlotView"]);
+                remoteManager.wrapObject("FlightSimModule", FlightSimModule, ["onKeydown", "onKeyup"]);
+                remoteManager.wrapObject("FlightSimModule.simulation", FlightSimModule.simulation, ["set", "reset"]);
+                remoteManager.wrapObject("FlightSimModule.flightModel", FlightSimModule.flightModel, ["set"]);
+
+                  if (dataDisplayRef && dataDisplayRef.value) {
+
+remoteManager.wrapObject(
+      "dataDisplayRef.value",
+      dataDisplayRef.value,
+      ["setDataView", "setPlotView", "reset", "showAll", "hideAll"]
+    );
+                }
+                if (editorComponentRef) {
+                remoteManager.wrapObject("editorComponentRef", editorComponentRef, ["reset"]);
+                }
+                return remoteManager;
+
+                                                // Dont mirror checkPoint, it defies its purpose. checkpoint is meant to be used as indicator when a simulaton
+                // manager.wrapObject("classroomComponentRef", classroomComponentRef, ["sendCheckPoint"])
+
 }
 </script>
 
