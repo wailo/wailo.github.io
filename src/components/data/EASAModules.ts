@@ -9,6 +9,9 @@ export type ModuleEntry = {
   export const moduleTree: ModuleTree = {
     "Demo": [
       {name: "Intro", path: "/LearningModules/demo.ts"},
+      {name: "Landing", path: "/LearningModules/landing.ts"},
+      {name: "Instruments scanning", path: "/LearningModules/instruments_scanning.ts"}
+
     ],
     "The Four Forces of Flight": [
       { name: "Observe Level Flight Forces", path: "/LearningModules/level_flight.ts" },
