@@ -8,6 +8,8 @@ import {
   repositionWithAutopilot
 } from "./core";
 
+import {LayoutTypes} from "../src/wasm/siminterface.ts"
+
 export interface ScriptContext {
   controls: ExtendedMainModule;
   props: any;
@@ -25,7 +27,8 @@ export interface ScriptContext {
   dataView: (prop: SimulationProperties, state: boolean) => void;
   plotView: (prop: SimulationProperties, state: boolean) => void;
   dataDisplayReset: () => void;
-
+  setLayout: (mode: LayoutTypes) => void;
+  layoutTypes: typeof LayoutTypes;
   checkPoint: (content: string) => void;
   metrics: any[];
 }
@@ -34,22 +37,7 @@ export interface ScriptContext {
 // 2. CONTEXT FACTORY (ONLY PLACE YOU UPDATE)
 // ==============================
 
-export function createScriptContext(deps: {
-  controls: ExtendedMainModule;
-  props: any;
-  repositionWithAutopilot: ScriptContext["repositionWithAutopilot"];
-
-  waitFor: ScriptContext["waitFor"];
-  waitForCondition: ScriptContext["waitForCondition"];
-
-  notifyUser: ScriptContext["notifyUser"];
-  dataView: ScriptContext["dataView"];
-  plotView: ScriptContext["plotView"];
-  dataDisplayReset: () => void;
-
-  checkPoint: ScriptContext["checkPoint"];
-  metrics: any[];
-}): ScriptContext {
+export function createScriptContext(deps: ScriptContext): ScriptContext {
   return {
     controls: deps.controls,
     props: deps.props,
@@ -61,6 +49,8 @@ export function createScriptContext(deps: {
     plotView: deps.plotView,
     dataDisplayReset: deps.dataDisplayReset,
     checkPoint: deps.checkPoint,
+    setLayout: deps.setLayout,
+    layoutTypes: LayoutTypes,
     metrics: deps.metrics,
   };
 }

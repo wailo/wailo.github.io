@@ -5,6 +5,12 @@ export type FlightModelInstance = b747 | c172;
 export type ExtendedMainModule = { flightModel : FlightModelInstance} & {simulation : graphics} & EmbindModule;
 export  {type graphics} from "./generated/flightsimulator_exec"
 
+export enum LayoutTypes {
+    INSTRUCTOR = "instructor",
+    PILOT = "pilot",
+    FOCUS = "focus",
+  }
+
 export async function initializeModule(options: any): Promise<[MainModule, ExtendedMainModule]> {
   const module: MainModule = await MainModuleFactory(options); 
   const simulation: graphics = module.graphics.getContext();

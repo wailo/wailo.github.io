@@ -181,6 +181,7 @@ import htmlWorker from "monaco-editor/esm/vs/language/html/html.worker?worker";
 import tsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker";
 import { UserScript, ScriptContext, createScriptContext, runUserScript } from "../ScriptContext.ts";
 import scriptApiTypes from "../ScriptContext.ts?raw";
+import {LayoutTypes} from "../../src/wasm/siminterface.ts"
 
 const isScriptRunning = ref(false);
 const isLLMPending = ref(false);
@@ -236,6 +237,7 @@ const props = defineProps({
       plotView: (item: SimulationProperties, state: boolean) => void;
       dataView: (item: SimulationProperties, state: boolean) => void;
       dataDisplayReset: () => void;
+      setLayout: (mode: LayoutTypes) => void;
       checkPoint: (content: string) => void;
     }>,
     required: true,
@@ -354,6 +356,8 @@ const executeCode = async () => {
       dataView: props.utilityFuncs.dataView,
       plotView: props.utilityFuncs.plotView,
       dataDisplayReset: props.utilityFuncs.dataDisplayReset,
+      setLayout: props.utilityFuncs.setLayout,
+      layoutTypes: LayoutTypes,
       checkPoint: props.utilityFuncs.checkPoint,
       metrics: metrics,
     };

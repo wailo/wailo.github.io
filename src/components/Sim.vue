@@ -134,6 +134,7 @@
           dataView:dataDisplayRef.setDataView,
           dataDisplayReset: dataDisplayRef.reset,
           notifyUser: simFunctions.notifyUser,
+          setLayout: simFunctions.setLayout,
           checkPoint: classroomComponentRef.sendCheckPoint}",
         @start="(_code: string) => {
           scriptComponentStatus = 'IN-PROGRESS';
@@ -321,6 +322,7 @@ import {
   getSimulationControlsParameters,
   getAutopilotProperties,
   ExtendedMainModule,
+  LayoutTypes
 } from "../wasm/siminterface.ts";
 
 import Editor, { ScriptStatus } from "./Editor.vue";
@@ -398,20 +400,8 @@ resetComponents : function() {
 setPlotView: function(item: SimulationProperties, state: boolean) {
   dataDisplayRef.value?.setPlotView(item, state );
 },
-setLayout: function setLayout(mode: typeof layout.value) {
-  switch(mode) {
-    case LayoutTypes.INSTRUCTOR:
-      layout.value = "instructor";
-      break;
-    case LayoutTypes.PILOT:
-      layout.value = "pilot";
-      break;
-    case LayoutTypes.FOCUS:
-      layout.value = "focus";
-      break;
-    default:
-      layout.value = "instructor";
-  }
+setLayout: function(mode: typeof layout.value) {
+      layout.value = mode;
 
   // delay a resize event to allow components to adjust
   // This is needed resize event is not dispatched when component size change but the window size stay the same
@@ -437,13 +427,8 @@ const userPromptStatus = ref<string>("----");
 const userPromptActive = ref<boolean>(false);
 const isFullscreen = ref(false);
 const fullscreenContainer = ref<HTMLElement | null>(null)
-  const isDarkMode = ref(true);
-  enum LayoutTypes {
-    INSTRUCTOR = "instructor",
-    PILOT = "pilot",
-    FOCUS = "focus",
-  }
-  const layout = ref<"instructor" | "pilot" | "focus">("instructor");
+const isDarkMode = ref(true);
+const layout = ref<LayoutTypes>(LayoutTypes.INSTRUCTOR);
 
 // Initialize theme from localStorage
 const initializeTheme = () => {
@@ -488,7 +473,7 @@ const layoutControls: ComputedRef<Record<string, SimulationProperties>> = comput
        id: 'layout',
       type: 'enum',
       label: 'Layout',
-      inputValue: layout.value === 'instructor' ? LayoutTypes.INSTRUCTOR : layout.value === 'pilot' ? LayoutTypes.PILOT : LayoutTypes.FOCUS,
+      inputValue: layout.value,
       group: 'simulation',
       enumValues: [
         { enumName: 'Instructor', enumValue: LayoutTypes.INSTRUCTOR },
