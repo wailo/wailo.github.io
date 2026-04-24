@@ -8,8 +8,8 @@
     <!-- Panel 1 -->
     <Panel
       :status="simulationStatus"
-      :flash="FlightSimModule?.simulation.simulation_pause || FlightSimModule?.flightModel.is_damaged"
-      :active="FlightSimModule?.simulation.simulation_pause || FlightSimModule?.flightModel.is_damaged"
+      :flash="FlightSimModule?.simulation.simulation_pause || FlightSimModule?.flightModel.damaged"
+      :active="FlightSimModule?.simulation.simulation_pause || FlightSimModule?.flightModel.damaged"
       class="panel-cockpit"
       data-layout="focus instructor pilot"
     >
@@ -355,7 +355,7 @@ const simulationStatus = computed(() => {
   renderSignal.value; // depend on render signal to update when sim data is fetched
   if (!FlightSimModule) return "Loading";
   if (FlightSimModule.simulation.simulation_pause) return "Paused";
-  if (FlightSimModule.flightModel.is_damaged) return "Structural Damage";
+  if (FlightSimModule.flightModel.damaged) return "Structural Damage";
   if (FlightSimModule.simulation.simulation_speed === 1) {
     return isLicenceValid.value ? "Running" : "Trial";
   }

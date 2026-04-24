@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "wasmTag": "v0.1.02",
+  "wasmTag": "v0.1.03",
   "scripts": {
     "docker:up": "docker compose up -d",
     "check": "vue-tsc -b",
