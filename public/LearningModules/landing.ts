@@ -1,170 +1,221 @@
 import { ScriptContext } from "../../src/core";
 
 export async function main(context: ScriptContext) {
-  const simControls = context.controls;
-  const simProps = context.props;
-  const repositionWithAutopilot = context.repositionWithAutopilot;
-  const waitFor = context.waitFor;
-  const waitForCondition = context.waitForCondition;
-  const checkPoint = context.checkPoint;
-  const notifyUser = context.notifyUser;
-  const dataDisplayReset = context.dataDisplayReset;
-  const plotView = context.plotView;
+  const {
+    controls: simControls,
+    props: simProps,
+    repositionWithAutopilot,
+    waitForCondition,
+    checkPoint,
+    notifyUser,
+    dataDisplayReset,
+    plotView,
+  } = context;
 
-// simControls.simulation.reset_flightmodel();
-const simulation = simControls.simulation;
-simulation.reset_simulation();
+  const simulation = simControls.simulation;
 
+  // 🟢 [ACTION] Reset Simulation Environment
+  simulation.reset_simulation();
+  dataDisplayReset();
+  simulation.set_six_instruments_display(false);
+  simulation.set_pfd_horizon_visible(false);
+  simulation.set_motion_cues(true);
 
-notifyUser("Landing Scenario", "Landing Scenario - B747\n\n" + 
-    "Lesson plan:\n\n" +
-    "1. Reposition to approach configuration, aircraft is trimmed\n" +
-    "2. Configure aircraft for landing (flaps, gear, speed reduction)\n" +
-    "3. Descend to approach altitude\n" +
-    "4. Configure for final approach\n" +
-    "5. Touchdown and rollout\n" +
-    "6. Observe final approach data\n"
-);
+  // 🟢 [ACTION] Configure Aircraft Model
+  const flightModel = simControls.simulation.set_flight_model_b747();
 
-dataDisplayReset();
-simulation.set_six_instruments_display(false);
-simulation.set_pfd_horizon_visible(false);
-simulation.set_motion_cues(true);
+  const CALLSIGN = "Atlas 742 Heavy";
 
-const flightModel = simControls.simulation.set_flight_model_b747();
-await repositionWithAutopilot(context, 300, 180, 90);
+  // 🟢 [ACTION] Lesson Introduction (START FIRST)
+  await notifyUser(
+    "Landing Lesson",
+    `## Instrument Landing Procedure – B747
 
+This lesson demonstrates a stabilized approach and landing using autopilot assistance.
 
-checkPoint("Initiating Landing Sequence")
-await waitFor(5000);
+**Objectives:**
+- Configure the aircraft for landing
+- Maintain a stabilized descent profile
+- Execute a controlled flare and touchdown
+- Perform a safe rollout
 
-notifyUser("Landing Scenario", "Initiating landing sequence for B747\n\n" + 
-    "Current Configuration:\n" +
-    "- Altitude: 800 ft\n" +
-    "- Speed: 180 knots\n" +
-    "- Heading: 90 degrees\n\n" +
-    "Next steps:\n" +
-    "1. Configure flaps for landing\n" +
-    "2. Extend landing gear\n" +
-    "3. Reduce speed to approach speed\n" +
-    "4. Configure pitch for descent\n" +
-    "5. Maintain approach altitude and speed\n"
-);
+All actions will follow standard operating procedures.`,
+    6000
+  );
 
-await waitFor(10000);
+  // 🟢 [ACTION] Position Aircraft
+  await repositionWithAutopilot(context, 300, 180, 90);
+  context.setLayout(context.layoutTypes.PILOT);
+  checkPoint("Initiating Landing Sequence");
 
-notifyUser("Landing Scenario", "Configuring flaps and gear for approach\n\n" +
-    "1. Set FULL flaps for landing\n" +
-    "2. Extend landing gear\n" +
-    "3. Reduce speed to approach speed (~200 knots for B747)\n" +
-    "4. Configure pitch attitude for glide slope\n"
-);
+  // 📡 [ATC TRANSMISSION - STYLED]
+  await notifyUser(
+    "ATC",
+    `<div style="background-color:#1e3a8a;color:white;padding:10px;border-radius:6px">
+    <b>Antalya Tower:</b><br/>
+    ${CALLSIGN}, wind calm, runway 09 cleared to land.
+    </div>`,
+    5000
+  );
 
-flightModel.set_flaps_selector_position(simControls.B747FlapSelector.THIRTY);
-flightModel.set_autopilot_master_switch(true);  // Enable autopilot
-flightModel.set_autopilot_speed_indicated_hold(true);
-flightModel.set_autopilot_speed_indicated_target(150);
+  // 💬 [PILOT RESPONSE - STYLED]
+  await notifyUser(
+    "Pilot",
+    `<div style="background-color:#0f766e;color:white;padding:10px;border-radius:6px">
+    <b>${CALLSIGN}:</b><br/>
+    Cleared to land runway 09, ${CALLSIGN}.
+    </div>`,
+    4000
+  );
 
-flightModel.set_autopilot_vertical_speed_target(-500); // Set descent rate
-flightModel.set_autopilot_vertical_speed_hold(true);
+  // 🟢 [ACTION] Configure Aircraft (Flaps)
+  flightModel.set_flaps_selector_position(simControls.B747FlapSelector.THIRTY);
 
-await waitFor(2000);
+  await notifyUser(
+    "Landing Procedure",
+    `[ACTION] Flap configuration set to 30°.
 
-plotView(simProps.speed_indicated_knots, true);
-await waitFor(2000);
+This increases lift and drag, enabling a lower approach speed.`,
+    5000
+  );
 
-flightModel.set_landing_gear_selector_position(simControls.B747GearSelector.DOWN);
-await waitFor(5000);
+  // 🟢 [ACTION] Configure Autopilot
+  flightModel.set_autopilot_master_switch(true);
+  flightModel.set_autopilot_speed_indicated_hold(true);
+  flightModel.set_autopilot_speed_indicated_target(150);
+  flightModel.set_autopilot_vertical_speed_target(-600);
+  flightModel.set_autopilot_vertical_speed_hold(true);
 
-notifyUser("Landing Scenario", "Gear extended. Configuring speed to approach.\n\n" + 
-    "Target speed: ~200 knots\n" +
-    "Current speed: ${flightModel.speed_indicated_knots} knots\n\n" +
-    "Monitor speed and adjust throttle.\n"
-);
+  await notifyUser(
+    "Landing Procedure",
+    `[ACTION] Autopilot configured.
 
-await waitFor(5000);
+- Target speed: 150 knots
+- Vertical speed: -600 ft/min
 
-plotView(simProps.throttle_position, true);
-await waitFor(5000);
+This establishes a stabilized descent profile.`,
+    5000
+  );
 
-notifyUser("Landing Scenario", "Approaching glide slope. Pitch is being adjusted for descent.\n\n" + 
-    "Configure pitch attitude to maintain glide path.\n\n" +
-    "Target: ~3 degrees below horizon for approach\n"
-);
+  // 🟢 [ACTION] Extend Landing Gear
+  flightModel.set_landing_gear_selector_position(
+    simControls.B747GearSelector.DOWN
+  );
 
-plotView(simProps.pitch_deg, true);
-await waitFor(3000);
+  await notifyUser(
+    "Landing Procedure",
+    `[ACTION] Landing gear extended.
 
-notifyUser("Landing Scenario", "Maintaining approach parameters.\n\n" + 
-    `- Speed: ${flightModel.speed_indicated_knots} knots\n` +
-    `- Altitude: ${flightModel.altitude_ft} ft\n` +
-    `- Rate of descent: ${flightModel.vertical_speed_ftmin} fpm\n` +
-    `- Glide slope: On approach path\n` +
-    `- Configure for final approach\n`
-);
+Increased aerodynamic drag will require thrust adjustments.`,
+    4000
+  );
 
-await waitFor(15000);
+  // 🟢 [ACTION] Enable Data Monitoring
+  plotView(simProps.speed_indicated_knots, true);
+  plotView(simProps.g_force, true);
+  plotView(simProps.throttle_position, true);
+  plotView(simProps.pitch_deg, true);
+  plotView(simProps.altitude_ft, true);
 
-notifyUser("Landing Scenario", "On final approach.\n\n" + 
-    "Monitor your approach:\n" +
-    "- Maintain glide slope\n" +
-    "- Configure speed between 180-200 knots\n" +
-    "- Prepare for touchdown\n"
-);
+  await notifyUser(
+    "Landing Procedure",
+    `[ACTION] Monitoring primary flight parameters.
 
+Maintain awareness of speed, pitch attitude, and descent rate.`,
+    4000
+  );
 
-checkPoint("Approaching runway")
-await waitFor(10000);
+  // 🟢 [ACTION] Stabilized Approach Monitoring
+  await notifyUser(
+    "Landing Procedure",
+    `[ACTION] Stabilized approach criteria check:
 
-notifyUser("Landing Scenario", "Touchdown imminent. Reduce speed and prepare for landing.\n\n" +
-    "- Pull throttle to idle\n" +
-    "- Hold nose wheel in landing gear position\n" +
-    "- Touchdown on main gear\n" + 
-    "- Deploy reverse thrusters when appropriate\n"
-);
+- Speed: ${Math.round(flightModel.speed_indicated_knots)} knots
+- Altitude: ${Math.round(flightModel.altitude_ft)} ft
+- Vertical speed: ${Math.round(flightModel.vertical_speed_ftmin)} ft/min
 
-await waitForCondition(() => flightModel.altitude_ft < 70);
-flightModel.set_autopilot_vertical_speed_target(0); // Level off for final approach
-flightModel.set_autopilot_speed_indicated_target(120);
+Aircraft must remain within stable limits.`,
+    5000
+  );
 
-await waitFor(1000);
+  checkPoint("Approaching runway");
 
-plotView(simProps.altitude_ft, true);
-// await waitFor(3000);
+  // 🟢 [ACTION] Final Approach Guidance
+  await notifyUser(
+    "Landing Procedure",
+    `[ACTION] Final approach.
 
-notifyUser("Landing Scenario", "Touchdown!\n\n" +
-    "- Maintain directional control\n" +
-    "- Use reverse thrust and spoilers if available\n" +
-    "- Apply brakes when appropriate\n" +
-    "- Maintain runway centerline\n"
-);
+Maintain glide slope and runway alignment. Prepare for flare.`,
+    4000
+  );
 
-await waitFor(10000);
+  // 🟢 [ACTION] Flare Preparation
+  await waitForCondition(() => flightModel.altitude_ft < 250);
 
-notifyUser("Landing Scenario", "Rollout in progress.\n\n" +
-    "- Monitor speed reduction\n" +
-    "- Apply brakes as needed\n" +
-    "- Keep runway centerline\n" +
-    "- Complete landing procedure\n"
-);
+  flightModel.set_autopilot_speed_indicated_target(130);
 
-await waitFor(30000);
+  await notifyUser(
+    "Landing Procedure",
+    `[ACTION] Flare preparation initiated.
 
-checkPoint("Landing Complete")
-await waitFor(10000);
+Reducing target speed to 130 knots for landing.`,
+    4000
+  );
 
-notifyUser("Landing Scenario", "Landing sequence complete.\n\n" +
-    "Summary:\n\n" +
-    "1. Started at 800 ft altitude, 180 knots, heading 90\n" +
-    "2. Configured flaps and gear\n" +
-    "3. Reduced speed to approach parameters\n" +
-    "4. Maintained glide slope\n" +
-    "5. Achieved touchdown\n" +
-    "6. Completed rollout\n\n" +
-    "Good job completing the landing scenario!\n"
-);
+  // 🟢 [ACTION] Flare Execution
+  await waitForCondition(() => flightModel.altitude_ft < 150);
 
-await waitFor(5000);
+  flightModel.set_autopilot_vertical_speed_target(-20);
 
-simControls.simulation.set_simulation_speed(1);
+  await notifyUser(
+    "Landing Procedure",
+    `[ACTION] Flare initiated.
+
+Descent rate reduced to achieve a smooth touchdown.`,
+    4000
+  );
+
+  // 🟢 [ACTION] Touchdown Detection
+  await waitForCondition(() => flightModel.weight_on_wheel);
+
+  await notifyUser(
+    "Landing Procedure",
+    `[EVENT] Touchdown confirmed.
+
+Main landing gear has made ground contact.`,
+    5000
+  );
+
+  // 🟢 [ACTION] Apply Braking
+  flightModel.set_parking_brake(true);
+
+  await notifyUser(
+    "Landing Procedure",
+    `[ACTION] Braking applied.
+
+Aircraft deceleration in progress. Maintain directional control.`,
+    4000
+  );
+
+  // 🟢 [ACTION] Rollout Monitoring
+  await waitForCondition(() => flightModel.speed_indicated_knots < 30);
+
+  await notifyUser(
+    "Landing Procedure",
+    `[ACTION] Rollout phase.
+
+Speed reduced below 30 knots. Aircraft exiting active landing phase.`,
+    4000
+  );
+
+  checkPoint("Landing Complete");
+
+  // 🎓 [FINAL]
+  await notifyUser(
+    "Landing Procedure",
+    `[COMPLETE] The landing procedure has been successfully completed.
+
+All objectives achieved under stabilized conditions.`,
+    5000
+  );
 }
