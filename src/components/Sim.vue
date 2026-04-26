@@ -135,7 +135,7 @@
           dataDisplayReset: dataDisplayRef.reset,
           notifyUser: simFunctions.notifyUser,
           setLayout: simFunctions.setLayout,
-          checkPoint: classroomComponentRef.sendCheckPoint}",
+          checkPoint: classroomComponentRef.sendCheckPoint}"
         @start="(_code: string) => {
           scriptComponentStatus = 'IN-PROGRESS';
         }"
