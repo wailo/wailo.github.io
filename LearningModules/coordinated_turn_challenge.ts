@@ -13,12 +13,8 @@ export async function main(context: ScriptContext) {
   // const checkPoint = context.checkPoint;
   const metrics = context.metrics;
 
-
-
 dataDisplayReset();
 simControls.simulation.reset_simulation();
-
-const flightModel = simControls.simulation.set_flight_model_c172();
 
 // 📘 Configurations for Cessna 172
 const initialAltitude_ft = 5000; // Typical cruising altitude
@@ -34,7 +30,7 @@ notifyUser(
     "**No slipping or skidding** — the aircraft turns smoothly while maintaining altitude."
 );
 
-
+const flightModel = simControls.simulation.set_flight_model_c172();
 await repositionWithAutopilot(context, initialAltitude_ft, initialSpeed_knots, initialHeading_deg);
 
 flightModel.set_autopilot_master_switch(true);  // Enable autopilot again
