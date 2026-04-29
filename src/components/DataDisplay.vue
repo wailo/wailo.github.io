@@ -5,11 +5,14 @@
       <div class="flex gap-2">
         <input v-model="searchQuery" type="text" placeholder="Search..."
           class="w-1/3 text-secondary bg-transparent border border-simElementBorder p-1" @focus="isFocused = true" />
-        <button @click="showAll" class="w-1/3 border border-simElementBorder text-secondary">
-          Show All
-        </button>
+        <!-- <button @click="showAll" class="w-1/4 border border-simElementBorder text-secondary"> -->
+        <!--   Show All -->
+        <!-- </button> -->
         <button @click="hideAll" class="w-1/3 border border-simElementBorder text-secondary">
-          Clear
+          Close All
+        </button>
+        <button @click="timePlotRef?.reset_x_axis()" class="w-1/3 border border-simElementBorder text-secondary">
+          Reset Plots
         </button>
       </div>
 
@@ -142,9 +145,9 @@ function plot(id: string) {
   timePlotRef.value?.addPlot(id)
 }
 
-function showAll() {
-  Object.keys(props.simProps).forEach((key) => visibleItems.add(key))
-}
+// function showAll() {
+//   Object.keys(props.simProps).forEach((key) => visibleItems.add(key))
+// }
 
 function hideAll() {
   visibleItems.clear()
@@ -183,7 +186,7 @@ onBeforeUnmount(() => {
 // Expose to parent
 defineExpose({
   reset,
-  showAll,
+  // showAll,
   hideAll,
   tickPlot,
   setDataView,

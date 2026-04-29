@@ -4,20 +4,35 @@
     :key="name"
     class="relative w-full min-h-0 flex-1 border-b border-simElementBorder last:border-b-0"
   >
-    <!-- Close Button -->
-    <button
-      @click="removePlot(name)"
-      class="absolute top-1 right-1 z-10 bg-black bg-opacity-60 text-white text-xs px-2 py-0.5 rounded hover:bg-red-600"
-    >
-      ✕
-    </button>
+    <!-- Top Overlay Bar -->
+    <div class="absolute top-1 left-1 right-1 z-10 flex items-start justify-between pointer-events-none">
 
-    <!-- Custom Label Top-Right (FIXED) -->
-    <div class="absolute top-1 right-7 z-10 text-secondary bg-opacity-50 px-2 py-0.5 rounded 
-                w-64 font-mono text-right">
-      {{ props.sources[name]?.label || name }} 
-      <span class="inline-block w-24 text-right">{{ props.sources[name]?.inputValue }}</span>
-      {{ props.sources[name]?.unit || '' }}
+      <!-- Left: Label -->
+      <div class="text-secondary bg-opacity-50 px-2 rounded font-mono text-left pointer-events-auto">
+        <span>{{ props.sources[name]?.label || name }}</span>
+        <span class="ml-2 inline-block min-w-[80px] text-right">
+          {{ props.sources[name]?.inputValue }}
+        </span>
+        <span class="ml-1">{{ props.sources[name]?.unit || '' }}</span>
+      </div>
+
+      <!-- Right: Buttons -->
+      <div class="flex gap-1 pointer-events-auto">
+        <button
+          @click="resetPlot(name)"
+          class="border border-simElementBorder bg-opacity-60 text-secondary text-xs px-0.5 py-0.5 rounded hover:bg-simInputBackground"
+        >
+          ⟲
+        </button>
+
+        <button
+          @click="removePlot(name)"
+          class="border border-simElementBorder bg-opacity-60 text-secondary text-xs px-0.5 py-0.5 rounded hover:bg-simInputBackground"
+        >
+          ✕
+        </button>
+      </div>
+
     </div>
 
     <!-- uPlot Container -->
@@ -51,12 +66,11 @@ const props = defineProps({
   pause: {
     type: Boolean as PropType<Boolean>,
     required: true
-    },
+  },
   max_duration_ms: {
     type: Number,
     default: 120_000
   },
-  // Number of plots is calculated based on window height if not provided
   max_plots: {
     type: Number,
     default: Math.floor(window.innerHeight / 70)
@@ -67,7 +81,7 @@ const props = defineProps({
   }
 })
 
-defineExpose({ addPlot, removePlot, reset, tick })
+defineExpose({ addPlot, removePlot, reset, reset_x_axis, tick })
 
 // ✅ Reactive State
 const plotRefs = reactive<Record<string, HTMLElement>>({})
@@ -75,10 +89,9 @@ const plots = new Map<string, uPlot>()
 const dataBuffers = new Map<string, CircularBuffer>()
 const selectedKeys = ref<Set<string>>(new Set())
 let MAX_POINTS = 0
-let globalIndex = 0
 let plotResizeObserver: ResizeObserver | null = null
-let globalXBuffer :Int32Array;
 const renderBuffers = new Map<string, Float64Array>()
+const xBuffers = new Map<string, Int32Array>() // ✅ per-buffer X
 
 // ✅ Derived Keys
 const getPlottableKeys = computed(() =>
@@ -88,10 +101,8 @@ const getPlottableKeys = computed(() =>
 )
 
 interface CircularBuffer {
-  // x: Float64Array
   y: Float64Array
-  // index: number
-  // full: boolean
+  index: number // ✅ per-buffer index
 }
 
 function addPlot(propId: keyof typeof props.sources) {
@@ -102,7 +113,7 @@ function addPlot(propId: keyof typeof props.sources) {
   selectedKeys.value.add(propId)
   initBuffer(propId)
 
-    setTimeout(() => {
+  setTimeout(() => {
     recreateAllPlots()
   }, 50)
 }
@@ -112,18 +123,24 @@ function removePlot(propId: string) {
 
   selectedKeys.value.delete(propId)
   dataBuffers.delete(propId)
-  renderBuffers.delete(propId);
+  renderBuffers.delete(propId)
+  xBuffers.delete(propId)
+
   recreateAllPlots()
-  if (dataBuffers.size === 0) {
-    globalIndex = 0
-  }
 }
 
-// ✅ Recreate all plots from scratch
+function resetPlot(propId: string) {
+  let databuffer = dataBuffers.get(propId)
+  if (!databuffer) return
+
+  databuffer.y.fill(0)
+  databuffer.index = 0
+}
+
+// ✅ Recreate plots
 async function recreateAllPlots() {
-  // Destroy existing plots
   plots.forEach(p => p.destroy())
-  // remove all resize observers
+
   if (plotResizeObserver) {
     plotResizeObserver.disconnect()
     plotResizeObserver = null
@@ -134,39 +151,55 @@ async function recreateAllPlots() {
 
   getPlottableKeys.value.forEach(id => {
     const el = plotRefs[id]
-    // const prop = props.sources[id]
-    // const prop_label = prop?.label || id
-    // const prop_unit = prop?.unit || ''
-    // const prop_min = prop.min
-    // const prop_max = prop.max
-
     if (!el) return
 
     const plot = new uPlot({
       legend: { show: false },
       width: el.offsetWidth,
       height: el.offsetHeight,
+      padding: [25,1,5,1],
       scales: {
-        x: { time: false, range: () => [0, MAX_POINTS - 1] },
+        x: {
+          time: false,
+          range: (_self) => {
+            const buf = dataBuffers.get(id)
+            if (!buf) return [0, MAX_POINTS]
+            return [buf.index - MAX_POINTS, buf.index]
+          }
+        },
         y: { auto: true }
       },
       axes: [
-
-        { show: false, stroke: 'white', border :{show: true, stroke: 'grey'}, grid: { show: false, stroke: '#333', width: 1 },
-          values: (_self, ticks) => ticks.map(i => (i / (1000/props.update_intervals)).toFixed(1)), },
-        { show: true, stroke: 'white', border :{show: true, stroke: 'grey'}, grid: { show: false, stroke: '#333', width: 1 },
-        ticks: {show: true, stroke: "rgba(1,0,0,1)" }}],
+        {
+          show: false,
+          stroke: 'white',
+          border: { show: true, stroke: 'grey' },
+          grid: { show: false },
+          values: (_self, ticks) =>
+            ticks.map(i => (i / (1000 / props.update_intervals)).toFixed(1))
+        },
+        {
+          show: true,
+          stroke: 'white',
+          border: { show: true, stroke: 'grey' },
+          grid: { show: false },
+          ticks: { show: true },
+          font: '8px monospace',
+          gap: 0,
+          labelGap: 0,
+          lineGap: 0,
+        }
+      ],
       series: [
         { show: false },
-        { stroke: 'grey', width: 1, points: { show: false }}
+        { stroke: 'grey', width: 1, points: { show: false } }
       ]
     }, [[], []], el)
 
     plots.set(id, plot)
   })
 
-  // Re-add resize observer
-    plotResizeObserver = new ResizeObserver(() => {
+  plotResizeObserver = new ResizeObserver(() => {
     plots.forEach((plot, id) => {
       const el = plotRefs[id]
       if (el) {
@@ -181,81 +214,86 @@ async function recreateAllPlots() {
   }
 }
 
-// ✅ Init buffer if needed
+// ✅ Init buffer
 function initBuffer(name: string) {
   if (!dataBuffers.has(name)) {
     dataBuffers.set(name, {
-      // x: new Float64Array(MAX_POINTS),
       y: new Float64Array(MAX_POINTS),
-      // index: globalIndex,
-      // full: false
+      index: 0 // ✅ init per-buffer index
     })
-  // Create global X buffer once
-   globalXBuffer = new Int32Array(MAX_POINTS)
-  for (let i = 0; i < MAX_POINTS; i++) {
-    globalXBuffer[i] = i
-  }
-     // ✅ Pre-allocate the render buffer too
+
     renderBuffers.set(name, new Float64Array(MAX_POINTS))
+    xBuffers.set(name, new Int32Array(MAX_POINTS))
   }
- // dataX = [...Array(MAX_POINTS).keys()]
 }
 
 // ✅ Tick
 function tick() {
   if (props.pause || getPlottableKeys.value.length < 1) return
 
-  const writeIndex = globalIndex % MAX_POINTS
-
   getPlottableKeys.value.forEach(propId => {
     const buf = dataBuffers.get(propId)!
-    buf.y[writeIndex] = Number(props.sources[propId]?.inputValue)
-  })
+    const writeIndex = buf.index % MAX_POINTS
 
-  globalIndex++
-  getPlottableKeys.value.forEach(propId => {
-    updatePlot(propId, dataBuffers.get(propId)!)
+    buf.y[writeIndex] = Number(props.sources[propId]?.inputValue)
+    buf.index++
+
+    updatePlot(propId, buf)
   })
 }
 
 function updatePlot(name: string, buf: CircularBuffer) {
   const u = plots.get(name)
   const renderBuf = renderBuffers.get(name)
-  if (!u || !renderBuf) return
+  const xBuf = xBuffers.get(name)
 
-  const len = Math.min(globalIndex, MAX_POINTS)
-  const start = globalIndex >= MAX_POINTS
-    ? globalIndex % MAX_POINTS
+  if (!u || !renderBuf || !xBuf) return
+
+  const len = Math.min(buf.index, MAX_POINTS)
+  const start = buf.index >= MAX_POINTS
+    ? buf.index % MAX_POINTS
     : 0
 
-  if (globalIndex >= MAX_POINTS) {
+  // ✅ build X buffer (per plot)
+  const base = buf.index - len
+  for (let i = 0; i < len; i++) {
+    xBuf[i] = base + i
+  }
+
+  // ✅ same fast circular reorder
+  if (buf.index >= MAX_POINTS) {
     const tailLen = MAX_POINTS - start
 
-    // oldest → end
     renderBuf.set(buf.y.subarray(start), 0)
-
-    // beginning → newest
     renderBuf.set(buf.y.subarray(0, start), tailLen)
   } else {
     renderBuf.set(buf.y.subarray(0, len), 0)
   }
 
   u.setData([
-    globalXBuffer.subarray(0, len),
+    xBuf.subarray(0, len),
     renderBuf.subarray(0, len)
   ])
 }
 
-// ✅ Reset data
+// ✅ Reset
 function reset() {
   plots.forEach(p => p.destroy())
   plots.clear()
   selectedKeys.value.clear()
   dataBuffers.clear()
-  globalIndex = 0
+  renderBuffers.clear()
+  xBuffers.clear()
 }
 
-// ✅ On Mount
+function reset_x_axis() {
+  dataBuffers.forEach(v => {
+    v.y.fill(0)
+    v.index = 0
+  })
+}
+
+// ✅ Lifecycle
 onMounted(() => {
   MAX_POINTS = Math.ceil(props.max_duration_ms / props.update_intervals)
 })
