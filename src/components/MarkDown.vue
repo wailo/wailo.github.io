@@ -74,7 +74,7 @@ watch(
   
   /* Code blocks */
   .markdown pre {
-    background: #f6f8fa;
+    background: #f6f8fa00;
     padding: 1em;
     overflow: auto;
     border-radius: 4px;
