@@ -23,15 +23,14 @@ export async function main(context: ScriptContext) {
   simulation.set_motion_cues(true);
 
   // 🟢 [ACTION] Configure Aircraft Model
-  const flightModel = simControls.simulation.set_flight_model_b747();
+  simControls.simulation.set_flight_model_b747();
+  const flightModel = simControls.flightModel;
 
   // 🟢 [ACTION] Position Aircraft - Start landing from 1400ft, heading 210, speed 180
   await repositionWithAutopilot(context, 1400, 210, 180);
-  context.controls.flightModel.set_atmosphere_wind_direction(260);
-  context.controls.flightModel.set_atmosphere_wind_speed(8);
-  context.controls.flightModel.set_flaps_selector_position(
-    simControls.B747FlapSelector.TEN,
-  );
+  flightModel.set_atmosphere_wind_direction(260);
+  flightModel.set_atmosphere_wind_speed(8);
+  flightModel.set_flaps_selector_position(simControls.B747FlapSelector.TEN);
 
   const CALLSIGN = "Speedbird 123";
 
@@ -59,6 +58,8 @@ All actions will follow standard operating procedures.`,
   context.setLayout(context.layoutTypes.PILOT);
   checkPoint("Initiating Landing Sequence - 1400ft, HDG 210, 180 KIAS");
 
+  await waitFor(2000);
+
   // 📡 [ATC TRANSMISSION - Final Vector / Intercept]
   atcChatHistory += `<div style="background-color:#1e3a8a;color:white;padding:10px;border-radius:6px;margin:4px 0">
     <b>Approach Control:</b><br/>
@@ -71,7 +72,7 @@ All actions will follow standard operating procedures.`,
     <b>${CALLSIGN}:</b><br/>
     Turn right heading 240, intercept localizer runway 27, ${CALLSIGN}.
     </div>`;
-  await notifyUser("ATC Communications", atcChatHistory, 3000);
+  await notifyUser("ATC Communications", atcChatHistory, 7000);
 
   // 🟢 [ACTION] Configure Autopilot for Intercept
   flightModel.set_autopilot_master_switch(true);
@@ -125,14 +126,21 @@ All actions will follow standard operating procedures.`,
     <b>Approach Control:</b><br/>
     ${CALLSIGN}, contact Tower on 118.7.
     </div>`;
-  await notifyUser("ATC Communications", atcChatHistory, 4000);
+  await notifyUser("ATC Communications", atcChatHistory, 5000);
 
+ // 💬 [PILOT Readback]
+  atcChatHistory += `<div style="background-color:#0f766e;color:white;padding:10px;border-radius:6px;margin:4px 0">
+    <b>${CALLSIGN}:</b><br/>
+    Contact Tower on 118.7, ${CALLSIGN}.
+    </div>`;
+  await notifyUser("ATC Communications", atcChatHistory, 7000);
+  
   // 💬 [PILOT → Tower Check-in]
   atcChatHistory += `<div style="background-color:#0f766e;color:white;padding:10px;border-radius:6px;margin:4px 0">
     <b>${CALLSIGN}:</b><br/>
     Tower, Speedbird 123, established ILS runway 27.
     </div>`;
-  await notifyUser("ATC Communications", atcChatHistory, 4000);
+  await notifyUser("ATC Communications", atcChatHistory, 5000);
 
   // 📡 [Tower → Landing Clearance]
   atcChatHistory += `<div style="background-color:#1e3a8a;color:white;padding:10px;border-radius:6px;margin:4px 0">
@@ -146,7 +154,7 @@ All actions will follow standard operating procedures.`,
     <b>${CALLSIGN}:</b><br/>
     Wind 260 at 8, runway 27 cleared to land, Speedbird 123.
     </div>`;
-  await notifyUser("ATC Communications", atcChatHistory, 4000);
+  await notifyUser("ATC Communications", atcChatHistory, 7000);
 
   // 🟢 [ACTION] Configure Aircraft for Final Approach
   flightModel.set_flaps_selector_position(simControls.B747FlapSelector.THIRTY);
