@@ -160,8 +160,6 @@ Instrument scan procedure executed for **${totalCycles} cycles** with integrated
 • Attitude indicator serves as primary reference instrument
 • Systematic cross-check rhythm prevents instrument fixation
 • Scan pace adjusts to maintain situational awareness
-
-> Next Module: Proceed to advanced instrument procedures upon completion of review.
 `
   );
 }
