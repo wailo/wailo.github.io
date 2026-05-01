@@ -25,6 +25,12 @@ if (!globalScope.__myAppTimeoutCache) {
 }
 const cache: number[] = globalScope.__myAppTimeoutCache;
 
+// Helper function to calculate the difference between two angles in degrees, normalized to the range [-180, 180]
+function angleDiffDeg(aDeg: number, bDeg: number) : number{
+  return (aDeg - bDeg + 180) % 360 - 180;
+}
+
+
 /**
  * Re‑positions the aircraft to a specified altitude, speed and heading using the autopilot.
  *
@@ -128,7 +134,7 @@ export async function repositionWithAutopilot(context: ScriptContext, target_alt
   const success = await waitForCondition(() => {
     return Math.abs(flightModel.altitude_ft - target_altitude) < 2 &&
       Math.abs(flightModel.speed_indicated_knots - target_speed) < 0.1 &&
-      Math.abs(flightModel.heading_deg - target_heading) < 0.1 &&
+      angleDiffDeg(flightModel.heading_deg, target_heading) < 0.1 &&
       Math.abs(flightModel.elevator_position) < 0.005;
   }, 400, 40, timeOut);
 
