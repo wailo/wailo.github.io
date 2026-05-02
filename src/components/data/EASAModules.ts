@@ -10,8 +10,8 @@ export type ModuleEntry = {
     "Demo": [
       {name: "Intro", path: "/LearningModules/demo.ts"},
       {name: "Landing", path: "/LearningModules/landing.ts"},
-      {name: "Instruments scanning", path: "/LearningModules/instruments_scanning.ts"}
-
+      {name: "Instruments scanning", path: "/LearningModules/instruments_scanning.ts"},
+      {name: "Yaw Damper", path: "/LearningModules/yaw_damper.ts"}
     ],
     "The Four Forces of Flight": [
       { name: "Observe Level Flight Forces", path: "/LearningModules/level_flight.ts" },
