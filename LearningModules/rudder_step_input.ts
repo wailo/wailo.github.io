@@ -14,13 +14,6 @@ export async function main(context: ScriptContext) {
   
 const flightModel = simControls.flightModel
 
-if (flightModel.autopilot_yaw_damper) {
-  notifyUser(
-    "❌ Autopilot yaw dumper is engaged.",
-    "Rudder can not be commanded. Disengage",
-  );
-  return;
-}
 
 // Demonstrate elevator step input
 notifyUser("Rudder Step Input", "Applying step input on the rudder.\n\n");

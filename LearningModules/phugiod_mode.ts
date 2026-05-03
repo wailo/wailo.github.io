@@ -26,7 +26,7 @@ const flightModel = simControls.simulation.set_flight_model_b747();
 
 // Pre-configuration before trimming the aircraft.
 const preConfiguration = () => {
-    flightModel.set_flaps_selector_position(simControls.B747FlapSelector.TWENTY);
+    simControls.flightModel.set_flaps_selector_position(simControls.B747FlapSelector.TWENTY);
 }
 
 // simControls.simulation.reset_simulation();

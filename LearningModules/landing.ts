@@ -32,7 +32,11 @@ export async function main(context: ScriptContext) {
   flightModel.set_atmosphere_wind_speed(8);
   flightModel.set_flaps_selector_position(simControls.B747FlapSelector.TEN);
 
-  const CALLSIGN = "Speedbird 123";
+  flightModel.set_autopilot_master_switch(true);
+  flightModel.set_autopilot_altitude_hold(true);
+  flightModel.set_autopilot_altitude_target(1400);
+
+  const CALLSIGN = "Iberia 987"; // Example callsign for ATC communications
 
   // 📡 Chat history accumulator for ATC/Pilot messages (stacked chat style)
   let atcChatHistory = "";
@@ -75,7 +79,6 @@ All actions will follow standard operating procedures.`,
   await notifyUser("ATC Communications", atcChatHistory, 7000);
 
   // 🟢 [ACTION] Configure Autopilot for Intercept
-  flightModel.set_autopilot_master_switch(true);
   flightModel.set_autopilot_heading_hold(true);
   flightModel.set_autopilot_heading_target(240);
 
@@ -95,8 +98,6 @@ All actions will follow standard operating procedures.`,
 
   flightModel.set_autopilot_speed_indicated_hold(true);
   flightModel.set_autopilot_speed_indicated_target(180);
-  flightModel.set_autopilot_altitude_hold(true);
-  flightModel.set_autopilot_altitude_target(1400);
 
   await notifyUser(
     "Landing Procedure",
@@ -128,31 +129,31 @@ All actions will follow standard operating procedures.`,
     </div>`;
   await notifyUser("ATC Communications", atcChatHistory, 5000);
 
- // 💬 [PILOT Readback]
+  // 💬 [PILOT Readback]
   atcChatHistory += `<div style="background-color:#0f766e;color:white;padding:10px;border-radius:6px;margin:4px 0">
     <b>${CALLSIGN}:</b><br/>
     Contact Tower on 118.7, ${CALLSIGN}.
     </div>`;
   await notifyUser("ATC Communications", atcChatHistory, 7000);
-  
+
   // 💬 [PILOT → Tower Check-in]
   atcChatHistory += `<div style="background-color:#0f766e;color:white;padding:10px;border-radius:6px;margin:4px 0">
     <b>${CALLSIGN}:</b><br/>
-    Tower, Speedbird 123, established ILS runway 27.
+    Tower, ${CALLSIGN}, established ILS runway 27.
     </div>`;
   await notifyUser("ATC Communications", atcChatHistory, 5000);
 
   // 📡 [Tower → Landing Clearance]
   atcChatHistory += `<div style="background-color:#1e3a8a;color:white;padding:10px;border-radius:6px;margin:4px 0">
     <b>Tower:</b><br/>
-    Speedbird 123, wind ${context.controls.flightModel.atmosphere_wind_direction} at ${context.controls.flightModel.atmosphere_wind_speed}, runway 27 cleared to land.
+    ${CALLSIGN}, wind ${context.controls.flightModel.atmosphere_wind_direction} at ${context.controls.flightModel.atmosphere_wind_speed}, runway 27 cleared to land.
     </div>`;
   await notifyUser("ATC Communications", atcChatHistory, 5000);
 
   // 💬 [PILOT Readback]
   atcChatHistory += `<div style="background-color:#0f766e;color:white;padding:10px;border-radius:6px;margin:4px 0">
     <b>${CALLSIGN}:</b><br/>
-    Wind 260 at 8, runway 27 cleared to land, Speedbird 123.
+    Wind 260 at 8, runway 27 cleared to land, ${CALLSIGN}.
     </div>`;
   await notifyUser("ATC Communications", atcChatHistory, 7000);
 
@@ -309,6 +310,10 @@ All actions will follow standard operating procedures.`,
     4000,
   );
 
+  // Disengage autopilot
+  flightModel.set_autopilot_master_switch(false);
+  // Set engine throttle to idle
+  flightModel.set_engine_throttle_position(0);
   // 🟢 [ACTION] Apply Braking
   flightModel.set_parking_brake(true);
 
