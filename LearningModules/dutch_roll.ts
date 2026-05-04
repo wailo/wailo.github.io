@@ -67,10 +67,10 @@ export async function main(context: ScriptContext) {
   // Show motions cues
   simControls.simulation.set_motion_cues(true);
   await waitFor(5000);
-  flightModel.set_rudder_position(-1.0);
-  await waitFor(2500);
-  flightModel.set_rudder_position(1.0);
-  await waitFor(3000);
+  flightModel.set_rudder_position(-0.50);
+  await waitFor(5000);
+  flightModel.set_rudder_position(0.50);
+  await waitFor(5000);
   flightModel.set_rudder_position(0.0);
 
   notifyUser(
