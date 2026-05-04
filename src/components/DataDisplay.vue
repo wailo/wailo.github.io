@@ -82,7 +82,7 @@ const props = defineProps({
     required: true
   },
   plotPause: {
-    type: Boolean as PropType<Boolean>,
+    type: Boolean as PropType<boolean>,
     required: true
   },
   plotUpdateIntervals: {

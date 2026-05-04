@@ -444,6 +444,9 @@ const applyTheme = (dark: boolean) => {
     document.documentElement.classList.remove('dark');
   }
   localStorage.setItem('theme', dark ? 'dark' : 'light');
+
+  // notify anything that cares (charts, canvas, etc.)
+  window.dispatchEvent(new Event('theme-change'))
 };
 
 const toggleTheme = () => {

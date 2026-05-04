@@ -64,7 +64,7 @@ const props = defineProps({
     required: true
   },
   pause: {
-    type: Boolean as PropType<Boolean>,
+    type: Boolean as PropType<boolean>,
     required: true
   },
   max_duration_ms: {
@@ -92,6 +92,15 @@ let MAX_POINTS = 0
 let plotResizeObserver: ResizeObserver | null = null
 const renderBuffers = new Map<string, Float64Array>()
 const xBuffers = new Map<string, Int32Array>() // ✅ per-buffer X
+
+function getStrokeColor() {
+  const val = getComputedStyle(document.documentElement)
+    .getPropertyValue('--color-secondary')
+    .trim()
+
+  return `rgb(${val})`
+}
+
 
 // ✅ Derived Keys
 const getPlottableKeys = computed(() =>
@@ -172,16 +181,16 @@ async function recreateAllPlots() {
       axes: [
         {
           show: false,
-          stroke: 'white',
-          border: { show: true, stroke: 'grey' },
+          stroke: getStrokeColor(),
+          border: { show: true, stroke: getStrokeColor() },
           grid: { show: false },
           values: (_self, ticks) =>
             ticks.map(i => (i / (1000 / props.update_intervals)).toFixed(1))
         },
         {
           show: true,
-          stroke: 'white',
-          border: { show: true, stroke: 'grey' },
+          stroke: getStrokeColor(),
+          border: { show: true, stroke: getStrokeColor() },
           grid: { show: false },
           ticks: { show: true },
           font: '8px monospace',
@@ -192,7 +201,7 @@ async function recreateAllPlots() {
       ],
       series: [
         { show: false },
-        { stroke: 'grey', width: 1, points: { show: false } }
+        { stroke: getStrokeColor(), width: 1, points: { show: false } }
       ]
     }, [[], []], el)
 
@@ -296,11 +305,13 @@ function reset_x_axis() {
 // ✅ Lifecycle
 onMounted(() => {
   MAX_POINTS = Math.ceil(props.max_duration_ms / props.update_intervals)
+  window.addEventListener('theme-change', recreateAllPlots)
 })
 
 onBeforeUnmount(() => {
   plots.forEach(p => p.destroy())
   plotResizeObserver?.disconnect()
+  window.removeEventListener('theme-change', recreateAllPlots)
 })
 </script>
 
