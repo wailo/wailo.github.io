@@ -48,7 +48,7 @@ const measureDamping = async (label: string, context: ScriptContext) => {
       return now >= endTime;
     },
     0,
-    20,
+    100,
   );
 
   // --- Need at least 2 peaks ---
@@ -115,12 +115,14 @@ const applyRudderImpulse = async (
   context: ScriptContext,
 ) => {
   flightModel.set_rudder_position(-0.5);
-  await context.waitFor(1000);
+  await context.waitFor(5000);
 
   flightModel.set_rudder_position(0.5);
-  await context.waitFor(1000);
+  await context.waitFor(5000);
 
   flightModel.set_rudder_position(0.0);
+  await context.waitFor(100);
+
 };
 
 // Helper function to run the disturbance
@@ -131,9 +133,14 @@ const runDutchRollTest = async (
 ) => {
   await context.notifyUser(
     `**${label}**`,
-    `Yaw damper is **${yawDamperOn ? "ENGAGED" : "DISENGAGED"}**.
+    `Yaw damper is <font color="${yawDamperOn ? "red" : "green"}">**${yawDamperOn ? "ENGAGED" : "DISENGAGED"}**</font>.
 
-A controlled rudder input will now be applied to initiate lateral-directional oscillations.`,
+A controlled rudder input will now be applied to initiate lateral-directional oscillations.
+
+The rudder will deflect in one direction, then the opposite, before returning to neutral.  
+
+Observe the resulting oscillations in yaw and roll.
+Note how the amplitude changes over time and whether the motion damps out quickly or persists.`,
     5000,
   );
 
@@ -145,27 +152,8 @@ A controlled rudder input will now be applied to initiate lateral-directional os
 
   await context.waitFor(3000);
 
-  context.notifyUser(
-    "Disturbance Input",
-    `A brief rudder doublet will be applied.
-
-The rudder will deflect in one direction, then the opposite, before returning to neutral.  
-This creates a short-duration disturbance that excites the Dutch roll mode without introducing sustained forcing.`,
-    5000,
-  );
-
   await applyRudderImpulse(flightModel, context);
-
   flightModel.set_autopilot_yaw_damper(yawDamperOn);
-
-  await context.notifyUser(
-    "Observation Phase",
-    `Observe the resulting oscillations in yaw and roll.
-
-Note how the amplitude changes over time and whether the motion damps out quickly or persists.`,
-    5000,
-  );
-
   return await measureDamping(label, context);
 };
 
@@ -192,42 +180,26 @@ export async function main(context: ScriptContext) {
 
   await notifyUser(
     "Introduction",
-    `This lesson examines the Dutch roll mode, a coupled oscillation involving yaw and roll motion.`,
-    5000,
-  );
+    `This lesson examines the Dutch roll mode, a coupled oscillation involving yaw and roll motion.
 
-  await notifyUser(
-    "Objective",
-    `The objective is to evaluate how effectively the yaw damper reduces oscillations and improves dynamic stability.`,
-    5000,
-  );
 
-  await notifyUser(
-    "Test Setup",
-    `The aircraft will be stabilized at a constant altitude and airspeed using the autopilot.
+### Objective: 
+evaluate how effectively the yaw damper reduces oscillations and improves dynamic stability.
 
-Lateral control will remain free to allow natural oscillatory motion.`,
-    5000,
-  );
+### Test Setup
+1. The aircraft will be stabilized at a constant altitude:${targetAltitude} and airspeed:${targetSpeed}.
+2. A rudder doublet input will be used to initiate motion. This consists of a brief deflection in one direction, followed by an equal deflection in the opposite direction, before returning to neutral.
 
-  await notifyUser(
-    "Disturbance Method",
-    `A rudder doublet input will be used to initiate motion.
-
-This consists of a brief deflection in one direction, followed by an equal deflection in the opposite direction, before returning to neutral.`,
-    5000,
-  );
-
-  await notifyUser(
-    "What to Observe",
-    `Following the disturbance, observe the oscillatory motion.
+### What to Observe
+Following the disturbance, observe the oscillatory motion.
 
 Key characteristics include:
 • Peak yaw rate  
 • Rate of decay of the oscillations  
 
-These will be measured and compared.`,
-    5000,
+These will be measured and compared
+Lateral control will remain free to allow natural oscillatory motion.`,
+    10000,
   );
 
   const preConfiguration = () => {
@@ -246,8 +218,6 @@ These will be measured and compared.`,
   );
 
   // Disable instruments view, only turn coordinator and attitude indicator are vibible
-  simControls.simulation.set_pfd_display(false);
-  await waitFor(500);
   simControls.simulation.set_analog_altimeter_visible(false);
   await waitFor(500);
   simControls.simulation.set_analog_heading_indicator_visible(false);
@@ -255,9 +225,10 @@ These will be measured and compared.`,
   simControls.simulation.set_analog_vertical_speed_indicator_visible(false);
   await waitFor(500);
   simControls.simulation.set_analog_speed_indicator_visible(false);
+  await waitFor(500);
+  simControls.simulation.set_pfd_display(false);
 
   // Plot signals
-  plotView(simProps.heading, true);
   plotView(simProps.heading_dot, true);
   plotView(simProps.sideslip, true);
   plotView(simProps.rudder_position, true);
@@ -315,6 +286,7 @@ The following results are measured over a **30-second period** after the disturb
 • A higher damping ratio (ζ) indicates improved stability  
 
 With the yaw damper engaged, the aircraft exhibits reduced oscillation amplitude and improved damping of the Dutch roll motion.`,
-    7000,
+    1000,
   );
+  simControls.simulation.set_simulation_pause(true);
 }
