@@ -19,7 +19,7 @@ const configureAutoPilotForDutchRoll = (
   flightModel.set_autopilot_bank_hold(false);
 };
 
-// Measures damping characteristics over 30 seconds
+// Measures damping characteristics
 const measureDamping = async (label: string, context: ScriptContext) => {
   let prev = 0;
   let rising = false;
@@ -40,6 +40,16 @@ const measureDamping = async (label: string, context: ScriptContext) => {
       } else if (r < prev && rising) {
         // local maximum
         peaks.push({ time: now, value: prev });
+        let markdown_table = `| # | Magnitude | Time |
+|---|-----------|------|
+`;
+
+        let i = 1;
+        for (let peak of peaks) {
+          markdown_table += `| ${i} | ${peak.value.toFixed(3)} | ${(peak.time - startTime).toFixed(2)} |\n`;
+          i++;
+        }
+        context.notifyUser("Peaks", markdown_table)
         rising = false;
       }
 
@@ -48,7 +58,7 @@ const measureDamping = async (label: string, context: ScriptContext) => {
       return now >= endTime;
     },
     0,
-    100,
+    40,
   );
 
   // --- Need at least 2 peaks ---
@@ -56,7 +66,7 @@ const measureDamping = async (label: string, context: ScriptContext) => {
     await context.notifyUser(
       `**Damping Result: ${label}**`,
       `Not enough peaks detected.`,
-      5000,
+      4000,
     );
     return null;
   }
@@ -103,7 +113,7 @@ Max peak: **${maxPeak.toFixed(3)}**
 Time to half amplitude: **${halfTime?.toFixed(2) ?? "N/A"} sec**
 Log decrement: **${logDec?.toFixed(3) ?? "N/A"}**
 Damping ratio ζ: **${zeta?.toFixed(3) ?? "N/A"}**`,
-    7000,
+    5500,
   );
 
   return { peaks, halfTime, logDec, zeta };
@@ -122,7 +132,6 @@ const applyRudderImpulse = async (
 
   flightModel.set_rudder_position(0.0);
   await context.waitFor(100);
-
 };
 
 // Helper function to run the disturbance
@@ -130,27 +139,35 @@ const runDutchRollTest = async (
   label: string,
   yawDamperOn: boolean,
   context: ScriptContext,
+  isFirstTest: boolean,
 ) => {
-  await context.notifyUser(
-    `**${label}**`,
-    `Yaw damper is <font color="${yawDamperOn ? "red" : "green"}">**${yawDamperOn ? "ENGAGED" : "DISENGAGED"}**</font>.
+  if (isFirstTest) {
+    await context.notifyUser(
+      `**${label}**`,
+      `Yaw damper is <span style="color: ${yawDamperOn ? "red" : "green"};">**${yawDamperOn ? "ENGAGED" : "DISENGAGED"}**</span>.
 
 A controlled rudder input will now be applied to initiate lateral-directional oscillations.
 
-The rudder will deflect in one direction, then the opposite, before returning to neutral.  
-
 Observe the resulting oscillations in yaw and roll.
 Note how the amplitude changes over time and whether the motion damps out quickly or persists.`,
-    5000,
-  );
+      5000,
+    );
+  } else {
+    // Shortened second intro (keeps context, removes repetition)
+    await context.notifyUser(
+      `**${label}**`,
+      `Now repeat the same test with the yaw damper <span style="color: ${yawDamperOn ? "red" : "green"};">**${yawDamperOn ? "ENGAGED" : "DISENGAGED"}**</span>.
+
+Compare how quickly the oscillations decay.`,
+      2500,
+    );
+  }
 
   const flightModel = context.controls.flightModel;
 
   // Reset control surfaces
   flightModel.set_aileron_position(0.0);
   flightModel.set_rudder_position(0.0);
-
-  await context.waitFor(3000);
 
   await applyRudderImpulse(flightModel, context);
   flightModel.set_autopilot_yaw_damper(yawDamperOn);
@@ -176,39 +193,13 @@ export async function main(context: ScriptContext) {
   simControls.simulation.set_flight_model_b747();
   context.setLayout(context.layoutTypes.FOCUS);
 
-  // --- Narrated lesson introduction ---
-
-  await notifyUser(
-    "Introduction",
-    `This lesson examines the Dutch roll mode, a coupled oscillation involving yaw and roll motion.
-
-
-### Objective: 
-evaluate how effectively the yaw damper reduces oscillations and improves dynamic stability.
-
-### Test Setup
-1. The aircraft will be stabilized at a constant altitude:${targetAltitude} and airspeed:${targetSpeed}.
-2. A rudder doublet input will be used to initiate motion. This consists of a brief deflection in one direction, followed by an equal deflection in the opposite direction, before returning to neutral.
-
-### What to Observe
-Following the disturbance, observe the oscillatory motion.
-
-Key characteristics include:
-• Peak yaw rate  
-• Rate of decay of the oscillations  
-
-These will be measured and compared
-Lateral control will remain free to allow natural oscillatory motion.`,
-    10000,
-  );
-
   const preConfiguration = () => {
     simControls.flightModel.set_flaps_selector_position(
       simControls.B747FlapSelector.TWENTY,
     );
   };
 
-  await repositionWithAutopilot(
+  repositionWithAutopilot(
     context,
     targetAltitude,
     targetSpeed,
@@ -217,19 +208,37 @@ Lateral control will remain free to allow natural oscillatory motion.`,
     preConfiguration,
   );
 
+  // --- Narrated lesson introduction ---
+  await notifyUser(
+    "Introduction",
+    `This lesson focuses on the **yaw damper**, a system designed to improve lateral-directional stability and reduce unwanted oscillations.
+
+### Objective: 
+Demonstrate how effectively the yaw damper suppresses oscillatory motion and improves dynamic stability.
+
+### Test Setup
+1. The aircraft will be stabilized at a constant altitude:${targetAltitude} and airspeed:${targetSpeed}.
+2. A rudder doublet input will be used to introduce a disturbance. This consists of a brief deflection in one direction, followed by an equal deflection in the opposite direction, before returning to neutral.
+3. Key characteristics like yaw rate and decay of oscillations will be measured and compared.
+
+### What to Observe
+The disturbance will excite the aircraft’s natural lateral-directional motion (commonly associated with Dutch roll).`,
+    9000,
+  );
+
   // Disable instruments view, only turn coordinator and attitude indicator are vibible
   simControls.simulation.set_analog_altimeter_visible(false);
-  await waitFor(500);
+  await waitFor(400);
   simControls.simulation.set_analog_heading_indicator_visible(false);
-  await waitFor(500);
+  await waitFor(400);
   simControls.simulation.set_analog_vertical_speed_indicator_visible(false);
-  await waitFor(500);
+  await waitFor(400);
   simControls.simulation.set_analog_speed_indicator_visible(false);
-  await waitFor(500);
+  await waitFor(400);
   simControls.simulation.set_pfd_display(false);
-  await waitFor(500);
+  await waitFor(400);
   simControls.simulation.set_motion_cues(true);
-  
+
   // Plot signals
   plotView(simProps.heading_dot, true);
   plotView(simProps.sideslip, true);
@@ -243,6 +252,7 @@ Lateral control will remain free to allow natural oscillatory motion.`,
     "Test 1: Yaw Damper Disengaged",
     false,
     context,
+    true,
   );
 
   // Reset conditions
@@ -263,6 +273,7 @@ Lateral control will remain free to allow natural oscillatory motion.`,
     "Test 2: Yaw Damper Engaged",
     true,
     context,
+    false,
   );
 
   const getMaxPeak = (res: any) =>
@@ -276,10 +287,10 @@ Lateral control will remain free to allow natural oscillatory motion.`,
 
 The following results are measured over a **30-second period** after the disturbance is applied.
 
-| Condition | Max Peak (deg/s) | Number of Peaks | Damping Ratio (ζ) |
+| Yaw Damper | Max Peak (deg/s) | Number of Peaks | Damping Ratio (ζ) |
 |-----------|------------------|------------------|-------------------|
-| Yaw Damper OFF | ${getMaxPeak(test1Results)?.toFixed(3) ?? "N/A"} | ${getPeakCount(test1Results)} | ${test1Results?.zeta?.toFixed(3) ?? "N/A"} |
-| Yaw Damper ON  | ${getMaxPeak(test2Results)?.toFixed(3) ?? "N/A"} | ${getPeakCount(test2Results)} | ${test2Results?.zeta?.toFixed(3) ?? "N/A"} |
+|  OFF      | ${getMaxPeak(test1Results)?.toFixed(3) ?? "N/A"} | ${getPeakCount(test1Results)} | ${test1Results?.zeta?.toFixed(3) ?? "N/A"} |
+|  ON       | ${getMaxPeak(test2Results)?.toFixed(3) ?? "N/A"} | ${getPeakCount(test2Results)} | ${test2Results?.zeta?.toFixed(3) ?? "N/A"} |
 
 **Interpretation**
 
