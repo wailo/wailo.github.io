@@ -227,7 +227,9 @@ Lateral control will remain free to allow natural oscillatory motion.`,
   simControls.simulation.set_analog_speed_indicator_visible(false);
   await waitFor(500);
   simControls.simulation.set_pfd_display(false);
-
+  await waitFor(500);
+  simControls.simulation.set_motion_cues(true);
+  
   // Plot signals
   plotView(simProps.heading_dot, true);
   plotView(simProps.sideslip, true);
