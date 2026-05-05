@@ -387,6 +387,8 @@ const executeCode = async () => {
           scenario: ModuleTitle.value,
           start_time: startStime,
           end_time: endTime,
+          model_version: deps.controls.FLIGHTMODEL_VERSION.toString(),
+          ui_version: import.meta.env.VITE_GIT_SHA,
           raw_metrics: metrics
         }).catch(err => {
           emit("error", err);

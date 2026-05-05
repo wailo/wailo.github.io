@@ -12,6 +12,8 @@ type SessionInput = {
   scenario: string
   start_time: Date
   end_time: Date
+  model_version: string,
+  ui_version: string,
   raw_metrics: Metric[]
   score?: number
 }
