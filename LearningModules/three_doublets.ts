@@ -71,7 +71,7 @@ export async function main(context: ScriptContext) {
   simControls.simulation.set_flight_model_b747();
   const flightModel = simControls.flightModel;
 
-  const target_altitude = Math.floor(Math.random() * 38500) + 1500;
+  const target_altitude = Math.floor(Math.random() * 15000) + 1500;
   const target_speed = Math.floor(Math.random() * 120) + 180;
   const target_heading = Math.floor(Math.random() * 359);
   const waitTimeSeconds = Math.floor(Math.random() * 4) + 1;
@@ -79,28 +79,35 @@ export async function main(context: ScriptContext) {
   const testCounts = 3;
   const results: FlightSnapshot[] = [];
 
+  let reposition_status = true;
+
   // Print all the target values
   for (let i = 0; i < testCounts; ++i) {
     notifyUser(
       `Test ${i + 1} of ${testCounts}`,
-      `🎯 Target Altitude: ${target_altitude.toLocaleString()} ft\n` +
-        `🎯 Target Speed: ${target_speed} knots\n` +
-        `🎯 Target Heading: ${target_heading}°\n` +
-        `⏱️  Wait Time: ${waitTimeSeconds}s\n` +
-        `🔄 Test Iterations: ${testCounts}\n` +
-        `⏱ Wait: ${waitTimeSeconds}s\n` +
+      `Target Altitude: ${target_altitude.toLocaleString()} ft\n` +
+        `Target Speed: ${target_speed} knots\n` +
+        `Target Heading: ${target_heading}°\n` +
+        `Wait Time: ${waitTimeSeconds}s\n` +
+        `Test Iterations: ${testCounts}\n` +
+        `Wait: ${waitTimeSeconds}s\n` +
         `Simulation Speed: ${simulationSpeed}x`,
     );
 
     // Reset simulation
     simulation.reset_simulation();
 
-    await repositionWithAutopilot(
+    reposition_status = await repositionWithAutopilot(
       context,
       target_altitude,
       target_speed,
       target_heading,
     );
+
+    // Reposition failed
+    if (!reposition_status) {
+      break;
+    }
 
     await waitFor(500);
     simulation.set_simulation_speed(simulationSpeed);
@@ -140,26 +147,97 @@ export async function main(context: ScriptContext) {
     results.push(snapshot);
   }
 
+  // If reposition failed, no point of continuing the test.
+  if (!reposition_status) {
+    notifyUser("Reposition failed", "Test aborted");
+    return;
+  }
+
   // ---------- RAW DATA TABLE ----------
   const snapshotKeys = Object.keys(results[0]) as (keyof FlightSnapshot)[];
 
-  let rawTable = "## 📋 Raw\n\n";
-  rawTable += "| # | " + snapshotKeys.join(" | ") + " |\n";
-  rawTable += "|---|" + snapshotKeys.map(() => "---").join("|") + "|\n";
+  // ---------- HELPERS ----------
+  function splitNumStr(val: string) {
+    const [int, frac = ""] = val.split(".");
+    return { int, frac };
+  }
 
-  results.forEach((r, i) => {
-    const row = snapshotKeys.map((key) => r[key].toFixed(3));
-    rawTable += `| ${i} | ${row.join(" | ")} |\n`;
+  function stripHtml(s: string) {
+    return s.replace(/<[^>]+>/g, "");
+  }
+
+  function pad(str: string, width: number, align: "left" | "right" = "right") {
+    return align === "right"
+      ? str.padStart(width, " ")
+      : str.padEnd(width, " ");
+  }
+
+  function colorize(text: string, type: "good" | "warn" | "bad") {
+    const colors = {
+      good: "#22c55e",
+      warn: "#f59e0b",
+      bad: "#ef4444",
+    };
+    return `<span style="color:${colors[type]}; font-weight:600">${text}</span>`;
+  }
+
+  // ---------- BUILD OUTPUT ----------
+  let output = `<pre style="
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  margin: 0;
+">`;
+
+  // ================= RAW =================
+  output += "📋 RAW\n\n";
+
+  const rawHeaders = ["#", ...snapshotKeys];
+
+  // RAW widths
+  const rawWidths = rawHeaders.map((h, i) => {
+    if (i === 0) return 4;
+    const key = snapshotKeys[i - 1];
+    return (
+      Math.max(h.length, ...results.map((r) => r[key].toFixed(3).length)) + 2
+    );
   });
 
-  // ---------- STATISTICAL TABLE ----------
-  let statsTable = "\n## 📊 Report\n\n";
-  statsTable +=
-    "| Metric | Mean | Std Dev | Min | Max | ±2σ (95%) | Tolerance | Status |\n";
-  statsTable +=
-    "|--------|------|---------|-----|-----|------------|-----------|--------|\n";
+  // RAW header
+  output +=
+    rawHeaders.map((h, i) => pad(h, rawWidths[i], "left")).join("") + "\n";
 
-  snapshotKeys.forEach((key) => {
+  // RAW separator
+  output += rawWidths.map((w) => "-".repeat(w)).join("") + "\n";
+
+  // RAW rows
+  results.forEach((r, i) => {
+    const row = [
+      pad(String(i), rawWidths[0], "left"),
+      ...snapshotKeys.map((key, idx) =>
+        pad(r[key].toFixed(3), rawWidths[idx + 1], "left"),
+      ),
+    ];
+    output += row.join("") + "\n";
+  });
+
+  // ================= REPORT =================
+  output += "\n📊 REPORT\n\n";
+
+  const headers = [
+    "Metric",
+    "Mean",
+    "Std",
+    "Min",
+    "Max",
+    "±2σ",
+    "Tol",
+    "Status",
+  ];
+  const numericCols = [1, 2, 3, 4, 5, 6];
+
+  // build rows
+  const rows = snapshotKeys.map((key) => {
     const values = results.map((r) => r[key]);
     const stats = computeStats(values);
 
@@ -167,26 +245,88 @@ export async function main(context: ScriptContext) {
     const unit = units[key];
     const ci95 = 2 * stats.std;
 
-    // Stability classification
-    let status = "";
+    let status: string;
     if (ci95 < tolerance * 0.5) {
-      status = "🟢 STABLE";
+      status = colorize("STABLE", "good");
     } else if (ci95 < tolerance) {
-      status = "🟡 MARGINAL";
+      status = colorize("MARGINAL", "warn");
     } else {
-      status = "🔴 FAIL";
+      status = colorize("FAIL", "bad");
     }
 
-    statsTable += `| ${key} (${unit}) | ${stats.mean.toFixed(
-      3,
-    )} | ${stats.std.toFixed(3)} | ${stats.min.toFixed(
-      3,
-    )} | ${stats.max.toFixed(3)} | ±${ci95.toFixed(
-      3,
-    )} | ±${tolerance} | ${status} |\n`;
+    return [
+      `${key}(${unit})`,
+      stats.mean.toFixed(3),
+      stats.std.toFixed(3),
+      stats.min.toFixed(3),
+      stats.max.toFixed(3),
+      ci95.toFixed(3),
+      tolerance.toFixed(3),
+      status,
+    ];
   });
 
-  notifyUser("Report", rawTable + "\n" + statsTable);
+  // compute decimal widths
+  const colMeta = headers.map((_, colIdx) => {
+    if (!numericCols.includes(colIdx)) return null;
+
+    let maxInt = 0;
+    let maxFrac = 0;
+
+    rows.forEach((r) => {
+      const raw = stripHtml(r[colIdx]);
+      const { int, frac } = splitNumStr(raw);
+      maxInt = Math.max(maxInt, int.length);
+      maxFrac = Math.max(maxFrac, frac.length);
+    });
+
+    return { maxInt, maxFrac };
+  });
+
+  // compute total widths
+  const widths = headers.map((h, colIdx) => {
+    if (!numericCols.includes(colIdx)) {
+      return (
+        Math.max(h.length, ...rows.map((r) => stripHtml(r[colIdx]).length)) + 2
+      );
+    }
+
+    const meta = colMeta[colIdx]!;
+    return meta.maxInt + 1 + meta.maxFrac + 2;
+  });
+
+  // format cell
+  function formatCell(val: string, colIdx: number): string {
+    if (!numericCols.includes(colIdx)) {
+      return pad(val, widths[colIdx], "left");
+    }
+
+    const meta = colMeta[colIdx]!;
+    const raw = stripHtml(val);
+    const { int, frac } = splitNumStr(raw);
+
+    const paddedInt = int.padStart(meta.maxInt, " ");
+    const paddedFrac = frac.padEnd(meta.maxFrac, " ");
+
+    return pad(`${paddedInt}.${paddedFrac}`, widths[colIdx], "left");
+  }
+
+  // HEADER (fixed alignment)
+  output += headers.map((h, i) => pad(h, widths[i], "left")).join("") + "\n";
+
+  // separator
+  output += widths.map((w) => "-".repeat(w)).join("") + "\n";
+
+  // rows
+  rows.forEach((row) => {
+    output += row.map((cell, i) => formatCell(cell, i)).join("") + "\n";
+  });
+
+  // close
+  output += "</pre>";
+
+  // ---------- SEND ----------
+  notifyUser("Results", output);
 
   // Write to database
   metrics.push({
