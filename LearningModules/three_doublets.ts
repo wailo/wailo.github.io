@@ -285,7 +285,7 @@ export async function main(context: ScriptContext) {
 
   const flightModel = simControls.flightModel;
 
-  const initial_altitude = Math.floor(Math.random() * 38500) + 1500;
+  const initial_altitude = Math.floor(Math.random() * 15000) + 1500;
   const initial_speed = Math.floor(Math.random() * 120) + 180;
   const initial_heading = Math.floor(Math.random() * 359);
 
