@@ -48,169 +48,72 @@ const units: Record<keyof FlightSnapshot, string> = {
   BETA: "rad",
 };
 
-export async function main(context: ScriptContext) {
-  const {
-    controls: simControls,
-    props: simProps,
-    repositionWithAutopilot,
-    waitFor,
-    notifyUser,
-    dataDisplayReset,
-    plotView,
-    metrics,
-  } = context;
+// ---------- HELPERS ----------
+function splitNumStr(val: string) {
+  const [int, frac = ""] = val.split(".");
+  return { int, frac };
+}
 
-  const simulation = simControls.simulation;
+function stripHtml(s: string) {
+  return s.replace(/<[^>]+>/g, "");
+}
 
-  dataDisplayReset();
-  plotView(simProps.aileron_position, true);
-  plotView(simProps.rudder_position, true);
-  plotView(simProps.elevator_position, true);
+function pad(str: string, width: number, align: "left" | "right" = "right") {
+  return align === "right" ? str.padStart(width, " ") : str.padEnd(width, " ");
+}
 
-  // Configure Aircraft Model
-  simControls.simulation.set_flight_model_b747();
-  const flightModel = simControls.flightModel;
+function colorize(text: string, type: "good" | "warn" | "bad") {
+  const colors = {
+    good: "#22c55e",
+    warn: "#f59e0b",
+    bad: "#ef4444",
+  };
 
-  const target_altitude = Math.floor(Math.random() * 15000) + 1500;
-  const target_speed = Math.floor(Math.random() * 120) + 180;
-  const target_heading = Math.floor(Math.random() * 359);
-  const waitTimeSeconds = Math.floor(Math.random() * 4) + 1;
-  const simulationSpeed = Math.floor(Math.random() * 2) + 0.5;
-  const testCounts = 3;
-  const results: FlightSnapshot[] = [];
+  return `<span style="color:${colors[type]}; font-weight:600">${text}</span>`;
+}
 
-  let reposition_status = true;
-
-  // Print all the target values
-  for (let i = 0; i < testCounts; ++i) {
-    notifyUser(
-      `Test ${i + 1} of ${testCounts}`,
-      `Target Altitude: ${target_altitude.toLocaleString()} ft\n` +
-        `Target Speed: ${target_speed} knots\n` +
-        `Target Heading: ${target_heading}°\n` +
-        `Wait Time: ${waitTimeSeconds}s\n` +
-        `Test Iterations: ${testCounts}\n` +
-        `Wait: ${waitTimeSeconds}s\n` +
-        `Simulation Speed: ${simulationSpeed}x`,
-    );
-
-    // Reset simulation
-    simulation.reset_simulation();
-
-    reposition_status = await repositionWithAutopilot(
-      context,
-      target_altitude,
-      target_speed,
-      target_heading,
-    );
-
-    // Reposition failed
-    if (!reposition_status) {
-      break;
-    }
-
-    await waitFor(500);
-    simulation.set_simulation_speed(simulationSpeed);
-
-    // Apply aileron/rudder/elevator doublet
-    flightModel.set_aileron_position(0.2);
-    flightModel.set_rudder_position(0.5);
-    flightModel.set_elevator_position(0.2);
-    await waitFor(1000);
-
-    flightModel.set_aileron_position(-0.2);
-    flightModel.set_rudder_position(-0.5);
-    flightModel.set_elevator_position(-0.2);
-    await waitFor(1000);
-
-    flightModel.set_aileron_position(0.0);
-    flightModel.set_rudder_position(0.0);
-    flightModel.set_elevator_position(0.0);
-
-    // Wait for T time (convert seconds to milliseconds)
-    await waitFor(waitTimeSeconds * 1000);
-
-    simulation.set_simulation_speed(1);
-    simulation.set_simulation_pause(true);
-
-    // Take a snapshot
-    const snapshot: FlightSnapshot = {
-      ALT: flightModel.altitude_ft,
-      SPD: flightModel.speed_indicated_knots,
-      VSP: flightModel.vertical_speed,
-      THETA: flightModel.pitch,
-      PHI: flightModel.bank,
-      PSI: flightModel.heading,
-      BETA: flightModel.sideslip,
-    };
-
-    results.push(snapshot);
+function generateRawTable(results: FlightSnapshot[]): string {
+  if (!results.length) {
+    return `<pre style="
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11px;
+      line-height: 1.35;
+      margin: 0;
+    ">No results available
+</pre>`;
   }
 
-  // If reposition failed, no point of continuing the test.
-  if (!reposition_status) {
-    notifyUser("Reposition failed", "Test aborted");
-    return;
-  }
-
-  // ---------- RAW DATA TABLE ----------
   const snapshotKeys = Object.keys(results[0]) as (keyof FlightSnapshot)[];
-
-  // ---------- HELPERS ----------
-  function splitNumStr(val: string) {
-    const [int, frac = ""] = val.split(".");
-    return { int, frac };
-  }
-
-  function stripHtml(s: string) {
-    return s.replace(/<[^>]+>/g, "");
-  }
-
-  function pad(str: string, width: number, align: "left" | "right" = "right") {
-    return align === "right"
-      ? str.padStart(width, " ")
-      : str.padEnd(width, " ");
-  }
-
-  function colorize(text: string, type: "good" | "warn" | "bad") {
-    const colors = {
-      good: "#22c55e",
-      warn: "#f59e0b",
-      bad: "#ef4444",
-    };
-    return `<span style="color:${colors[type]}; font-weight:600">${text}</span>`;
-  }
-
-  // ---------- BUILD OUTPUT ----------
-  let output = `<pre style="
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 11px;
-  line-height: 1.35;
-  margin: 0;
-">`;
-
-  // ================= RAW =================
-  output += "📋 RAW\n\n";
 
   const rawHeaders = ["#", ...snapshotKeys];
 
-  // RAW widths
   const rawWidths = rawHeaders.map((h, i) => {
     if (i === 0) return 4;
+
     const key = snapshotKeys[i - 1];
+
     return (
       Math.max(h.length, ...results.map((r) => r[key].toFixed(3).length)) + 2
     );
   });
 
-  // RAW header
+  let output = `<pre style="
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.35;
+    margin: 0;
+  ">`;
+
+  //  output += "📋 RAW\n\n";
+
+  // Header
   output +=
     rawHeaders.map((h, i) => pad(h, rawWidths[i], "left")).join("") + "\n";
 
-  // RAW separator
+  // Separator
   output += rawWidths.map((w) => "-".repeat(w)).join("") + "\n";
 
-  // RAW rows
+  // Rows
   results.forEach((r, i) => {
     const row = [
       pad(String(i), rawWidths[0], "left"),
@@ -218,11 +121,33 @@ export async function main(context: ScriptContext) {
         pad(r[key].toFixed(3), rawWidths[idx + 1], "left"),
       ),
     ];
+
     output += row.join("") + "\n";
   });
 
-  // ================= REPORT =================
-  output += "\n📊 REPORT\n\n";
+  output += "</pre>";
+
+  return output;
+}
+
+function generateReportTable(
+  results: FlightSnapshot[],
+  tolerances: Record<keyof FlightSnapshot, number>,
+  units: Record<keyof FlightSnapshot, string>,
+): string {
+  if (!results.length) {
+    return `<pre style="
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11px;
+      line-height: 1.35;
+      margin: 0;
+    ">📊 REPORT
+
+No results available
+</pre>`;
+  }
+
+  const snapshotKeys = Object.keys(results[0]) as (keyof FlightSnapshot)[];
 
   const headers = [
     "Metric",
@@ -234,9 +159,9 @@ export async function main(context: ScriptContext) {
     "Tol",
     "Status",
   ];
+
   const numericCols = [1, 2, 3, 4, 5, 6];
 
-  // build rows
   const rows = snapshotKeys.map((key) => {
     const values = results.map((r) => r[key]);
     const stats = computeStats(values);
@@ -246,6 +171,7 @@ export async function main(context: ScriptContext) {
     const ci95 = 2 * stats.std;
 
     let status: string;
+
     if (ci95 < tolerance * 0.5) {
       status = colorize("STABLE", "good");
     } else if (ci95 < tolerance) {
@@ -266,7 +192,6 @@ export async function main(context: ScriptContext) {
     ];
   });
 
-  // compute decimal widths
   const colMeta = headers.map((_, colIdx) => {
     if (!numericCols.includes(colIdx)) return null;
 
@@ -276,6 +201,7 @@ export async function main(context: ScriptContext) {
     rows.forEach((r) => {
       const raw = stripHtml(r[colIdx]);
       const { int, frac } = splitNumStr(raw);
+
       maxInt = Math.max(maxInt, int.length);
       maxFrac = Math.max(maxFrac, frac.length);
     });
@@ -283,7 +209,6 @@ export async function main(context: ScriptContext) {
     return { maxInt, maxFrac };
   });
 
-  // compute total widths
   const widths = headers.map((h, colIdx) => {
     if (!numericCols.includes(colIdx)) {
       return (
@@ -292,10 +217,10 @@ export async function main(context: ScriptContext) {
     }
 
     const meta = colMeta[colIdx]!;
+
     return meta.maxInt + 1 + meta.maxFrac + 2;
   });
 
-  // format cell
   function formatCell(val: string, colIdx: number): string {
     if (!numericCols.includes(colIdx)) {
       return pad(val, widths[colIdx], "left");
@@ -303,6 +228,7 @@ export async function main(context: ScriptContext) {
 
     const meta = colMeta[colIdx]!;
     const raw = stripHtml(val);
+
     const { int, frac } = splitNumStr(raw);
 
     const paddedInt = int.padStart(meta.maxInt, " ");
@@ -311,24 +237,151 @@ export async function main(context: ScriptContext) {
     return pad(`${paddedInt}.${paddedFrac}`, widths[colIdx], "left");
   }
 
-  // HEADER (fixed alignment)
+  let output = `<pre style="
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.35;
+    margin: 0;
+  ">`;
+
+  output += "📊 REPORT\n\n";
+
+  // Header
   output += headers.map((h, i) => pad(h, widths[i], "left")).join("") + "\n";
 
-  // separator
+  // Separator
   output += widths.map((w) => "-".repeat(w)).join("") + "\n";
 
-  // rows
+  // Rows
   rows.forEach((row) => {
     output += row.map((cell, i) => formatCell(cell, i)).join("") + "\n";
   });
 
-  // close
   output += "</pre>";
 
-  // ---------- SEND ----------
-  notifyUser("Results", output);
+  return output;
+}
 
-  // Write to database
+export async function main(context: ScriptContext) {
+  const {
+    controls: simControls,
+    props: simProps,
+    repositionWithAutopilot,
+    waitFor,
+    notifyUser,
+    dataDisplayReset,
+    plotView,
+    metrics,
+  } = context;
+
+  const simulation = simControls.simulation;
+
+  dataDisplayReset();
+  plotView(simProps.aileron_position, true);
+  plotView(simProps.rudder_position, true);
+  plotView(simProps.elevator_position, true);
+
+  simControls.simulation.set_flight_model_b747();
+
+  const flightModel = simControls.flightModel;
+
+  const initial_altitude = Math.floor(Math.random() * 38500) + 1500;
+  const initial_speed = Math.floor(Math.random() * 120) + 180;
+  const initial_heading = Math.floor(Math.random() * 359);
+
+  const waitTimeSeconds = Math.floor(Math.random() * 4) + 1;
+  const simulationSpeed = Math.floor(Math.random() * 2) + 0.5;
+
+  const testCounts = 3;
+
+  const results: FlightSnapshot[] = [];
+
+  let reposition_status = true;
+
+  for (let i = 0; i < testCounts; ++i) {
+    const rawDateReport =
+      `<pre>Initial Altitude: ${initial_altitude.toLocaleString()} ft\n` +
+      `Initial Speed: ${initial_speed} knots\n` +
+      `Initial Heading: ${initial_heading}°\n` +
+      `Wait Time: ${waitTimeSeconds}s\n` +
+      `Simulation Speed: ${simulationSpeed}x\n` +
+      `Run Iterations: ${testCounts}</pre>\n` +
+      `${results.length > 0 ? generateRawTable(results) : ""}`;
+
+    notifyUser(`Run ${i + 1} of ${testCounts}`, rawDateReport);
+
+    simulation.reset_simulation();
+    simulation.set_pfd_display(false);
+
+    reposition_status = await repositionWithAutopilot(
+      context,
+      initial_altitude,
+      initial_speed,
+      initial_heading,
+    );
+
+    if (!reposition_status) {
+      break;
+    }
+
+    await waitFor(500);
+
+    simulation.set_simulation_speed(simulationSpeed);
+
+    flightModel.set_aileron_position(0.2);
+    flightModel.set_rudder_position(0.5);
+    flightModel.set_elevator_position(0.2);
+
+    await waitFor(1000);
+
+    flightModel.set_aileron_position(-0.2);
+    flightModel.set_rudder_position(-0.5);
+    flightModel.set_elevator_position(-0.2);
+
+    await waitFor(1000);
+
+    flightModel.set_aileron_position(0.0);
+    flightModel.set_rudder_position(0.0);
+    flightModel.set_elevator_position(0.0);
+
+    await waitFor(waitTimeSeconds * 1000);
+
+    simulation.set_simulation_speed(1);
+    simulation.set_simulation_pause(true);
+
+    const snapshot: FlightSnapshot = {
+      ALT: flightModel.altitude_ft,
+      SPD: flightModel.speed_indicated_knots,
+      VSP: flightModel.vertical_speed,
+      THETA: flightModel.pitch,
+      PHI: flightModel.bank,
+      PSI: flightModel.heading,
+      BETA: flightModel.sideslip,
+    };
+
+    results.push(snapshot);
+  }
+
+  if (!reposition_status) {
+    notifyUser("Reposition failed", "Test aborted");
+    return;
+  }
+
+  // ---------- USE FORMATTER ----------
+  const rawDateReport =
+    `<pre>Initial Altitude: ${initial_altitude.toLocaleString()} ft\n` +
+    `Initial Speed: ${initial_speed} knots\n` +
+    `Initial Heading: ${initial_heading}°\n` +
+    `Wait Time: ${waitTimeSeconds}s\n` +
+    `Simulation Speed: ${simulationSpeed}x\n` +
+    `Run Iterations: ${testCounts}</pre>\n` +
+    `${results.length > 0 ? generateRawTable(results) : ""}`;
+
+  // ---------- USE FORMATTER ----------
+  const formattedOutput = generateReportTable(results, tolerances, units);
+
+  notifyUser("Results", `${rawDateReport}\n\n${formattedOutput}`);
+
   metrics.push({
     data: results,
   });
