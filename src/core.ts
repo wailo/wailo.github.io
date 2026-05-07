@@ -132,11 +132,11 @@ export async function repositionWithAutopilot(context: ScriptContext, target_alt
 
   // Wait until all condition are met.
   const success = await waitForCondition(() => {
-    return Math.abs(flightModel.altitude_ft - target_altitude) < 2 &&
-      Math.abs(flightModel.speed_indicated_knots - target_speed) < 0.1 &&
-      angleDiffDeg(flightModel.heading_deg, target_heading) < 0.1 &&
+    return Math.abs(flightModel.altitude_ft - target_altitude) < 0.5 &&
+      Math.abs(flightModel.speed_indicated_knots - target_speed) < 0.05 &&
+      angleDiffDeg(flightModel.heading_deg, target_heading) < 0.01 &&
       Math.abs(flightModel.elevator_position) < 0.005;
-  }, 400, 40, timeOut);
+  }, 400, 400, timeOut);
 
   if (!success) {
     context.notifyUser("Reposition Failed", `Failed to reposition to altitude: ${target_altitude} ft, speed: ${target_speed} knots, heading: ${target_heading}° within ${timeOut / 1000} seconds.`);
