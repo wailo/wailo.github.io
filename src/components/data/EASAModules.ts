@@ -25,7 +25,7 @@ export type ModuleEntry = {
       { name: "Effect of Altitude on Lift", path: "/LearningModules/lift_vs_altitude.ts" }
     ],
     "Stability modes": [
-      { name: "Phugiod mode", path: "/LearningModules/phugiod_mode.ts" },
+      { name: "Phugoid Mode", path: "/LearningModules/phugoid_mode.ts" },
       { name: "Dutch Roll", path : "/LearningModules/dutch_roll.ts" },
 
     ],
