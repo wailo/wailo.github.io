@@ -1,5 +1,68 @@
 import { FlightModelInstance, ScriptContext } from "../../src/core";
 
+// Helper function, formatting
+function pad(str: string, width: number, align: "left" | "right" = "right") {
+  return align === "right" ? str.padStart(width, " ") : str.padEnd(width, " ");
+}
+
+function generateRawTable(results: any[]): string {
+  if (!results.length) {
+    return `<pre style="
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11px;
+      line-height: 1.35;
+      margin: 0;
+    ">No results available
+</pre>`;
+  }
+
+  const snapshotKeys = Object.keys(results[0]);
+
+  const rawHeaders = ["#", ...snapshotKeys];
+
+  const rawWidths = rawHeaders.map((h, i) => {
+    if (i === 0) return 4;
+
+    const key = snapshotKeys[i - 1];
+
+    return (
+      Math.max(h.length, ...results.map((r) => r[key].toFixed(3).length)) + 2
+    );
+  });
+
+  let output = `<pre style="
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.35;
+    margin: 0;
+  ">`;
+
+  //  output += "📋 RAW\n\n";
+
+  // Header
+  output +=
+    rawHeaders.map((h, i) => pad(h, rawWidths[i], "left")).join("") + "\n";
+
+  // Separator
+  output += rawWidths.map((w) => "-".repeat(w)).join("") + "\n";
+
+  // Rows
+  results.forEach((r, i) => {
+    const row = [
+      pad(String(i), rawWidths[0], "left"),
+      ...snapshotKeys.map((key, idx) =>
+        pad(r[key].toFixed(3), rawWidths[idx + 1], "left"),
+      ),
+    ];
+
+    output += row.join("") + "\n";
+  });
+
+  output += "</pre>";
+
+  return output;
+}
+
 // Helper function to configure autopilot for dutch roll mode
 const configureAutoPilotForDutchRoll = (
   flightModel: FlightModelInstance,
@@ -40,16 +103,19 @@ const measureDamping = async (label: string, context: ScriptContext) => {
       } else if (r < prev && rising) {
         // local maximum
         peaks.push({ time: now, value: prev });
-        let markdown_table = `| # | Magnitude | Time |
-|---|-----------|------|
-`;
 
-        let i = 1;
-        for (let peak of peaks) {
-          markdown_table += `| ${i} | ${peak.value.toFixed(3)} | ${(peak.time - startTime).toFixed(2)} |\n`;
-          i++;
-        }
-        context.notifyUser("Peaks", markdown_table)
+        context.notifyUser(`Oscillations: ${label}`, generateRawTable(peaks));
+
+        //         let markdown_table = `| # | Magnitude | Time |
+        // |---|-----------|------|
+        // `;
+
+        //         let i = 1;
+        //         for (let peak of peaks) {
+        //           markdown_table += `| ${i} | ${peak.value.toFixed(3)} | ${(peak.time - startTime).toFixed(2)} |\n`;
+        //           i++;
+        //         }
+        //         context.notifyUser("Peaks", markdown_table)
         rising = false;
       }
 
