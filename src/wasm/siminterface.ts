@@ -2,6 +2,7 @@ import MainModuleFactory, { b747, c172, graphics, EmbindModule, type MainModule}
 
 export { getFlightModelParameters, getSimulationControlsParameters, getAutopilotProperties, fetchSimData, type SimulationProperties, type AutopilotProperties } from "./generated/flightsimulator_exec_meta"
 export type FlightModelInstance = b747 | c172;
+export {type b747, type c172} from "./generated/flightsimulator_exec"
 export type ExtendedMainModule = { flightModel : FlightModelInstance} & {simulation : graphics} & EmbindModule;
 export  {type graphics} from "./generated/flightsimulator_exec"
 

@@ -1,5 +1,5 @@
 
-export type { FlightModelInstance, graphics, ExtendedMainModule } from "./wasm/siminterface"
+export type { FlightModelInstance, b747, c172, graphics, ExtendedMainModule  } from "./wasm/siminterface"
 
 import { SimulationProperties } from "../src/wasm/generated/flightsimulator_exec_meta"
 export type { SimulationProperties } from "../src/wasm/generated/flightsimulator_exec_meta"

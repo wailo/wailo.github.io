@@ -27,7 +27,7 @@ notifyUser(
   
   dataDisplayReset();
 
-  const flightModel = simControls.simulation.set_flight_model_b747()
+  const flightModel = simControls.flightModel;
 
   // ✈️ Reposition and stabilize at level flight
   await repositionWithAutopilot(context, 10000, 280, 270);
