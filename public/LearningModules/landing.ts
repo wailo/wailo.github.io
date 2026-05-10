@@ -327,7 +327,11 @@ All actions will follow standard operating procedures.`,
   );
 
   // 🟢 [ACTION] Rollout Monitoring
-  await waitForCondition(() => flightModel.speed_indicated_knots < 30);
+  await waitForCondition(() => {
+    // Slowly reduce wind speed
+    flightModel.set_atmosphere_wind_speed(Math.max(flightModel.atmosphere_wind_speed -1, 0));
+    return flightModel.speed_indicated_knots < 30;
+  });
 
   await notifyUser(
     "Landing Procedure",
