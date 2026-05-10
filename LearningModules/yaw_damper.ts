@@ -49,7 +49,7 @@ function generateRawTable(results: any[]): string {
   // Rows
   results.forEach((r, i) => {
     const row = [
-      pad(String(i), rawWidths[0], "left"),
+      pad(String(i+1), rawWidths[0], "left"),
       ...snapshotKeys.map((key, idx) =>
         pad(r[key].toFixed(3), rawWidths[idx + 1], "left"),
       ),
@@ -190,13 +190,19 @@ const applyRudderImpulse = async (
   flightModel: FlightModelInstance,
   context: ScriptContext,
 ) => {
-  flightModel.set_rudder_position(-0.5);
-  await context.waitFor(5000);
+  flightModel.set_atmosphere_wind_direction(flightModel.heading_deg + 90);
+  flightModel.set_atmosphere_wind_speed(20);
+  // flightModel.set_rudder_position(-0.5);
+  await context.waitFor(7000);
 
-  flightModel.set_rudder_position(0.5);
-  await context.waitFor(5000);
+  flightModel.set_atmosphere_wind_direction(flightModel.heading_deg - 90);
+  flightModel.set_atmosphere_wind_speed(-20);
+  // flightModel.set_rudder_position(0.5);
+  await context.waitFor(7000);
 
-  flightModel.set_rudder_position(0.0);
+  flightModel.set_atmosphere_wind_direction(0);
+  flightModel.set_atmosphere_wind_speed(0);
+  // flightModel.set_rudder_position(0.0);
   await context.waitFor(100);
 };
 
@@ -235,8 +241,8 @@ Compare how quickly the oscillations decay.`,
   flightModel.set_aileron_position(0.0);
   flightModel.set_rudder_position(0.0);
 
-  await applyRudderImpulse(flightModel, context);
   flightModel.set_autopilot_yaw_damper(yawDamperOn);
+  await applyRudderImpulse(flightModel, context);
   return await measureDamping(label, context);
 };
 
@@ -309,6 +315,7 @@ The disturbance will excite the aircraft’s natural lateral-directional motion 
   plotView(simProps.heading_dot, true);
   plotView(simProps.sideslip, true);
   plotView(simProps.rudder_position, true);
+  plotView(simProps.wind_speed, true);
 
   // --- TEST 1 ---
   let flightModel = context.controls.flightModel;

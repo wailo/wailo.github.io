@@ -1,4 +1,4 @@
-import { ScriptContext } from "../../src/core";
+import { b747, ScriptContext } from "../../src/core";
 
 export async function main(context: ScriptContext) {
   const {
@@ -24,7 +24,7 @@ export async function main(context: ScriptContext) {
 
   // 🟢 [ACTION] Configure Aircraft Model
   simControls.simulation.set_flight_model_b747();
-  const flightModel = simControls.flightModel;
+  const flightModel = simControls.flightModel as b747;
 
   // 🟢 [ACTION] Position Aircraft - Start landing from 1400ft, heading 210, speed 180
   await repositionWithAutopilot(context, 1400, 210, 180);
@@ -227,12 +227,12 @@ All actions will follow standard operating procedures.`,
 
   for (const alt of altitudeCallouts) {
     waitForCondition(
-      () => flightModel.altitude_ft <= alt[0],
+      () => flightModel.altitude_radio_ft <= alt[0],
       0,
       50,
       120000,
     ).then(async () => {
-      if (flightModel.altitude_ft > 0 && !flightModel.weight_on_wheel) {
+      if (flightModel.altitude_radio_ft > 0 && !flightModel.weight_on_wheel) {
         await notifyUser(
           "Altitude Callout",
           `<div style="background-color:#7c2d12;color:white;padding:10px;border-radius:6px;font-weight:bold">
@@ -273,7 +273,7 @@ All actions will follow standard operating procedures.`,
   );
 
   // 🟢 [ACTION] Flare Preparation
-  await waitForCondition(() => flightModel.altitude_ft < 250);
+  await waitForCondition(() => flightModel.altitude_radio_ft < 250);
   flightModel.set_autopilot_speed_indicated_target(130);
 
   await notifyUser(
@@ -286,7 +286,7 @@ All actions will follow standard operating procedures.`,
   );
 
   // 🟢 [ACTION] Flare Execution
-  await waitForCondition(() => flightModel.altitude_ft < 150);
+  await waitForCondition(() => flightModel.altitude_radio_ft < 150);
   flightModel.set_autopilot_vertical_speed_target(-20);
 
   await notifyUser(
@@ -327,7 +327,11 @@ All actions will follow standard operating procedures.`,
   );
 
   // 🟢 [ACTION] Rollout Monitoring
-  await waitForCondition(() => flightModel.speed_indicated_knots < 30);
+  await waitForCondition(() => {
+    // Slowly reduce wind speed
+    flightModel.set_atmosphere_wind_speed(Math.max(flightModel.atmosphere_wind_speed -1, 0));
+    return flightModel.speed_indicated_knots < 30;
+  });
 
   await notifyUser(
     "Landing Procedure",
