@@ -306,7 +306,8 @@ The disturbance will excite the aircraft’s natural lateral-directional motion 
   simControls.simulation.set_motion_cues(true);
 
   // Plot signals
-  plotView(simProps.heading_dot, true);
+  plotView([simProps.heading_dot, simProps.bank_dot], true);
+  plotView([simProps.heading, simProps.bank], true);
   plotView(simProps.sideslip, true);
   plotView(simProps.rudder_position, true);
 
