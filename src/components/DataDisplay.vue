@@ -156,13 +156,39 @@ function hideAll() {
 
 
 // Externally callable method
-function setPlotView(item: SimulationProperties, state: boolean) {
-  if (!item || !item.id) return
-  const id = item.id.toLowerCase();
+function setPlotView(
+  item: SimulationProperties | SimulationProperties[],
+  state: boolean
+) {
+  if (!item) return
+
+  // normalize to array
+  const items = Array.isArray(item)
+    ? item
+    : [item]
+
+  // collect valid ids
+  const ids = items
+    .filter(v => v?.id)
+    .map(v => v.id.toLowerCase())
+
+  if (ids.length === 0) {
+    return
+  }
+
   if (state) {
-    timePlotRef.value?.addPlot(id)
-  } else {
-    timePlotRef.value?.removePlot(id)
+    // supports:
+    // addPlot("a")
+    // addPlot("a", "b")
+    // addPlot("a", "b", "c")
+    timePlotRef.value?.addPlot(...ids)
+  }
+  else {
+    // removePlot expects plotId
+    // plotId format = ids joined with "|"
+    timePlotRef.value?.removePlot(
+      ids.join('|')
+    )
   }
 }
 

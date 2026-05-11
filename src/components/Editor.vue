@@ -234,7 +234,7 @@ const props = defineProps({
   utilityFuncs: {
     type: Object as PropType<{
       notifyUser: (title: string, body?: string, timeOut?: number) => void;
-      plotView: (item: SimulationProperties, state: boolean) => void;
+      plotView: (item: SimulationProperties | SimulationProperties[], state: boolean) => void;
       dataView: (item: SimulationProperties, state: boolean) => void;
       dataDisplayReset: () => void;
       setLayout: (mode: LayoutTypes) => void;

@@ -25,7 +25,7 @@ export interface ScriptContext {
 
   notifyUser: (title: string, body?: string, timeout?: number) => void;
   dataView: (prop: SimulationProperties, state: boolean) => void;
-  plotView: (prop: SimulationProperties, state: boolean) => void;
+  plotView: (prop: SimulationProperties | SimulationProperties[], state: boolean) => void;
   dataDisplayReset: () => void;
   setLayout: (mode: LayoutTypes) => void;
   layoutTypes: typeof LayoutTypes;
