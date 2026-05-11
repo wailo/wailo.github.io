@@ -87,7 +87,7 @@ const measureDamping = async (label: string, context: ScriptContext) => {
   let prev = 0;
   let rising = false;
 
-  const peaks: { time: number; value: number }[] = [];
+  const peaks: { time: number; yaw_rate_deg: number }[] = [];
 
   const startTime = context.controls.simulation.simulation_time;
   const endTime = startTime + 30;
@@ -102,7 +102,7 @@ const measureDamping = async (label: string, context: ScriptContext) => {
         rising = true;
       } else if (r < prev && rising) {
         // local maximum
-        peaks.push({ time: now, value: prev });
+        peaks.push({ time: now - startTime, yaw_rate_deg: prev });
 
         context.notifyUser(`Oscillations: ${label}`, generateRawTable(peaks));
 
@@ -142,7 +142,7 @@ const measureDamping = async (label: string, context: ScriptContext) => {
 
   // --- Find half-amplitude peak ---
   const halfPeak = peaks.find(
-    (p, i) => i > 1 && p.value <= refPeak.value * 0.5,
+    (p, i) => i > 1 && p.yaw_rate_deg <= refPeak.yaw_rate_deg * 0.5,
   );
 
   const halfTime = halfPeak ? halfPeak.time - refPeak.time : null;
@@ -151,7 +151,7 @@ const measureDamping = async (label: string, context: ScriptContext) => {
   let deltas: number[] = [];
 
   for (let i = 1; i < peaks.length; i++) {
-    const ratio = peaks[i - 1].value / peaks[i].value;
+    const ratio = peaks[i - 1].yaw_rate_deg / peaks[i].yaw_rate_deg;
     if (ratio > 1) {
       deltas.push(Math.log(ratio));
     }
@@ -169,7 +169,7 @@ const measureDamping = async (label: string, context: ScriptContext) => {
   }
 
   // --- Peak summary ---
-  const peakValues = peaks.map((p) => p.value);
+  const peakValues = peaks.map((p) => p.yaw_rate_deg);
   const maxPeak = Math.max(...peakValues);
 
   await context.notifyUser(
@@ -190,19 +190,13 @@ const applyRudderImpulse = async (
   flightModel: FlightModelInstance,
   context: ScriptContext,
 ) => {
-  flightModel.set_atmosphere_wind_direction(flightModel.heading_deg + 90);
-  flightModel.set_atmosphere_wind_speed(20);
-  // flightModel.set_rudder_position(-0.5);
-  await context.waitFor(7000);
+  flightModel.set_rudder_position(-0.5);
+  await context.waitFor(5000);
 
-  flightModel.set_atmosphere_wind_direction(flightModel.heading_deg - 90);
-  flightModel.set_atmosphere_wind_speed(-20);
-  // flightModel.set_rudder_position(0.5);
-  await context.waitFor(7000);
+  flightModel.set_rudder_position(0.5);
+  await context.waitFor(5000);
 
-  flightModel.set_atmosphere_wind_direction(0);
-  flightModel.set_atmosphere_wind_speed(0);
-  // flightModel.set_rudder_position(0.0);
+  flightModel.set_rudder_position(0.0);
   await context.waitFor(100);
 };
 
@@ -241,8 +235,8 @@ Compare how quickly the oscillations decay.`,
   flightModel.set_aileron_position(0.0);
   flightModel.set_rudder_position(0.0);
 
-  flightModel.set_autopilot_yaw_damper(yawDamperOn);
   await applyRudderImpulse(flightModel, context);
+  flightModel.set_autopilot_yaw_damper(yawDamperOn);
   return await measureDamping(label, context);
 };
 
@@ -312,10 +306,10 @@ The disturbance will excite the aircraft’s natural lateral-directional motion 
   simControls.simulation.set_motion_cues(true);
 
   // Plot signals
-  plotView(simProps.heading_dot, true);
+  plotView([simProps.heading_dot, simProps.bank_dot], true);
+  plotView([simProps.heading, simProps.bank], true);
   plotView(simProps.sideslip, true);
   plotView(simProps.rudder_position, true);
-  plotView(simProps.wind_speed, true);
 
   // --- TEST 1 ---
   let flightModel = context.controls.flightModel;
@@ -350,7 +344,7 @@ The disturbance will excite the aircraft’s natural lateral-directional motion 
   );
 
   const getMaxPeak = (res: any) =>
-    res?.peaks?.length ? Math.max(...res.peaks.map((p: any) => p.value)) : null;
+    res?.peaks?.length ? Math.max(...res.peaks.map((p: any) => p.yaw_rate_deg)) : null;
 
   const getPeakCount = (res: any) => res?.peaks?.length ?? 0;
 
@@ -358,7 +352,11 @@ The disturbance will excite the aircraft’s natural lateral-directional motion 
     "Summary",
     `**Damping Comparison**
 
-The following results are measured over a **30-second period** after the disturbance is applied.
+Yaw Damper OFF:
+${generateRawTable(test1Results?.peaks || [])}
+
+Yaw Damper ON:
+${generateRawTable(test2Results?.peaks || [])}
 
 | Yaw Damper | Max Peak (deg/s) | Number of Peaks | Damping Ratio (ζ) |
 |-----------|------------------|------------------|-------------------|
@@ -369,10 +367,8 @@ The following results are measured over a **30-second period** after the disturb
 
 • A lower peak yaw rate indicates smaller oscillations  
 • Fewer peaks within the same time period indicate faster damping  
-• A higher damping ratio (ζ) indicates improved stability  
-
-With the yaw damper engaged, the aircraft exhibits reduced oscillation amplitude and improved damping of the Dutch roll motion.`,
-    1000,
+• A higher damping ratio (ζ) indicates improved stability  `,
+    7000,
   );
   simControls.simulation.set_simulation_pause(true);
 }
