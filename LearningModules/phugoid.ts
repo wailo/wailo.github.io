@@ -23,6 +23,7 @@ export async function main(context: ScriptContext) {
       "4. Increase the simulation speed to observe the damping effect\n",
   );
 
+  simControls.simulation.reset_simulation();
   simControls.simulation.set_flight_model_b747();
   const flightModel = simControls.flightModel;
 
