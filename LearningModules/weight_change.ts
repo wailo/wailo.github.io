@@ -57,7 +57,7 @@ export async function main(context: ScriptContext) {
   };
 
   // 🔼 Increase weight by 20%
-  flightModel.set_empty_weight(initialWeight * 1.2);
+  flightModel.set_empty_mass(initialWeight * 1.2);
   notifyUser(
     "🔼 Increasing Weight",
     "Weight increased by 20%. Observe performance.",
@@ -68,7 +68,7 @@ export async function main(context: ScriptContext) {
   }
 
   // 🔽 Decrease weight to 80% of original
-  flightModel.set_empty_weight(initialWeight * 0.8);
+  flightModel.set_empty_mass(initialWeight * 0.8);
   notifyUser("🔽 Decreasing Weight", "Weight reduced by 20%. Observe changes.");
   for (let i = 0; i < 3; i++) {
     await waitFor(5000);
@@ -76,7 +76,7 @@ export async function main(context: ScriptContext) {
   }
 
   // 🔁 Reset to original weight
-  flightModel.set_empty_weight(initialWeight);
+  flightModel.set_empty_mass(initialWeight);
   notifyUser(
     "🔁 Weight Restored",
     "Aircraft weight reset. Observe return to initial performance.",
