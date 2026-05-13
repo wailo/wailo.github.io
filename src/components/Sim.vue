@@ -588,6 +588,27 @@ onMounted(async () => {
       simFunctions.notifyUser("Flight Sim", `SIM: ${FlightSimModule.FLIGHTMODEL_VERSION} ${FlightSimModule.FLIGHTMODEL_BUILD_TIMESTAMP}
       UI: ${import.meta.env.VITE_GIT_SHA}`,2000)
 
+      document.addEventListener('keydown', (e: KeyboardEvent) => {
+      // When editing a text input, we don't want the global keybindings to trigger.
+        if (isTextInput()) {
+          return;
+        }
+
+        // Ctrl + Shift + F to toggle fullscreen
+        if (e.code=== 'KeyL') {
+          // cycle through layouts with L key
+          const nextLayout = {
+            [LayoutTypes.INSTRUCTOR]: LayoutTypes.PILOT,
+            [LayoutTypes.PILOT]: LayoutTypes.FOCUS,
+            [LayoutTypes.FOCUS]: LayoutTypes.INSTRUCTOR,
+        }
+          simFunctions.setLayout(nextLayout[layout.value]);
+        }
+        if (e.code === 'KeyF' && e.ctrlKey && e.shiftKey)         {
+          toggleFullscreen();
+        }
+      });
+
       watch(simulationStatus, (newStatus) => {
   if (classroomComponentRef.value) {
     classroomComponentRef.value.sendStatus(newStatus);
