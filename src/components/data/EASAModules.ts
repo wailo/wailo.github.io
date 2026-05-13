@@ -15,7 +15,7 @@ export type ModuleEntry = {
       {name: "Three doublets", path: "/LearningModules/three_doublets.ts"}
     ],
     "The Four Forces of Flight": [
-      { name: "Observe Level Flight Forces", path: "/LearningModules/level_flight.ts" },
+      { name: "Level Flight Forces", path: "/LearningModules/level_flight.ts" },
       { name: "Increase and Reduce Thrust", path: "/LearningModules/thrust_change.ts"},
       { name: "Change Aircraft Weight", path: "/LearningModules/weight_change.ts" }
     ],
