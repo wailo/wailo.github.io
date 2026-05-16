@@ -274,9 +274,9 @@ const measureDamping = async (
       prev = r;
 
       context.notifyUser(
-        "Oscillations:",
+        "Oscillations",
         `
-${label}: ${(endTime - now).toFixed(0)}
+${label}: ${(endTime - now).toFixed(0)}s remaining
 
 ${generateRawTable(peaks)}
 `,
@@ -347,7 +347,7 @@ Max peak: **${maxPeak.toFixed(3)}**
 Time to half amplitude: **${halfTime?.toFixed(2) ?? "N/A"} sec**
 Log decrement: **${logDec?.toFixed(3) ?? "N/A"}**
 Damping ratio ζ: **${zeta?.toFixed(3) ?? "N/A"}**
-Natural frequency ωₙ: **${naturalFrequency.omega_n?.toFixed(3) ?? "N/A"} deg/s**
+Natural frequency ωₙ: **${naturalFrequency.omega_n?.toFixed(3) ?? "N/A"} rad/s**
 Frequency: **${naturalFrequency.frequency_hz?.toFixed(3) ?? "N/A"} Hz**
 Oscillation period: **${naturalFrequency.period?.toFixed(3) ?? "N/A"} sec**`,
     5500,
@@ -382,7 +382,7 @@ const runDutchRollTest = async (
   if (isFirstTest) {
     await context.notifyUser(
       `**${label}**`,
-      `Yaw damper is <span style="color: ${yawDamperOn ? "red" : "green"};">**${yawDamperOn ? "ENGAGED" : "DISENGAGED"}**</span>.
+      `Yaw damper is **${yawDamperOn ? "ENGAGED" : "DISENGAGED"}**.
 
 A controlled rudder input will now be applied to initiate lateral-directional oscillations.
 
@@ -459,7 +459,7 @@ export async function main(context: ScriptContext) {
     "Introduction",
     `This lesson focuses on the **yaw damper**, a system designed to improve lateral-directional stability and reduce unwanted oscillations.
 
-### Objective: 
+### Objective
 Demonstrate how effectively the yaw damper suppresses oscillatory motion and improves dynamic stability.
 
 ### Test Setup
@@ -494,7 +494,7 @@ The disturbance will excite the aircraft’s natural lateral-directional motion 
   simControls.simulation.set_motion_cues(true);
 
   // Plot signals
-  plotView([simProps.heading_dot_deg, simProps.bank_dot_deg], true);
+  plotView([simProps.yaw_dot_deg, simProps.bank_dot_deg], true);
   plotView([simProps.sideslip_deg, simProps.bank_deg], true);
   plotView(simProps.rudder_position, true);
 
@@ -560,6 +560,7 @@ ${generateRawTable([
     peaks: getPeakCount(test1Results),
     zeta: test1Results?.zeta ?? 0,
     omega_n: test1Results?.naturalFrequency?.omega_n ?? 0,
+    period: test1Results?.naturalFrequency?.period ?? 0,
     freq_hz: test1Results?.naturalFrequency?.frequency_hz ?? 0,
   },
   {
@@ -568,6 +569,7 @@ ${generateRawTable([
     peaks: getPeakCount(test2Results),
     zeta: test2Results?.zeta ?? 0,
     omega_n: test2Results?.naturalFrequency?.omega_n ?? 0,
+    period: test2Results?.naturalFrequency?.period ?? 0,
     freq_hz: test2Results?.naturalFrequency?.frequency_hz ?? 0,
   },
 ])}
@@ -575,19 +577,29 @@ ${generateRawTable([
 ### Interpretation
 
 • With the yaw damper OFF, the aircraft exhibits a lightly damped Dutch-roll oscillation.  
-  The yaw rate decreases gradually, allowing several oscillation cycles to remain visible.
+  The yaw rate decreases gradually, allowing several oscillation cycles to remain visible within the observation period.
 • With the yaw damper ON, oscillations decay much faster.  
-  Only a few measurable peaks remain before the motion becomes negligible.
-• The damping ratio ζ increased from **${test1Results?.zeta?.toFixed(3)}** to **${test2Results?.zeta?.toFixed(3)}**, indicating improved lateral-directional stability.
-• The natural frequency remained nearly unchanged.  
-  This shows that the yaw damper primarily increases damping rather than changing the aircraft’s natural oscillation frequency.
+  Only a few measurable peaks remain before the motion becomes negligible, demonstrating improved damping performance.
+• The damping ratio ζ increased from **${test1Results?.zeta?.toFixed(3)}** to **${test2Results?.zeta?.toFixed(3)}**, indicating improved lateral-directional stability and faster suppression of oscillatory motion.
+• The oscillation period remained approximately constant at **${test1Results?.naturalFrequency?.period?.toFixed(2)} sec**.  
+  This means the aircraft completes one Dutch-roll cycle approximately every ${test1Results?.naturalFrequency?.period?.toFixed(2)} seconds.
+• The natural frequency remained nearly unchanged at approximately **${test1Results?.naturalFrequency?.omega_n?.toFixed(3)} rad/s** (**${test1Results?.naturalFrequency?.frequency_hz?.toFixed(3)} Hz**).  
+  This shows that the yaw damper primarily increases damping rather than significantly changing the aircraft’s natural oscillation speed.
+• Dutch roll is a coupled lateral-directional motion involving both yawing and rolling oscillations.  
+  As the aircraft yaws, sideslip develops, producing rolling motion that continues the oscillation cycle.
 
 ### Further Exploration
 
-• Increase the observation duration to capture additional oscillation cycles.
-• Try the test with c172 modeland compare:
-• Repeat the test with stronger or weaker rudder inputs and observe how the aircraft responds.`,
-    30000,
+• Increase the observation duration beyond 30 seconds to capture additional oscillation cycles and improve damping measurements.
+• Try the same experiment using the C172 model and compare:
+  - damping ratio
+  - oscillation frequency
+  - oscillation decay rate
+  - number of visible peaks
+• Repeat the test using stronger or weaker rudder inputs and observe how oscillation amplitude and damping behavior change.
+• Observe how yaw rate and bank angle oscillate together during Dutch roll motion.
+• Compare how quickly different aircraft return to coordinated flight after the disturbance.`,
+    60000,
   );
   context.setLayout(context.layoutTypes.INSTRUCTOR);
 }
