@@ -1,58 +1,69 @@
 import { FlightModelInstance, ScriptContext } from "../../src/core";
 
-// Helper function, formatting
+// ---------------------------------------------------
+// Helpers
+// ---------------------------------------------------
+
 function pad(str: string, width: number, align: "left" | "right" = "right") {
   return align === "right" ? str.padStart(width, " ") : str.padEnd(width, " ");
 }
 
+const TABLE_STYLE = `
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  margin: 0;
+`;
+
+// ---------------------------------------------------
+// Generic single table
+// ---------------------------------------------------
+
 function generateRawTable(results: any[]): string {
   if (!results.length) {
-    return `<pre style="
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 11px;
-      line-height: 1.35;
-      margin: 0;
-    ">No results available
-</pre>`;
+    return `<pre style="${TABLE_STYLE}">No results available</pre>`;
   }
 
   const snapshotKeys = Object.keys(results[0]);
 
-  const rawHeaders = ["#", ...snapshotKeys];
+  const headers = ["#", ...snapshotKeys];
 
-  const rawWidths = rawHeaders.map((h, i) => {
+  const widths = headers.map((h, i) => {
     if (i === 0) return 4;
 
     const key = snapshotKeys[i - 1];
 
     return (
-      Math.max(h.length, ...results.map((r) => r[key].toFixed(3).length)) + 2
+      Math.max(
+        h.length,
+        ...results.map((r) =>
+          typeof r[key] === "number"
+            ? r[key].toFixed(3).length
+            : String(r[key]).length,
+        ),
+      ) + 3
     );
   });
 
-  let output = `<pre style="
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 11px;
-    line-height: 1.35;
-    margin: 0;
-  ">`;
-
-  //  output += "📋 RAW\n\n";
+  let output = `<pre style="${TABLE_STYLE}">`;
 
   // Header
-  output +=
-    rawHeaders.map((h, i) => pad(h, rawWidths[i], "left")).join("") + "\n";
+  output += headers.map((h, i) => pad(h, widths[i], "left")).join("") + "\n";
 
   // Separator
-  output += rawWidths.map((w) => "-".repeat(w)).join("") + "\n";
+  output += widths.map((w) => "-".repeat(w)).join("") + "\n";
 
   // Rows
   results.forEach((r, i) => {
     const row = [
-      pad(String(i+1), rawWidths[0], "left"),
-      ...snapshotKeys.map((key, idx) =>
-        pad(r[key].toFixed(3), rawWidths[idx + 1], "left"),
-      ),
+      pad(String(i + 1), widths[0], "left"),
+
+      ...snapshotKeys.map((key, idx) => {
+        const value =
+          typeof r[key] === "number" ? r[key].toFixed(3) : String(r[key]);
+
+        return pad(value, widths[idx + 1], "left");
+      }),
     ];
 
     output += row.join("") + "\n";
@@ -63,7 +74,119 @@ function generateRawTable(results: any[]): string {
   return output;
 }
 
-// Helper function to configure autopilot for dutch roll mode
+// ---------------------------------------------------
+// Side-by-side comparison table
+// ---------------------------------------------------
+
+function generateComparisonTable(
+  yawDamperOn: any[],
+  yawDamperOff: any[],
+): string {
+  const leftTitle = "Yaw Damper OFF";
+  const rightTitle = "Yaw Damper ON";
+
+  const rightColor = "#16a34a";
+  const leftColor = "#dc2626";
+
+  const headers = ["#", "Time", "Yaw Rate °/s"];
+
+  const widths = [4, 10, 14];
+
+  const rowCount = Math.max(yawDamperOn.length, yawDamperOff.length);
+
+  const formatRow = (r: any, i: number) => {
+    if (!r) {
+      return widths.map((w) => pad("", w, "left")).join("");
+    }
+
+    return [
+      pad(String(i + 1), widths[0], "left"),
+      pad(r.time.toFixed(3), widths[1], "left"),
+      pad(r.yaw_rate_deg.toFixed(3), widths[2], "left"),
+    ].join("");
+  };
+
+  const columnWidth = widths.reduce((a, b) => a + b, 0);
+
+  let output = `<pre style="${TABLE_STYLE}">`;
+
+  // Titles
+  output +=
+    `<span style="color:${leftColor}; font-weight:bold;">` +
+    pad(leftTitle, columnWidth, "left") +
+    `</span>| ` +
+    `<span style="color:${rightColor}; font-weight:bold;">` +
+    pad(rightTitle, columnWidth, "left") +
+    `</span>\n`;
+
+  // Headers
+  output +=
+    headers.map((h, i) => pad(h, widths[i], "left")).join("") +
+    "| " +
+    headers.map((h, i) => pad(h, widths[i], "left")).join("") +
+    "\n";
+
+  // Separator
+  output += "-".repeat(columnWidth) + "|" + "-".repeat(columnWidth) + "\n";
+
+  // Rows
+  for (let i = 0; i < rowCount; i++) {
+    const left = formatRow(yawDamperOn[i], i);
+    const right = formatRow(yawDamperOff[i], i);
+
+    output +=
+      `<span style="color:${leftColor};">${left}</span>| ` +
+      `<span style="color:${rightColor};">${right}</span>\n`;
+  }
+
+  output += "</pre>";
+
+  return output;
+}
+
+// ---------------------------------------------------
+// Natural frequency helpers
+// ---------------------------------------------------
+
+// Average oscillation period from peaks
+const calculateNaturalFrequency = (
+  peaks: { time: number; yaw_rate_deg: number }[],
+) => {
+  if (peaks.length < 2) {
+    return {
+      period: null,
+      omega_n: null,
+      frequency_hz: null,
+    };
+  }
+
+  // Time differences between successive peaks
+  const periods: number[] = [];
+
+  for (let i = 1; i < peaks.length; i++) {
+    periods.push(peaks[i].time - peaks[i - 1].time);
+  }
+
+  // Average damped period
+  const avgPeriod = periods.reduce((a, b) => a + b, 0) / periods.length;
+
+  // Damped natural frequency
+  const omega_d = (2 * Math.PI) / avgPeriod;
+
+  // Frequency in Hz
+  const frequencyHz = 1 / avgPeriod;
+
+  return {
+    period: avgPeriod,
+    omega_n: omega_d,
+    frequency_hz: frequencyHz,
+  };
+};
+
+// ---------------------------------------------------
+// Configure AP for Dutch roll
+// ---------------------------------------------------
+
 const configureAutoPilotForDutchRoll = (
   flightModel: FlightModelInstance,
   targetSpeed: number,
@@ -82,44 +205,82 @@ const configureAutoPilotForDutchRoll = (
   flightModel.set_autopilot_bank_hold(false);
 };
 
+// ---------------------------------------------------
 // Measures damping characteristics
-const measureDamping = async (label: string, context: ScriptContext) => {
+// ---------------------------------------------------
+
+const measureDamping = async (
+  label: string,
+  measurementPeriod: number,
+  context: ScriptContext,
+) => {
   let prev = 0;
   let rising = false;
 
-  const peaks: { time: number; yaw_rate_deg: number }[] = [];
+  let lastPeakTime = -999;
+
+  const MIN_PEAK = 0.03; // ignore tiny oscillations
+  const MIN_DELTA = 0.01; // hysteresis
+  const MIN_PERIOD = 0.2; // sec between peaks
+
+  const peaks: {
+    time: number;
+    yaw_rate_deg: number;
+  }[] = [];
 
   const startTime = context.controls.simulation.simulation_time;
-  const endTime = startTime + 30;
+
+  const endTime = startTime + measurementPeriod;
 
   await context.waitForCondition(
     () => {
       const now = context.controls.simulation.simulation_time;
-      const r = Math.abs(context.controls.flightModel.heading_dot_deg);
 
-      // --- Peak detection ---
-      if (r > prev) {
+      const r = Math.abs(context.controls.flightModel.yaw_dot_deg);
+
+      // ----------------------------------------
+      // Rising edge detection with hysteresis
+      // ----------------------------------------
+
+      if (r > prev + MIN_DELTA) {
         rising = true;
-      } else if (r < prev && rising) {
-        // local maximum
-        peaks.push({ time: now - startTime, yaw_rate_deg: prev });
+      }
 
-        context.notifyUser(`Oscillations: ${label}`, generateRawTable(peaks));
+      // ----------------------------------------
+      // Peak detection
+      // ----------------------------------------
+      else if (r < prev - MIN_DELTA && rising) {
+        const peakValue = prev;
+        const peakTime = now - startTime;
 
-        //         let markdown_table = `| # | Magnitude | Time |
-        // |---|-----------|------|
-        // `;
+        // Reject tiny/noisy peaks
+        const validAmplitude = peakValue > MIN_PEAK;
 
-        //         let i = 1;
-        //         for (let peak of peaks) {
-        //           markdown_table += `| ${i} | ${peak.value.toFixed(3)} | ${(peak.time - startTime).toFixed(2)} |\n`;
-        //           i++;
-        //         }
-        //         context.notifyUser("Peaks", markdown_table)
+        // Reject duplicate peaks
+        const validSpacing = peakTime - lastPeakTime > MIN_PERIOD;
+
+        if (validAmplitude && validSpacing) {
+          peaks.push({
+            time: peakTime,
+            yaw_rate_deg: peakValue,
+          });
+
+          lastPeakTime = peakTime;
+        }
+
         rising = false;
       }
 
       prev = r;
+
+      context.notifyUser(
+        "Oscillations",
+        `
+${label}: ${(endTime - now).toFixed(0)}s remaining
+
+${generateRawTable(peaks)}
+`,
+      );
 
       return now >= endTime;
     },
@@ -127,31 +288,32 @@ const measureDamping = async (label: string, context: ScriptContext) => {
     40,
   );
 
-  // --- Need at least 2 peaks ---
   if (peaks.length < 2) {
     await context.notifyUser(
       `**Damping Result: ${label}**`,
       `Not enough peaks detected.`,
       4000,
     );
+
     return null;
   }
 
-  // --- Use 2nd peak as reference (more robust) ---
+  // Reference peak
   const refPeak = peaks[1];
 
-  // --- Find half-amplitude peak ---
+  // Half amplitude peak
   const halfPeak = peaks.find(
     (p, i) => i > 1 && p.yaw_rate_deg <= refPeak.yaw_rate_deg * 0.5,
   );
 
   const halfTime = halfPeak ? halfPeak.time - refPeak.time : null;
 
-  // --- Log decrement (average over multiple peaks) ---
+  // Log decrement
   let deltas: number[] = [];
 
   for (let i = 1; i < peaks.length; i++) {
     const ratio = peaks[i - 1].yaw_rate_deg / peaks[i].yaw_rate_deg;
+
     if (ratio > 1) {
       deltas.push(Math.log(ratio));
     }
@@ -162,27 +324,36 @@ const measureDamping = async (label: string, context: ScriptContext) => {
       ? deltas.reduce((a, b) => a + b, 0) / deltas.length
       : null;
 
-  // --- Damping ratio ζ ---
+  // Damping ratio
   let zeta: number | null = null;
+
   if (logDec !== null) {
     zeta = logDec / Math.sqrt(4 * Math.PI * Math.PI + logDec * logDec);
   }
 
-  // --- Peak summary ---
+  // Natural frequency
+  const naturalFrequency = calculateNaturalFrequency(peaks);
+
+  // Peak summary
   const peakValues = peaks.map((p) => p.yaw_rate_deg);
   const maxPeak = Math.max(...peakValues);
 
   await context.notifyUser(
     `**Damping Result: ${label}**`,
-    `Peaks detected: **${peaks.length}**
+    `${generateRawTable(peaks)}
+
+Peaks detected: **${peaks.length}**
 Max peak: **${maxPeak.toFixed(3)}**
 Time to half amplitude: **${halfTime?.toFixed(2) ?? "N/A"} sec**
 Log decrement: **${logDec?.toFixed(3) ?? "N/A"}**
-Damping ratio ζ: **${zeta?.toFixed(3) ?? "N/A"}**`,
+Damping ratio ζ: **${zeta?.toFixed(3) ?? "N/A"}**
+Natural frequency ωₙ: **${naturalFrequency.omega_n?.toFixed(3) ?? "N/A"} rad/s**
+Frequency: **${naturalFrequency.frequency_hz?.toFixed(3) ?? "N/A"} Hz**
+Oscillation period: **${naturalFrequency.period?.toFixed(3) ?? "N/A"} sec**`,
     5500,
   );
 
-  return { peaks, halfTime, logDec, zeta };
+  return { peaks, halfTime, logDec, zeta, naturalFrequency };
 };
 
 // Apply a controlled rudder impulse
@@ -204,13 +375,14 @@ const applyRudderImpulse = async (
 const runDutchRollTest = async (
   label: string,
   yawDamperOn: boolean,
+  measurementPeriod: number,
   context: ScriptContext,
   isFirstTest: boolean,
 ) => {
   if (isFirstTest) {
     await context.notifyUser(
       `**${label}**`,
-      `Yaw damper is <span style="color: ${yawDamperOn ? "red" : "green"};">**${yawDamperOn ? "ENGAGED" : "DISENGAGED"}**</span>.
+      `Yaw damper is **${yawDamperOn ? "ENGAGED" : "DISENGAGED"}**.
 
 A controlled rudder input will now be applied to initiate lateral-directional oscillations.
 
@@ -222,7 +394,9 @@ Note how the amplitude changes over time and whether the motion damps out quickl
     // Shortened second intro (keeps context, removes repetition)
     await context.notifyUser(
       `**${label}**`,
-      `Now repeat the same test with the yaw damper <span style="color: ${yawDamperOn ? "red" : "green"};">**${yawDamperOn ? "ENGAGED" : "DISENGAGED"}**</span>.
+      `Now repeat the same test with the yaw damper <span style="color: ${
+        yawDamperOn ? "#16a34a" : "#dc2626"
+      };">**${yawDamperOn ? "ENGAGED" : "DISENGAGED"}**</span>.
 
 Compare how quickly the oscillations decay.`,
       2500,
@@ -231,17 +405,22 @@ Compare how quickly the oscillations decay.`,
 
   const flightModel = context.controls.flightModel;
 
-  // Reset control surfaces
+  // Reset controls
   flightModel.set_aileron_position(0.0);
   flightModel.set_rudder_position(0.0);
 
   await applyRudderImpulse(flightModel, context);
   flightModel.set_autopilot_yaw_damper(yawDamperOn);
-  return await measureDamping(label, context);
+  return await measureDamping(label, measurementPeriod, context);
 };
+
+// ---------------------------------------------------
+// Main
+// ---------------------------------------------------
 
 export async function main(context: ScriptContext) {
   const simControls = context.controls;
+  const simulation = simControls.simulation;
   const simProps = context.props;
 
   const repositionWithAutopilot = context.repositionWithAutopilot;
@@ -253,10 +432,11 @@ export async function main(context: ScriptContext) {
   const targetAltitude = 5000;
   const targetSpeed = 180;
   const targetHeading = 0;
+  const measurementPeriod = 30; // seconds
 
   dataDisplayReset();
-  simControls.simulation.reset_simulation();
-  simControls.simulation.set_flight_model_b747();
+  simulation.reset_simulation();
+  simulation.set_flight_model_b747();
   context.setLayout(context.layoutTypes.FOCUS);
 
   const preConfiguration = () => {
@@ -274,18 +454,18 @@ export async function main(context: ScriptContext) {
     preConfiguration,
   );
 
-  // --- Narrated lesson introduction ---
+  // Introduction
   await notifyUser(
     "Introduction",
     `This lesson focuses on the **yaw damper**, a system designed to improve lateral-directional stability and reduce unwanted oscillations.
 
-### Objective: 
+### Objective
 Demonstrate how effectively the yaw damper suppresses oscillatory motion and improves dynamic stability.
 
 ### Test Setup
 1. The aircraft will be stabilized at a constant altitude:${targetAltitude} and airspeed:${targetSpeed}.
-2. A rudder doublet input will be used to introduce a disturbance. This consists of a brief deflection in one direction, followed by an equal deflection in the opposite direction, before returning to neutral.
-3. Key characteristics like yaw rate and decay of oscillations will be measured and compared.
+2. A rudder doublet input will be used to introduce a disturbance.
+3. Key characteristics like yaw rate and decay of oscillations will be measured and compared for a period of ${measurementPeriod} seconds.
 
 ### What to Observe
 The disturbance will excite the aircraft’s natural lateral-directional motion (commonly associated with Dutch roll).`,
@@ -301,14 +481,21 @@ The disturbance will excite the aircraft’s natural lateral-directional motion 
   await waitFor(400);
   simControls.simulation.set_analog_speed_indicator_visible(false);
   await waitFor(400);
-  simControls.simulation.set_pfd_display(false);
+  simControls.simulation.set_pfd_horizon_visible(false);
+  await waitFor(400);
+  simControls.simulation.set_pfd_altimeter_visible(false);
+  await waitFor(400);
+  simControls.simulation.set_pfd_speed_indicator_visible(false);
+  await waitFor(400);
+  simControls.simulation.set_pfd_flight_mode_annunciator_visible(false);
+  await waitFor(400);
+  simControls.simulation.set_pfd_vertical_speed_indicator_visible(false);
   await waitFor(400);
   simControls.simulation.set_motion_cues(true);
 
   // Plot signals
-  plotView([simProps.heading_dot, simProps.bank_dot], true);
-  plotView([simProps.heading, simProps.bank], true);
-  plotView(simProps.sideslip, true);
+  plotView([simProps.yaw_dot_deg, simProps.bank_dot_deg], true);
+  plotView([simProps.sideslip_deg, simProps.bank_deg], true);
   plotView(simProps.rudder_position, true);
 
   // --- TEST 1 ---
@@ -318,6 +505,7 @@ The disturbance will excite the aircraft’s natural lateral-directional motion 
   const test1Results = await runDutchRollTest(
     "Test 1: Yaw Damper Disengaged",
     false,
+    measurementPeriod,
     context,
     true,
   );
@@ -339,36 +527,79 @@ The disturbance will excite the aircraft’s natural lateral-directional motion 
   const test2Results = await runDutchRollTest(
     "Test 2: Yaw Damper Engaged",
     true,
+    measurementPeriod,
     context,
     false,
   );
 
+  // ---------------------------------------------------
+  // Summary
+  // ---------------------------------------------------
+
   const getMaxPeak = (res: any) =>
-    res?.peaks?.length ? Math.max(...res.peaks.map((p: any) => p.yaw_rate_deg)) : null;
+    res?.peaks?.length
+      ? Math.max(...res.peaks.map((p: any) => p.yaw_rate_deg))
+      : null;
 
   const getPeakCount = (res: any) => res?.peaks?.length ?? 0;
+
+  simulation.set_simulation_pause(true);
 
   await notifyUser(
     "Summary",
     `**Damping Comparison**
 
-Yaw Damper OFF:
-${generateRawTable(test1Results?.peaks || [])}
+${generateComparisonTable(test1Results?.peaks || [], test2Results?.peaks || [])}
 
-Yaw Damper ON:
-${generateRawTable(test2Results?.peaks || [])}
+**Damping Results**
 
-| Yaw Damper | Max Peak (deg/s) | Number of Peaks | Damping Ratio (ζ) |
-|-----------|------------------|------------------|-------------------|
-|  OFF      | ${getMaxPeak(test1Results)?.toFixed(3) ?? "N/A"} | ${getPeakCount(test1Results)} | ${test1Results?.zeta?.toFixed(3) ?? "N/A"} |
-|  ON       | ${getMaxPeak(test2Results)?.toFixed(3) ?? "N/A"} | ${getPeakCount(test2Results)} | ${test2Results?.zeta?.toFixed(3) ?? "N/A"} |
+${generateRawTable([
+  {
+    yaw_damper: "OFF",
+    max_peak: getMaxPeak(test1Results) ?? 0,
+    peaks: getPeakCount(test1Results),
+    zeta: test1Results?.zeta ?? 0,
+    omega_n: test1Results?.naturalFrequency?.omega_n ?? 0,
+    period: test1Results?.naturalFrequency?.period ?? 0,
+    freq_hz: test1Results?.naturalFrequency?.frequency_hz ?? 0,
+  },
+  {
+    yaw_damper: "ON",
+    max_peak: getMaxPeak(test2Results) ?? 0,
+    peaks: getPeakCount(test2Results),
+    zeta: test2Results?.zeta ?? 0,
+    omega_n: test2Results?.naturalFrequency?.omega_n ?? 0,
+    period: test2Results?.naturalFrequency?.period ?? 0,
+    freq_hz: test2Results?.naturalFrequency?.frequency_hz ?? 0,
+  },
+])}
 
-**Interpretation**
+### Interpretation
 
-• A lower peak yaw rate indicates smaller oscillations  
-• Fewer peaks within the same time period indicate faster damping  
-• A higher damping ratio (ζ) indicates improved stability  `,
-    7000,
+• With the yaw damper OFF, the aircraft exhibits a lightly damped Dutch-roll oscillation.  
+  The yaw rate decreases gradually, allowing several oscillation cycles to remain visible within the observation period.
+• With the yaw damper ON, oscillations decay much faster.  
+  Only a few measurable peaks remain before the motion becomes negligible, demonstrating improved damping performance.
+• The damping ratio ζ increased from **${test1Results?.zeta?.toFixed(3)}** to **${test2Results?.zeta?.toFixed(3)}**, indicating improved lateral-directional stability and faster suppression of oscillatory motion.
+• The oscillation period remained approximately constant at **${test1Results?.naturalFrequency?.period?.toFixed(2)} sec**.  
+  This means the aircraft completes one Dutch-roll cycle approximately every ${test1Results?.naturalFrequency?.period?.toFixed(2)} seconds.
+• The natural frequency remained nearly unchanged at approximately **${test1Results?.naturalFrequency?.omega_n?.toFixed(3)} rad/s** (**${test1Results?.naturalFrequency?.frequency_hz?.toFixed(3)} Hz**).  
+  This shows that the yaw damper primarily increases damping rather than significantly changing the aircraft’s natural oscillation speed.
+• Dutch roll is a coupled lateral-directional motion involving both yawing and rolling oscillations.  
+  As the aircraft yaws, sideslip develops, producing rolling motion that continues the oscillation cycle.
+
+### Further Exploration
+
+• Increase the observation duration beyond 30 seconds to capture additional oscillation cycles and improve damping measurements.
+• Try the same experiment using the C172 model and compare:
+  - damping ratio
+  - oscillation frequency
+  - oscillation decay rate
+  - number of visible peaks
+• Repeat the test using stronger or weaker rudder inputs and observe how oscillation amplitude and damping behavior change.
+• Observe how yaw rate and bank angle oscillate together during Dutch roll motion.
+• Compare how quickly different aircraft return to coordinated flight after the disturbance.`,
+    60000,
   );
-  simControls.simulation.set_simulation_pause(true);
+  context.setLayout(context.layoutTypes.INSTRUCTOR);
 }
