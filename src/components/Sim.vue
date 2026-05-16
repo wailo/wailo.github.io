@@ -374,7 +374,7 @@ notifyUser : async function notifyUser(
   time: number = 0
 ): Promise<void> {
   userPromptStatus.value = "☀︎";
-  userPromptText.value = `## ${title}\n\n${message || ""}`;
+  userPromptText.value = `# ${title}\n\n${message || ""}`;
   userPromptActive.value = true;
 
   if (time <= 0) {
