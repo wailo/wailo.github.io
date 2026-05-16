@@ -355,7 +355,7 @@ export async function main(context: ScriptContext) {
       VSP: flightModel.vertical_speed,
       THETA: flightModel.pitch,
       PHI: flightModel.bank,
-      PSI: flightModel.heading,
+      PSI: flightModel.yaw,
       BETA: flightModel.sideslip,
     };
 

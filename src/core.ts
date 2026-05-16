@@ -188,7 +188,7 @@ export async function repositionWithAutopilot(
       return (
         Math.abs(flightModel.altitude_ft - target_altitude) < 0.5 &&
         Math.abs(flightModel.speed_indicated_knots - target_speed) < 0.05 &&
-        angleDiffDeg(flightModel.heading_deg, target_heading) < 0.01 &&
+        angleDiffDeg(flightModel.yaw_deg, target_heading) < 0.01 &&
         Math.abs(flightModel.elevator_position) < 0.005
       );
     },

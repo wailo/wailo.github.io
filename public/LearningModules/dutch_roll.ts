@@ -50,8 +50,8 @@ export async function main(context: ScriptContext) {
     preConfiguration,
   );
   // plotView(simProps.api_aileron_position, true);
-  plotView(simProps.heading, true);
-  plotView(simProps.heading_dot, true);
+  plotView(simProps.yaw, true);
+  plotView(simProps.yaw_dot, true);
   plotView(simProps.sideslip, true);
   plotView(simProps.rudder_position, true);
   // plotView(simProps.pitch_deg, true);

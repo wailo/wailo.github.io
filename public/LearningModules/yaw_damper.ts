@@ -236,7 +236,7 @@ const measureDamping = async (
     () => {
       const now = context.controls.simulation.simulation_time;
 
-      const r = Math.abs(context.controls.flightModel.heading_dot_deg);
+      const r = Math.abs(context.controls.flightModel.yaw_dot_deg);
 
       // ----------------------------------------
       // Rising edge detection with hysteresis

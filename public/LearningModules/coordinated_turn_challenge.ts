@@ -6,7 +6,6 @@ export async function main(context: ScriptContext) {
   const repositionWithAutopilot = context.repositionWithAutopilot;
   const waitFor = context.waitFor;
   const waitForCondition = context.waitForCondition;
-  const dataView = context.dataView;
   const plotView = context.plotView;
   const dataDisplayReset = context.dataDisplayReset;
   const notifyUser = context.notifyUser;
@@ -48,23 +47,14 @@ export async function main(context: ScriptContext) {
   await waitFor(4000);
 
   // 📘 Step 3: Display and Plot Relevant Data
-  dataView(simProps.altitude, true);
-  await waitFor(300);
-  dataView(simProps.heading, true);
-  await waitFor(300);
-  dataView(simProps.aileron_position, true);
-  await waitFor(300);
-  dataView(simProps.elevator_position, true);
-  await waitFor(300);
-
   plotView(simProps.altitude, true);
-  plotView(simProps.heading, true);
+  plotView(simProps.yaw, true);
   plotView(simProps.aileron_position, true);
   plotView(simProps.elevator_position, true);
 
   // Capture starting values
   const initialAltitude = flightModel.altitude_ft;
-  const initialHeading = flightModel.heading_deg;
+  const initialHeading = flightModel.yaw_deg;
   const initialPitch_deg = 3; // Cessna 172 typical pitch for coordinated turn
   let altitudeWithinLimits = false;
 
@@ -87,14 +77,14 @@ export async function main(context: ScriptContext) {
   const success = await waitForCondition(
     () => {
       const currentAltitude = flightModel.altitude_ft;
-      const currentHeading = flightModel.heading_deg;
+      const currentHeading = flightModel.yaw_deg;
       metrics.push({
         timestamp: Date.now(),
-        heading: flightModel.heading_deg,
+        heading: flightModel.yaw_deg,
         altitude: flightModel.altitude_ft,
         speed: flightModel.speed_indicated_knots,
         verticalSpeed: flightModel.vertical_speed,
-        turnRate: flightModel.heading_dot_deg,
+        turnRate: flightModel.yaw_dot_deg,
         bank: flightModel.bank_deg,
         pitch: flightModel.pitch_deg,
         elevator: flightModel.elevator_position,

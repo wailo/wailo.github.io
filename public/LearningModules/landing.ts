@@ -117,7 +117,7 @@ All actions will follow standard operating procedures.`,
 
   // 🟢 [ACTION] Wait for Localizer Capture
   await waitForCondition(() => {
-    return flightModel.heading_deg > 265 && flightModel.heading_deg < 275;
+    return flightModel.yaw_deg > 265 && flightModel.yaw_deg < 275;
   });
 
   checkPoint("Established on localizer runway 27");
