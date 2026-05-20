@@ -13,20 +13,43 @@
       class="panel-cockpit"
       data-layout="focus instructor pilot"
     >
+    
     <template #Cockpit>
-      <div id="fullscreen-container" class="flex w-full h-full bg-simBackground">
+  <div class="relative w-full h-full overflow-hidden">
 
-  <!-- Canvas container -->
-  <div id="canvas-container" class="flex-grow h-full">
-    <canvas
-      class="emscripten w-full h-full bg-openglCanvasBackground"
-      id="canvas"
-      @contextmenu.prevent
-      tabindex="-1"
-    ></canvas>
+    <!-- Background map -->
+    <OpenLayersMap
+      v-if="sim_module_loaded && isMapVisible"
+      ref="openLayersMapRef"
+      :lat="FlightSimModule.flightModel.latitude"
+      :lon="FlightSimModule.flightModel.longitude"
+      :alt-ft="FlightSimModule.flightModel.altitude_ft"
+      :heading-deg="FlightSimModule.flightModel.yaw_deg"
+      :pitch-deg="FlightSimModule.flightModel.pitch_deg"
+      :bank-deg="FlightSimModule.flightModel.bank_deg"
+      class="absolute inset-0 w-full h-full z-0"
+    />
+
+    <!-- Cockpit overlay -->
+    <div
+      id="fullscreen-container"
+      class="absolute inset-0 z-10 flex w-full h-full bg-transparent pointer-events-none"
+    >
+      <div
+        id="canvas-container"
+        class="flex-grow w-full h-full pointer-events-auto"
+      >
+        <canvas
+          id="canvas"
+          class="emscripten w-full h-full bg-transparent"
+          @contextmenu.prevent
+          tabindex="-1"
+        ></canvas>
+      </div>
+    </div>
+
   </div>
-</div>
-    </template>
+</template>
     </Panel>
     <!-- Panel 2 -->
     <Panel
@@ -327,6 +350,7 @@ import {
 
 import Editor, { ScriptStatus } from "./Editor.vue";
 import { MainModule } from "../../src/wasm/generated/flightsimulator_exec";
+import OpenLayersMap from "./OpenLayersMap.vue";
 
 
 const renderSignal = ref(0);
@@ -411,7 +435,11 @@ setLayout: function(mode: typeof layout.value) {
   window.dispatchEvent(new Event('resize'))
   }, 20)
 
+},
+toggleMap: function() {
+  isMapVisible.value = !isMapVisible.value;
 }
+
 }
 
 let GLFWModule : MainModule;
@@ -428,6 +456,7 @@ const userPromptActive = ref<boolean>(false);
 const isFullscreen = ref(false);
 const fullscreenContainer = ref<HTMLElement | null>(null)
 const isDarkMode = ref(true);
+const isMapVisible = ref(true);
 const layout = ref<LayoutTypes>(LayoutTypes.INSTRUCTOR);
 
 // Initialize theme from localStorage
@@ -461,6 +490,7 @@ const editorComponentRef = ref<InstanceType<typeof Editor> | null>(null); // Use
 const dataDisplayRef = ref<InstanceType<typeof SimDataDisplay> | null>(null); // Use the SimDataDisplay component type
 const markdownRef = ref<InstanceType<typeof MarkDown> | null>(null); // Use the MarkDown component type
 // const accountsComponentRef = ref<InstanceType<typeof Accounts> | null>(null); // Use the Accounts component type
+const openLayersMapRef = ref<InstanceType<typeof OpenLayersMap> | null>(null); // Use the OpenLayersMap component type
 
 // Layout controls as computed
 const layoutControls: ComputedRef<Record<string, SimulationProperties>> = computed(() => ({
@@ -491,6 +521,14 @@ const layoutControls: ComputedRef<Record<string, SimulationProperties>> = comput
     label: 'Dark Theme',
     setterFunc: () => toggleTheme(),
     inputValue: isDarkMode.value,
+    group: 'simulation',
+  },
+  toggle_map: {
+    id: 'toggle_map',
+    type: 'boolean',
+    label: 'Map',
+    setterFunc: simFunctions.toggleMap,
+    inputValue: isMapVisible.value,
     group: 'simulation',
   },
 }));
@@ -619,6 +657,15 @@ onMounted(async () => {
         renderSignal.value++;
         fetchSimData(FlightSimModule, initFlightModelParams);
         dataDisplayRef.value?.tickPlot();
+
+        openLayersMapRef.value?.updateMap(
+          FlightSimModule.flightModel.latitude,
+          FlightSimModule.flightModel.longitude,
+          FlightSimModule.flightModel.altitude_ft,
+          FlightSimModule.flightModel.pitch_deg,
+          FlightSimModule.flightModel.bank_deg,
+          FlightSimModule.flightModel.yaw_deg
+        );
       }, update_interval_ms);
     })
     .catch(console.error);
@@ -657,7 +704,7 @@ function createRemoteManager(FlightSimModule : ExtendedMainModule) {
                   // todo, enable broadcast only if instructor
                 // Rationale: student does not send data
                 const remoteManager = new RemoteCallManager(broadcast);
-                remoteManager.wrapObject("simFunctions", simFunctions, ["notifyUser", "resetComponents", "setPlotView", "setLayout"]);
+                remoteManager.wrapObject("simFunctions", simFunctions, ["notifyUser", "resetComponents", "setPlotView", "setLayout", "toggleMap"]);
                 remoteManager.wrapObject("FlightSimModule", FlightSimModule, ["onKeydown", "onKeyup"]);
                 remoteManager.wrapObject("FlightSimModule.simulation", FlightSimModule.simulation, ["set", "reset"]);
                 remoteManager.wrapObject("FlightSimModule.flightModel", FlightSimModule.flightModel, ["set"]);

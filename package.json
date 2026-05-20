@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "wasmTag": "v0.1.09",
+  "wasmTag": "v0.1.10",
   "scripts": {
     "docker:up": "docker compose up -d",
     "check": "vue-tsc -b",
@@ -18,13 +18,16 @@
     "dev:modelfile": "tsx src/generate-modelfile.ts && ollama create flightsimModel -f src/wasm/generated/Modelfile"
   },
   "dependencies": {
+    "cesium": "^1.141.0",
     "fuse.js": "^7.1.0",
     "marked": "^15.0.11",
     "monaco-editor-vue3": "^1.0.5",
+    "olcs": "^2.23.0",
     "peerjs": "^1.5.4",
     "pocketbase": "^0.26.1",
     "ts-morph": "^27.0.2",
     "uplot": "^1.6.32",
+    "vite-plugin-cesium": "^1.2.23",
     "vue": "^3.5.28",
     "vue-qr": "^4.0.9",
     "vue-router": "^4.5.0"

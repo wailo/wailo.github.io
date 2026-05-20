@@ -20,7 +20,7 @@ export default {
       colors: {
         primary: "rgb(var(--color-primary) / <alpha-value>)",
         secondary: "rgb(var(--color-secondary) / <alpha-value>)",
-        openglCanvasBackground: "#000000",
+        openglCanvasBackground: "#00000000",
         panelBorder: "rgb(var(--color-panelBorder) / <alpha-value>)",
         panelHeaderBackground: "rgb(var(--color-panelHeaderBackground) / <alpha-value>)",
         panelStatusBackground: "rgb(var(--color-panelStatusBackground) / <alpha-value>)",
