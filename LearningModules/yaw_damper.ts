@@ -454,6 +454,8 @@ export async function main(context: ScriptContext) {
     preConfiguration,
   );
 
+  context.setVisuals(true);
+
   // Introduction
   await notifyUser(
     "Introduction",
