@@ -663,9 +663,9 @@ onMounted(async () => {
           FlightSimModule.flightModel.latitude,
           FlightSimModule.flightModel.longitude,
           FlightSimModule.flightModel.altitude_ft,
-          FlightSimModule.flightModel.pitch_deg,
-          FlightSimModule.flightModel.bank_deg,
-          FlightSimModule.flightModel.yaw_deg
+          FlightSimModule.flightModel.pitch,
+          FlightSimModule.flightModel.bank,
+          FlightSimModule.flightModel.yaw
         );
       }, update_interval_ms);
     })

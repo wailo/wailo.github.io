@@ -211,9 +211,9 @@ function updateMap(
     lat: number,
     lon: number,
     altFt: number,
-    pitchDeg: number,
-    bankDeg: number,
-    headingDeg: number
+    pitch: number,
+    bank: number,
+    heading: number
 ) {
     if (!map || !cesiumScene) return
 
@@ -236,15 +236,9 @@ function updateMap(
         Cesium.Ellipsoid.WGS84,
         targetCamera.position
     )
-
-    targetCamera.heading =
-        Cesium.Math.toRadians(headingDeg)
-
-    targetCamera.pitch =
-        Cesium.Math.toRadians(pitchDeg)
-
-    targetCamera.roll =
-        Cesium.Math.toRadians(bankDeg)
+    targetCamera.heading = heading;
+    targetCamera.pitch = pitch;
+    targetCamera.roll = bank;
 }
 
 // ============================================================
