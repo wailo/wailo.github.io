@@ -20,21 +20,22 @@ export async function main(context: ScriptContext) {
   dataDisplayReset();
   simulation.set_six_instruments_display(false);
   simulation.set_pfd_horizon_visible(false);
-  // simulation.set_motion_cues(true);
-
+  
   // 🟢 [ACTION] Configure Aircraft Model
   simControls.simulation.set_flight_model_b747();
   const flightModel = simControls.flightModel as b747;
 
   // 🟢 [ACTION] Position Aircraft - Start landing from 1400ft, heading 210, speed 180
   await repositionWithAutopilot(context, 1400, 210, 180);
+
+    // Tokyo approach is typically from the south, so we start with a heading of 210 to set up for the intercept. Initial speed is set to 180 knots for a stable approach profile.
+  flightModel.set_latitude(35.5493); // Convert to radians
+  flightModel.set_longitude(139.7798); // Convert to radians
+  context.setVisuals(true);
+
   flightModel.set_atmosphere_wind_direction(260);
   flightModel.set_atmosphere_wind_speed(8);
   flightModel.set_flaps_selector_position(simControls.B747FlapSelector.TEN);
-
-  // Tokyo approach is typically from the south, so we start with a heading of 210 to set up for the intercept. Initial speed is set to 180 knots for a stable approach profile.
-  flightModel.set_latitude(35.5493); // Convert to radians
-  flightModel.set_longitude(139.7798); // Convert to radians
 
   flightModel.set_autopilot_master_switch(true);
   flightModel.set_autopilot_altitude_hold(true);

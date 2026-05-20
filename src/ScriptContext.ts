@@ -29,6 +29,7 @@ export interface ScriptContext {
   dataDisplayReset: () => void;
   setLayout: (mode: LayoutTypes) => void;
   layoutTypes: typeof LayoutTypes;
+  setVisuals: (state: boolean) => void;
   checkPoint: (content: string) => void;
   metrics: any[];
 }
@@ -51,6 +52,7 @@ export function createScriptContext(deps: ScriptContext): ScriptContext {
     checkPoint: deps.checkPoint,
     setLayout: deps.setLayout,
     layoutTypes: LayoutTypes,
+    setVisuals: deps.setVisuals,
     metrics: deps.metrics,
   };
 }

@@ -238,6 +238,7 @@ const props = defineProps({
       dataView: (item: SimulationProperties, state: boolean) => void;
       dataDisplayReset: () => void;
       setLayout: (mode: LayoutTypes) => void;
+      setVisuals: (state: boolean) => void;
       checkPoint: (content: string) => void;
     }>,
     required: true,
@@ -357,6 +358,7 @@ const executeCode = async () => {
       plotView: props.utilityFuncs.plotView,
       dataDisplayReset: props.utilityFuncs.dataDisplayReset,
       setLayout: props.utilityFuncs.setLayout,
+      setVisuals: props.utilityFuncs.setVisuals,
       layoutTypes: LayoutTypes,
       checkPoint: props.utilityFuncs.checkPoint,
       metrics: metrics,

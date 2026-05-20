@@ -19,7 +19,7 @@
 
     <!-- Background map -->
     <OpenLayersMap
-      v-if="sim_module_loaded && isMapVisible"
+      v-if="sim_module_loaded && isVisuals"
       ref="openLayersMapRef"
       :lat="FlightSimModule.flightModel.latitude"
       :lon="FlightSimModule.flightModel.longitude"
@@ -158,7 +158,8 @@
           dataDisplayReset: dataDisplayRef.reset,
           notifyUser: simFunctions.notifyUser,
           setLayout: simFunctions.setLayout,
-          checkPoint: classroomComponentRef.sendCheckPoint}"
+          checkPoint: classroomComponentRef.sendCheckPoint,
+          setVisuals: simFunctions.setVisuals}"
         @start="(_code: string) => {
           scriptComponentStatus = 'IN-PROGRESS';
         }"
@@ -436,8 +437,8 @@ setLayout: function(mode: typeof layout.value) {
   }, 20)
 
 },
-toggleMap: function() {
-  isMapVisible.value = !isMapVisible.value;
+setVisuals: function(state: boolean) {
+  isVisuals.value = state;
 }
 
 }
@@ -456,7 +457,7 @@ const userPromptActive = ref<boolean>(false);
 const isFullscreen = ref(false);
 const fullscreenContainer = ref<HTMLElement | null>(null)
 const isDarkMode = ref(true);
-const isMapVisible = ref(true);
+const isVisuals = ref(false);
 const layout = ref<LayoutTypes>(LayoutTypes.INSTRUCTOR);
 
 // Initialize theme from localStorage
@@ -523,12 +524,12 @@ const layoutControls: ComputedRef<Record<string, SimulationProperties>> = comput
     inputValue: isDarkMode.value,
     group: 'simulation',
   },
-  toggle_map: {
-    id: 'toggle_map',
+  toggle_visuals: {
+    id: 'toggle_visuals',
     type: 'boolean',
-    label: 'Map',
-    setterFunc: simFunctions.toggleMap,
-    inputValue: isMapVisible.value,
+    label: 'Visuals',
+    setterFunc: () => simFunctions.setVisuals(!isVisuals.value),
+    inputValue: isVisuals.value,
     group: 'simulation',
   },
 }));
