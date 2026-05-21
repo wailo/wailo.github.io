@@ -135,7 +135,7 @@ dataView(simProps.pitch_deg, true);
 await waitFor(300);
 dataView(simProps.bank_deg, true);
 await waitFor(300);
-dataView(simProps.heading_deg, true);
+dataView(simProps.yaw_deg, true);
 await waitFor(300);
 dataView(simProps.flaps_selector_position, true);
 await waitFor(300);
