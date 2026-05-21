@@ -285,7 +285,7 @@ async function recreateAllPlots() {
           show: false
         },
         dash: i === 0 ? undefined : [10, 5],
-        label: `${props.sources[plotDef.sourceIds[i]]?.label} [${props.sources[plotDef.sourceIds[i]]?.unit}]`,
+        label: `${props.sources[plotDef.sourceIds[i]]?.label} [${props.sources[plotDef.sourceIds[i]]?.unit || ''}]`,
         value: (self, val, seriesIdx, dataIdx) => {
           // When not hovering, dataIdx is null
           if (dataIdx == null) {
