@@ -2,8 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Light mode colors (default) */
+/* Dark mode colors (default) */
 :root {
+    --color-primary: 25 25 25;              /* #191919 */
+  --color-secondary: 214 214 214;         /* #d6d6d6 */
+  --color-panelBorder: 44 44 44;          /* #2c2c2c */
+  --color-panelHeaderBackground: 25 25 25;    /* #191919 */
+  --color-panelStatusBackground: 223 228 226; /* #dfe4e2 */
+  --color-panelContentBackground: 0 0 0;      /* #000000 */
+  --color-simElementBorder: 89 89 89;     /* #595959 */
+  --color-simInputBackground: 25 25 25;   /* #191919 */
+  --color-simBackground: 0 0 0;           /* #000000 */
+  --color-simActiveButton: 27 185 94;     /* #1bb95e */
+}
+
+/* light mode colors */
+.light {
   --color-primary: 255 255 255;           /* #ffffff */
   --color-secondary: 19 15 12;            /* #130f0c */
   --color-panelBorder: 123 128 121;       /* #7b8079 */
@@ -14,20 +28,6 @@
   --color-simInputBackground: 230 230 230;    /* #e6e6e6 */
   --color-simBackground: 247 247 247;     /* #f7f7f7 */
   --color-simActiveButton: 185 57 27;     /* #b9391b */
-}
-
-/* Dark mode colors */
-.dark {
-  --color-primary: 25 25 25;              /* #191919 */
-  --color-secondary: 214 214 214;         /* #d6d6d6 */
-  --color-panelBorder: 44 44 44;          /* #2c2c2c */
-  --color-panelHeaderBackground: 25 25 25;    /* #191919 */
-  --color-panelStatusBackground: 223 228 226; /* #dfe4e2 */
-  --color-panelContentBackground: 0 0 0;      /* #000000 */
-  --color-simElementBorder: 89 89 89;     /* #595959 */
-  --color-simInputBackground: 25 25 25;   /* #191919 */
-  --color-simBackground: 0 0 0;           /* #000000 */
-  --color-simActiveButton: 27 185 94;     /* #1bb95e */
 }
 
 @font-face {

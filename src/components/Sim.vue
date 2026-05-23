@@ -468,10 +468,10 @@ const initializeTheme = () => {
 };
 
 const applyTheme = (dark: boolean) => {
-  if (dark) {
-    document.documentElement.classList.add('dark');
+  if (!dark) {
+    document.documentElement.classList.add('light');
   } else {
-    document.documentElement.classList.remove('dark');
+    document.documentElement.classList.remove('light');
   }
   localStorage.setItem('theme', dark ? 'dark' : 'light');
 
