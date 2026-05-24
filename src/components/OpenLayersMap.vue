@@ -1,4 +1,4 @@
-<template>
+ƒ<template>
   <div class="map-wrapper">
     <!-- =====================================================
          MAIN 3D
@@ -39,7 +39,7 @@ declare global {
 
 import { onMounted, onUnmounted, ref } from 'vue'
 
-const showNavMap = ref(true)
+const showNavMap = ref(false)
 
 import Map from 'ol/Map'
 import View from 'ol/View'
