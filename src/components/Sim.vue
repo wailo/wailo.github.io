@@ -1,10 +1,11 @@
 <template>
   <!-- <div  class="container max-w-full h-screen gap-2 p-5 bg-simBackground"> -->
 
-      <div
+  <div
     ref="fullscreenContainer"
     class="container max-w-full h-screen gap-1 p-1 bg-simBackground"
-    :class="`layout-${layout}`">
+    :class="`layout-${layout}`"
+  >
     <!-- Panel 1 -->
     <Panel
       :status="simulationStatus"
@@ -13,43 +14,37 @@
       class="panel-cockpit"
       data-layout="focus instructor pilot"
     >
-    
-    <template #Cockpit>
-  <div class="relative w-full h-full overflow-hidden">
+      <template #Cockpit>
+        <div class="relative w-full h-full overflow-hidden">
+          <!-- Background map -->
+          <OpenLayersMap
+            v-if="sim_module_loaded && isVisuals"
+            ref="openLayersMapRef"
+            :lat="FlightSimModule.flightModel.latitude"
+            :lon="FlightSimModule.flightModel.longitude"
+            :alt-ft="FlightSimModule.flightModel.altitude_ft"
+            :heading-deg="FlightSimModule.flightModel.yaw_deg"
+            :pitch-deg="FlightSimModule.flightModel.pitch_deg"
+            :bank-deg="FlightSimModule.flightModel.bank_deg"
+            class="absolute inset-0 w-full h-full z-0"
+          />
 
-    <!-- Background map -->
-    <OpenLayersMap
-      v-if="sim_module_loaded && isVisuals"
-      ref="openLayersMapRef"
-      :lat="FlightSimModule.flightModel.latitude"
-      :lon="FlightSimModule.flightModel.longitude"
-      :alt-ft="FlightSimModule.flightModel.altitude_ft"
-      :heading-deg="FlightSimModule.flightModel.yaw_deg"
-      :pitch-deg="FlightSimModule.flightModel.pitch_deg"
-      :bank-deg="FlightSimModule.flightModel.bank_deg"
-      class="absolute inset-0 w-full h-full z-0"
-    />
-
-    <!-- Cockpit overlay -->
-    <div
-      id="fullscreen-container"
-      class="absolute inset-0 z-10 flex w-full h-full bg-transparent pointer-events-none"
-    >
-      <div
-        id="canvas-container"
-        class="flex-grow w-full h-full pointer-events-auto"
-      >
-        <canvas
-          id="canvas"
-          class="emscripten w-full h-full bg-transparent"
-          @contextmenu.prevent
-          tabindex="-1"
-        ></canvas>
-      </div>
-    </div>
-
-  </div>
-</template>
+          <!-- Cockpit overlay -->
+          <div
+            id="fullscreen-container"
+            class="absolute inset-0 z-10 flex w-full h-full bg-transparent pointer-events-none"
+          >
+            <div id="canvas-container" class="flex-grow w-full h-full pointer-events-none">
+              <canvas
+                id="canvas"
+                class="emscripten w-full h-full bg-transparent pointer-events-none"
+                @contextmenu.prevent
+                tabindex="-1"
+              ></canvas>
+            </div>
+          </div>
+        </div>
+      </template>
     </Panel>
     <!-- Panel 2 -->
     <Panel
@@ -57,225 +52,232 @@
       class="panel-realtimedata gap-1"
       data-layout="focus instructor pilot"
     >
-    <template #Real-Time-Data display="Real Time Data">
-       <SimDataDisplay
-    ref="dataDisplayRef"
-    :simProps="{...simulationControlsProps,...flightModelProps}"
-    :plotPause="FlightSimModule.simulation.simulation_pause"
-    :plotUpdateIntervals="update_interval_ms"
-    v-if="sim_module_loaded"
-  />
-</template>
-
+      <template #Real-Time-Data display="Real Time Data">
+        <SimDataDisplay
+          ref="dataDisplayRef"
+          :simProps="{ ...simulationControlsProps, ...flightModelProps }"
+          :plotPause="FlightSimModule.simulation.simulation_pause"
+          :plotUpdateIntervals="update_interval_ms"
+          v-if="sim_module_loaded"
+        />
+      </template>
     </Panel>
     <!-- Panel 3 -->
     <Panel
-    v-if="sim_module_loaded"
-      :status="FlightSimModule.simulation.simulation_pause ? `PAUSED` : FlightSimModule.simulation.simulation_speed == 1 ? `RUNNING` :`${FlightSimModule.simulation.simulation_speed}x`"
-      :active="FlightSimModule.simulation.simulation_pause || FlightSimModule.simulation.simulation_speed != 1"
+      v-if="sim_module_loaded"
+      :status="
+        FlightSimModule.simulation.simulation_pause
+          ? `PAUSED`
+          : FlightSimModule.simulation.simulation_speed == 1
+            ? `RUNNING`
+            : `${FlightSimModule.simulation.simulation_speed}x`
+      "
+      :active="
+        FlightSimModule.simulation.simulation_pause ||
+        FlightSimModule.simulation.simulation_speed != 1
+      "
       :flash="FlightSimModule.simulation.simulation_pause"
       class="panel-simulationcontrols"
       data-layout="focus"
     >
-   <template #Simulation>
-  <div v-if="sim_module_loaded" class="w-full h-full grid grid-cols-3 gap-1">
+      <template #Simulation>
+        <div v-if="sim_module_loaded" class="w-full h-full grid grid-cols-3 gap-1">
+          <template
+            v-for="input in Object.values(simulationControlsProps)
+              .flatMap((arr) => arr)
+              .filter((v: SimulationProperties) => v.group === 'simulation' && v.setterFunc)
+              .sort((a: SimulationProperties) => (['boolean', 'void'].includes(a.type) ? -1 : 1))"
+            :key="input.id"
+          >
+            <!-- Boolean & Void -->
+            <wButton
+              v-if="['boolean', 'void'].includes(input.type)"
+              :buttonLabel="input.label"
+              :buttonClick="() => input.setterFunc?.()"
+              :button-state="input?.inputValue as boolean"
+              class="border border-simElementBorder"
+            />
 
-    <template
-      v-for="input in Object.values(simulationControlsProps)
-        .flatMap(arr => arr)
-        .filter((v: SimulationProperties) => v.group === 'simulation' && v.setterFunc)
-        .sort((a: SimulationProperties) =>
-          ['boolean', 'void'].includes(a.type) ? -1 : 1
-        )"
-      :key="input.id"
-    >
-
-      <!-- Boolean & Void -->
-      <wButton
-        v-if="['boolean', 'void'].includes(input.type)"
-        :buttonLabel="input.label"
-        :buttonClick="() => input.setterFunc?.()"
-        :button-state="input?.inputValue as boolean"
-        class="border border-simElementBorder"
-      />
-
-      <!-- Everything else -->
-      <ButtonSwitch
-        v-if="['string', 'number'].includes(input.type)"
-        :buttonLabel="input.label"
-        :buttonClick="() => input.setterFunc?.()"
-        :textInput="input?.inputValue"
-        :inputChange="input.setterFunc"
-        :button-state="input.type === 'boolean' && input?.inputValue == 1"
-        :inputMin="input.min"
-        :inputMax="input.max"
-        :inputStep="input.step"
-        class="border border-simElementBorder"
-      />
-   <select
-  v-else-if="input.type === 'enum' && input.enumValues"
-  class="border border-simElementBorder bg-simInputBackground text-secondary"
-  :value="input.inputValue"
-  @change="(e) => {
-    const value = (e.target as HTMLSelectElement).value
-    const selected = input.enumValues?.find(
-      v => String(v.enumValue) === value
-    )
-    input.setterFunc?.(selected?.enumValue)
-  }"
->
-  <option
-    v-for="value in input.enumValues"
-    :key="value.enumName"
-    :value="String(value.enumValue)"
-  >
-    {{ value.enumName }}
-  </option>
-</select>
-
-    </template>
-
-  </div>
-</template>
+            <!-- Everything else -->
+            <ButtonSwitch
+              v-if="['string', 'number'].includes(input.type)"
+              :buttonLabel="input.label"
+              :buttonClick="() => input.setterFunc?.()"
+              :textInput="input?.inputValue"
+              :inputChange="input.setterFunc"
+              :button-state="input.type === 'boolean' && input?.inputValue == 1"
+              :inputMin="input.min"
+              :inputMax="input.max"
+              :inputStep="input.step"
+              class="border border-simElementBorder"
+            />
+            <select
+              v-else-if="input.type === 'enum' && input.enumValues"
+              class="border border-simElementBorder bg-simInputBackground text-secondary"
+              :value="input.inputValue"
+              @change="
+                (e) => {
+                  const value = (e.target as HTMLSelectElement).value
+                  const selected = input.enumValues?.find((v) => String(v.enumValue) === value)
+                  input.setterFunc?.(selected?.enumValue)
+                }
+              "
+            >
+              <option
+                v-for="value in input.enumValues"
+                :key="value.enumName"
+                :value="String(value.enumValue)"
+              >
+                {{ value.enumName }}
+              </option>
+            </select>
+          </template>
+        </div>
+      </template>
     </Panel>
 
-           <!-- Panel 2 -->
-  <Panel
-  class="panel-learningmodules"
-  data-layout="instructor"
-  :status=scriptComponentStatus
-  :active="scriptComponentStatus != 'IDLE'">
-
-<template #Learning-Modules>
-      <Editor
-        v-if="sim_module_loaded && dataDisplayRef && classroomComponentRef"
-        :context-object="FlightSimModule"
-        :simProps="flightModelProps"
-        :is-dark-mode="isDarkMode"
-        :utility-funcs="{
-          plotView:dataDisplayRef.setPlotView,
-          dataView:dataDisplayRef.setDataView,
-          dataDisplayReset: dataDisplayRef.reset,
-          notifyUser: simFunctions.notifyUser,
-          setLayout: simFunctions.setLayout,
-          checkPoint: classroomComponentRef.sendCheckPoint,
-          setVisuals: simFunctions.setVisuals}"
-        @start="(_code: string) => {
-          scriptComponentStatus = 'IN-PROGRESS';
-        }"
-        @reset="scriptComponentStatus = 'IDLE'"
-        @error="(error: any) => {
-          simFunctions.notifyUser('Editor Error', error, 5000);
-          scriptComponentStatus = 'ERROR';
-        }"
-        @broadcastScript="(title:string, content:string) => {classroomComponentRef?.sendScript(title, content)}"
-        class="w-full h-full"
-        ref="editorComponentRef"
-      />
-</template>
-  </Panel>
+    <!-- Panel 2 -->
+    <Panel
+      class="panel-learningmodules"
+      data-layout="instructor"
+      :status="scriptComponentStatus"
+      :active="scriptComponentStatus != 'IDLE'"
+    >
+      <template #Learning-Modules>
+        <Editor
+          v-if="sim_module_loaded && dataDisplayRef && classroomComponentRef"
+          :context-object="FlightSimModule"
+          :simProps="flightModelProps"
+          :is-dark-mode="isDarkMode"
+          :utility-funcs="{
+            plotView: dataDisplayRef.setPlotView,
+            dataView: dataDisplayRef.setDataView,
+            dataDisplayReset: dataDisplayRef.reset,
+            notifyUser: simFunctions.notifyUser,
+            setLayout: simFunctions.setLayout,
+            checkPoint: classroomComponentRef.sendCheckPoint,
+            setVisuals: simFunctions.setVisuals,
+          }"
+          @start="
+            (_code: string) => {
+              scriptComponentStatus = 'IN-PROGRESS'
+            }
+          "
+          @reset="scriptComponentStatus = 'IDLE'"
+          @error="
+            (error: any) => {
+              simFunctions.notifyUser('Editor Error', error, 5000)
+              scriptComponentStatus = 'ERROR'
+            }
+          "
+          @broadcastScript="
+            (title: string, content: string) => {
+              classroomComponentRef?.sendScript(title, content)
+            }
+          "
+          class="w-full h-full"
+          ref="editorComponentRef"
+        />
+      </template>
+    </Panel>
     <!-- Panel 5 -->
     <Panel
-    v-if="sim_module_loaded"
+      v-if="sim_module_loaded"
       :status="FlightSimModule.flightModel.autopilot_master_switch ? 'Engaged' : 'Disengaged'"
       :active="FlightSimModule.flightModel.autopilot_master_switch"
       class="panel-autopilot"
       data-layout="instructor pilot"
     >
-    <template #Autopilot>
-  <div class="w-full h-full">
-  <div class="col-span-1 grid grid-cols-4 gap-1">
-    <button-switch
-      v-if="sim_module_loaded"
-      v-for="(input, i) in autopilotControls"
-      :key="i"
-      class="border border-simElementBorder w-full"
-
-      :buttonClick="(_e: MouseEvent) => input.stateCommand.setterFunc?.()"
-      :buttonState="input.stateCommand?.inputValue as boolean"
-      :buttonLabel="input.label.replace('Hold', '').replace('Angle', '').trim()"
-      :textInput="input.targetCommand?.inputValue"
-      :inputChange="input.targetCommand?.setterFunc"
-      :inputMin="input.targetCommand?.min"
-      :inputMax="input.targetCommand?.max"
-      :inputStep="input.targetCommand?.step"
-    ></button-switch>
-    </div>
-  </div>
-</template>
-
+      <template #Autopilot>
+        <div class="w-full h-full">
+          <div class="col-span-1 grid grid-cols-4 gap-1">
+            <button-switch
+              v-if="sim_module_loaded"
+              v-for="(input, i) in autopilotControls"
+              :key="i"
+              class="border border-simElementBorder w-full"
+              :buttonClick="(_e: MouseEvent) => input.stateCommand.setterFunc?.()"
+              :buttonState="input.stateCommand?.inputValue as boolean"
+              :buttonLabel="input.label.replace('Hold', '').replace('Angle', '').trim()"
+              :textInput="input.targetCommand?.inputValue"
+              :inputChange="input.targetCommand?.setterFunc"
+              :inputMin="input.targetCommand?.min"
+              :inputMax="input.targetCommand?.max"
+              :inputStep="input.targetCommand?.step"
+            ></button-switch>
+          </div>
+        </div>
+      </template>
     </Panel>
     <!-- Panel 6 -->
-    <Panel :status="FlightSimModule.flightModel.name"
-    v-if="sim_module_loaded"
-    class="panel-flightmodel"
-    data-layout="instructor pilot">
+    <Panel
+      :status="FlightSimModule.flightModel.name"
+      v-if="sim_module_loaded"
+      class="panel-flightmodel"
+      data-layout="instructor pilot"
+    >
       <template #Flight-Model>
-      <div class="w-full max-h-full grid gap-1">
-        <template
-          v-if="sim_module_loaded"
-          v-for="sim_group in groupedSimProps"
-        >
-          <span class="font-bold text-secondary">{{ sim_group[0].group.toUpperCase() }}</span>
-          <!-- label + control -->
-          <div
-            v-for="sim_prop in Object.values(sim_group)"
-            :key="sim_prop.id"
-            class="flex items-center pl-1 border border-simElementBorder"
-          >
-            <span class="w-3/5">
-              {{ sim_prop.label }} <span v-if="sim_prop.unit">({{ sim_prop.unit }})</span>
-            </span>
-            <wInput
-            v-if="sim_prop.type === 'number'"
-              type="number"
-              class="bg-simInputBackground border-l border-simElementBorder pl-1 h-full text-secondary w-2/5"
-              :textInput="sim_prop.inputValue as number"
-              :inputChange="sim_prop.setterFunc"
-              :inputMin="sim_prop.min"
-              :inputMax="sim_prop.max"
-              :inputStep="sim_prop.step"
-            />
-            <wButton
-              v-else-if="sim_prop.type === 'boolean'"
-              class="border-l border-simElementBorder w-2/5 text-left pl-1"
-              :class="sim_prop.inputValue ? 'bg-simActiveButton text-primary' : 'text-secondary'"
-              :buttonLabel="sim_prop.inputValue ? 'On' : 'Off'"
-              :buttonClick="() => sim_prop.setterFunc?.()"
-              :buttonState="sim_prop.inputValue as boolean"
+        <div class="w-full max-h-full grid gap-1">
+          <template v-if="sim_module_loaded" v-for="sim_group in groupedSimProps">
+            <span class="font-bold text-secondary">{{ sim_group[0].group.toUpperCase() }}</span>
+            <!-- label + control -->
+            <div
+              v-for="sim_prop in Object.values(sim_group)"
+              :key="sim_prop.id"
+              class="flex items-center pl-1 border border-simElementBorder"
+            >
+              <span class="w-3/5">
+                {{ sim_prop.label }} <span v-if="sim_prop.unit">({{ sim_prop.unit }})</span>
+              </span>
+              <wInput
+                v-if="sim_prop.type === 'number'"
+                type="number"
+                class="bg-simInputBackground border-l border-simElementBorder pl-1 h-full text-secondary w-2/5"
+                :textInput="sim_prop.inputValue as number"
+                :inputChange="sim_prop.setterFunc"
+                :inputMin="sim_prop.min"
+                :inputMax="sim_prop.max"
+                :inputStep="sim_prop.step"
               />
-   <wButton
-              v-else-if="sim_prop.type === 'void'"
-              class="border-l border-simElementBorder w-2/5 text-left pl-1"
-              :class="sim_prop.inputValue ? 'bg-simActiveButton text-primary' : 'text-secondary'"
-              buttonLabel="▶"
-              :buttonClick="() => sim_prop.setterFunc?.()"
+              <wButton
+                v-else-if="sim_prop.type === 'boolean'"
+                class="border-l border-simElementBorder w-2/5 text-left pl-1"
+                :class="sim_prop.inputValue ? 'bg-simActiveButton text-primary' : 'text-secondary'"
+                :buttonLabel="sim_prop.inputValue ? 'On' : 'Off'"
+                :buttonClick="() => sim_prop.setterFunc?.()"
+                :buttonState="sim_prop.inputValue as boolean"
               />
-             <!-- Enum Input -->
-  <select
-  v-else-if="sim_prop.type === 'enum' && sim_prop.enumValues"
-    class="bg-simInputBackground border-l border-simElementBorder pl-1 h-full text-secondary w-2/5"
-  :value="sim_prop.inputValue"
-  @change="(e) => {
-    const value = (e.target as HTMLSelectElement).value
-    const selected = sim_prop.enumValues?.find(
-      v => String(v.enumValue) === value
-    )
-    sim_prop.setterFunc?.(selected?.enumValue)
-  }"
->
-  <option
-    v-for="value in sim_prop.enumValues"
-    :key="value.enumName"
-    :value="String(value.enumValue)"
-  >
-    {{ value.enumName }}
-  </option>
-</select>
-          </div>
-
-        </template>
-      </div>
+              <wButton
+                v-else-if="sim_prop.type === 'void'"
+                class="border-l border-simElementBorder w-2/5 text-left pl-1"
+                :class="sim_prop.inputValue ? 'bg-simActiveButton text-primary' : 'text-secondary'"
+                buttonLabel="▶"
+                :buttonClick="() => sim_prop.setterFunc?.()"
+              />
+              <!-- Enum Input -->
+              <select
+                v-else-if="sim_prop.type === 'enum' && sim_prop.enumValues"
+                class="bg-simInputBackground border-l border-simElementBorder pl-1 h-full text-secondary w-2/5"
+                :value="sim_prop.inputValue"
+                @change="
+                  (e) => {
+                    const value = (e.target as HTMLSelectElement).value
+                    const selected = sim_prop.enumValues?.find((v) => String(v.enumValue) === value)
+                    sim_prop.setterFunc?.(selected?.enumValue)
+                  }
+                "
+              >
+                <option
+                  v-for="value in sim_prop.enumValues"
+                  :key="value.enumName"
+                  :value="String(value.enumValue)"
+                >
+                  {{ value.enumName }}
+                </option>
+              </select>
+            </div>
+          </template>
+        </div>
       </template>
     </Panel>
     <!-- Panel 7 -->
@@ -284,58 +286,65 @@
       class="panel-classroom"
       data-layout="instructor pilot"
       :active="classRoomComponentState"
-      >
+    >
       <template #Classroom>
         <div class="flex flex-col h-full w-full">
           <Accounts
-          v-if="sim_module_loaded"
-          @onLogin="(url: string, authToken: string) => FlightSimModule.check_licence(url, authToken)"
-          @onLogout="() => FlightSimModule.check_licence('', '')"
-          ref="accountsComponentRef" />
+            v-if="sim_module_loaded"
+            @onLogin="
+              (url: string, authToken: string) => FlightSimModule.check_licence(url, authToken)
+            "
+            @onLogout="() => FlightSimModule.check_licence('', '')"
+            ref="accountsComponentRef"
+          />
           <ClassRoom
-          v-if="dataDisplayRef"
-            @apiDataEvent="(receivedApiCall: PeerApiData) => manager.handleIncomingMessage(receivedApiCall?.api)"
-            @apiScriptEvent="(receviedScript: PeerScriptData) => editorComponentRef?.executeExternalCode(receviedScript.tite, receviedScript.script)"
+            v-if="dataDisplayRef"
+            @apiDataEvent="
+              (receivedApiCall: PeerApiData) => manager.handleIncomingMessage(receivedApiCall?.api)
+            "
+            @apiScriptEvent="
+              (receviedScript: PeerScriptData) =>
+                editorComponentRef?.executeExternalCode(receviedScript.tite, receviedScript.script)
+            "
             ref="classroomComponentRef"
-            @classroomConnection='(isOnline) => {
-              classRoomComponentState = isOnline;
-              // if the connection to the server is established, create a proxy object that mirrors all actions
-              if (isOnline === true) {
-                manager = createRemoteManager(FlightSimModule);
+            @classroomConnection="
+              (isOnline) => {
+                classRoomComponentState = isOnline
+                // if the connection to the server is established, create a proxy object that mirrors all actions
+                if (isOnline === true) {
+                  manager = createRemoteManager(FlightSimModule)
+                }
               }
-            }'
+            "
           />
         </div>
-    </template>
-  </Panel>
-      <!-- Panel 8 -->
-  <Panel
+      </template>
+    </Panel>
+    <!-- Panel 8 -->
+    <Panel
       :status="userPromptStatus"
       :active="userPromptActive"
       class="panel-userprompt"
       data-layout="focus instructor pilot"
-      >
+    >
       <template #Prompt>
-          <MarkDown
-          class="w-full h-full p-1"
-          :content="userPromptText"
-          />
-    </template>
-  </Panel>
+        <MarkDown class="w-full h-full p-1" :content="userPromptText" />
+      </template>
+    </Panel>
   </div>
 </template>
 
 <script setup lang="ts">
-import { watch, ComputedRef, computed, ref, onMounted, onUnmounted, onBeforeMount } from "vue";
-import Panel from "./Panel.vue";
-import ButtonSwitch from "./ButtonSwitch.vue";
-import wButton from "./wButton.vue"
-import wInput from "./wInput.vue"
-import ClassRoom from "./ClassRoom.vue";
-import Accounts from "./Accounts.vue";
+import { watch, ComputedRef, computed, ref, onMounted, onUnmounted, onBeforeMount } from 'vue'
+import Panel from './Panel.vue'
+import ButtonSwitch from './ButtonSwitch.vue'
+import wButton from './wButton.vue'
+import wInput from './wInput.vue'
+import ClassRoom from './ClassRoom.vue'
+import Accounts from './Accounts.vue'
 import SimDataDisplay from './DataDisplay.vue'
-import MarkDown from "./MarkDown.vue";
-import { RemoteCallManager, RemoteCall, RemoteEvent } from '../RemoteCallManager';
+import MarkDown from './MarkDown.vue'
+import { RemoteCallManager, RemoteCall, RemoteEvent } from '../RemoteCallManager'
 
 import {
   initializeModule,
@@ -346,24 +355,21 @@ import {
   getSimulationControlsParameters,
   getAutopilotProperties,
   ExtendedMainModule,
-  LayoutTypes
-} from "../wasm/siminterface.ts";
+  LayoutTypes,
+} from '../wasm/siminterface.ts'
 
-import Editor, { ScriptStatus } from "./Editor.vue";
-import { MainModule } from "../../src/wasm/generated/flightsimulator_exec";
-import OpenLayersMap from "./OpenLayersMap.vue";
+import Editor, { ScriptStatus } from './Editor.vue'
+import { MainModule } from '../../src/wasm/generated/flightsimulator_exec'
+import OpenLayersMap from './OpenLayersMap.vue'
 
-
-const renderSignal = ref(0);
-
+const renderSignal = ref(0)
 
 // Define a decorator function
 function broadcast(call: RemoteCall | RemoteEvent) {
   if (classroomComponentRef.value) {
-    classroomComponentRef.value.sendApiCall(JSON.stringify(call));
+    classroomComponentRef.value.sendApiCall(JSON.stringify(call))
   }
 }
-
 
 const toggleFullscreen = async () => {
   if (!document.fullscreenElement) {
@@ -379,119 +385,115 @@ const onFullscreenChange = () => {
 }
 
 const simulationStatus = computed(() => {
-  renderSignal.value; // depend on render signal to update when sim data is fetched
-  if (!FlightSimModule) return "Loading";
-  if (FlightSimModule.simulation.simulation_pause) return "Paused";
-  if (FlightSimModule.flightModel.damaged) return "Structural Damage";
+  renderSignal.value // depend on render signal to update when sim data is fetched
+  if (!FlightSimModule) return 'Loading'
+  if (FlightSimModule.simulation.simulation_pause) return 'Paused'
+  if (FlightSimModule.flightModel.damaged) return 'Structural Damage'
   if (FlightSimModule.simulation.simulation_speed === 1) {
-    return isLicenceValid.value ? "Running" : "Trial";
+    return isLicenceValid.value ? 'Running' : 'Trial'
   }
-  return `${FlightSimModule.simulation.simulation_speed}x`;
-});
-
+  return `${FlightSimModule.simulation.simulation_speed}x`
+})
 
 // These functions will be mirrored to the clients
 // They need to be inside an object to have a path.
 const simFunctions = {
-notifyUser : async function notifyUser(
-  title: string,
-  message?: string,
-  time: number = 0
-): Promise<void> {
-  userPromptStatus.value = "☀︎";
-  userPromptText.value = `# ${title}\n\n${message || ""}`;
-  userPromptActive.value = true;
+  notifyUser: async function notifyUser(
+    title: string,
+    message?: string,
+    time: number = 0,
+  ): Promise<void> {
+    userPromptStatus.value = '☀︎'
+    userPromptText.value = `# ${title}\n\n${message || ''}`
+    userPromptActive.value = true
 
-  if (time <= 0) {
-    return Promise.resolve();
-  }
+    if (time <= 0) {
+      return Promise.resolve()
+    }
 
-  return new Promise<void>((resolve) => {
+    return new Promise<void>((resolve) => {
+      setTimeout(() => {
+        userPromptActive.value = false
+        resolve()
+      }, time)
+    })
+  },
+
+  // Logic to reset components, triggered with simulation module is reset
+  resetComponents: function () {
+    // Called when user invoke reset from a button, still can't tell if keyboard is pressed.
+    editorComponentRef.value?.reset()
+    classroomComponentRef.value?.reset()
+    dataDisplayRef.value?.reset()
+    markdownRef.value?.reset()
+  },
+  setPlotView: function (item: SimulationProperties, state: boolean) {
+    dataDisplayRef.value?.setPlotView(item, state)
+  },
+  setLayout: function (mode: typeof layout.value) {
+    layout.value = mode
+
+    // delay a resize event to allow components to adjust
+    // This is needed resize event is not dispatched when component size change but the window size stay the same
+    // So the openGL context will not resize.
+    // The delay is to ensure the DOM has updated before the resize event is dispatched
     setTimeout(() => {
-      userPromptActive.value = false;
-      resolve();
-    }, time);
-  });
-},
-
-// Logic to reset components, triggered with simulation module is reset
-resetComponents : function() {
-  // Called when user invoke reset from a button, still can't tell if keyboard is pressed.
-    editorComponentRef.value?.reset();
-    classroomComponentRef.value?.reset();
-    dataDisplayRef.value?.reset();
-    markdownRef.value?.reset();
-},
-setPlotView: function(item: SimulationProperties, state: boolean) {
-  dataDisplayRef.value?.setPlotView(item, state );
-},
-setLayout: function(mode: typeof layout.value) {
-      layout.value = mode;
-
-  // delay a resize event to allow components to adjust
-  // This is needed resize event is not dispatched when component size change but the window size stay the same
-  // So the openGL context will not resize.
-  // The delay is to ensure the DOM has updated before the resize event is dispatched
-  setTimeout(() => {
-  window.dispatchEvent(new Event('resize'))
-  }, 20)
-
-},
-setVisuals: function(state: boolean) {
-  isVisuals.value = state;
+      window.dispatchEvent(new Event('resize'))
+    }, 20)
+  },
+  setVisuals: function (state: boolean) {
+    isVisuals.value = state
+  },
 }
 
-}
-
-let GLFWModule : MainModule;
-let FlightSimModule: ExtendedMainModule;
+let GLFWModule: MainModule
+let FlightSimModule: ExtendedMainModule
 // let utilsFuncs: any;
-let sim_module_loaded = ref(false);
-let isLicenceValid = ref(false);
-let classRoomComponentState = ref(false);
-let scriptComponentStatus = ref<ScriptStatus>("IDLE");
-const update_interval_ms = 200;
-const userPromptText = ref<string>("");
-const userPromptStatus = ref<string>("----");
-const userPromptActive = ref<boolean>(false);
-const isFullscreen = ref(false);
+let sim_module_loaded = ref(false)
+let isLicenceValid = ref(false)
+let classRoomComponentState = ref(false)
+let scriptComponentStatus = ref<ScriptStatus>('IDLE')
+const update_interval_ms = 200
+const userPromptText = ref<string>('')
+const userPromptStatus = ref<string>('----')
+const userPromptActive = ref<boolean>(false)
+const isFullscreen = ref(false)
 const fullscreenContainer = ref<HTMLElement | null>(null)
-const isDarkMode = ref(true);
-const isVisuals = ref(false);
-const layout = ref<LayoutTypes>(LayoutTypes.INSTRUCTOR);
+const isDarkMode = ref(true)
+const isVisuals = ref(false)
+const layout = ref<LayoutTypes>(LayoutTypes.INSTRUCTOR)
 
 // Initialize theme from localStorage
 const initializeTheme = () => {
-  const savedTheme = localStorage.getItem('theme') || 'light';
-  isDarkMode.value = savedTheme === 'dark';
-  applyTheme(isDarkMode.value);
-};
+  const savedTheme = localStorage.getItem('theme') || 'light'
+  isDarkMode.value = savedTheme === 'dark'
+  applyTheme(isDarkMode.value)
+}
 
 const applyTheme = (dark: boolean) => {
   if (!dark) {
-    document.documentElement.classList.add('light');
+    document.documentElement.classList.add('light')
   } else {
-    document.documentElement.classList.remove('light');
+    document.documentElement.classList.remove('light')
   }
-  localStorage.setItem('theme', dark ? 'dark' : 'light');
+  localStorage.setItem('theme', dark ? 'dark' : 'light')
 
   // notify anything that cares (charts, canvas, etc.)
   window.dispatchEvent(new Event('theme-change'))
-};
+}
 
 const toggleTheme = () => {
-  isDarkMode.value = !isDarkMode.value;
-  applyTheme(isDarkMode.value);
-};
-
+  isDarkMode.value = !isDarkMode.value
+  applyTheme(isDarkMode.value)
+}
 
 // Components refs
-const classroomComponentRef = ref<InstanceType<typeof ClassRoom> | null>(null); // Use the ClassRoom component type
-const editorComponentRef = ref<InstanceType<typeof Editor> | null>(null); // Use the Editor component type
-const dataDisplayRef = ref<InstanceType<typeof SimDataDisplay> | null>(null); // Use the SimDataDisplay component type
-const markdownRef = ref<InstanceType<typeof MarkDown> | null>(null); // Use the MarkDown component type
+const classroomComponentRef = ref<InstanceType<typeof ClassRoom> | null>(null) // Use the ClassRoom component type
+const editorComponentRef = ref<InstanceType<typeof Editor> | null>(null) // Use the Editor component type
+const dataDisplayRef = ref<InstanceType<typeof SimDataDisplay> | null>(null) // Use the SimDataDisplay component type
+const markdownRef = ref<InstanceType<typeof MarkDown> | null>(null) // Use the MarkDown component type
 // const accountsComponentRef = ref<InstanceType<typeof Accounts> | null>(null); // Use the Accounts component type
-const openLayersMapRef = ref<InstanceType<typeof OpenLayersMap> | null>(null); // Use the OpenLayersMap component type
+const openLayersMapRef = ref<InstanceType<typeof OpenLayersMap> | null>(null) // Use the OpenLayersMap component type
 
 // Layout controls as computed
 const layoutControls: ComputedRef<Record<string, SimulationProperties>> = computed(() => ({
@@ -500,22 +502,22 @@ const layoutControls: ComputedRef<Record<string, SimulationProperties>> = comput
     type: 'void' as const,
     label: 'Fullscreen',
     setterFunc: () => toggleFullscreen(),
-    group: 'simulation'
+    group: 'simulation',
   },
 
   layout: {
-       id: 'layout',
-      type: 'enum',
-      label: 'Layout',
-      inputValue: layout.value,
-      group: 'simulation',
-      enumValues: [
-        { enumName: 'Instructor', enumValue: LayoutTypes.INSTRUCTOR },
-        { enumName: 'Pilot', enumValue: LayoutTypes.PILOT },
-        { enumName: 'Focus', enumValue: LayoutTypes.FOCUS },
-      ],
-      setterFunc: (val: string ) => simFunctions.setLayout(val as LayoutTypes)
-    },
+    id: 'layout',
+    type: 'enum',
+    label: 'Layout',
+    inputValue: layout.value,
+    group: 'simulation',
+    enumValues: [
+      { enumName: 'Instructor', enumValue: LayoutTypes.INSTRUCTOR },
+      { enumName: 'Pilot', enumValue: LayoutTypes.PILOT },
+      { enumName: 'Focus', enumValue: LayoutTypes.FOCUS },
+    ],
+    setterFunc: (val: string) => simFunctions.setLayout(val as LayoutTypes),
+  },
   toggle_theme: {
     id: 'toggle_theme',
     type: 'boolean',
@@ -532,132 +534,132 @@ const layoutControls: ComputedRef<Record<string, SimulationProperties>> = comput
     inputValue: isVisuals.value,
     group: 'simulation',
   },
-}));
+}))
 
-let autopilotControls : ComputedRef<ReturnType<typeof getAutopilotProperties>>;
-let flightModelProps : ComputedRef<ReturnType<typeof getFlightModelParameters>>;
-let simulationControlsProps : ComputedRef<ReturnType<typeof getSimulationControlsParameters>>;
-let groupedSimProps: ComputedRef<Record<string, SimulationProperties[]>>;
+let autopilotControls: ComputedRef<ReturnType<typeof getAutopilotProperties>>
+let flightModelProps: ComputedRef<ReturnType<typeof getFlightModelParameters>>
+let simulationControlsProps: ComputedRef<ReturnType<typeof getSimulationControlsParameters>>
+let groupedSimProps: ComputedRef<Record<string, SimulationProperties[]>>
 
-let simUpdateInterval: ReturnType<typeof setInterval>;
-let manager: RemoteCallManager;
+let simUpdateInterval: ReturnType<typeof setInterval>
+let manager: RemoteCallManager
 
 // Lifecycle hooks
 onBeforeMount(() => {
-  initializeTheme();
-});
+  initializeTheme()
+})
 
 onMounted(async () => {
   initializeModule({
     locateFile: (path: string, prefix: string) => {
-  if (path.endsWith('.wasm') || path.endsWith('.data')) {
-    // In Vite, files in /public are accessed via the root '/'
-    // use import.meta.env.BASE_URL to handle subdirectories automatically
-    const base = import.meta.env.BASE_URL; // Usually '/'
-    // Remove any leading slash from the path to avoid '//'
-    const cleanPath = path.startsWith('/') ? path.substring(1) : path;
-    return base + cleanPath;
-  }
-  return prefix + path;
-},
+      if (path.endsWith('.wasm') || path.endsWith('.data')) {
+        // In Vite, files in /public are accessed via the root '/'
+        // use import.meta.env.BASE_URL to handle subdirectories automatically
+        const base = import.meta.env.BASE_URL // Usually '/'
+        // Remove any leading slash from the path to avoid '//'
+        const cleanPath = path.startsWith('/') ? path.substring(1) : path
+        return base + cleanPath
+      }
+      return prefix + path
+    },
     canvas: (() => {
-      const canvas = document.getElementById("canvas");
-      return canvas;
+      const canvas = document.getElementById('canvas')
+      return canvas
     })(),
     // Functions to be called from C++
     notifyUser: simFunctions.notifyUser,
     resetComponents: simFunctions.resetComponents,
-    onLicenceState: (LicenceState: boolean) => isLicenceValid.value = LicenceState, // Update licence state
-    syncFlightModel: () => fetchSimData(FlightSimModule, initFlightModelParams) // Sync flightmodel
+    onLicenceState: (LicenceState: boolean) => (isLicenceValid.value = LicenceState), // Update licence state
+    syncFlightModel: () => fetchSimData(FlightSimModule, initFlightModelParams), // Sync flightmodel
   })
     .then((modules) => {
       GLFWModule = modules[0]
-      FlightSimModule = modules[1];
-      GLFWModule.GLFW.requestFullscreen = toggleFullscreen; // Replace with custom implementation
+      FlightSimModule = modules[1]
+      GLFWModule.GLFW.requestFullscreen = toggleFullscreen // Replace with custom implementation
 
       initFlightModelParams()
 
       // key presses are handled inside the canvas only
-      window.removeEventListener(
-        "keydown",
-        GLFWModule.GLFW.onKeydown,
+      window.removeEventListener('keydown', GLFWModule.GLFW.onKeydown, true)
+      window.removeEventListener('keypress', GLFWModule.GLFW.onKeyPress, true)
+      window.removeEventListener('keyup', GLFWModule.GLFW.onKeyup, true)
+      window.removeEventListener('blur', GLFWModule.GLFW.onBlur, true)
+      const canvas = document.getElementById('canvas')
+      canvas?.focus()
+      canvas?.addEventListener(
+        'keydown',
+        (e) => {
+          GLFWModule.GLFW.onKeydown(e)
+        },
         true,
-      );
-      window.removeEventListener(
-        "keypress",
-        GLFWModule.GLFW.onKeyPress,
-        true,
-      );
-      window.removeEventListener("keyup", GLFWModule.GLFW.onKeyup, true);
-      window.removeEventListener("blur", GLFWModule.GLFW.onBlur, true);
-      const canvas = document.getElementById("canvas");
-      canvas?.focus();
-      canvas?.addEventListener("keydown", (e) => {
-        GLFWModule.GLFW.onKeydown(e)}
-        , true);
-      canvas?.addEventListener("keyup", (e) => GLFWModule.GLFW.onKeyup(e), true);
+      )
+      canvas?.addEventListener('keyup', (e) => GLFWModule.GLFW.onKeyup(e), true)
 
       function isTextInput() {
-        const activeElement = document.activeElement;
+        const activeElement = document.activeElement
         return (
-          activeElement?.role === "textbox" ||
-          activeElement?.tagName === "INPUT" ||
-          activeElement?.tagName === "TEXTAREA" ||
-          activeElement?.tagName === "SELECT" ||
+          activeElement?.role === 'textbox' ||
+          activeElement?.tagName === 'INPUT' ||
+          activeElement?.tagName === 'TEXTAREA' ||
+          activeElement?.tagName === 'SELECT' ||
           (activeElement as HTMLElement)?.isContentEditable
-        );
+        )
       }
 
       window.addEventListener(
-        "blur",
+        'blur',
         (_event) => {
           // When defocuses (blur), revert back to canvas to enable keyboard controls
           setTimeout(() => {
             if (document.activeElement == canvas || isTextInput()) {
-              return;
+              return
             }
-            canvas?.focus();
-          }, 1000);
+            canvas?.focus()
+          }, 1000)
         },
         true,
-      );
+      )
 
       document.addEventListener('fullscreenchange', onFullscreenChange)
-      sim_module_loaded.value = true;
-      simFunctions.notifyUser("Flight Sim", `SIM: ${FlightSimModule.FLIGHTMODEL_VERSION} ${FlightSimModule.FLIGHTMODEL_BUILD_TIMESTAMP}
-      UI: ${import.meta.env.VITE_GIT_SHA}`,2000)
+      sim_module_loaded.value = true
+      simFunctions.notifyUser(
+        'Flight Sim',
+        `SIM: ${FlightSimModule.FLIGHTMODEL_VERSION} ${FlightSimModule.FLIGHTMODEL_BUILD_TIMESTAMP}
+      UI: ${import.meta.env.VITE_GIT_SHA}`,
+        2000,
+      )
 
       document.addEventListener('keydown', (e: KeyboardEvent) => {
-      // When editing a text input, we don't want the global keybindings to trigger.
+        // When editing a text input, we don't want the global keybindings to trigger.
         if (isTextInput()) {
-          return;
+          return
         }
 
         // Ctrl + Shift + F to toggle fullscreen
-        if (e.code=== 'KeyL') {
+        if (e.code === 'KeyL') {
           // cycle through layouts with L key
           const nextLayout = {
             [LayoutTypes.INSTRUCTOR]: LayoutTypes.PILOT,
             [LayoutTypes.PILOT]: LayoutTypes.FOCUS,
             [LayoutTypes.FOCUS]: LayoutTypes.INSTRUCTOR,
+          }
+          simFunctions.setLayout(nextLayout[layout.value])
         }
-          simFunctions.setLayout(nextLayout[layout.value]);
+        if (e.code === 'KeyF' && e.ctrlKey && e.shiftKey) {
+          toggleFullscreen()
         }
-        if (e.code === 'KeyF' && e.ctrlKey && e.shiftKey)         {
-          toggleFullscreen();
-        }
-      });
+      })
 
       watch(simulationStatus, (newStatus) => {
-  if (classroomComponentRef.value) {
-    classroomComponentRef.value.sendStatus(newStatus);
-  }
-});
+        if (classroomComponentRef.value) {
+          classroomComponentRef.value.sendStatus(newStatus)
+        }
+      })
 
       simUpdateInterval = setInterval(() => {
-        renderSignal.value++;
-        fetchSimData(FlightSimModule, initFlightModelParams);
-        dataDisplayRef.value?.tickPlot();
+        renderSignal.value++
+        fetchSimData(FlightSimModule, initFlightModelParams)
+        dataDisplayRef.value?.tickPlot()
 
         openLayersMapRef.value?.updateMap(
           FlightSimModule.flightModel.latitude,
@@ -665,84 +667,106 @@ onMounted(async () => {
           FlightSimModule.flightModel.altitude_ft,
           FlightSimModule.flightModel.pitch,
           FlightSimModule.flightModel.bank,
-          FlightSimModule.flightModel.yaw
-        );
-      }, update_interval_ms);
+          FlightSimModule.flightModel.yaw,
+        )
+      }, update_interval_ms)
     })
-    .catch(console.error);
-});
-
+    .catch(console.error)
+})
 
 onUnmounted(() => {
-  clearInterval(simUpdateInterval);
+  clearInterval(simUpdateInterval)
   document.removeEventListener('fullscreenchange', onFullscreenChange)
-});
+})
 
 function initFlightModelParams() {
-  flightModelProps = computed(() => {renderSignal.value; return getFlightModelParameters(FlightSimModule.flightModel); });
-  autopilotControls = computed(() => { renderSignal.value; return getAutopilotProperties(FlightSimModule.flightModel).sort((a: AutopilotProperties, b: AutopilotProperties) => (a.targetCommand === undefined ? 0 : 1) - (b.targetCommand === undefined ? 0 : 1));});
-  simulationControlsProps = computed(() => { renderSignal.value; const base = getSimulationControlsParameters(FlightSimModule); return { ...base, ...layoutControls.value }; });
+  flightModelProps = computed(() => {
+    renderSignal.value
+    return getFlightModelParameters(FlightSimModule.flightModel)
+  })
+  autopilotControls = computed(() => {
+    renderSignal.value
+    return getAutopilotProperties(FlightSimModule.flightModel).sort(
+      (a: AutopilotProperties, b: AutopilotProperties) =>
+        (a.targetCommand === undefined ? 0 : 1) - (b.targetCommand === undefined ? 0 : 1),
+    )
+  })
+  simulationControlsProps = computed(() => {
+    renderSignal.value
+    const base = getSimulationControlsParameters(FlightSimModule)
+    return { ...base, ...layoutControls.value }
+  })
 
   groupedSimProps = computed(() => {
-  const all = { ...simulationControlsProps.value, ...flightModelProps.value };
-  return Object.values(all).filter((v: SimulationProperties) => v.setterFunc !== undefined).reduce((acc: Record<string, SimulationProperties[]>, item: SimulationProperties) => {
-    // Group by group
-    const parentKey = item.group;
-    if (!acc[parentKey]) {
-      acc[parentKey] = [];
-    }
-    // Push the item to the corresponding group
-    acc[parentKey].push(item);
-    return acc;
-  }, {} as Record<string, SimulationProperties[]>);
-  });
+    const all = { ...simulationControlsProps.value, ...flightModelProps.value }
+    return Object.values(all)
+      .filter((v: SimulationProperties) => v.setterFunc !== undefined)
+      .reduce(
+        (acc: Record<string, SimulationProperties[]>, item: SimulationProperties) => {
+          // Group by group
+          const parentKey = item.group
+          if (!acc[parentKey]) {
+            acc[parentKey] = []
+          }
+          // Push the item to the corresponding group
+          acc[parentKey].push(item)
+          return acc
+        },
+        {} as Record<string, SimulationProperties[]>,
+      )
+  })
 
-  manager = createRemoteManager(FlightSimModule);
+  manager = createRemoteManager(FlightSimModule)
 }
 
-function createRemoteManager(FlightSimModule : ExtendedMainModule) {
+function createRemoteManager(FlightSimModule: ExtendedMainModule) {
+  // todo, enable broadcast only if instructor
+  // Rationale: student does not send data
+  const remoteManager = new RemoteCallManager(broadcast)
+  remoteManager.wrapObject('simFunctions', simFunctions, [
+    'notifyUser',
+    'resetComponents',
+    'setPlotView',
+    'setLayout',
+    'toggleMap',
+  ])
+  remoteManager.wrapObject('FlightSimModule', FlightSimModule, ['onKeydown', 'onKeyup'])
+  remoteManager.wrapObject('FlightSimModule.simulation', FlightSimModule.simulation, [
+    'set',
+    'reset',
+  ])
+  remoteManager.wrapObject('FlightSimModule.flightModel', FlightSimModule.flightModel, ['set'])
 
-                  // todo, enable broadcast only if instructor
-                // Rationale: student does not send data
-                const remoteManager = new RemoteCallManager(broadcast);
-                remoteManager.wrapObject("simFunctions", simFunctions, ["notifyUser", "resetComponents", "setPlotView", "setLayout", "toggleMap"]);
-                remoteManager.wrapObject("FlightSimModule", FlightSimModule, ["onKeydown", "onKeyup"]);
-                remoteManager.wrapObject("FlightSimModule.simulation", FlightSimModule.simulation, ["set", "reset"]);
-                remoteManager.wrapObject("FlightSimModule.flightModel", FlightSimModule.flightModel, ["set"]);
+  if (dataDisplayRef && dataDisplayRef.value) {
+    remoteManager.wrapObject('dataDisplayRef.value', dataDisplayRef.value, [
+      'setDataView',
+      'setPlotView',
+      'reset',
+      'showAll',
+      'hideAll',
+    ])
+  }
+  if (editorComponentRef) {
+    remoteManager.wrapObject('editorComponentRef', editorComponentRef, ['reset'])
+  }
+  return remoteManager
 
-                  if (dataDisplayRef && dataDisplayRef.value) {
-
-remoteManager.wrapObject(
-      "dataDisplayRef.value",
-      dataDisplayRef.value,
-      ["setDataView", "setPlotView", "reset", "showAll", "hideAll"]
-    );
-                }
-                if (editorComponentRef) {
-                remoteManager.wrapObject("editorComponentRef", editorComponentRef, ["reset"]);
-                }
-                return remoteManager;
-
-                                                // Dont mirror checkPoint, it defies its purpose. checkpoint is meant to be used as indicator when a simulaton
-                // manager.wrapObject("classroomComponentRef", classroomComponentRef, ["sendCheckPoint"])
-
+  // Dont mirror checkPoint, it defies its purpose. checkpoint is meant to be used as indicator when a simulaton
+  // manager.wrapObject("classroomComponentRef", classroomComponentRef, ["sendCheckPoint"])
 }
 </script>
 
-
-
 <style scoped>
-
 /* Hide panels not participating in the active layout */
-.container.layout-focus > *:not([data-layout~="focus"]) {
+.container.layout-focus > *:not([data-layout~='focus']) {
   display: none;
 }
 
-.container.layout-instructor > *:not([data-layout~="instructor"]) {
+.container.layout-instructor > *:not([data-layout~='instructor']) {
   display: none;
 }
 
-.container.layout-pilot > *:not([data-layout~="pilot"]) {
+.container.layout-pilot > *:not([data-layout~='pilot']) {
   display: none;
 }
 
@@ -752,16 +776,16 @@ remoteManager.wrapObject(
   grid-template-columns: 2fr 1fr 1fr;
   grid-template-rows: repeat(8, 1fr);
   grid-template-areas:
-    "cockpit userprompt realtimedata"
-    "cockpit userprompt realtimedata"
-    "cockpit userprompt realtimedata"
-    "cockpit userprompt realtimedata"
-    "autopilot userprompt realtimedata"
-    "learningmodules classroom flightmodel"
-    "learningmodules classroom flightmodel"
-    "learningmodules classroom flightmodel"
-    "learningmodules classroom flightmodel"
-    "learningmodules classroom flightmodel";
+    'cockpit userprompt realtimedata'
+    'cockpit userprompt realtimedata'
+    'cockpit userprompt realtimedata'
+    'cockpit userprompt realtimedata'
+    'autopilot userprompt realtimedata'
+    'learningmodules classroom flightmodel'
+    'learningmodules classroom flightmodel'
+    'learningmodules classroom flightmodel'
+    'learningmodules classroom flightmodel'
+    'learningmodules classroom flightmodel';
 }
 
 /* ===== Pilot LAYOUT ===== */
@@ -770,14 +794,14 @@ remoteManager.wrapObject(
   grid-template-columns: 2fr 1fr 1fr;
   grid-template-rows: repeat(8, 1fr);
   grid-template-areas:
-    "cockpit userprompt realtimedata"
-    "cockpit userprompt realtimedata"
-    "cockpit userprompt realtimedata"
-    "cockpit userprompt realtimedata"
-    "cockpit userprompt flightmodel"
-    "cockpit userprompt flightmodel"
-    "cockpit userprompt flightmodel"
-    "autopilot classroom flightmodel"
+    'cockpit userprompt realtimedata'
+    'cockpit userprompt realtimedata'
+    'cockpit userprompt realtimedata'
+    'cockpit userprompt realtimedata'
+    'cockpit userprompt flightmodel'
+    'cockpit userprompt flightmodel'
+    'cockpit userprompt flightmodel'
+    'autopilot classroom flightmodel';
 }
 
 /* ===== Focus LAYOUT ===== */
@@ -786,25 +810,41 @@ remoteManager.wrapObject(
   grid-template-columns: 1fr 2fr 1fr;
   grid-template-rows: repeat(8, 1fr);
   grid-template-areas:
-    "realtimedata cockpit userprompt"
-    "realtimedata cockpit userprompt"
-    "realtimedata cockpit userprompt"
-    "realtimedata cockpit userprompt"
-    "realtimedata cockpit userprompt"
-    "realtimedata cockpit userprompt"
-    "realtimedata cockpit userprompt"
-    "realtimedata simulationcontrols userprompt";
+    'realtimedata cockpit userprompt'
+    'realtimedata cockpit userprompt'
+    'realtimedata cockpit userprompt'
+    'realtimedata cockpit userprompt'
+    'realtimedata cockpit userprompt'
+    'realtimedata cockpit userprompt'
+    'realtimedata cockpit userprompt'
+    'realtimedata simulationcontrols userprompt';
 }
 
 /* Panel bindings */
-.panel-cockpit { grid-area: cockpit; }
-.panel-realtimedata { grid-area: realtimedata; }
-.panel-simulationcontrols { grid-area: simulationcontrols; }
-.panel-learningmodules { grid-area: learningmodules; }
-.panel-autopilot { grid-area: autopilot; }
-.panel-flightmodel { grid-area: flightmodel; }
-.panel-classroom { grid-area: classroom; }
-.panel-userprompt { grid-area: userprompt; }
+.panel-cockpit {
+  grid-area: cockpit;
+}
+.panel-realtimedata {
+  grid-area: realtimedata;
+}
+.panel-simulationcontrols {
+  grid-area: simulationcontrols;
+}
+.panel-learningmodules {
+  grid-area: learningmodules;
+}
+.panel-autopilot {
+  grid-area: autopilot;
+}
+.panel-flightmodel {
+  grid-area: flightmodel;
+}
+.panel-classroom {
+  grid-area: classroom;
+}
+.panel-userprompt {
+  grid-area: userprompt;
+}
 
 /* Canvas fit */
 #canvas {
