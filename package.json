@@ -17,7 +17,8 @@
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist -b master",
     "generate-modelfile": "tsx src/generate-modelfile.ts",
-    "dev:modelfile": "tsx src/generate-modelfile.ts && ollama create flightsimModel -f src/wasm/generated/Modelfile"
+    "dev:modelfile": "tsx src/generate-modelfile.ts && ollama create flightsimModel -f src/wasm/generated/Modelfile",
+    "prepare": "husky install"
   },
   "dependencies": {
     "cesium": "^1.141.0",
@@ -42,6 +43,8 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-vue": "^10.9.1",
     "gh-pages": "^6.3.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.5",
     "postcss": "^8.4.39",
     "prettier": "^3.8.3",
     "tailwindcss": "^3.4.4",
@@ -51,5 +54,9 @@
     "vite-plugin-checker": "^0.9.3",
     "vite-plugin-vue-devtools": "^8.0.7",
     "vue-tsc": "^2.0.21"
+  },
+  "lint-staged": {
+    "*.{js,ts,vue}": "eslint --cache --fix",
+    "*.--write": "prettier --write"
   }
 }
