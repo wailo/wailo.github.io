@@ -54,7 +54,7 @@ watch(
     border-radius: 0.25rem;
 
     /* Base theme mapping using your global Tailwind design tokens */
-    background-color: rgb(var(--color-simBackground));
+    background-color: rgb(var(--color-panelContentBackground));
     color: rgb(var(--color-secondary));
   }
   

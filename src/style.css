@@ -4,7 +4,7 @@
 
 /* Dark mode colors (default) */
 :root {
-    --color-primary: 25 25 25;              /* #191919 */
+  --color-primary: 25 25 25;              /* #191919 */
   --color-secondary: 214 214 214;         /* #d6d6d6 */
   --color-panelBorder: 44 44 44;          /* #2c2c2c */
   --color-panelHeaderBackground: 25 25 25;    /* #191919 */
@@ -18,16 +18,16 @@
 
 /* light mode colors */
 .light {
-  --color-primary: 255 255 255;           /* #ffffff */
-  --color-secondary: 19 15 12;            /* #130f0c */
-  --color-panelBorder: 123 128 121;       /* #7b8079 */
-  --color-panelHeaderBackground: 223 228 226; /* #dfe4e2 */
-  --color-panelStatusBackground: 19 15 12;    /* #130f0c */
-  --color-panelContentBackground: 247 247 247; /* #f7f7f7 */
-  --color-simElementBorder: 19 15 12;     /* #130f0c */
-  --color-simInputBackground: 230 230 230;    /* #e6e6e6 */
-  --color-simBackground: 247 247 247;     /* #f7f7f7 */
-  --color-simActiveButton: 185 57 27;     /* #b9391b */
+  --color-primary: 228 230 230;
+  --color-secondary: 24 28 31;
+  --color-panelBorder: 142 148 150;
+  --color-panelHeaderBackground: 210 214 216;
+  --color-panelStatusBackground: 24 28 31;
+  --color-panelContentBackground: 238 240 240;
+  --color-simElementBorder: 24 28 31;
+  --color-simInputBackground: 200 205 207;
+  --color-simBackground: 238 240 240;
+  --color-simActiveButton: 185 57 27;
 }
 
 @font-face {
