@@ -4,21 +4,18 @@
 
 ## Build Locally
 
-``` bash
+```bash
 # install dependencies
-$ yarn install
+$ npm install
 
-# serve with hot reload at localhost:3000
-$ yarn dev
+# serve with hot reload at localhost:5173
+$ npm run dev
 
 # build for production and launch server
-$ yarn build
-$ yarn start
+$ npm run build
+$ npm run preview
 
-# generate static project
-$ yarn generate
 ```
 
 ## Publish
 - Commit and push changed to the development branch.
-- Website will be automatically deployed by travis CI

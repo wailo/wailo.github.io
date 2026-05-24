@@ -1,17 +1,15 @@
 <template>
-    <!-- Button or Label -->
-    <button
-      :class="[
-        'outline-none items-center justify-center h-full text-nowrap',
-        props.buttonState === true
-          ? 'bg-simActiveButton text-primary'
-          : 'bg-primary text-secondary',
-        'cursor-pointer font-medium',
-      ]"
-      @click="props.buttonClick"
-    >
-      {{ props.buttonLabel }}
-    </button>
+  <!-- Button or Label -->
+  <button
+    :class="[
+      'outline-none items-center justify-center h-full text-nowrap',
+      props.buttonState === true ? 'bg-simActiveButton text-primary' : 'bg-primary text-secondary',
+      'cursor-pointer font-medium',
+    ]"
+    @click="props.buttonClick"
+  >
+    {{ props.buttonLabel }}
+  </button>
 </template>
 
 <script setup lang="ts">
@@ -30,8 +28,7 @@ const props = defineProps({
   },
   buttonClick: {
     type: Function as PropType<() => void>,
-    required: true
-  }
+    required: true,
+  },
 })
-
 </script>

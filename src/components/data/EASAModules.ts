@@ -1,53 +1,57 @@
 export type ModuleEntry = {
-    name: string;
-    path: string;
-  };
+  name: string
+  path: string
+}
 
-  export type ModuleTree = Record<string, ModuleEntry[]>;
+export type ModuleTree = Record<string, ModuleEntry[]>
 
-
-  export const moduleTree: ModuleTree = {
-    "Demo": [
-      {name: "Intro", path: "/LearningModules/demo.ts"},
-      {name: "Landing", path: "/LearningModules/landing.ts"},
-      {name: "Instruments scanning", path: "/LearningModules/instruments_scanning.ts"},
-      {name: "Yaw Damper", path: "/LearningModules/yaw_damper.ts"},
-      {name: "Three doublets", path: "/LearningModules/three_doublets.ts"}
-    ],
-    "The Four Forces of Flight": [
-      { name: "Level Flight Forces", path: "/LearningModules/level_flight.ts" },
-      { name: "Increase and Reduce Thrust", path: "/LearningModules/thrust_change.ts"},
-      { name: "Change Aircraft Weight", path: "/LearningModules/weight_change.ts" }
-    ],
-    "Bernoulli’s Principle and Airflow Over the Wing": [
-      { name: "Monitor Lift Generation in Flight", path: "/LearningModules/lift_generation.ts" },
-      { name: "Increase Airspeed and Observe Lift Changes", path : "/LearningModules/lift_vs_speed.ts" },
-      { name: "Effect of Altitude on Lift", path: "/LearningModules/lift_vs_altitude.ts" }
-    ],
-    "Stability modes": [
-      { name: "Phugoid Mode", path: "/LearningModules/phugoid.ts" },
-      { name: "Dutch Roll", path : "/LearningModules/dutch_roll.ts" },
-
-    ],
-    "Relationship Between Pressure, Velocity, and Airflow": [
+export const moduleTree: ModuleTree = {
+  Demo: [
+    { name: 'Intro', path: '/LearningModules/demo.ts' },
+    { name: 'Landing', path: '/LearningModules/landing.ts' },
+    { name: 'Instruments scanning', path: '/LearningModules/instruments_scanning.ts' },
+    { name: 'Yaw Damper', path: '/LearningModules/yaw_damper.ts' },
+    { name: 'Three doublets', path: '/LearningModules/three_doublets.ts' },
+  ],
+  'The Four Forces of Flight': [
+    { name: 'Level Flight Forces', path: '/LearningModules/level_flight.ts' },
+    { name: 'Increase and Reduce Thrust', path: '/LearningModules/thrust_change.ts' },
+    { name: 'Change Aircraft Weight', path: '/LearningModules/weight_change.ts' },
+  ],
+  'Bernoulli’s Principle and Airflow Over the Wing': [
+    { name: 'Monitor Lift Generation in Flight', path: '/LearningModules/lift_generation.ts' },
+    {
+      name: 'Increase Airspeed and Observe Lift Changes',
+      path: '/LearningModules/lift_vs_speed.ts',
+    },
+    { name: 'Effect of Altitude on Lift', path: '/LearningModules/lift_vs_altitude.ts' },
+  ],
+  'Stability modes': [
+    { name: 'Phugoid Mode', path: '/LearningModules/phugoid.ts' },
+    { name: 'Dutch Roll', path: '/LearningModules/dutch_roll.ts' },
+  ],
+  'Relationship Between Pressure, Velocity, and Airflow': [
     //     { name: "The Relationship Between Velocity and Pressure", content: "" },
-      { name: "Changes in Airspeed and Lift at Different Flap Settings", path: "/LearningModules/speed_lift_vs_flap.ts" }
-    ],
-    // "Angle of Attack (AoA) and Its Influence on Lift and Drag": [
-    //     { name: "Monitor AoA and Lift in Straight and Level Flight", content: "" },
-    //     { name: "Increase AoA Until Stall", content: "" },
-    //     { name: "Stall Recovery Practice", content: "" }
-    // ],
-    // "Practical Application – Flying an Efficient Climb and Descent": [
-    //     { name: "Optimizing Climb Performance", content: "" },
-    //     { name: "Simulating a High-Drag Descent", content: "" },
-    //     { name: "Autopilot vs. Manual Climb/Descent", content: "" }
-    // ],
-    "Flight Exercise": [
-      { name: "Coordinated Turne Challenge", path: "/LearningModules/coordinated_turn_challenge.ts" },
-    ],
-     "Stick inputs": [
-      { name: "Elevator Step Input", path: "/LearningModules/elevator_step_input.ts" },
-      { name: "Rudder Step Input", path: "/LearningModules/rudder_step_input.ts" }
-    ]
-};
+    {
+      name: 'Changes in Airspeed and Lift at Different Flap Settings',
+      path: '/LearningModules/speed_lift_vs_flap.ts',
+    },
+  ],
+  // "Angle of Attack (AoA) and Its Influence on Lift and Drag": [
+  //     { name: "Monitor AoA and Lift in Straight and Level Flight", content: "" },
+  //     { name: "Increase AoA Until Stall", content: "" },
+  //     { name: "Stall Recovery Practice", content: "" }
+  // ],
+  // "Practical Application – Flying an Efficient Climb and Descent": [
+  //     { name: "Optimizing Climb Performance", content: "" },
+  //     { name: "Simulating a High-Drag Descent", content: "" },
+  //     { name: "Autopilot vs. Manual Climb/Descent", content: "" }
+  // ],
+  'Flight Exercise': [
+    { name: 'Coordinated Turne Challenge', path: '/LearningModules/coordinated_turn_challenge.ts' },
+  ],
+  'Stick inputs': [
+    { name: 'Elevator Step Input', path: '/LearningModules/elevator_step_input.ts' },
+    { name: 'Rudder Step Input', path: '/LearningModules/rudder_step_input.ts' },
+  ],
+}

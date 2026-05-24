@@ -2,17 +2,17 @@
   <div class="w-full max-h-full grid grid-flow-row grid-cols-1 gap-2">
     <div class="w-full grid grid-flow-row grid-cols-1 gap-1">
       <div>
-      <input
-        v-model="selfPeerId"
-        :readonly="isOnline"
-        placeholder="Classroom name (optional)"
-        class="pl-1 text-secondary bg-primary w-1/2 border border-simElementBorder"
-      />
-      <input
-        v-model="displayname"
-        placeholder="Enter your display name (optional)"
-        class="pl-1 text-secondary bg-primary w-1/2 border border-simElementBorder"
-      />
+        <input
+          v-model="selfPeerId"
+          :readonly="isOnline"
+          placeholder="Classroom name (optional)"
+          class="pl-1 text-secondary bg-primary w-1/2 border border-simElementBorder"
+        />
+        <input
+          v-model="displayname"
+          placeholder="Enter your display name (optional)"
+          class="pl-1 text-secondary bg-primary w-1/2 border border-simElementBorder"
+        />
       </div>
       <!-- <button-switch
         id="share"
@@ -22,32 +22,27 @@
       >
       </button-switch> -->
       <div>
-      <wButton
-        id="connect"
-        :button-label="isOnline ? 'Disconnect' : 'Start'"
-        :button-state="isOnline"
-        class="w-1/2 border border-simElementBorder"
-        :buttonClick="
-          () => (isOnline ? disconnect() : connectToPeerJsServer(selfPeerId))
-        "
-      >
-
-      </wButton>
-          <wButton
-    v-if="isInstructor"
-      button-label="Broadcast Mode"
-      :button-state="followMode"
-      class="w-1/2 border border-simElementBorder"
-      :button-click="() => (followMode = !followMode)"
-    />
-    </div>
+        <wButton
+          id="connect"
+          :button-label="isOnline ? 'Disconnect' : 'Start'"
+          :button-state="isOnline"
+          class="w-1/2 border border-simElementBorder"
+          :buttonClick="() => (isOnline ? disconnect() : connectToPeerJsServer(selfPeerId))"
+        >
+        </wButton>
+        <wButton
+          v-if="isInstructor"
+          button-label="Broadcast Mode"
+          :button-state="followMode"
+          class="w-1/2 border border-simElementBorder"
+          :button-click="() => (followMode = !followMode)"
+        />
+      </div>
     </div>
 
     <div class="grid grid-flow-row grid-cols-1">
       <table class="table-fixed text-left border">
-        <thead
-          class="border-b border-t border-simElementBorder bg-panelHeaderBackground"
-        >
+        <thead class="border-b border-t border-simElementBorder bg-panelHeaderBackground">
           <tr>
             <th class="flex-1">Callsign [{{ Object.keys(incomingConns).length }}]</th>
             <th class="flex-1">Status</th>
@@ -56,17 +51,13 @@
           </tr>
         </thead>
         <tbody>
-          <tr
-            class="nowrap border-b"
-            v-for="(peer, peerId) in incomingConns"
-            :key="peerId"
-          >
+          <tr class="nowrap border-b" v-for="(peer, peerId) in incomingConns" :key="peerId">
             <!-- Display name -->
             <td class="pl-1">{{ peer.conn.metadata.displayName }}</td>
             <!-- Status -->
             <td class="pl-1 border-l border-simElementBorder">
               <button class="">
-                {{ peer.conn.metadata.status}}
+                {{ peer.conn.metadata.status }}
                 <!-- <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 16 16"
@@ -82,7 +73,7 @@
               </button>
             </td>
             <td class="pl-1 border-l border-simElementBorder">
-{{ peer.conn.metadata.checkPoint}}
+              {{ peer.conn.metadata.checkPoint }}
             </td>
             <!-- Disconnect -->
             <td class="pl-1 border-l border-simElementBorder">
@@ -122,7 +113,7 @@
 
       <div class="border">
         <b :v-if="selfPeerId && selfPeerId.length"
-          >{{ selfPeerId ? `${baseUrl}/#sim?roomId=${selfPeerId}` : "" }}
+          >{{ selfPeerId ? `${baseUrl}/#sim?roomId=${selfPeerId}` : '' }}
         </b>
       </div>
 
@@ -144,375 +135,359 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from "vue";
-import wButton from "./wButton.vue";
-import * as PeerJS from "peerjs";
-import { DataConnection } from "peerjs";
+import { ref, onMounted, watch } from 'vue'
+import wButton from './wButton.vue'
+import * as PeerJS from 'peerjs'
+import { DataConnection } from 'peerjs'
 // import vueQr from "vue-qr/src/packages/vue-qr.vue";
 
 // Define the event emitter
 const emit = defineEmits<{
-  (event: "classroomConnection", newValue: boolean): void;
-  (event: "apiDataEvent", receivedData: PeerApiData ): void;
-  (event: "apiScriptEvent", receivedData: PeerScriptData ): void;
-  (event: "error", errorMessage: string): void;
-}>();
+  (event: 'classroomConnection', newValue: boolean): void
+  (event: 'apiDataEvent', receivedData: PeerApiData): void
+  (event: 'apiScriptEvent', receivedData: PeerScriptData): void
+  (event: 'error', errorMessage: string): void
+}>()
 
-const isDevelopment = import.meta.env.DEV;
-const baseUrl = window.location.origin;
-let selfPeer: PeerJS.Peer;
-let instructorConnection: PeerJS.DataConnection;
-let instructorConnectionOpen = false;
-const selfPeerId = ref<string>(isDevelopment ? "EK583838" : "");
-const isInstructor = ref(true);
-let displayname = ref<string>();
-let isOnline = ref(false);
+const isDevelopment = import.meta.env.DEV
+const baseUrl = window.location.origin
+let selfPeer: PeerJS.Peer
+let instructorConnection: PeerJS.DataConnection
+let instructorConnectionOpen = false
+const selfPeerId = ref<string>(isDevelopment ? 'EK583838' : '')
+const isInstructor = ref(true)
+let displayname = ref<string>()
+let isOnline = ref(false)
 type ConnectionMeta = {
-  displayName?: string;
-  status?: string;
-  checkPoint?: string,
-  [key: string]: any;
-};
+  displayName?: string
+  status?: string
+  checkPoint?: string
+  [key: string]: any
+}
 
 type ConnectionsList = {
   [peerId: string]: {
-    metadata: ConnectionMeta;
-    conn: PeerJS.DataConnection;
-  };
-};
-const incomingConns = ref<ConnectionsList>({});
-const routeHash = window.location.href;
-const isQrPopupOpen = ref(false);
-const followMode = ref(false);
+    metadata: ConnectionMeta
+    conn: PeerJS.DataConnection
+  }
+}
+const incomingConns = ref<ConnectionsList>({})
+const routeHash = window.location.href
+const isQrPopupOpen = ref(false)
+const followMode = ref(false)
 
 // Watch the booleanVariable and emit an event when it changes
 watch(isOnline, (newValue: boolean) => {
-  emit("classroomConnection", newValue);
-  followMode.value = true;
-});
+  emit('classroomConnection', newValue)
+  followMode.value = true
+})
 
 const copyToClipboard = () => {
-  const textToCopy = `${baseUrl}/#sim?roomId=${selfPeerId}`;
+  const textToCopy = `${baseUrl}/#sim?roomId=${selfPeerId}`
   navigator.clipboard
     .writeText(textToCopy)
     .then(() => {
-      alert("Copied to clipboard!");
+      alert('Copied to clipboard!')
     })
     .catch((err) => {
-      console.error("Failed to copy: ", err);
-    });
-};
+      console.error('Failed to copy: ', err)
+    })
+}
 
 onMounted(() => {
-
   // There is no hook in Vuejs to detect when a tab is closed.
   // When the user closes the tab, disconnect
-  window.addEventListener("beforeunload", disconnect);
+  window.addEventListener('beforeunload', disconnect)
 
-  const match = /roomId=(.*)/g.exec(routeHash);
+  const match = /roomId=(.*)/g.exec(routeHash)
   if (match && match[1]) {
-    selfPeerId.value = match[1];
+    selfPeerId.value = match[1]
     if (selfPeerId.value) {
-      connectToPeerJsServer(selfPeerId.value);
+      connectToPeerJsServer(selfPeerId.value)
     }
   }
-
-});
+})
 
 const setupConnection = (incomingConnection: DataConnection) => {
   // Connection request from remote peer
-  trace(`Received a connection data from ${incomingConnection.peer}`);
+  trace(`Received a connection data from ${incomingConnection.peer}`)
 
-   // Data from remote peer
-   incomingConnection.on("data", (data: unknown) => {
-    onData(data as PeerApiData, incomingConnection);
-  });
+  // Data from remote peer
+  incomingConnection.on('data', (data: unknown) => {
+    onData(data as PeerApiData, incomingConnection)
+  })
   // Connected to remote peer.
-  incomingConnection.on("open", () => {
-    trace(`OPEN Peer ${incomingConnection.peer}`);
+  incomingConnection.on('open', () => {
+    trace(`OPEN Peer ${incomingConnection.peer}`)
 
     // Add to incoming connection list (create new entry)
     incomingConns.value[incomingConnection.peer] = {
       metadata: incomingConnection.metadata || {},
       conn: incomingConnection,
-    };
-  });
-
-
+    }
+  })
 
   // Lost connection with remote peer
-  incomingConnection.on("close", () => onConnectionClose(incomingConnection.peer));
+  incomingConnection.on('close', () => onConnectionClose(incomingConnection.peer))
 
   // Error
-  incomingConnection.on("error", (e: PeerJS.PeerError<string>) => {
-    onError(`${e.type} - ${e.name} - ${e.message} - ${e.stack}`);
+  incomingConnection.on('error', (e: PeerJS.PeerError<string>) => {
+    onError(`${e.type} - ${e.name} - ${e.message} - ${e.stack}`)
     incomingConnection.close()
 
-    if (e.type === "unavailable-id") {
+    if (e.type === 'unavailable-id') {
       // if id is taken, it means someone gave us the class-id and we want to join the class.
       // A peer will be created with a random ID.
-      connectToPeerJsServer("");
+      connectToPeerJsServer('')
     }
-});
-};
+  })
+}
 
 const onDisconnected = (peer: PeerJS.Peer) => {
-  trace(`Peer disconnected ${peer.id}`);
-  delete incomingConns.value[peer.id];
-};
+  trace(`Peer disconnected ${peer.id}`)
+  delete incomingConns.value[peer.id]
+}
 
 const onPeerClose = (peerId: string) => {
-  trace(`Peer closed ${peerId}`);
-  isOnline.value = false;
-};
+  trace(`Peer closed ${peerId}`)
+  isOnline.value = false
+}
 
 const onConnectionClose = (peerId: string) => {
-
   // Lost connection to the sever
   if (peerId === selfPeerId.value) {
-    trace(`Connection to server closed ${peerId}`);
-    isOnline.value = false;
+    trace(`Connection to server closed ${peerId}`)
+    isOnline.value = false
   }
   // Lost connection to the instructor.
   else if (instructorConnection && peerId == instructorConnection.peer) {
-    trace(`Connection to the instructor closed ${peerId}. Reconnecting`);
-    instructorConnectionOpen = false;
-    instructorConnection.close();
+    trace(`Connection to the instructor closed ${peerId}. Reconnecting`)
+    instructorConnectionOpen = false
+    instructorConnection.close()
     // Reconnect reconnect
-    setTimeout(() => connectToPeer(peerId), 3000);
+    setTimeout(() => connectToPeer(peerId), 3000)
   }
   // Lost connection with a peer
   else {
     // delete from the list
-    delete incomingConns.value[peerId];
+    delete incomingConns.value[peerId]
   }
-};
+}
 
 const onData = (data: PeerData, conn: PeerJS.DataConnection) => {
-  trace(`Received data from ${conn.peer} ${JSON.stringify(data)}`);
+  trace(`Received data from ${conn.peer} ${JSON.stringify(data)}`)
   // trace(`Received ${JSON.stringify(data)} from ${conn.peer}`);
   if ('api' in data) {
-    emit("apiDataEvent", data as PeerApiData );
-  }
-  else if ('status' in data) {
+    emit('apiDataEvent', data as PeerApiData)
+  } else if ('status' in data) {
     // some logic to update the student status.
-    incomingConns.value[conn.peer].metadata.status = data.status;
-  }
-    else if ('checkpoint' in data) {
+    incomingConns.value[conn.peer].metadata.status = data.status
+  } else if ('checkpoint' in data) {
     // some logic to update the student status.
-    incomingConns.value[conn.peer].metadata.checkPoint = data.checkpoint;
-  }
-  else if ('script' in data) {
+    incomingConns.value[conn.peer].metadata.checkPoint = data.checkpoint
+  } else if ('script' in data) {
     emit('apiScriptEvent', data)
+  } else {
+    emit('error', `Unknown data: ${data}`)
   }
-  else {
-    emit("error", `Unknown data: ${data}`);
-  }
-};
+}
 
 const onError = (err: string) => {
-  trace(`Error: ${err}`);
-  emit("error", err);
-};
+  trace(`Error: ${err}`)
+  emit('error', err)
+}
 
 const connectToPeerJsServer = (targetPeerId: string) => {
-  trace(`Creating a new peer ${targetPeerId}`);
+  trace(`Creating a new peer ${targetPeerId}`)
   if (selfPeer?.id === targetPeerId) {
-    return;
+    return
   }
 
   // Auto genrate display name
-  displayname.value =
-    displayname.value || Math.random().toString(36).substring(2, 7).toUpperCase();
+  displayname.value = displayname.value || Math.random().toString(36).substring(2, 7).toUpperCase()
 
-  const hostConfig: PeerJS.PeerOptions = {};
+  const hostConfig: PeerJS.PeerOptions = {}
   if (isDevelopment) {
-    hostConfig.host = "127.0.0.1";
-    hostConfig.port = 9000;
-  }
-  else {
-    hostConfig.host = "raspberrypi.tail89a8a0.ts.net";
-    hostConfig.port = 443;
-    hostConfig.secure = true ;
-    hostConfig.path = "/peerjs";
+    hostConfig.host = '127.0.0.1'
+    hostConfig.port = 9000
+  } else {
+    hostConfig.host = 'raspberrypi.tail89a8a0.ts.net'
+    hostConfig.port = 443
+    hostConfig.secure = true
+    hostConfig.path = '/peerjs'
   }
 
   // Create a new peer
-  const peerJsServer = new PeerJS.Peer(targetPeerId, hostConfig);
+  const peerJsServer = new PeerJS.Peer(targetPeerId, hostConfig)
 
   // Peer receive a connection request from the server
-  peerJsServer.on("connection", (incomingConnection: PeerJS.DataConnection) => {
+  peerJsServer.on('connection', (incomingConnection: PeerJS.DataConnection) => {
     // outConnection = newConn;
-    setupConnection(incomingConnection);
-  });
+    setupConnection(incomingConnection)
+  })
 
   // Peer is disconnected from the server, but can recover
-  peerJsServer.on("disconnected", () => onDisconnected(peerJsServer));
+  peerJsServer.on('disconnected', () => onDisconnected(peerJsServer))
   // Peer (me) is destroyed and can't connect to the server
-  peerJsServer.on("close", () => onPeerClose(peerJsServer.id));
+  peerJsServer.on('close', () => onPeerClose(peerJsServer.id))
   // Wrapped in promise to allow async call waiting until connection is esablish
   // return new Promise((resolve, reject) => {
   // Connected to the peerServer
-  peerJsServer.on("open", (id: string) => {
-    trace("OPEN: My peer ID is: " + id);
-    selfPeer = peerJsServer;
-    isOnline.value = true;
-    isInstructor.value = selfPeerId.value == id;
+  peerJsServer.on('open', (id: string) => {
+    trace('OPEN: My peer ID is: ' + id)
+    selfPeer = peerJsServer
+    isOnline.value = true
+    isInstructor.value = selfPeerId.value == id
     // If the user entered a peer id, that is not same as this id, connecto that was unavilalbe, connect to it
     if (selfPeerId.value.length && id != selfPeerId.value) {
-      connectToPeer(selfPeerId.value);
+      connectToPeer(selfPeerId.value)
     }
-    selfPeerId.value = id;
-  });
+    selfPeerId.value = id
+  })
   // Error
-  peerJsServer.on("error", (e: PeerJS.PeerError<string>) => {
-    onError(`${e.type} - ${e.name} - ${e.message} - ${e.stack}`);
-    if (e.type === "unavailable-id") {
+  peerJsServer.on('error', (e: PeerJS.PeerError<string>) => {
+    onError(`${e.type} - ${e.name} - ${e.message} - ${e.stack}`)
+    if (e.type === 'unavailable-id') {
       // if id is taken, it means someone gave us the class-id and we want to join the class.
       // A peer will be created with a random ID.
-      connectToPeerJsServer("");
+      connectToPeerJsServer('')
     }
-  });
-};
+  })
+}
 
 const disconnect = () => {
-  trace("Disconnect");
+  trace('Disconnect')
   if (instructorConnection) {
-    instructorConnection.close();
+    instructorConnection.close()
   }
   if (incomingConns) {
     Object.keys(incomingConns.value).forEach((id) => {
-      const conn = incomingConns.value[id].conn;
-      conn.close();
-    });
+      const conn = incomingConns.value[id].conn
+      conn.close()
+    })
   }
 
   if (selfPeer) {
-    selfPeer.disconnect();
+    selfPeer.disconnect()
   }
 
-  isOnline.value = false;
-};
+  isOnline.value = false
+}
 
 const connectToPeer = async (remotePeerId: string) => {
-  trace(`Connecting to a peer ${remotePeerId}`);
+  trace(`Connecting to a peer ${remotePeerId}`)
   instructorConnection = selfPeer.connect(remotePeerId, {
     metadata: { displayName: displayname.value },
-  });
+  })
 
   // conn.on('disconnected', this.onDisconnected)
-  instructorConnection.on("error", (e) =>
+  instructorConnection.on('error', (e) =>
     onError(`${e.type} - ${e.name} - ${e.message} - ${e.stack}`),
-  );
-    instructorConnection.on("close", () => {
-        instructorConnectionOpen = false
-        onConnectionClose(instructorConnection.peer)
-        }
-    );
+  )
+  instructorConnection.on('close', () => {
+    instructorConnectionOpen = false
+    onConnectionClose(instructorConnection.peer)
+  })
 
-    instructorConnection.on("open", () => {
-    instructorConnectionOpen = true;
-    trace(`OPEN Connected to a peer ${remotePeerId}`);
+  instructorConnection.on('open', () => {
+    instructorConnectionOpen = true
+    trace(`OPEN Connected to a peer ${remotePeerId}`)
     // Data received from remote peer
-    instructorConnection.on("data", (data : unknown) => {
-      onData(data as PeerData, instructorConnection);
-    });
-  });
-};
+    instructorConnection.on('data', (data: unknown) => {
+      onData(data as PeerData, instructorConnection)
+    })
+  })
+}
 
 const send = (data: any) => {
   // Send data to all peers
   Object.entries(incomingConns.value).forEach(([, peer]) => {
-    trace(`Sending data to ${peer.conn.peer}:  ${JSON.stringify(data)}`);
-    peer.conn.send(data);
-  });
-};
+    trace(`Sending data to ${peer.conn.peer}:  ${JSON.stringify(data)}`)
+    peer.conn.send(data)
+  })
+}
 
 const sendApiCall = (apiCall: string) => {
   // Must be online and mirror mode activated
   if (!isOnline.value || !followMode.value) {
-    return;
+    return
   }
 
-  const data = { api: apiCall };
+  const data = { api: apiCall }
   // Send data to all peers
-  send(data);
-};
-
-
-const sendStatus = (status: string) => {
-    if (!instructorConnection) {
-        return;
-    }
-
-  // Must be online and mirror mode activated
-  if (!isOnline.value || !followMode.value || !instructorConnectionOpen) {
-    return;
-  }
-
-  const data = { status: status };
-  // Send data to all peers
-  // send(data);
-
-  instructorConnection.send(data)
-
-};
-
-
-const sendCheckPoint = (checkpoint: string) => {
-    if (!instructorConnection) {
-        return;
-    }
-
-  // Must be online and mirror mode activated
-  if (!isOnline.value || !followMode.value || !instructorConnectionOpen) {
-    return;
-  }
-
-  const data = { checkpoint: checkpoint };
-  // Send data to all peers
-  // send(data);
-
-  instructorConnection.send(data)
-
-};
-const sendScript = (title:string, content:string) => {
- const scriptData = {
-  title: title,
-  script: content };
-
-   send(scriptData);
+  send(data)
 }
 
+const sendStatus = (status: string) => {
+  if (!instructorConnection) {
+    return
+  }
+
+  // Must be online and mirror mode activated
+  if (!isOnline.value || !followMode.value || !instructorConnectionOpen) {
+    return
+  }
+
+  const data = { status: status }
+  // Send data to all peers
+  // send(data);
+
+  instructorConnection.send(data)
+}
+
+const sendCheckPoint = (checkpoint: string) => {
+  if (!instructorConnection) {
+    return
+  }
+
+  // Must be online and mirror mode activated
+  if (!isOnline.value || !followMode.value || !instructorConnectionOpen) {
+    return
+  }
+
+  const data = { checkpoint: checkpoint }
+  // Send data to all peers
+  // send(data);
+
+  instructorConnection.send(data)
+}
+const sendScript = (title: string, content: string) => {
+  const scriptData = {
+    title: title,
+    script: content,
+  }
+
+  send(scriptData)
+}
 
 const reset = () => {
-  trace("Resetting classroom");
-  disconnect();
+  trace('Resetting classroom')
+  disconnect()
   if (selfPeer) {
-    selfPeer.destroy();
-    selfPeer = undefined as any;
+    selfPeer.destroy()
+    selfPeer = undefined as any
   }
-  incomingConns.value = {};
-  instructorConnection = undefined as any;
-};
+  incomingConns.value = {}
+  instructorConnection = undefined as any
+}
 
-defineExpose({ sendApiCall, sendStatus, sendScript, sendCheckPoint, reset });
+defineExpose({ sendApiCall, sendStatus, sendScript, sendCheckPoint, reset })
 
 const trace = (text: string) => {
   if (isDevelopment === false) {
-    return;
+    return
   }
 
-  if (text[text.length - 1] === "\n") {
-    text = text.substring(0, text.length - 1);
+  if (text[text.length - 1] === '\n') {
+    text = text.substring(0, text.length - 1)
   }
   if (window.performance) {
-    const now = (window.performance.now() / 1000).toFixed(3);
-    console.log(now + ": " + text);
+    const now = (window.performance.now() / 1000).toFixed(3)
+    console.log(now + ': ' + text)
   } else {
-    console.log(text);
+    console.log(text)
   }
-};
+}
 
 // peer.on('open')         // Connected to peerServer
 // peer.on('connection')   // Recevied a connection request from peerServer

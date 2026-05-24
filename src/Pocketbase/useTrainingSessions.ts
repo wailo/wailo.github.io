@@ -1,4 +1,4 @@
-import {pb} from '../Pocketbase/pocketbase.ts'
+import { pb } from '../Pocketbase/pocketbase.ts'
 
 type Metric = {
   timestamp: number
@@ -8,12 +8,11 @@ type Metric = {
 }
 
 type SessionInput = {
-
   scenario: string
   start_time: Date
   end_time: Date
-  model_version: string,
-  ui_version: string,
+  model_version: string
+  ui_version: string
   raw_metrics: Metric[]
   score?: number
 }
@@ -21,15 +20,15 @@ type SessionInput = {
 export function useTrainingSessions() {
   const submitSession = async (data: SessionInput) => {
     try {
-      let recordServices = await pb.collection('studentRecords');
+      let recordServices = await pb.collection('studentRecords')
       const result = await recordServices.create({
         ...data,
         student: pb.authStore.record?.id,
-      });
-      return result;
+      })
+      return result
     } catch (error) {
-      console.log('Failed to submit session:', error);
-      throw error;
+      console.log('Failed to submit session:', error)
+      throw error
     }
   }
 

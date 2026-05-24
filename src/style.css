@@ -4,17 +4,17 @@
 
 /* Dark mode colors (default) */
 :root {
-  --color-primary: 25 25 25;              /* #191919 */
-  --color-secondary: 214 214 214;         /* #d6d6d6 */
-  --color-panelBorder: 44 44 44;          /* #2c2c2c */
-  --color-panelHeaderBackground: 25 25 25;    /* #191919 */
+  --color-primary: 25 25 25; /* #191919 */
+  --color-secondary: 214 214 214; /* #d6d6d6 */
+  --color-panelBorder: 44 44 44; /* #2c2c2c */
+  --color-panelHeaderBackground: 25 25 25; /* #191919 */
   --color-panelStatusBackground: 223 228 226; /* #dfe4e2 */
-  --color-panelContentBackground: 0 0 0;      /* #000000 */
+  --color-panelContentBackground: 0 0 0; /* #000000 */
   --color-panelActive: 185 57 27;
-  --color-simElementBorder: 89 89 89;     /* #595959 */
-  --color-simInputBackground: 25 25 25;   /* #191919 */
-  --color-simBackground: 0 0 0;           /* #000000 */
-  --color-simActiveButton: 27 185 94;     /* #1bb95e */
+  --color-simElementBorder: 89 89 89; /* #595959 */
+  --color-simInputBackground: 25 25 25; /* #191919 */
+  --color-simBackground: 0 0 0; /* #000000 */
+  --color-simActiveButton: 27 185 94; /* #1bb95e */
 }
 
 /* light mode colors */
@@ -91,7 +91,9 @@ a:hover {
 }
 
 /* Ensure html, body, and #app take full width and height */
-html, body, #app {
+html,
+body,
+#app {
   width: 100%;
   height: 100%;
 }

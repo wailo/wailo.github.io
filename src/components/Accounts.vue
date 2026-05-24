@@ -1,77 +1,74 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
-import { pb } from "../Pocketbase/pocketbase";
-import  { type RecordModel } from "pocketbase";
+import { onMounted, ref } from 'vue'
+import { pb } from '../Pocketbase/pocketbase'
+import { type RecordModel } from 'pocketbase'
 
 // Define the event emitter
 const emit = defineEmits<{
-  (event: "onLogin", url: string, authToken: string): void;
-  (event: "onLogout"): void;
-}>();
+  (event: 'onLogin', url: string, authToken: string): void
+  (event: 'onLogout'): void
+}>()
 
-const email = ref("instructor@flightschool.ai");
-const password = ref("1234567890");
-const loginFailed = ref(false);
-pb.authStore.clear(); // Clear any previous authentication state
-const isLoggedIn = ref(pb.authStore.isValid); // Check if the user is logged in
+const email = ref('instructor@flightschool.ai')
+const password = ref('1234567890')
+const loginFailed = ref(false)
+pb.authStore.clear() // Clear any previous authentication state
+const isLoggedIn = ref(pb.authStore.isValid) // Check if the user is logged in
 
-const userInfo = ref<RecordModel | null>(pb.authStore.record); // or `pb.authStore.record`
-const authError = ref<unknown>(null);
-let token = "";
+const userInfo = ref<RecordModel | null>(pb.authStore.record) // or `pb.authStore.record`
+const authError = ref<unknown>(null)
+let token = ''
 
 const login = async (email: string, password: string) => {
   try {
-    const authResult = await pb
-      .collection("users")
-      .authWithPassword(email, password);
-    userInfo.value = authResult.record;
-    token = authResult.token;
+    const authResult = await pb.collection('users').authWithPassword(email, password)
+    userInfo.value = authResult.record
+    token = authResult.token
     // const payload = getTokenPayload(token);
-    emit("onLogin", pb.baseURL, token); // Emit the login event with the JWT token
-//     {
-//     "collectionId": "_pb_users_auth_",
-//     "exp": 1752856419,
-//     "id": "hemygubhpj0n31d",
-//     "refreshable": true,
-//     "type": "auth"
-// }
-    isLoggedIn.value = true;
-    authError.value = null;
+    emit('onLogin', pb.baseURL, token) // Emit the login event with the JWT token
+    //     {
+    //     "collectionId": "_pb_users_auth_",
+    //     "exp": 1752856419,
+    //     "id": "hemygubhpj0n31d",
+    //     "refreshable": true,
+    //     "type": "auth"
+    // }
+    isLoggedIn.value = true
+    authError.value = null
   } catch (error) {
-    userInfo.value = null;
-    authError.value = error;
-    isLoggedIn.value = false;
-    loginFailed.value = true;
-    console.error("Authentication failed:", error);
+    userInfo.value = null
+    authError.value = error
+    isLoggedIn.value = false
+    loginFailed.value = true
+    console.error('Authentication failed:', error)
   }
-
-};
+}
 
 const logout = () => {
-  pb.authStore.clear();
-  userInfo.value = null;
-  isLoggedIn.value = false;
-  loginFailed.value = false;
-  emit("onLogout"); // Emit logout event to clear any previous state
-};
+  pb.authStore.clear()
+  userInfo.value = null
+  isLoggedIn.value = false
+  loginFailed.value = false
+  emit('onLogout') // Emit logout event to clear any previous state
+}
 
 async function toggleAuth() {
   if (!isLoggedIn.value) {
-    await login(email.value, password.value);
+    await login(email.value, password.value)
   } else {
-    logout();
+    logout()
   }
 }
 
 // login automatically on component mount if the user name and password are set
-  onMounted(() => {
+onMounted(() => {
   if (email.value && password.value) {
-  login(email.value, password.value).catch((error) => {
-    console.error("Auto-login failed:", error);
-    loginFailed.value = true;
-  });
+    login(email.value, password.value).catch((error) => {
+      console.error('Auto-login failed:', error)
+      loginFailed.value = true
+    })
   }
-  });
+})
 </script>
 
 <template>
@@ -109,7 +106,7 @@ async function toggleAuth() {
             ? `Login Failed: ${authError}`
             : isLoggedIn
               ? `Logout ${userInfo?.name} | ${userInfo?.role}`
-              : "Login"
+              : 'Login'
         }}
       </button>
     </div>

@@ -10,48 +10,48 @@ import {
   Type,
   SyntaxKind,
   JSDocTag,
-} from "ts-morph";
+} from 'ts-morph'
 
-import fs from "fs";
-import path from "path";
+import fs from 'fs'
+import path from 'path'
 
 /*
 CONFIG
 */
 
-const ENTRY_FILE = "src/core.ts";
+const ENTRY_FILE = 'src/core.ts'
 // const META_FILE = "src/wasm/generated/flightsimulator_exec_meta.ts";
-const OUTPUT_FILE = "src/wasm/generated/Modelfile";
-const DTS_OUTPUT_FILE = "src/wasm/generated/editorTypes.txt";
-const MODEL_NAME = "qwen3.5";
+const OUTPUT_FILE = 'src/wasm/generated/Modelfile'
+const DTS_OUTPUT_FILE = 'src/wasm/generated/editorTypes.txt'
+const MODEL_NAME = 'qwen3.5'
 
 /*
 PROJECT
 */
 
 const project = new Project({
-  tsConfigFilePath: "tsconfig.app.json",
-});
+  tsConfigFilePath: 'tsconfig.app.json',
+})
 
 /*
 STATE
 */
 
-const visited = new Set<string>();
-const collected: Node[] = [];
+const visited = new Set<string>()
+const collected: Node[] = []
 
 /*
 UTILS
 */
 
 function isPromiseType(type: Type) {
-  const text = type.getText();
-  return text.startsWith("Promise<");
+  const text = type.getText()
+  return text.startsWith('Promise<')
 }
 
 function isLocalFile(source?: SourceFile) {
-  if (!source) return false;
-  return !source.getFilePath().includes("node_modules");
+  if (!source) return false
+  return !source.getFilePath().includes('node_modules')
 }
 
 function getNodeName(node: Node) {
@@ -62,15 +62,14 @@ function getNodeName(node: Node) {
     Node.isFunctionDeclaration(node) ||
     Node.isVariableDeclaration(node)
   ) {
-    return node.getName();
-  }
-  else if (Node.isTypeLiteral(node)) {
+    return node.getName()
+  } else if (Node.isTypeLiteral(node)) {
     const member = node.getMembers()[0]
-    const member_type =  member.getType().getApparentType();
+    const member_type = member.getType().getApparentType()
     const symbol = member_type.getAliasSymbol() || member_type.getSymbol()
-    return symbol?.getName();
+    return symbol?.getName()
   }
-  return undefined;
+  return undefined
 }
 
 /*
@@ -79,11 +78,11 @@ TYPE NORMALIZATION
 
 function normalizeType(typeText: string) {
   return typeText
-    .replace(/import\([^)]+\)\./g, "")
-    .replace(/Array<(.*?)>/g, "$1[]")
-    .replace(/Promise<(.*?)>/g, "$1")
-    .replace(/"/g, "")
-    .trim();
+    .replace(/import\([^)]+\)\./g, '')
+    .replace(/Array<(.*?)>/g, '$1[]')
+    .replace(/Promise<(.*?)>/g, '$1')
+    .replace(/"/g, '')
+    .trim()
 }
 
 /*
@@ -91,19 +90,18 @@ DEPENDENCY RESOLUTION
 */
 
 function resolveDependencies(node: Node) {
-  const name = getNodeName(node);
-  if (!name) return;
-  if (visited.has(name)) return;
+  const name = getNodeName(node)
+  if (!name) return
+  if (visited.has(name)) return
 
-  visited.add(name);
-  collected.push(node);
+  visited.add(name)
+  collected.push(node)
 
   // ✅ NEW: handle variable type dependencies
   // if (Node.isVariableDeclaration(node)) {
-    const type = node.getType();
-    resolveTypeDependencies(type);
+  const type = node.getType()
+  resolveTypeDependencies(type)
   // }
-
 }
 
 /*
@@ -113,30 +111,30 @@ EXPAND TYPES FROM TYPE OBJECT
 function resolveTypeDependencies(type: Type) {
   // unions
   if (type.isUnion()) {
-    type.getUnionTypes().forEach(resolveTypeDependencies);
-    return;
+    type.getUnionTypes().forEach(resolveTypeDependencies)
+    return
   }
 
   // intersections
   if (type.isIntersection()) {
-    type.getIntersectionTypes().forEach(resolveTypeDependencies);
-    return;
+    type.getIntersectionTypes().forEach(resolveTypeDependencies)
+    return
   }
 
   // generics
-  type.getTypeArguments().forEach(resolveTypeDependencies);
+  type.getTypeArguments().forEach(resolveTypeDependencies)
 
-  const symbol = type.getAliasSymbol() ?? type.getSymbol();
-  if (!symbol) return;
+  const symbol = type.getAliasSymbol() ?? type.getSymbol()
+  if (!symbol) return
 
-  const decls = symbol.getDeclarations();
-  if (!decls?.length) return;
+  const decls = symbol.getDeclarations()
+  if (!decls?.length) return
 
   for (const decl of decls) {
-    const source = decl.getSourceFile();
-    if (!isLocalFile(source)) continue;
+    const source = decl.getSourceFile()
+    if (!isLocalFile(source)) continue
 
-    resolveDependencies(decl);
+    resolveDependencies(decl)
   }
 }
 
@@ -144,206 +142,205 @@ function resolveTypeDependencies(type: Type) {
 GRAMMAR BUILDERS
 */
 
-function interfaceToGrammar(node: InterfaceDeclaration, metadata: Record<string, Record<string, string>>) {
-  const interfaceName = node.getName();
+function interfaceToGrammar(
+  node: InterfaceDeclaration,
+  metadata: Record<string, Record<string, string>>,
+) {
+  const interfaceName = node.getName()
   const properties = node.getProperties().map((p) => {
-    const field = p.getName();
-    const type = p.getType();
-    const metaitem = metadata[interfaceName]?.[field];
+    const field = p.getName()
+    const type = p.getType()
+    const metaitem = metadata[interfaceName]?.[field]
     const metajson =
-      metaitem !== undefined
-        ? JSON.stringify(new Function(`return ${metaitem}`)())
-        : null;
-    resolveTypeDependencies(type);
-    const typeText = normalizeType(type.getText());
-    let output_text = metajson ? `// ${metajson}\n` : "";
-    output_text += `${field}: ${typeText}`;
-    return output_text;
-  });
+      metaitem !== undefined ? JSON.stringify(new Function(`return ${metaitem}`)()) : null
+    resolveTypeDependencies(type)
+    const typeText = normalizeType(type.getText())
+    let output_text = metajson ? `// ${metajson}\n` : ''
+    output_text += `${field}: ${typeText}`
+    return output_text
+  })
 
   const methods = node.getMethods().map((m) => {
-    const methodName = m.getName();
-    const metaitem = metadata[interfaceName]?.[methodName.replace("set_", "")];
+    const methodName = m.getName()
+    const metaitem = metadata[interfaceName]?.[methodName.replace('set_', '')]
     const metajson =
-      metaitem !== undefined
-        ? JSON.stringify(new Function(`return ${metaitem}`)())
-        : "";
+      metaitem !== undefined ? JSON.stringify(new Function(`return ${metaitem}`)()) : ''
     const params = m.getParameters().map((p) => {
-      const pname = p.getName();
-      const type = p.getType();
-      resolveTypeDependencies(type);
-      const typeText = normalizeType(type.getText());
-      let output_text = `${pname}: ${typeText}`;
-      return output_text;
-    });
+      const pname = p.getName()
+      const type = p.getType()
+      resolveTypeDependencies(type)
+      const typeText = normalizeType(type.getText())
+      let output_text = `${pname}: ${typeText}`
+      return output_text
+    })
 
-    const returnTypeObj = m.getReturnType();
-    resolveTypeDependencies(returnTypeObj);
-    const asyncFlag = isPromiseType(returnTypeObj);
-    const returnType = normalizeType(returnTypeObj.getText());
-    const prefix = asyncFlag ? "async " : "";
-    let output_text = metajson ? `// ${metajson}\n` : "";
-    output_text += `${prefix}${methodName}(${params.join(", ")}) -> ${returnType}`;
-    return output_text;
-  });
+    const returnTypeObj = m.getReturnType()
+    resolveTypeDependencies(returnTypeObj)
+    const asyncFlag = isPromiseType(returnTypeObj)
+    const returnType = normalizeType(returnTypeObj.getText())
+    const prefix = asyncFlag ? 'async ' : ''
+    let output_text = metajson ? `// ${metajson}\n` : ''
+    output_text += `${prefix}${methodName}(${params.join(', ')}) -> ${returnType}`
+    return output_text
+  })
 
-  const lines = [...properties, ...methods];
-  return `${interfaceName} {\n${lines.join("\n")}\n}`;
+  const lines = [...properties, ...methods]
+  return `${interfaceName} {\n${lines.join('\n')}\n}`
 }
 
 function variableToGrammar(node: VariableDeclaration) {
-  const name = node.getName();
+  const name = node.getName()
 
-  const type = node.getType();
-  resolveTypeDependencies(type);
-  const typeText = normalizeType(type.getText());
+  const type = node.getType()
+  resolveTypeDependencies(type)
+  const typeText = normalizeType(type.getText())
 
-  const stmt = node.getVariableStatement();
+  const stmt = node.getVariableStatement()
 
-  const isConst = stmt?.getDeclarationKind() === "const";
+  const isConst = stmt?.getDeclarationKind() === 'const'
 
-  const isDeclare = stmt?.hasModifier(SyntaxKind.DeclareKeyword);
-  const isExported = stmt?.hasModifier(SyntaxKind.ExportKeyword);
+  const isDeclare = stmt?.hasModifier(SyntaxKind.DeclareKeyword)
+  const isExported = stmt?.hasModifier(SyntaxKind.ExportKeyword)
 
-  const kind = isConst ? "const" : "let";
+  const kind = isConst ? 'const' : 'let'
 
-  const declarePrefix = isDeclare ? "declare " : "";
-  const exportPrefix = isExported ? "export " : "";
+  const declarePrefix = isDeclare ? 'declare ' : ''
+  const exportPrefix = isExported ? 'export ' : ''
 
-  return `${exportPrefix}${declarePrefix}${kind} ${name}: ${typeText}`;
+  return `${exportPrefix}${declarePrefix}${kind} ${name}: ${typeText}`
 }
 
 function enumToGrammar(node: EnumDeclaration) {
-  const name = node.getName();
+  const name = node.getName()
 
   const values = node.getMembers().map((m) => {
-    const init = m.getInitializer()?.getText();
-    if (init) return init;
-    return `"${m.getName()}"`;
-  });
+    const init = m.getInitializer()?.getText()
+    if (init) return init
+    return `"${m.getName()}"`
+  })
 
-  return `${name} = ${values.join(" | ")}`;
+  return `${name} = ${values.join(' | ')}`
 }
 
 function aliasToGrammar(node: TypeAliasDeclaration) {
-  const name = node.getName();
-  const typeNode = node.getTypeNode();
-  if (!typeNode) return `${name} = unknown`;
-  const type = node.getType();
+  const name = node.getName()
+  const typeNode = node.getTypeNode()
+  if (!typeNode) return `${name} = unknown`
+  const type = node.getType()
 
   if (type.isIntersection()) {
-    return intersectionToGrammar(name, type);
+    return intersectionToGrammar(name, type)
   }
 
-  resolveTypeDependencies(type);
-  const typeText = normalizeType(typeNode.getText());
-  return `${name} = ${typeText}`;
+  resolveTypeDependencies(type)
+  const typeText = normalizeType(typeNode.getText())
+  return `${name} = ${typeText}`
 }
 
 function intersectionToGrammar(name: string, type: Type) {
-  const parts = type.getIntersectionTypes();
+  const parts = type.getIntersectionTypes()
 
-  const fields: string[] = [];
-  const spreads: string[] = [];
+  const fields: string[] = []
+  const spreads: string[] = []
 
   for (const part of parts) {
-    resolveTypeDependencies(part);
+    resolveTypeDependencies(part)
 
     // 🟢 Case 1: inline object type
-    const props = part.getProperties();
+    const props = part.getProperties()
 
     if (props.length > 0) {
       props.forEach((prop) => {
-        const propType = prop.getTypeAtLocation(prop.getDeclarations()[0]);
-        resolveTypeDependencies(propType);
+        const propType = prop.getTypeAtLocation(prop.getDeclarations()[0])
+        resolveTypeDependencies(propType)
 
-        const typeText = normalizeType(propType.getText());
-        fields.push(`${prop.getName()}: ${typeText}`);
-      });
+        const typeText = normalizeType(propType.getText())
+        fields.push(`${prop.getName()}: ${typeText}`)
+      })
 
-      continue;
+      continue
     }
 
     // 🔵 Case 2: named type (e.g., MainModule)
-    const symbol = part.getAliasSymbol() ?? part.getSymbol();
+    const symbol = part.getAliasSymbol() ?? part.getSymbol()
     if (symbol) {
-      const name = symbol.getName();
-      spreads.push(`...${name}`);
+      const name = symbol.getName()
+      spreads.push(`...${name}`)
     }
   }
 
-  const lines = [...spreads, ...fields];
+  const lines = [...spreads, ...fields]
 
-  return `${name} {\n${lines.join("\n")}\n}`;
+  return `${name} {\n${lines.join('\n')}\n}`
 }
 
 function functionToGrammar(node: FunctionDeclaration) {
-  const name = node.getName();
-  if (!name) return "";
+  const name = node.getName()
+  if (!name) return ''
 
-  const jsdoc = getJsDoc(node);
+  const jsdoc = getJsDoc(node)
 
-  const paramDocs: Record<string, any> = {};
+  const paramDocs: Record<string, any> = {}
 
   if (jsdoc?.tags?.param) {
     jsdoc.tags.param.forEach((p: string) => {
-      const parsed = parseParamTag(p);
-      if (parsed) paramDocs[parsed.name] = parsed;
-    });
+      const parsed = parseParamTag(p)
+      if (parsed) paramDocs[parsed.name] = parsed
+    })
   }
 
   const params = node.getParameters().map((p) => {
-    const pname = p.getName();
-    const type = p.getType();
-    resolveTypeDependencies(type);
+    const pname = p.getName()
+    const type = p.getType()
+    resolveTypeDependencies(type)
 
-    const typeText = normalizeType(type.getText());
+    const typeText = normalizeType(type.getText())
 
-    const isOptional = p.isOptional();
-    const defaultValue = p.getInitializer()?.getText();
+    const isOptional = p.isOptional()
+    const defaultValue = p.getInitializer()?.getText()
 
-    const meta = paramDocs[pname];
+    const meta = paramDocs[pname]
 
-    let line = `${pname}${isOptional ? "?" : ""}: ${typeText}`;
+    let line = `${pname}${isOptional ? '?' : ''}: ${typeText}`
 
     if (defaultValue) {
-      line += ` = ${defaultValue}`;
+      line += ` = ${defaultValue}`
     }
 
     if (meta?.unit) {
-      line = `// unit: ${meta.unit}\n${line}`;
+      line = `// unit: ${meta.unit}\n${line}`
     }
 
     if (meta?.description) {
-      line = `// ${meta.description}\n${line}`;
+      line = `// ${meta.description}\n${line}`
     }
 
-    return line;
-  });
+    return line
+  })
 
-  const returnTypeObj = node.getReturnType();
-  resolveTypeDependencies(returnTypeObj);
+  const returnTypeObj = node.getReturnType()
+  resolveTypeDependencies(returnTypeObj)
 
-  const asyncFlag = isPromiseType(returnTypeObj);
-  const returnType = normalizeType(returnTypeObj.getText());
+  const asyncFlag = isPromiseType(returnTypeObj)
+  const returnType = normalizeType(returnTypeObj.getText())
 
-  const prefix = asyncFlag ? "async fn" : "fn";
+  const prefix = asyncFlag ? 'async fn' : 'fn'
 
-  let header = "";
+  let header = ''
 
   if (jsdoc?.description) {
-    header += `// ${jsdoc.description}\n`;
+    header += `// ${jsdoc.description}\n`
   }
 
   if (jsdoc?.tags?.returns?.[0]) {
-    header += `// @returns ${jsdoc.tags.returns[0]}\n`;
+    header += `// @returns ${jsdoc.tags.returns[0]}\n`
   }
 
   if (jsdoc?.tags?.throws?.[0]) {
-    header += `// @throws ${jsdoc.tags.throws[0]}\n`;
+    header += `// @throws ${jsdoc.tags.throws[0]}\n`
   }
 
-  return `${header}${prefix} ${name}(\n${params.join(",\n")}\n) -> ${returnType}`;
+  return `${header}${prefix} ${name}(\n${params.join(',\n')}\n) -> ${returnType}`
 }
 
 /*
@@ -351,13 +348,13 @@ GRAMMAR ROUTER
 */
 
 function toGrammar(node: Node, metadata: {}) {
-  if (Node.isInterfaceDeclaration(node)) return interfaceToGrammar(node, metadata);
-  if (Node.isEnumDeclaration(node)) return enumToGrammar(node);
-  if (Node.isTypeAliasDeclaration(node)) return aliasToGrammar(node);
-  if (Node.isFunctionDeclaration(node)) return functionToGrammar(node);
-  if (Node.isVariableDeclaration(node)) return variableToGrammar(node);
+  if (Node.isInterfaceDeclaration(node)) return interfaceToGrammar(node, metadata)
+  if (Node.isEnumDeclaration(node)) return enumToGrammar(node)
+  if (Node.isTypeAliasDeclaration(node)) return aliasToGrammar(node)
+  if (Node.isFunctionDeclaration(node)) return functionToGrammar(node)
+  if (Node.isVariableDeclaration(node)) return variableToGrammar(node)
 
-  return "";
+  return ''
 }
 
 /*
@@ -365,75 +362,75 @@ CONTRACT METADATA
 */
 // ignore typescript unused error
 // @ts-ignore
-function extractMetadata(entryFile: string): { c172: Record<string, string>; b747: Record<string, string>; graphics: Record<string, string> } {
-  const source = project.getSourceFileOrThrow(entryFile);
-  let c172_meta = {};
-  let b747_meta = {};
-  let graphics_meta = {};
+function extractMetadata(entryFile: string): {
+  c172: Record<string, string>
+  b747: Record<string, string>
+  graphics: Record<string, string>
+} {
+  const source = project.getSourceFileOrThrow(entryFile)
+  let c172_meta = {}
+  let b747_meta = {}
+  let graphics_meta = {}
   source.getFunctions().forEach((func) => {
-    let functionName = func.getName();
-    let body = func.getBody();
-    const metaData: Record<string, string> = {};
+    let functionName = func.getName()
+    let body = func.getBody()
+    const metaData: Record<string, string> = {}
     body?.forEachDescendant((node) => {
       if (node.getKind() === SyntaxKind.ReturnStatement) {
-        const returnStmt = node.asKindOrThrow(SyntaxKind.ReturnStatement);
-        const expr = returnStmt.getExpression();
+        const returnStmt = node.asKindOrThrow(SyntaxKind.ReturnStatement)
+        const expr = returnStmt.getExpression()
 
-        if (!expr) return;
+        if (!expr) return
 
         if (expr.getKind() === SyntaxKind.ObjectLiteralExpression) {
-          const obj = expr.asKindOrThrow(SyntaxKind.ObjectLiteralExpression);
+          const obj = expr.asKindOrThrow(SyntaxKind.ObjectLiteralExpression)
 
           obj.getProperties().forEach((prop) => {
             if (prop.getKind() === SyntaxKind.PropertyAssignment) {
-              const assignment = prop.asKindOrThrow(
-                SyntaxKind.PropertyAssignment,
-              );
+              const assignment = prop.asKindOrThrow(SyntaxKind.PropertyAssignment)
 
-              const key = assignment.getName();
-              const value = assignment.getInitializer();
+              const key = assignment.getName()
+              const value = assignment.getInitializer()
               // remove unwanted properties
-if (Node.isObjectLiteralExpression(value)) {
-              value.getProperties().forEach((prop) => {
-                if (prop.isKind(SyntaxKind.PropertyAssignment)) {
-                  const name = prop.getName().toLowerCase();
+              if (Node.isObjectLiteralExpression(value)) {
+                value.getProperties().forEach((prop) => {
+                  if (prop.isKind(SyntaxKind.PropertyAssignment)) {
+                    const name = prop.getName().toLowerCase()
 
-                  // Remove these entries..
-                  if (
-                    ["id", "inputvalue", "setterfunc", "type"].includes(name)
-                  ) {
-                    prop.remove();
+                    // Remove these entries..
+                    if (['id', 'inputvalue', 'setterfunc', 'type'].includes(name)) {
+                      prop.remove()
+                    }
                   }
+                })
+                const valueText = value?.getText()
+                if (!key || !value) {
+                  return
                 }
-              });
-              const valueText = value?.getText();
-              if (!key || !value) {
-                return;
-              }
 
-              metaData[key] = valueText;
+                metaData[key] = valueText
+              }
             }
-            }
-          });
+          })
         }
       }
-    });
-    const function_name = functionName?.toLowerCase();
-    if (function_name == "get_parameters_b747") {
-      b747_meta = metaData;
-    } else if (function_name == "get_parameters_c172") {
-      c172_meta = metaData;
-    } else if (function_name == "get_parameters_graphics") {
-      graphics_meta = metaData;
+    })
+    const function_name = functionName?.toLowerCase()
+    if (function_name == 'get_parameters_b747') {
+      b747_meta = metaData
+    } else if (function_name == 'get_parameters_c172') {
+      c172_meta = metaData
+    } else if (function_name == 'get_parameters_graphics') {
+      graphics_meta = metaData
     }
-  });
+  })
 
   if (!c172_meta || !b747_meta || !graphics_meta) {
     // Throw an error
-    throw "Missing metadata for C172 or B747 or graphics";
+    throw 'Missing metadata for C172 or B747 or graphics'
   }
 
-  return { c172: c172_meta, b747: b747_meta, graphics: graphics_meta };
+  return { c172: c172_meta, b747: b747_meta, graphics: graphics_meta }
 }
 
 /*
@@ -441,84 +438,84 @@ CONTRACT EXTRACTION
 */
 
 function extractContract(entryFile: string, metadata: {}) {
-  const source = project.getSourceFileOrThrow(entryFile);
+  const source = project.getSourceFileOrThrow(entryFile)
 
   source.getExportedDeclarations().forEach((decls) => {
-    decls.forEach((decl) => resolveDependencies(decl));
-  });
+    decls.forEach((decl) => resolveDependencies(decl))
+  })
 
   const sorted = collected.sort((a, b) =>
-    (getNodeName(a) ?? "").localeCompare(getNodeName(b) ?? ""),
-  );
+    (getNodeName(a) ?? '').localeCompare(getNodeName(b) ?? ''),
+  )
 
-  return sorted.map((node) => toGrammar(node, metadata)).join("\n\n");
+  return sorted.map((node) => toGrammar(node, metadata)).join('\n\n')
 }
 
 function extractContractTypescript(entryFile: string) {
-  const source = project.getSourceFileOrThrow(entryFile);
+  const source = project.getSourceFileOrThrow(entryFile)
 
   source.getExportedDeclarations().forEach((decls) => {
-    decls.forEach((decl) => resolveDependencies(decl));
-  });
+    decls.forEach((decl) => resolveDependencies(decl))
+  })
 
   const sorted = collected.sort((a, b) =>
-    (getNodeName(a) ?? "").localeCompare(getNodeName(b) ?? ""),
-  );
+    (getNodeName(a) ?? '').localeCompare(getNodeName(b) ?? ''),
+  )
 
-  return sorted.map((node) => {
-    if (Node.isFunctionDeclaration(node)) {
-  node.removeBody();
-  return node.getText();
+  return sorted
+    .map((node) => {
+      if (Node.isFunctionDeclaration(node)) {
+        node.removeBody()
+        return node.getText()
+      }
+      return node.getFullText()
+    })
+    .join('\n\n')
 }
-    return node.getFullText()
-  }).join("\n\n");
-}
-
 
 function getJsDoc(node: Node) {
-  if (!Node.isFunctionDeclaration(node)) return null;
-  const docs = node.getJsDocs?.() ?? [];
-  if (!docs.length) return null;
+  if (!Node.isFunctionDeclaration(node)) return null
+  const docs = node.getJsDocs?.() ?? []
+  if (!docs.length) return null
 
-  const doc = docs[0];
+  const doc = docs[0]
 
-  const description = doc.getDescription().trim();
+  const description = doc.getDescription().trim()
 
-  const tags: Record<string, any[]> = {};
+  const tags: Record<string, any[]> = {}
 
   doc.getTags().forEach((tag: JSDocTag) => {
-    const tagName = tag.getTagName();
-    const text = tag.getComment() ?? "";
+    const tagName = tag.getTagName()
+    const text = tag.getComment() ?? ''
 
-    if (!tags[tagName]) tags[tagName] = [];
-    tags[tagName].push(text);
-  });
+    if (!tags[tagName]) tags[tagName] = []
+    tags[tagName].push(text)
+  })
 
-  return { description, tags };
+  return { description, tags }
 }
-
 
 function parseParamTag(text: string) {
   // Handles: "{type} name - description"
-  const match = text.match(/\{(.+?)\}\s+(\w+)\s*-?\s*(.*)/);
+  const match = text.match(/\{(.+?)\}\s+(\w+)\s*-?\s*(.*)/)
 
-  if (!match) return null;
+  if (!match) return null
 
-  const [, type, name, description] = match;
+  const [, type, name, description] = match
 
-  let unit: string | null = null;
+  let unit: string | null = null
 
   // naive unit extraction (you can improve later)
-  if (/feet|ft/i.test(description)) unit = "feet";
-  if (/knots|kt/i.test(description)) unit = "knots";
-  if (/degrees/i.test(description)) unit = "degrees";
+  if (/feet|ft/i.test(description)) unit = 'feet'
+  if (/knots|kt/i.test(description)) unit = 'knots'
+  if (/degrees/i.test(description)) unit = 'degrees'
 
   return {
     name,
     type,
     description,
     unit,
-  };
+  }
 }
 
 /*
@@ -527,10 +524,10 @@ DTS GENERATION
 
 function generateDts(contract: string) {
   // Remove all export and declare keywards
-  const typeDeclarations = contract.replace(/(export|declare)\s+/g, "");
-  
+  const typeDeclarations = contract.replace(/(export|declare)\s+/g, '')
+
   return `// Generated TypeScript definitions
-  ${typeDeclarations}`;
+  ${typeDeclarations}`
 }
 
 /*
@@ -591,7 +588,7 @@ ${contract}
 ### TASK
 
 {{ .Prompt }}
-"""`;
+"""`
 }
 
 /*
@@ -599,20 +596,20 @@ MAIN
 */
 
 function main() {
-  const entry = path.resolve(ENTRY_FILE);
+  const entry = path.resolve(ENTRY_FILE)
   // const meta = path.resolve(META_FILE);
 
   // const metadata = extractMetadata(meta);
   // const contract = extractContract(entry, metadata);
-  const contract = extractContract(entry, {});
-  const modelfile = generateModelfile(contract);
-  
-  const contractTs = extractContractTypescript(entry);
-  const dtsContent = generateDts(contractTs);
+  const contract = extractContract(entry, {})
+  const modelfile = generateModelfile(contract)
 
-  fs.writeFileSync(OUTPUT_FILE, modelfile);
-  fs.writeFileSync(DTS_OUTPUT_FILE, dtsContent);
-  console.log("Modelfile and .d.ts generated successfully");
+  const contractTs = extractContractTypescript(entry)
+  const dtsContent = generateDts(contractTs)
+
+  fs.writeFileSync(OUTPUT_FILE, modelfile)
+  fs.writeFileSync(DTS_OUTPUT_FILE, dtsContent)
+  console.log('Modelfile and .d.ts generated successfully')
 }
 
-main();
+main()

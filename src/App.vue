@@ -1,12 +1,10 @@
-<script setup lang="ts">
+<script setup lang="ts"></script>
 
-</script>
-
-<template >
+<template>
   <div class="font-panelFont font-light">
-    <router-view></router-view> <!-- Renders the current page -->
+    <router-view></router-view>
+    <!-- Renders the current page -->
   </div>
 </template>
 
-<style scoped>
-</style>
+<style scoped></style>

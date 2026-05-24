@@ -1,18 +1,18 @@
 <template>
-    <input
-      type="number"
-      class="bg-simInputBackground border-l border-simElementBorder pl-1 h-full text-secondary"
-      :value.number="localValue"
-      :min="inputMin"
-      :max="inputMax"
-      :step="inputStep"
-      @input="onInput"
-      @change="onChange"
-    />
+  <input
+    type="number"
+    class="bg-simInputBackground border-l border-simElementBorder pl-1 h-full text-secondary"
+    :value.number="localValue"
+    :min="inputMin"
+    :max="inputMax"
+    :step="inputStep"
+    @input="onInput"
+    @change="onChange"
+  />
 </template>
 
 <script setup lang="ts">
-import { ref, watch} from 'vue'
+import { ref, watch } from 'vue'
 import { PropType } from 'vue'
 
 // The best thing to do is to seperate the button from text input
@@ -20,7 +20,7 @@ import { PropType } from 'vue'
 const props = defineProps({
   textInput: {
     type: [Number, Boolean] as PropType<number | boolean>,
-    required: false
+    required: false,
   },
   inputChange: {
     type: Function,
@@ -39,18 +39,20 @@ const props = defineProps({
   },
 })
 
-
 // Local state
 const localValue = ref(props.textInput)
 const isEditing = ref(false)
 let editTimeout: ReturnType<typeof setTimeout> | null = null
 
 // External update sync logic
-watch(() => props.textInput, (newVal) => {
-  if (!isEditing.value) {
-    localValue.value = newVal
-  }
-})
+watch(
+  () => props.textInput,
+  (newVal) => {
+    if (!isEditing.value) {
+      localValue.value = newVal
+    }
+  },
+)
 
 // User types → start editing session
 function onInput(event: Event) {

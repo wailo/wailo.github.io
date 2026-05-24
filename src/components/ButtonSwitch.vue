@@ -6,9 +6,7 @@
       :class="[
         'outline-none flex items-center justify-center w-full h-full text-nowrap',
         buttonWidth,
-        buttonState
-          ? 'bg-simActiveButton text-primary'
-          : 'bg-primary text-secondary',
+        buttonState ? 'bg-simActiveButton text-primary' : 'bg-primary text-secondary',
         'cursor-pointer font-medium border-transparent',
       ]"
       @click="buttonClick"
@@ -63,7 +61,7 @@ const props = defineProps({
   },
   textInput: {
     type: [Number, Boolean, String] as PropType<number | boolean | string>,
-    required: false
+    required: false,
   },
   buttonClick: {
     type: Function as PropType<(event: MouseEvent) => void>,
@@ -86,12 +84,8 @@ const props = defineProps({
 })
 
 // Layout
-const buttonWidth = computed(() =>
-  props.textInput !== undefined ? 'w-6/12' : 'w-full',
-)
-const inputWidth = computed(() =>
-  props.textInput !== undefined ? 'w-6/12' : 'w-full',
-)
+const buttonWidth = computed(() => (props.textInput !== undefined ? 'w-6/12' : 'w-full'))
+const inputWidth = computed(() => (props.textInput !== undefined ? 'w-6/12' : 'w-full'))
 
 // Local state
 const localValue = ref(props.textInput)
@@ -99,11 +93,14 @@ const isEditing = ref(false)
 let editTimeout: ReturnType<typeof setTimeout> | null = null
 
 // External update sync logic
-watch(() => props.textInput, (newVal) => {
-  if (!isEditing.value) {
-    localValue.value = newVal
-  }
-})
+watch(
+  () => props.textInput,
+  (newVal) => {
+    if (!isEditing.value) {
+      localValue.value = newVal
+    }
+  },
+)
 
 // User types → start editing session
 function onInput(event: Event) {

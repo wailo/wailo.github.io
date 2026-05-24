@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, watchEffect, useSlots, PropType } from "vue";
+import { ref, watchEffect, useSlots, PropType } from 'vue'
 
 const props = defineProps({
   status: {
     type: String as PropType<string>,
-    default: "Idle",
+    default: 'Idle',
   },
   active: {
     type: Boolean as PropType<boolean>,
@@ -14,12 +14,12 @@ const props = defineProps({
     type: Boolean as PropType<boolean>,
     default: false,
   },
-});
+})
 
 // Dynamic tab detection via named slots
-const tabSlots = useSlots();
-const tabMap = ref<{ name: string; display: string }[]>([]);
-const activeTab = ref<string | null>(null);
+const tabSlots = useSlots()
+const tabMap = ref<{ name: string; display: string }[]>([])
+const activeTab = ref<string | null>(null)
 
 watchEffect(() => {
   tabMap.value = Object.keys(tabSlots)
@@ -27,13 +27,12 @@ watchEffect(() => {
     .map((slotName) => ({
       name: slotName,
       display: slotName.replace(/-/g, ' '), // Customize to your liking
-    }));
+    }))
 
   if (!activeTab.value && tabMap.value.length > 0) {
-    activeTab.value = tabMap.value[0].name;
+    activeTab.value = tabMap.value[0].name
   }
-});
-
+})
 </script>
 
 <template>
@@ -60,12 +59,10 @@ watchEffect(() => {
           @click="activeTab = tab.name"
           :class="[
             'px-1 rounded-t flex items-center',
-            tabMap.length > 1 ? activeTab === tab.name
-              ? 'bg-panelActive'
-              : 'text-xs' : '',
+            tabMap.length > 1 ? (activeTab === tab.name ? 'bg-panelActive' : 'text-xs') : '',
           ]"
         >
-          {{ tab.display}}
+          {{ tab.display }}
         </button>
       </div>
 

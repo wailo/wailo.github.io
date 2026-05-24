@@ -1,13 +1,20 @@
 <template>
-  <div v-for="plot in plotList" :key="plot.id"
-    class="relative w-full min-h-0 flex-1 border-b border-simElementBorder last:border-b-0">
+  <div
+    v-for="plot in plotList"
+    :key="plot.id"
+    class="relative w-full min-h-0 flex-1 border-b border-simElementBorder last:border-b-0"
+  >
     <!-- Overlay -->
-    <div class="absolute top-1 left-2 right-1 z-10 flex items-start justify-between pointer-events-none">
-
+    <div
+      class="absolute top-1 left-2 right-1 z-10 flex items-start justify-between pointer-events-none"
+    >
       <!-- Labels -->
       <div class="flex flex-col gap-0.5 pointer-events-auto">
-        <div v-for="sourceId in plot.sourceIds" :key="sourceId"
-          class="text-secondary bg-opacity-50 px-2 rounded font-mono text-left">
+        <div
+          v-for="sourceId in plot.sourceIds"
+          :key="sourceId"
+          class="text-secondary bg-opacity-50 px-2 rounded font-mono text-left"
+        >
           <span>
             <!-- {{ props.sources[sourceId]?.label || sourceId }} -->
           </span>
@@ -24,34 +31,36 @@
 
       <!-- Buttons -->
       <div class="flex gap-1 pointer-events-auto">
-        <button @click="resetPlot(plot.id)"
-          class="border border-simElementBorder bg-opacity-60 text-secondary text-xs px-0.5 py-0.5 rounded hover:bg-simInputBackground">
+        <button
+          @click="resetPlot(plot.id)"
+          class="border border-simElementBorder bg-opacity-60 text-secondary text-xs px-0.5 py-0.5 rounded hover:bg-simInputBackground"
+        >
           ⟲
         </button>
 
-        <button @click="removePlot(plot.id)"
-          class="border border-simElementBorder bg-opacity-60 text-secondary text-xs px-0.5 py-0.5 rounded hover:bg-simInputBackground">
+        <button
+          @click="removePlot(plot.id)"
+          class="border border-simElementBorder bg-opacity-60 text-secondary text-xs px-0.5 py-0.5 rounded hover:bg-simInputBackground"
+        >
           ✕
         </button>
       </div>
-
     </div>
 
     <!-- Plot -->
-    <div :ref="el => { if (el) plotRefs[plot.id] = el as HTMLElement }" class="w-full h-full" />
+    <div
+      :ref="
+        (el) => {
+          if (el) plotRefs[plot.id] = el as HTMLElement
+        }
+      "
+      class="w-full h-full"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import {
-  ref,
-  reactive,
-  computed,
-  onMounted,
-  onBeforeUnmount,
-  nextTick,
-  PropType
-} from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick, PropType } from 'vue'
 
 import uPlot from 'uplot'
 import 'uplot/dist/uPlot.min.css'
@@ -79,28 +88,28 @@ interface CircularBuffer {
 const props = defineProps({
   sources: {
     type: Object as PropType<Record<string, SimulationProperties>>,
-    required: true
+    required: true,
   },
 
   pause: {
     type: Boolean,
-    required: true
+    required: true,
   },
 
   max_duration_ms: {
     type: Number,
-    default: 120_000
+    default: 120_000,
   },
 
   max_plots: {
     type: Number,
-    default: Math.floor(window.innerHeight / 70)
+    default: Math.floor(window.innerHeight / 70),
   },
 
   update_intervals: {
     type: Number,
-    required: true
-  }
+    required: true,
+  },
 })
 
 defineExpose({
@@ -108,7 +117,7 @@ defineExpose({
   removePlot,
   reset,
   reset_x_axis,
-  tick
+  tick,
 })
 
 // -------------------------------------------------------------------------------------------------
@@ -135,9 +144,7 @@ let plotResizeObserver: ResizeObserver | null = null
 // COMPUTED
 // -------------------------------------------------------------------------------------------------
 
-const plotList = computed(() =>
-  plotDefinitions.value.slice(0, props.max_plots)
-)
+const plotList = computed(() => plotDefinitions.value.slice(0, props.max_plots))
 
 // -------------------------------------------------------------------------------------------------
 // HELPERS
@@ -153,19 +160,13 @@ function getStrokeColor(index: number) {
 
   const cssVar = palette[index % palette.length]
 
-  const val = getComputedStyle(document.documentElement)
-    .getPropertyValue(cssVar)
-    .trim()
+  const val = getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim()
 
   if (!val) {
     return `${cssVar}`
-  }
-  else {
+  } else {
     return `rgb(${val})`
   }
-
-
-
 }
 
 function createPlotId(sourceIds: string[]) {
@@ -180,7 +181,7 @@ function createPlotId(sourceIds: string[]) {
 // ✅ addPlot('a', 'b')
 // ✅ addPlot('a', 'b', 'c')
 function addPlot(...sourceIds: string[]) {
-  const filtered = sourceIds.filter(id => props.sources[id])
+  const filtered = sourceIds.filter((id) => props.sources[id])
 
   if (filtered.length === 0) {
     return
@@ -188,9 +189,7 @@ function addPlot(...sourceIds: string[]) {
 
   const plotId = createPlotId(filtered)
 
-  const exists = plotDefinitions.value.some(
-    p => p.id === plotId
-  )
+  const exists = plotDefinitions.value.some((p) => p.id === plotId)
 
   if (exists) {
     return
@@ -205,7 +204,7 @@ function addPlot(...sourceIds: string[]) {
 
   plotDefinitions.value.push({
     id: plotId,
-    sourceIds: filtered
+    sourceIds: filtered,
   })
 
   setTimeout(() => {
@@ -214,10 +213,7 @@ function addPlot(...sourceIds: string[]) {
 }
 
 function removePlot(plotId: string) {
-  plotDefinitions.value =
-    plotDefinitions.value.filter(
-      p => p.id !== plotId
-    )
+  plotDefinitions.value = plotDefinitions.value.filter((p) => p.id !== plotId)
 
   const plot = plots.get(plotId)
 
@@ -230,16 +226,13 @@ function removePlot(plotId: string) {
 }
 
 function resetPlot(plotId: string) {
-  const plotDef =
-    plotDefinitions.value.find(
-      p => p.id === plotId
-    )
+  const plotDef = plotDefinitions.value.find((p) => p.id === plotId)
 
   if (!plotDef) {
     return
   }
 
-  plotDef.sourceIds.forEach(sourceId => {
+  plotDef.sourceIds.forEach((sourceId) => {
     const buf = dataBuffers.get(sourceId)
 
     if (!buf) return
@@ -254,7 +247,7 @@ function resetPlot(plotId: string) {
 // -------------------------------------------------------------------------------------------------
 
 async function recreateAllPlots() {
-  plots.forEach(p => p.destroy())
+  plots.forEach((p) => p.destroy())
   plots.clear()
 
   if (plotResizeObserver) {
@@ -264,7 +257,7 @@ async function recreateAllPlots() {
 
   await nextTick()
 
-  plotList.value.forEach(plotDef => {
+  plotList.value.forEach((plotDef) => {
     const el = plotRefs[plotDef.id]
 
     if (!el) return
@@ -272,8 +265,8 @@ async function recreateAllPlots() {
     const series: uPlot.Series[] = [
       {
         show: false,
-        label: "Time",     // Empty label
-      }
+        label: 'Time', // Empty label
+      },
     ]
 
     // dynamic series
@@ -282,119 +275,110 @@ async function recreateAllPlots() {
         stroke: plotDef.sourceIds.length > 1 ? getStrokeColor(i + 1) : getStrokeColor(0),
         width: 1,
         points: {
-          show: false
+          show: false,
         },
         dash: i === 0 ? undefined : [10, 5],
         label: `${props.sources[plotDef.sourceIds[i]]?.label} [${props.sources[plotDef.sourceIds[i]]?.unit || ''}]`,
         value: (self, val, seriesIdx, dataIdx) => {
           // When not hovering, dataIdx is null
           if (dataIdx == null) {
-            const seriesData = self.data[seriesIdx];
-            const lastVal = seriesData[seriesData.length - 1];
-            return lastVal != null ? lastVal : "--";
+            const seriesData = self.data[seriesIdx]
+            const lastVal = seriesData[seriesData.length - 1]
+            return lastVal != null ? lastVal : '--'
           }
           // Standard behavior when hovering
-          return val;
-        }
+          return val
+        },
       })
     })
 
-    const data: uPlot.AlignedData = [
-      []
-    ]
+    const data: uPlot.AlignedData = [[]]
 
     plotDef.sourceIds.forEach(() => {
       data.push([])
     })
 
-    const plot = new uPlot({
-      legend: {
-        show: true,
-      },
-
-      width: el.offsetWidth,
-      height: el.offsetHeight,
-
-      padding: [25, 1, 5, 1],
-
-      scales: {
-        x: {
-          time: false,
-
-          range: () => {
-            const first =
-              dataBuffers.get(
-                plotDef.sourceIds[0]
-              )
-
-            if (!first) {
-              return [0, MAX_POINTS]
-            }
-
-            return [
-              first.index - MAX_POINTS,
-              first.index
-            ]
-          }
-        },
-
-        y: {
-          auto: true
-        }
-      },
-
-      axes: [
-        {
-          show: false,
-
-          stroke: getStrokeColor(0),
-
-          border: {
-            show: true,
-            stroke: getStrokeColor(0)
-          },
-
-          grid: {
-            show: false
-          },
-
-          values: (_self, ticks) =>
-            ticks.map(i =>
-              (
-                i /
-                (1000 / props.update_intervals)
-              ).toFixed(1)
-            )
-        },
-
-        {
+    const plot = new uPlot(
+      {
+        legend: {
           show: true,
+        },
 
-          stroke: getStrokeColor(0),
+        width: el.offsetWidth,
+        height: el.offsetHeight,
 
-          border: {
+        padding: [25, 1, 5, 1],
+
+        scales: {
+          x: {
+            time: false,
+
+            range: () => {
+              const first = dataBuffers.get(plotDef.sourceIds[0])
+
+              if (!first) {
+                return [0, MAX_POINTS]
+              }
+
+              return [first.index - MAX_POINTS, first.index]
+            },
+          },
+
+          y: {
+            auto: true,
+          },
+        },
+
+        axes: [
+          {
+            show: false,
+
+            stroke: getStrokeColor(0),
+
+            border: {
+              show: true,
+              stroke: getStrokeColor(0),
+            },
+
+            grid: {
+              show: false,
+            },
+
+            values: (_self, ticks) =>
+              ticks.map((i) => (i / (1000 / props.update_intervals)).toFixed(1)),
+          },
+
+          {
             show: true,
-            stroke: getStrokeColor(0)
+
+            stroke: getStrokeColor(0),
+
+            border: {
+              show: true,
+              stroke: getStrokeColor(0),
+            },
+
+            grid: {
+              show: false,
+            },
+
+            ticks: {
+              show: true,
+            },
+
+            font: '8px monospace',
+
+            gap: 0,
+            labelGap: 0,
+            lineGap: 0,
           },
+        ],
 
-          grid: {
-            show: false
-          },
-
-          ticks: {
-            show: true
-          },
-
-          font: '8px monospace',
-
-          gap: 0,
-          labelGap: 0,
-          lineGap: 0
-        }
-      ],
-
-      series
-    }, data, el)
+        series,
+      },
+      data,
+      el,
+    )
 
     plots.set(plotDef.id, plot)
   })
@@ -407,13 +391,12 @@ async function recreateAllPlots() {
 
       plot.setSize({
         width: el.offsetWidth,
-        height: el.offsetHeight
+        height: el.offsetHeight,
       })
     })
   })
 
-  const parentEl =
-    Object.values(plotRefs)[0]?.parentElement
+  const parentEl = Object.values(plotRefs)[0]?.parentElement
 
   if (parentEl) {
     plotResizeObserver.observe(parentEl)
@@ -431,18 +414,12 @@ function initBuffer(name: string) {
 
   dataBuffers.set(name, {
     y: new Float64Array(MAX_POINTS),
-    index: 0
+    index: 0,
   })
 
-  renderBuffers.set(
-    name,
-    new Float64Array(MAX_POINTS)
-  )
+  renderBuffers.set(name, new Float64Array(MAX_POINTS))
 
-  xBuffers.set(
-    name,
-    new Int32Array(MAX_POINTS)
-  )
+  xBuffers.set(name, new Int32Array(MAX_POINTS))
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -460,12 +437,9 @@ function tick() {
 
   // update buffers
   dataBuffers.forEach((buf, sourceId) => {
-    const writeIndex =
-      buf.index % MAX_POINTS
+    const writeIndex = buf.index % MAX_POINTS
 
-    buf.y[writeIndex] = Number(
-      props.sources[sourceId]?.inputValue ?? 0
-    )
+    buf.y[writeIndex] = Number(props.sources[sourceId]?.inputValue ?? 0)
 
     buf.index++
   })
@@ -485,27 +459,17 @@ function updatePlot(plotDef: PlotDefinition) {
     return
   }
 
-  const firstBuf =
-    dataBuffers.get(
-      plotDef.sourceIds[0]
-    )
+  const firstBuf = dataBuffers.get(plotDef.sourceIds[0])
 
   if (!firstBuf) {
     return
   }
 
-  const len = Math.min(
-    firstBuf.index,
-    MAX_POINTS
-  )
+  const len = Math.min(firstBuf.index, MAX_POINTS)
 
-  const start =
-    firstBuf.index >= MAX_POINTS
-      ? firstBuf.index % MAX_POINTS
-      : 0
+  const start = firstBuf.index >= MAX_POINTS ? firstBuf.index % MAX_POINTS : 0
 
-  const xBuf =
-    xBuffers.get(plotDef.sourceIds[0])
+  const xBuf = xBuffers.get(plotDef.sourceIds[0])
 
   if (!xBuf) {
     return
@@ -518,15 +482,12 @@ function updatePlot(plotDef: PlotDefinition) {
     xBuf[i] = base + i
   }
 
-  const aligned: uPlot.AlignedData = [
-    xBuf.subarray(0, len)
-  ]
+  const aligned: uPlot.AlignedData = [xBuf.subarray(0, len)]
 
   // build Y arrays
-  plotDef.sourceIds.forEach(sourceId => {
+  plotDef.sourceIds.forEach((sourceId) => {
     const buf = dataBuffers.get(sourceId)
-    const render =
-      renderBuffers.get(sourceId)
+    const render = renderBuffers.get(sourceId)
 
     if (!buf || !render) {
       // aligned.push([])
@@ -534,29 +495,16 @@ function updatePlot(plotDef: PlotDefinition) {
     }
 
     if (buf.index >= MAX_POINTS) {
-      const tailLen =
-        MAX_POINTS - start
+      const tailLen = MAX_POINTS - start
 
-      render.set(
-        buf.y.subarray(start),
-        0
-      )
+      render.set(buf.y.subarray(start), 0)
 
-      render.set(
-        buf.y.subarray(0, start),
-        tailLen
-      )
-    }
-    else {
-      render.set(
-        buf.y.subarray(0, len),
-        0
-      )
+      render.set(buf.y.subarray(0, start), tailLen)
+    } else {
+      render.set(buf.y.subarray(0, len), 0)
     }
 
-    aligned.push(
-      render.subarray(0, len)
-    )
+    aligned.push(render.subarray(0, len))
   })
 
   // ✅ supports any number of Y buffers
@@ -568,7 +516,7 @@ function updatePlot(plotDef: PlotDefinition) {
 // -------------------------------------------------------------------------------------------------
 
 function reset() {
-  plots.forEach(p => p.destroy())
+  plots.forEach((p) => p.destroy())
 
   plots.clear()
 
@@ -582,7 +530,7 @@ function reset() {
 }
 
 function reset_x_axis() {
-  dataBuffers.forEach(buf => {
+  dataBuffers.forEach((buf) => {
     buf.y.fill(0)
     buf.index = 0
   })
@@ -593,26 +541,17 @@ function reset_x_axis() {
 // -------------------------------------------------------------------------------------------------
 
 onMounted(() => {
-  MAX_POINTS = Math.ceil(
-    props.max_duration_ms /
-    props.update_intervals
-  )
+  MAX_POINTS = Math.ceil(props.max_duration_ms / props.update_intervals)
 
-  window.addEventListener(
-    'theme-change',
-    recreateAllPlots
-  )
+  window.addEventListener('theme-change', recreateAllPlots)
 })
 
 onBeforeUnmount(() => {
-  plots.forEach(p => p.destroy())
+  plots.forEach((p) => p.destroy())
 
   plotResizeObserver?.disconnect()
 
-  window.removeEventListener(
-    'theme-change',
-    recreateAllPlots
-  )
+  window.removeEventListener('theme-change', recreateAllPlots)
 })
 </script>
 

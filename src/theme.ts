@@ -1,15 +1,15 @@
 export interface Theme {
-  primaryColor: string;
-  borderColor: String;
-  secondaryColor: string;
-  accentColor: string;
-  panelBorderColor: String;
-  panelHeaderBackground: String;
-  panelContentBackground: String;
-  backgroundColor: string;
-  textColor: String;
-  separatorLineColor: String;
-  activeButton: String;
+  primaryColor: string
+  borderColor: String
+  secondaryColor: string
+  accentColor: string
+  panelBorderColor: String
+  panelHeaderBackground: String
+  panelContentBackground: String
+  backgroundColor: string
+  textColor: String
+  separatorLineColor: String
+  activeButton: String
 }
 
 // src/theme.js
@@ -43,17 +43,17 @@ export interface Theme {
 // };
 
 const blackAndWhiteTheme: Theme = {
-  primaryColor: "#000000", // Black
-  borderColor: "#000000", // Black
-  secondaryColor: "#ffffff", // Black
-  accentColor: "#000000", // Black
-  panelBorderColor: "#f0f0f0", // Off-white
-  panelHeaderBackground: "#00000000", // Light Grey
-  panelContentBackground: "#00000000", // White
-  backgroundColor: "#f5f5f5", // White
-  textColor: "#000000", // Black
-  separatorLineColor: "#e0e0e0", // Light Grey
-  activeButton: "#ffffff", // Black
-};
+  primaryColor: '#000000', // Black
+  borderColor: '#000000', // Black
+  secondaryColor: '#ffffff', // Black
+  accentColor: '#000000', // Black
+  panelBorderColor: '#f0f0f0', // Off-white
+  panelHeaderBackground: '#00000000', // Light Grey
+  panelContentBackground: '#00000000', // White
+  backgroundColor: '#f5f5f5', // White
+  textColor: '#000000', // Black
+  separatorLineColor: '#e0e0e0', // Light Grey
+  activeButton: '#ffffff', // Black
+}
 
-export const theme = blackAndWhiteTheme;
+export const theme = blackAndWhiteTheme

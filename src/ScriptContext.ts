@@ -2,36 +2,32 @@
 // 1. TYPES (Single Source of Truth)
 // ==============================
 
-import {
-  ExtendedMainModule,
-  SimulationProperties,
-  repositionWithAutopilot
-} from "./core";
+import { ExtendedMainModule, SimulationProperties, repositionWithAutopilot } from './core'
 
-import {LayoutTypes} from "../src/wasm/siminterface.ts"
+import { LayoutTypes } from '../src/wasm/siminterface.ts'
 
 export interface ScriptContext {
-  controls: ExtendedMainModule;
-  props: any;
-  repositionWithAutopilot: typeof repositionWithAutopilot;
-  waitFor: (ms: number) => Promise<void>;
+  controls: ExtendedMainModule
+  props: any
+  repositionWithAutopilot: typeof repositionWithAutopilot
+  waitFor: (ms: number) => Promise<void>
   waitForCondition: (
     condition: () => boolean,
     confirmationMs?: number,
     pollIntervalMs?: number,
     hardTimeoutMs?: number | null,
     throwOnTimeout?: boolean,
-  ) => Promise<boolean>;
+  ) => Promise<boolean>
 
-  notifyUser: (title: string, body?: string, timeout?: number) => void;
-  dataView: (prop: SimulationProperties, state: boolean) => void;
-  plotView: (prop: SimulationProperties | SimulationProperties[], state: boolean) => void;
-  dataDisplayReset: () => void;
-  setLayout: (mode: LayoutTypes) => void;
-  layoutTypes: typeof LayoutTypes;
-  setVisuals: (state: boolean) => void;
-  checkPoint: (content: string) => void;
-  metrics: any[];
+  notifyUser: (title: string, body?: string, timeout?: number) => void
+  dataView: (prop: SimulationProperties, state: boolean) => void
+  plotView: (prop: SimulationProperties | SimulationProperties[], state: boolean) => void
+  dataDisplayReset: () => void
+  setLayout: (mode: LayoutTypes) => void
+  layoutTypes: typeof LayoutTypes
+  setVisuals: (state: boolean) => void
+  checkPoint: (content: string) => void
+  metrics: any[]
 }
 
 // ==============================
@@ -54,21 +50,21 @@ export function createScriptContext(deps: ScriptContext): ScriptContext {
     layoutTypes: LayoutTypes,
     setVisuals: deps.setVisuals,
     metrics: deps.metrics,
-  };
+  }
 }
 
 // ==============================
 // 3. SCRIPT RUNNER
 // ==============================
 
-export type UserScript = (ctx: ScriptContext) => Promise<void>;
+export type UserScript = (ctx: ScriptContext) => Promise<void>
 
 export async function runUserScript(script: UserScript, ctx: ScriptContext) {
   try {
-    await script(ctx);
+    await script(ctx)
   } catch (err) {
-    console.error("Script execution failed:", err);
-    ctx.notifyUser("Script Error", String(err));
+    console.error('Script execution failed:', err)
+    ctx.notifyUser('Script Error', String(err))
   }
 }
 

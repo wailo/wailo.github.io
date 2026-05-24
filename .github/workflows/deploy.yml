@@ -7,7 +7,6 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-24.04
 
     strategy:
@@ -15,35 +14,35 @@ jobs:
         node-version: ['24']
 
     steps:
-    - name: Checkout page
-      uses: actions/checkout@v3
-      with:
-        ref: 'development'
+      - name: Checkout page
+        uses: actions/checkout@v3
+        with:
+          ref: 'development'
 
-    - name: Set Short Git SHA
-      # Generate short SHA and save it to GITHUB_ENV for subsequent steps
-      run: echo "VITE_GIT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+      - name: Set Short Git SHA
+        # Generate short SHA and save it to GITHUB_ENV for subsequent steps
+        run: echo "VITE_GIT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v2
-      with:
-        node-version: ${{ matrix.node-version }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node-version }}
 
-    - name: Installing dependencies
-      env:
-        ACCESS_TOKEN: ${{ secrets.GH_SIM_PAT }}
-      run: |
-        npm ci
+      - name: Installing dependencies
+        env:
+          ACCESS_TOKEN: ${{ secrets.GH_SIM_PAT }}
+        run: |
+          npm ci
 
-    - name: Build
-      run: |
-        npm run build
-      env:
-        # Map the variable so Vite injects it into your Vue app
-        VITE_GIT_SHA: ${{ env.VITE_GIT_SHA }}
+      - name: Build
+        run: |
+          npm run build
+        env:
+          # Map the variable so Vite injects it into your Vue app
+          VITE_GIT_SHA: ${{ env.VITE_GIT_SHA }}
 
-    - name: Deploy to GitHub Pages
-      uses: JamesIves/github-pages-deploy-action@v4
-      with:
-        branch: master
-        folder: dist
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: master
+          folder: dist

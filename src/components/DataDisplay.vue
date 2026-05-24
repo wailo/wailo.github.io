@@ -3,15 +3,23 @@
     <div ref="wrapper" class="w-full space-y-2">
       <!-- Input + Buttons Row -->
       <div class="flex gap-2">
-        <input v-model="searchQuery" type="text" placeholder="Search..."
-          class="w-1/3 text-secondary bg-transparent border border-simElementBorder p-1" @focus="isFocused = true" />
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search..."
+          class="w-1/3 text-secondary bg-transparent border border-simElementBorder p-1"
+          @focus="isFocused = true"
+        />
         <!-- <button @click="showAll" class="w-1/4 border border-simElementBorder text-secondary"> -->
         <!--   Show All -->
         <!-- </button> -->
         <button @click="hideAll" class="w-1/3 border border-simElementBorder text-secondary">
           Close All
         </button>
-        <button @click="timePlotRef?.reset_x_axis()" class="w-1/3 border border-simElementBorder text-secondary">
+        <button
+          @click="timePlotRef?.reset_x_axis()"
+          class="w-1/3 border border-simElementBorder text-secondary"
+        >
           Reset Plots
         </button>
       </div>
@@ -22,18 +30,28 @@
           <button @click="isFocused = false">✖ Close</button>
         </div>
 
-        <div v-for="item in Object.values(searchResults)" :key="item.id"
+        <div
+          v-for="item in Object.values(searchResults)"
+          :key="item.id"
           class="cursor-pointer p-1 transition hover:bg-primary flex items-center justify-between"
-          @click="setDataView(item, true)">
+          @click="setDataView(item, true)"
+        >
           <div>
             {{ `${item.label} ${item.unit ? `(${item.unit})` : ''}` }}
           </div>
           <div class="flex gap-2">
-            <button disabled class="text-xs hover:font-bold transition text-secondary" :title="`${item.id}`">
+            <button
+              disabled
+              class="text-xs hover:font-bold transition text-secondary"
+              :title="`${item.id}`"
+            >
               i
             </button>
-            <button class="rounded-full text-xs hover:font-bold transition text-secondary" @click.stop="plot(item.id)"
-              title="Toggle Plot">
+            <button
+              class="rounded-full text-xs hover:font-bold transition text-secondary"
+              @click.stop="plot(item.id)"
+              title="Toggle Plot"
+            >
               ⦿
             </button>
           </div>
@@ -43,19 +61,35 @@
       <!-- Visible Items Table -->
       <table class="flex w-full h-full">
         <tbody class="w-full">
-          <tr class="flex w-full border-b border-simElementBorder items-center" v-for="item in displayedItems"
-            :key="item.id">
-            <td class="font-medium w-3/5"> {{ `${item.label} ${item.unit ? `(${item.unit})` : ''}` }}</td>
+          <tr
+            class="flex w-full border-b border-simElementBorder items-center"
+            v-for="item in displayedItems"
+            :key="item.id"
+          >
+            <td class="font-medium w-3/5">
+              {{ `${item.label} ${item.unit ? `(${item.unit})` : ''}` }}
+            </td>
             <td class="w-1/5">{{ item.inputValue }}</td>
             <td class="w-1/5 text-right flex justify-end items-center gap-2">
-              <button disabled class="text-xs hover:font-bold transition text-secondary" :title="`${item.id}`">
+              <button
+                disabled
+                class="text-xs hover:font-bold transition text-secondary"
+                :title="`${item.id}`"
+              >
                 i
               </button>
-              <button class="rounded-full text-xs hover:font-bold transition text-secondary" @click="plot(item.id)"
-                title="Toggle Plot">
+              <button
+                class="rounded-full text-xs hover:font-bold transition text-secondary"
+                @click="plot(item.id)"
+                title="Toggle Plot"
+              >
                 ⦿
               </button>
-              <button @click="setDataView(item, false)" class="hover:text-red-700 transition" title="Remove">
+              <button
+                @click="setDataView(item, false)"
+                class="hover:text-red-700 transition"
+                title="Remove"
+              >
                 ⅹ
               </button>
             </td>
@@ -64,8 +98,12 @@
       </table>
     </div>
     <!-- Plot Component -->
-    <TimePlot ref="timePlotRef" :pause="props.plotPause" :update_intervals="props.plotUpdateIntervals"
-      :sources="props.simProps" />
+    <TimePlot
+      ref="timePlotRef"
+      :pause="props.plotPause"
+      :update_intervals="props.plotUpdateIntervals"
+      :sources="props.simProps"
+    />
   </div>
 </template>
 
@@ -79,16 +117,16 @@ import TimePlot from './TimePlot.vue'
 const props = defineProps({
   simProps: {
     type: Object as PropType<Record<string, SimulationProperties>>,
-    required: true
+    required: true,
   },
   plotPause: {
     type: Boolean as PropType<boolean>,
-    required: true
+    required: true,
   },
   plotUpdateIntervals: {
     type: Number,
-    required: true
-  }
+    required: true,
+  },
 })
 
 // UI state
@@ -101,15 +139,16 @@ const timePlotRef = ref<InstanceType<typeof TimePlot> | null>(null)
 const visibleItems = reactive(new Set<string>())
 
 // Computed
-const displayedItems = computed(() =>
-  Array.from(visibleItems).map((id) => props.simProps[id])
+const displayedItems = computed(() => Array.from(visibleItems).map((id) => props.simProps[id]))
+
+const fuse = computed(
+  () =>
+    new Fuse(Object.values(props.simProps), {
+      keys: ['group', 'label'],
+
+      threshold: 0.4,
+    }),
 )
-
-const fuse = computed(() => new Fuse(Object.values(props.simProps), {
-  keys: ['group', 'label'],
-
-  threshold: 0.4
-}))
 
 const searchResults = computed(() => {
   const query = searchQuery.value.trim()
@@ -130,7 +169,7 @@ function reset() {
 
 function setDataView(item: SimulationProperties, state: boolean) {
   if (!item || !item.id) return
-  const id = item.id.toLowerCase();
+  const id = item.id.toLowerCase()
   if (state) {
     visibleItems.add(id)
     searchQuery.value = ''
@@ -154,23 +193,15 @@ function hideAll() {
   timePlotRef.value?.reset?.()
 }
 
-
 // Externally callable method
-function setPlotView(
-  item: SimulationProperties | SimulationProperties[],
-  state: boolean
-) {
+function setPlotView(item: SimulationProperties | SimulationProperties[], state: boolean) {
   if (!item) return
 
   // normalize to array
-  const items = Array.isArray(item)
-    ? item
-    : [item]
+  const items = Array.isArray(item) ? item : [item]
 
   // collect valid ids
-  const ids = items
-    .filter(v => v?.id)
-    .map(v => v.id.toLowerCase())
+  const ids = items.filter((v) => v?.id).map((v) => v.id.toLowerCase())
 
   if (ids.length === 0) {
     return
@@ -182,13 +213,10 @@ function setPlotView(
     // addPlot("a", "b")
     // addPlot("a", "b", "c")
     timePlotRef.value?.addPlot(...ids)
-  }
-  else {
+  } else {
     // removePlot expects plotId
     // plotId format = ids joined with "|"
-    timePlotRef.value?.removePlot(
-      ids.join('|')
-    )
+    timePlotRef.value?.removePlot(ids.join('|'))
   }
 }
 
@@ -216,7 +244,7 @@ defineExpose({
   hideAll,
   tickPlot,
   setDataView,
-  setPlotView
+  setPlotView,
 })
 </script>
 

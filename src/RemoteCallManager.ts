@@ -1,111 +1,107 @@
 export type RemoteCall = {
-  type: "call";
-  path: string[];
-  args?: any[];
-  clientId?: string;
-  version?: string;
-  timestamp?: number;
-};
+  type: 'call'
+  path: string[]
+  args?: any[]
+  clientId?: string
+  version?: string
+  timestamp?: number
+}
 
 export type RemoteEvent = {
-  type: "onKeydown" | "onKeyup";
-  key: string;
-  code: string;
-  keyCode: number;
-  charCode: number;
+  type: 'onKeydown' | 'onKeyup'
+  key: string
+  code: string
+  keyCode: number
+  charCode: number
   mods: {
-    ctrl: boolean;
-    shift: boolean;
-    alt: boolean;
-    meta: boolean;
-  };
-  clientId?: string;
-  version?: string;
-  timestamp?: number;
-};
+    ctrl: boolean
+    shift: boolean
+    alt: boolean
+    meta: boolean
+  }
+  clientId?: string
+  version?: string
+  timestamp?: number
+}
 
 const getAllKeys = (obj: any) => {
-  const ownKeys = Object.keys(obj);
-  const proto = Object.getPrototypeOf(obj);
+  const ownKeys = Object.keys(obj)
+  const proto = Object.getPrototypeOf(obj)
 
-  if (!proto) return ownKeys;
+  if (!proto) return ownKeys
 
-  const protoKeys = Object.getOwnPropertyNames(proto)
-    .filter(k => k !== "constructor");
+  const protoKeys = Object.getOwnPropertyNames(proto).filter((k) => k !== 'constructor')
 
-  return [...new Set([...ownKeys, ...protoKeys])];
-};
+  return [...new Set([...ownKeys, ...protoKeys])]
+}
 
 export class RemoteCallManager {
   // private proxyCache = new WeakMap<object, any>();
-  private contextRoot: Record<string, any> = {};
-  private allowedPrefixes = new WeakMap<object, string[]>();
+  private contextRoot: Record<string, any> = {}
+  private allowedPrefixes = new WeakMap<object, string[]>()
 
-  constructor(
-    private send: (call: RemoteCall | RemoteEvent) => void
-  ) {}
-
+  constructor(private send: (call: RemoteCall | RemoteEvent) => void) {}
 
   // Updated: Takes a name to register in contextRoot
   public wrapObject(name: string, obj: any, allowedFnPrefixes: string[]): void {
-    this.contextRoot[name] = obj;
-    this.allowedPrefixes.set(obj, allowedFnPrefixes);
+    this.contextRoot[name] = obj
+    this.allowedPrefixes.set(obj, allowedFnPrefixes)
 
-    const visited = new WeakSet();
+    const visited = new WeakSet()
 
     const recurse = (target: any, path: string[] = [name]) => {
-      if (!this.isPlainObject(target) || visited.has(target)) return;
-      visited.add(target);
+      if (!this.isPlainObject(target) || visited.has(target)) return
+      visited.add(target)
 
       for (const key of getAllKeys(target)) {
-        const value = target[key];
-        const currentPath = [...path, key];
+        const value = target[key]
+        const currentPath = [...path, key]
 
-        if (typeof value === "function" && this.isAllowed(target,key)) {
-          target[key] = this.wrapFunction(value.bind(target), currentPath);
+        if (typeof value === 'function' && this.isAllowed(target, key)) {
+          target[key] = this.wrapFunction(value.bind(target), currentPath)
         } else if (this.isPlainObject(value)) {
-          recurse(value, currentPath);
+          recurse(value, currentPath)
         }
-      }
-    };
-
-    recurse(obj);
-  }
-
-  private isAllowed(obj: object, fnName: string): boolean {
-    const prefixes = this.allowedPrefixes.get(obj);
-    return prefixes?.some(prefix => fnName.startsWith(prefix)) ?? false;
-  }
-
-  private wrapFunction(fn: (...args: any[]) => any, path: string[]): (...args: any[]) => any {
-  return (...args: any[]) => {
-    const fromRemote = args[0]?.__fromRemote;
-    if (!fromRemote) {
-      let payload: RemoteCall;
-
-      const functionName = path[path.length - 1]
-      if (["onKeydown", "onKeyup"].includes(functionName) && args[0] instanceof KeyboardEvent) {
-        const e = args[0] as KeyboardEvent;
-        // Send a custom event payload instead
-        this.sendKeyMirror(e, functionName as "onKeydown" | "onKeyup");
-      } else {
-        // Normal API call
-        payload = {
-          type: "call",
-          path,
-          args,
-          timestamp: Date.now(),
-        };
-
-        this.send(payload);
       }
     }
 
-    return fn(...args);
-  };
-}
+    recurse(obj)
+  }
 
-  public sendKeyMirror(e: KeyboardEvent, functionName: "onKeydown" | "onKeyup") {
+  private isAllowed(obj: object, fnName: string): boolean {
+    const prefixes = this.allowedPrefixes.get(obj)
+    return prefixes?.some((prefix) => fnName.startsWith(prefix)) ?? false
+  }
+
+  private wrapFunction(fn: (...args: any[]) => any, path: string[]): (...args: any[]) => any {
+    return (...args: any[]) => {
+      const fromRemote = args[0]?.__fromRemote
+      if (!fromRemote) {
+        let payload: RemoteCall
+
+        const functionName = path[path.length - 1]
+        if (['onKeydown', 'onKeyup'].includes(functionName) && args[0] instanceof KeyboardEvent) {
+          const e = args[0] as KeyboardEvent
+          // Send a custom event payload instead
+          this.sendKeyMirror(e, functionName as 'onKeydown' | 'onKeyup')
+        } else {
+          // Normal API call
+          payload = {
+            type: 'call',
+            path,
+            args,
+            timestamp: Date.now(),
+          }
+
+          this.send(payload)
+        }
+      }
+
+      return fn(...args)
+    }
+  }
+
+  public sendKeyMirror(e: KeyboardEvent, functionName: 'onKeydown' | 'onKeyup') {
     const call: RemoteEvent = {
       type: functionName,
       key: e.key,
@@ -119,56 +115,56 @@ export class RemoteCallManager {
         meta: e.metaKey,
       },
       timestamp: Date.now(),
-    };
-    this.send(call);
+    }
+    this.send(call)
   }
 
   public handleIncomingMessage(message: string) {
-    let data: RemoteCall | RemoteEvent;
+    let data: RemoteCall | RemoteEvent
 
     try {
-      data = JSON.parse(message);
+      data = JSON.parse(message)
     } catch (err) {
-      console.error("JSON parse error:", err, "Original data:", message);
-      return;
+      console.error('JSON parse error:', err, 'Original data:', message)
+      return
     }
 
-    if (data.type === "call") {
-      this.executeRemoteCall(data);
-    } else if (["onKeydown", "onKeyup"].includes(data.type)) {
-      this.regenerateKeyboardEvent(data);
+    if (data.type === 'call') {
+      this.executeRemoteCall(data)
+    } else if (['onKeydown', 'onKeyup'].includes(data.type)) {
+      this.regenerateKeyboardEvent(data)
     } else {
-      console.warn("Unknown message type");
+      console.warn('Unknown message type')
     }
   }
 
   private executeRemoteCall(call: RemoteCall) {
-    const { path, args = [] } = call;
+    const { path, args = [] } = call
     if (!Array.isArray(path) || path.length < 1 || !this.isSafePath(path)) {
-      console.error("Invalid or unsafe path:", path);
-      return;
+      console.error('Invalid or unsafe path:', path)
+      return
     }
 
-    let context = this.contextRoot;
+    let context = this.contextRoot
     for (let i = 0; i < path.length - 1; i++) {
-      context = context?.[path[i]];
+      context = context?.[path[i]]
     }
 
-    const func = context?.[path[path.length - 1]];
+    const func = context?.[path[path.length - 1]]
 
-    if (typeof func === "function") {
+    if (typeof func === 'function') {
       try {
-        func.apply(context, args);
+        func.apply(context, args)
       } catch (err) {
-        console.error("Function execution error:", err);
+        console.error('Function execution error:', err)
       }
     } else {
-      console.warn("Function not found or invalid:", path.join("."));
+      console.warn('Function not found or invalid:', path.join('.'))
     }
   }
 
   private regenerateKeyboardEvent(msg: RemoteEvent) {
-    const event = new KeyboardEvent("keydown", {
+    const event = new KeyboardEvent('keydown', {
       key: msg.key,
       code: msg.code,
       charCode: msg.charCode,
@@ -179,22 +175,22 @@ export class RemoteCallManager {
       metaKey: msg.mods.meta,
       bubbles: true,
       cancelable: true,
-    });
+    })
 
-    this.contextRoot.FlightSimModule?.GLFW?.[msg.type]?.(event);
+    this.contextRoot.FlightSimModule?.GLFW?.[msg.type]?.(event)
   }
 
   private isPlainObject(val: any): val is Record<string, any> {
-    return Object.prototype.toString.call(val) === "[object Object]";
+    return Object.prototype.toString.call(val) === '[object Object]'
   }
 
   private isSafePath(path: string[]): boolean {
     return path.every(
       (key) =>
-        typeof key === "string" &&
-        key !== "__proto__" &&
-        key !== "constructor" &&
-        key !== "prototype"
-    );
+        typeof key === 'string' &&
+        key !== '__proto__' &&
+        key !== 'constructor' &&
+        key !== 'prototype',
+    )
   }
 }
