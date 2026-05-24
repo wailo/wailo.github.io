@@ -109,7 +109,7 @@ export async function repositionWithAutopilot(
 
   // Set Simulation speed to 100
   simulation.set_simulation_speed(100);
-
+  flightModel.set_freeze_position(true);
   flightModel.set_engine_throttle_position(1);
   // Toggle the autopilot master switch state.
   flightModel.set_autopilot_master_switch(true);
@@ -196,6 +196,9 @@ export async function repositionWithAutopilot(
     400,
     timeOut,
   );
+
+  // Unfreeze position
+  flightModel.set_freeze_position(false);
 
   if (!success) {
     context.notifyUser(
