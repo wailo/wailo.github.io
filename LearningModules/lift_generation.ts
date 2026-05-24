@@ -1,104 +1,112 @@
-import { ScriptContext } from "../../src/core";
+import { ScriptContext } from '../../src/core'
 
 export async function main(context: ScriptContext) {
-  const simControls = context.controls;
+  const simControls = context.controls
   // const simProps = context.props;
-  const repositionWithAutopilot = context.repositionWithAutopilot;
-  const waitFor = context.waitFor;
-  const waitForCondition = context.waitForCondition;  
+  const repositionWithAutopilot = context.repositionWithAutopilot
+  const waitFor = context.waitFor
+  const waitForCondition = context.waitForCondition
   // const dataView = context.dataView;
   // const plotView = context.plotView;
-  const dataDisplayReset = context.dataDisplayReset;
-  const notifyUser = context.notifyUser;
+  const dataDisplayReset = context.dataDisplayReset
+  const notifyUser = context.notifyUser
   // const checkPoint = context.checkPoint;
 
-// 📘 Lesson 1: Monitor Lift Generation in Flight
-notifyUser(
-  "📘 Lesson: Monitor Lift Generation",
-  "🪂 In this lesson, you'll monitor how lift (Cl) changes with pitch and angle of attack.\n\n" +
-  "We'll begin with straight and level flight, then introduce pitch changes for climb and descent.\n" +
-  "⏱ Simulation speed will slow when needed to help you observe clearly.\n\n" +
-  "👀 Interact: The simulation will pause after each observation.\n" +
-  "▶️ Click resume when ready to continue."
-);
+  // 📘 Lesson 1: Monitor Lift Generation in Flight
+  notifyUser(
+    '📘 Lesson: Monitor Lift Generation',
+    "🪂 In this lesson, you'll monitor how lift (Cl) changes with pitch and angle of attack.\n\n" +
+      "We'll begin with straight and level flight, then introduce pitch changes for climb and descent.\n" +
+      '⏱ Simulation speed will slow when needed to help you observe clearly.\n\n' +
+      '👀 Interact: The simulation will pause after each observation.\n' +
+      '▶️ Click resume when ready to continue.',
+  )
 
-// 📊 Snapshot Storage
-let levelMetrics = { pitch: "", aoa: "", speed: "", cl: "" };
-let climbMetrics = { pitch: "", aoa: "", speed: "", cl: "" };
-let descentMetrics = { pitch: "", aoa: "", speed: "", cl: "" };
+  // 📊 Snapshot Storage
+  let levelMetrics = { pitch: '', aoa: '', speed: '', cl: '' }
+  let climbMetrics = { pitch: '', aoa: '', speed: '', cl: '' }
+  let descentMetrics = { pitch: '', aoa: '', speed: '', cl: '' }
 
-// Snapshot function
-const getLiftSnapshot = async () => {
-  const cl = simControls.flightModel.cl.toFixed(3);
-  const pitch = simControls.flightModel.pitch_deg.toFixed(1);
-  const aoa = simControls.flightModel.aoa_deg.toFixed(1);
-  const speed = simControls.flightModel.speed_indicated_knots.toFixed(1);
+  // Snapshot function
+  const getLiftSnapshot = async () => {
+    const cl = simControls.flightModel.cl.toFixed(3)
+    const pitch = simControls.flightModel.pitch_deg.toFixed(1)
+    const aoa = simControls.flightModel.aoa_deg.toFixed(1)
+    const speed = simControls.flightModel.speed_indicated_knots.toFixed(1)
+
+    notifyUser(
+      '📊 Snapshot',
+      `| **Metric** | **Value** |\n|------------|-----------|\n| 🧭 **Pitch** | ${pitch}° |\n| 🎯 **AoA** | ${aoa}° |\n| 💨 **Speed** | ${speed} knots |\n| 🪂 **Cl** | ${cl} |`,
+    )
+    simControls.simulation.set_simulation_pause(true)
+    await waitFor(500)
+    await waitForCondition(() => simControls.simulation.simulation_pause === false)
+
+    return { pitch, aoa, speed, cl }
+  }
+
+  // 🔁 Setup: Reset and reposition at 15,000 ft and 250 knots
+  const targetVerticalSpeed = 3000 // feet per minute
+
+  dataDisplayReset()
+  await repositionWithAutopilot(context, 15000, 250, 90)
+
+  simControls.flightModel.set_autopilot_master_switch(true)
+  simControls.flightModel.set_autopilot_speed_indicated_hold(true)
+  simControls.flightModel.set_autopilot_altitude_hold(true)
 
   notifyUser(
-    "📊 Snapshot",
-    `| **Metric** | **Value** |\n|------------|-----------|\n| 🧭 **Pitch** | ${pitch}° |\n| 🎯 **AoA** | ${aoa}° |\n| 💨 **Speed** | ${speed} knots |\n| 🪂 **Cl** | ${cl} |`
-  );
-  simControls.simulation.set_simulation_pause(true);
-  await waitFor(500);
-  await waitForCondition(() => simControls.simulation.simulation_pause === false);
+    '🛫 Level Flight',
+    'We are now stabilized in straight and level flight.\nObserve Cl, pitch, and AoA.',
+  )
+  await waitFor(3000)
+  levelMetrics = await getLiftSnapshot()
+  await waitFor(2000)
 
-  return { pitch, aoa, speed, cl };
-};
+  // 🔼 Begin Climb
+  simControls.flightModel.set_autopilot_vertical_speed_target(targetVerticalSpeed)
+  simControls.flightModel.set_autopilot_vertical_speed_hold(true)
+  notifyUser('🔼 Climbing', "We're increasing pitch. Watch how Cl and AoA respond.")
 
-// 🔁 Setup: Reset and reposition at 15,000 ft and 250 knots
-const targetVerticalSpeed = 3000; // feet per minute
+  await waitForCondition(
+    () => Math.abs(simControls.flightModel.vertical_speed - targetVerticalSpeed) < 500,
+  )
+  await waitFor(3000)
+  climbMetrics = await getLiftSnapshot()
+  await waitFor(5000)
 
-dataDisplayReset();
-await repositionWithAutopilot(context, 15000, 250, 90);
+  // 🔽 Begin Descent
+  notifyUser('🔽 Descending', 'Pitching down. Watch how Cl and AoA change.')
+  simControls.flightModel.set_autopilot_vertical_speed_target(-targetVerticalSpeed)
+  await waitForCondition(
+    () => Math.abs(simControls.flightModel.vertical_speed + targetVerticalSpeed) < 500,
+  )
+  descentMetrics = await getLiftSnapshot()
+  await waitFor(5000)
 
-simControls.flightModel.set_autopilot_master_switch(true);
-simControls.flightModel.set_autopilot_speed_indicated_hold(true);
-simControls.flightModel.set_autopilot_altitude_hold(true);
+  // 🔁 Return to Level Flight
+  notifyUser('🔁 Returning to Level Flight', 'Resetting vertical speed to 0.')
+  simControls.simulation.set_simulation_speed(10)
+  simControls.flightModel.set_autopilot_vertical_speed_target(0)
+  waitForCondition(() => Math.abs(simControls.flightModel.vertical_speed) < 1).then(() =>
+    simControls.simulation.set_simulation_speed(1),
+  )
 
-notifyUser("🛫 Level Flight", "We are now stabilized in straight and level flight.\nObserve Cl, pitch, and AoA.");
-await waitFor(3000);
-levelMetrics = await getLiftSnapshot();
-await waitFor(2000);
-
-// 🔼 Begin Climb
-simControls.flightModel.set_autopilot_vertical_speed_target(targetVerticalSpeed);
-simControls.flightModel.set_autopilot_vertical_speed_hold(true);
-notifyUser("🔼 Climbing", "We're increasing pitch. Watch how Cl and AoA respond.");
-
-await waitForCondition(() => Math.abs(simControls.flightModel.vertical_speed - targetVerticalSpeed) < 500);
-await waitFor(3000);
-climbMetrics = await getLiftSnapshot();
-await waitFor(5000);
-
-// 🔽 Begin Descent
-notifyUser("🔽 Descending", "Pitching down. Watch how Cl and AoA change.");
-simControls.flightModel.set_autopilot_vertical_speed_target(-targetVerticalSpeed);
-await waitForCondition(() => Math.abs(simControls.flightModel.vertical_speed + targetVerticalSpeed) < 500);
-descentMetrics = await getLiftSnapshot();
-await waitFor(5000);
-
-// 🔁 Return to Level Flight
-notifyUser("🔁 Returning to Level Flight", "Resetting vertical speed to 0.");
-simControls.simulation.set_simulation_speed(10);
-simControls.flightModel.set_autopilot_vertical_speed_target(0);
-waitForCondition(() => Math.abs(simControls.flightModel.vertical_speed) < 1).then(() => simControls.simulation.set_simulation_speed(1));
-
-const combinedTable = `
+  const combinedTable = `
 | **Metric**       | **Level Flight**       | **Climb**             | **Descent**           |
 |-------------------|------------------------|------------------------|-----------------------|
 | 🧭 **Pitch**      | ${levelMetrics.pitch}° | ${climbMetrics.pitch}° | ${descentMetrics.pitch}° |
 | 🎯 **AoA**        | ${levelMetrics.aoa}°   | ${climbMetrics.aoa}°   | ${descentMetrics.aoa}°   |
 | 💨 **Speed**      | ${levelMetrics.speed} knots | ${climbMetrics.speed} knots | ${descentMetrics.speed} knots |
 | 🪂 **Cl**         | ${levelMetrics.cl}     | ${climbMetrics.cl}     | ${descentMetrics.cl}     |
-`;
+`
 
-
-notifyUser(
-  "🧠 Quiz Time!",
-  "❓ What happens to lift (Cl) when pitch increases? When it decreases?\n" +
-  "❓ How does this relate to angle of attack and airspeed?\n" +
-  "💡 What's the difference between pitch angle and angle of attack (AoA)? Why do they differ?\n\n" +
-  "📊 Use the table below to help explain:\n\n" +
-  combinedTable
-);
+  notifyUser(
+    '🧠 Quiz Time!',
+    '❓ What happens to lift (Cl) when pitch increases? When it decreases?\n' +
+      '❓ How does this relate to angle of attack and airspeed?\n' +
+      "💡 What's the difference between pitch angle and angle of attack (AoA)? Why do they differ?\n\n" +
+      '📊 Use the table below to help explain:\n\n' +
+      combinedTable,
+  )
 }
