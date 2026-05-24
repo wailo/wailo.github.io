@@ -109,10 +109,10 @@
 
   <div
     v-if="isQrPopupOpen == true"
-    class="fixed inset-0 flex items-center justify-center bg-simBackground bg-opacity-50"
+    class="fixed inset-0 flex items-center justify-center bg-panelContentBackground"
     @click.self="() => (isQrPopupOpen = false)"
   >
-    <div class="bg-simBackground p-6 rounded-lg shadow-lg w-min text-center">
+    <div class="bg-panelContentBackground p-6 rounded-lg shadow-lg w-min text-center">
       <!-- <vue-qr
         :text="myPeerId ? `${baseUrl}/#sim?roomId=${myPeerId}` : ''"
         :size="150"
