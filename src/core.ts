@@ -4,54 +4,44 @@ export type {
   c172,
   graphics,
   ExtendedMainModule,
-} from "./wasm/siminterface";
+} from './wasm/siminterface'
 
-import { SimulationProperties } from "../src/wasm/generated/flightsimulator_exec_meta";
-export type { SimulationProperties } from "../src/wasm/generated/flightsimulator_exec_meta";
+import { SimulationProperties } from '../src/wasm/generated/flightsimulator_exec_meta'
+export type { SimulationProperties } from '../src/wasm/generated/flightsimulator_exec_meta'
 
-import type { ScriptContext } from "./ScriptContext";
-import type { b747, c172 } from "./wasm/siminterface";
-export type { ScriptContext } from "./ScriptContext";
+import type { ScriptContext } from './ScriptContext'
+import type { b747, c172 } from './wasm/siminterface'
+export type { ScriptContext } from './ScriptContext'
 
 // Plot a graph of simulation property.
-export declare function plotView(
-  simPropitem: SimulationProperties,
-  state: boolean,
-): void;
+export declare function plotView(simPropitem: SimulationProperties, state: boolean): void
 // Display data of a simulation property
-export declare function dataView(
-  simPropitem: SimulationProperties,
-  state: boolean,
-): void;
+export declare function dataView(simPropitem: SimulationProperties, state: boolean): void
 // Reset All simulation displays
-export declare function dataDisplayReset(): void;
+export declare function dataDisplayReset(): void
 // Send a prompt that is visible to the user
-export declare function notifyUser(
-  title: string,
-  body?: string,
-  timeOut?: number,
-): void;
+export declare function notifyUser(title: string, body?: string, timeOut?: number): void
 // Create a checkpoint to inform the instructor about the progress of the a script
-export declare function checkPoint(content: string): void;
+export declare function checkPoint(content: string): void
 
 // Helper function to calculate the difference between two angles in degrees, normalized to the range [-180, 180]
 function angleDiffDeg(aDeg: number, bDeg: number): number {
-  return ((aDeg - bDeg + 180) % 360) - 180;
+  return ((aDeg - bDeg + 180) % 360) - 180
 }
 
 function getTypedFlightModel(
-  controls: ScriptContext["controls"],
+  controls: ScriptContext['controls'],
   flight_model_type: number,
 ): b747 | c172 {
   if (flight_model_type === controls.GRAPHICSEFlightModel.B747) {
-    return controls.flightModel as b747;
+    return controls.flightModel as b747
   }
 
   if (flight_model_type === controls.GRAPHICSEFlightModel.C172) {
-    return controls.flightModel as c172;
+    return controls.flightModel as c172
   }
 
-  return controls.flightModel as b747 | c172;
+  return controls.flightModel as b747 | c172
 }
 
 /**
@@ -98,89 +88,85 @@ export async function repositionWithAutopilot(
   timeOut: number = 10000,
   preConfiguration?: Function,
 ): Promise<boolean> {
-  const simulation = context.controls.simulation;
-  const flight_model_type = simulation.flight_model;
+  const simulation = context.controls.simulation
+  const flight_model_type = simulation.flight_model
 
   // Force Reset flight model
-  simulation.reset_flightmodel();
+  simulation.reset_flightmodel()
 
   // Reinitialize the flight model reference after reset
-  const flightModel = getTypedFlightModel(context.controls, flight_model_type);
+  const flightModel = getTypedFlightModel(context.controls, flight_model_type)
 
   // Set Simulation speed to 100
-  simulation.set_simulation_speed(100);
-  flightModel.set_freeze_position(true);
-  flightModel.set_engine_throttle_position(1);
+  simulation.set_simulation_speed(100)
+  flightModel.set_freeze_position(true)
+  flightModel.set_freeze_fuel(true)
+  flightModel.set_engine_throttle_position(1)
   // Toggle the autopilot master switch state.
-  flightModel.set_autopilot_master_switch(true);
-  flightModel.set_autopilot_auto_trim(true);
-  flightModel.set_autopilot_speed_indicated_target(target_speed);
-  flightModel.set_autopilot_altitude_target(target_altitude);
-  flightModel.set_autopilot_heading_target(target_heading);
+  flightModel.set_autopilot_master_switch(true)
+  flightModel.set_autopilot_auto_trim(true)
+  flightModel.set_autopilot_speed_indicated_target(target_speed)
+  flightModel.set_autopilot_altitude_target(target_altitude)
+  flightModel.set_autopilot_heading_target(target_heading)
 
-  let min_takeoff_speed = 0;
-  let climb_rate_fpm = 0;
-  let positive_climb_altitude_ft = 0;
+  let min_takeoff_speed = 0
+  let climb_rate_fpm = 0
+  let positive_climb_altitude_ft = 0
 
   if (flight_model_type == context.controls.GRAPHICSEFlightModel.B747) {
-    min_takeoff_speed = 180; // Minimum takeoff speed for B747 in knots (approximate)
-    climb_rate_fpm = 1500; // Climb rate for B747 in feet per minute (approximate)
-    positive_climb_altitude_ft = 300; // Minimum altitude to confirm positive climb for B747 in feet
+    min_takeoff_speed = 180 // Minimum takeoff speed for B747 in knots (approximate)
+    climb_rate_fpm = 1500 // Climb rate for B747 in feet per minute (approximate)
+    positive_climb_altitude_ft = 300 // Minimum altitude to confirm positive climb for B747 in feet
   } else if (flight_model_type == context.controls.GRAPHICSEFlightModel.C172) {
-    min_takeoff_speed = 80; // Minimum takeoff speed for C172 in knots (approximate)
-    climb_rate_fpm = 100; // Climb rate for C172 in feet per minute (approximate)
-    positive_climb_altitude_ft = 100; // Minimum altitude to confirm positive climb for C172 in feet
+    min_takeoff_speed = 80 // Minimum takeoff speed for C172 in knots (approximate)
+    climb_rate_fpm = 100 // Climb rate for C172 in feet per minute (approximate)
+    positive_climb_altitude_ft = 100 // Minimum altitude to confirm positive climb for C172 in feet
   }
 
   // Wait for speed to cross minimum takeoff speed in knots
   await waitForCondition(() => {
-    return flightModel.speed_indicated_knots > min_takeoff_speed;
-  });
+    return flightModel.speed_indicated_knots > min_takeoff_speed
+  })
 
   // Set vertical speed target and toggle vertical speed hold to start climbing
-  flightModel.set_autopilot_pitch_target(7); // Set an initial pitch target to help with takeoff
-  flightModel.set_autopilot_pitch_hold(true);
+  flightModel.set_autopilot_pitch_target(7) // Set an initial pitch target to help with takeoff
+  flightModel.set_autopilot_pitch_hold(true)
 
   // Wait until the aircraft is airborne
-  await waitForCondition(() => !flightModel.weight_on_wheel);
+  await waitForCondition(() => !flightModel.weight_on_wheel)
 
   // Toggle vertical speed hold
-  flightModel.set_autopilot_vertical_speed_target(climb_rate_fpm);
-  flightModel.set_autopilot_vertical_speed_hold(true);
+  flightModel.set_autopilot_vertical_speed_target(climb_rate_fpm)
+  flightModel.set_autopilot_vertical_speed_hold(true)
 
   // Wait until the altitude crosses the positive climb altitude
   await waitForCondition(() => {
-    return (
-      flightModel.altitude_ft >=
-      Math.min(positive_climb_altitude_ft, target_altitude)
-    );
-  });
+    return flightModel.altitude_ft >= Math.min(positive_climb_altitude_ft, target_altitude)
+  })
 
   // Landing gear up
   if (flight_model_type == context.controls.GRAPHICSEFlightModel.B747) {
     // Workaround until reposition is exported.
-    const flightModelB747 = context.controls.flightModel as b747;
-    flightModelB747.set_landing_gear_selector_position(
-      context.controls.B747GearSelector.UP,
-    );
+    const flightModelB747 = context.controls.flightModel as b747
+    flightModelB747.set_landing_gear_selector_position(context.controls.B747GearSelector.UP)
   }
 
   // Toggle vertical speed hold
-  flightModel.set_autopilot_altitude_hold(true);
+  flightModel.set_autopilot_altitude_hold(true)
 
   // Toggle speed hold
-  flightModel.set_autopilot_speed_indicated_hold(true);
+  flightModel.set_autopilot_speed_indicated_hold(true)
 
   // Toggle Heading hold
-  flightModel.set_autopilot_heading_hold(true);
+  flightModel.set_autopilot_heading_hold(true)
 
   // Invoke pre configuration function if provided
   if (preConfiguration) {
-    preConfiguration();
+    preConfiguration()
   }
 
-   // Set Simulation speed to 500
-  simulation.set_simulation_speed(500);
+  // Set Simulation speed to 500
+  simulation.set_simulation_speed(500)
 
   // Wait until all condition are met.
   const success = await waitForCondition(
@@ -190,40 +176,41 @@ export async function repositionWithAutopilot(
         Math.abs(flightModel.speed_indicated_knots - target_speed) < 0.05 &&
         angleDiffDeg(flightModel.yaw_deg, target_heading) < 0.01 &&
         Math.abs(flightModel.elevator_position) < 0.005
-      );
+      )
     },
     400,
     400,
     timeOut,
-  );
+  )
 
-  // Unfreeze position
-  flightModel.set_freeze_position(false);
+  // Unfreeze
+  flightModel.set_freeze_position(false)
+  flightModel.set_freeze_fuel(false)
 
   if (!success) {
     context.notifyUser(
-      "Reposition Failed",
+      'Reposition Failed',
       `Failed to reposition to altitude: ${target_altitude} ft, speed: ${target_speed} knots, heading: ${target_heading}° within ${timeOut / 1000} seconds.`,
-    );
-    simulation.set_simulation_speed(1);
-    simulation.set_simulation_pause(true);
-    return false;
+    )
+    simulation.set_simulation_speed(1)
+    simulation.set_simulation_pause(true)
+    return false
   }
 
   // Restore Simulation speed to 1
-  simulation.set_simulation_speed(1);
-  await waitFor(100);
+  simulation.set_simulation_speed(1)
+  await waitFor(100)
 
   // Turn off autopilot
-  flightModel.set_autopilot_master_switch(false);
-  flightModel.set_autopilot_auto_trim(false);
-  flightModel.set_autopilot_altitude_hold(false);
-  flightModel.set_autopilot_speed_indicated_hold(false);
-  flightModel.set_autopilot_heading_hold(false);
-  flightModel.set_autopilot_pitch_hold(false);
+  flightModel.set_autopilot_master_switch(false)
+  flightModel.set_autopilot_auto_trim(false)
+  flightModel.set_autopilot_altitude_hold(false)
+  flightModel.set_autopilot_speed_indicated_hold(false)
+  flightModel.set_autopilot_heading_hold(false)
+  flightModel.set_autopilot_pitch_hold(false)
 
-  await waitFor(100);
-  return success;
+  await waitFor(100)
+  return success
 }
 
 // Function to wait for a condition to be true after a given confirmation time in ms
@@ -239,63 +226,60 @@ export async function waitForCondition(
   hardTimeout_ms: number | null = null,
   throwOnTimeout: boolean = false,
 ): Promise<boolean> {
-  const maxAttempts = Math.ceil(confirmation_ms / pollInterval_ms);
-  let attempts = 0;
-  let resolved = false;
-  let timeoutHandle: number;
+  const maxAttempts = Math.ceil(confirmation_ms / pollInterval_ms)
+  let attempts = 0
+  let resolved = false
+  let timeoutHandle: number
 
-  const poll = (
-    resolve: (value: boolean) => void,
-    reject: (reason?: any) => void,
-  ) => {
-    if (resolved) return;
+  const poll = (resolve: (value: boolean) => void, reject: (reason?: any) => void) => {
+    if (resolved) return
 
     if (conditionFunction() === true) {
-      attempts++;
+      attempts++
       if (attempts >= maxAttempts) {
-        clearTimeout(timeoutHandle);
-        resolved = true;
-        resolve(true); // Condition confirmed
+        clearTimeout(timeoutHandle)
+        resolved = true
+        resolve(true) // Condition confirmed
       } else {
-        setTimeout(() => poll(resolve, reject), pollInterval_ms);
+        setTimeout(() => poll(resolve, reject), pollInterval_ms)
       }
     } else {
-      attempts = 0; // reset if fails
-      setTimeout(() => poll(resolve, reject), pollInterval_ms);
+      attempts = 0 // reset if fails
+      setTimeout(() => poll(resolve, reject), pollInterval_ms)
     }
-  };
+  }
 
   return new Promise<boolean>((resolve, reject) => {
     if (hardTimeout_ms !== null) {
       timeoutHandle = setTimeout(() => {
         if (!resolved) {
-          resolved = true;
+          resolved = true
           if (throwOnTimeout) {
-            reject(new Error("Condition not met within timeout."));
+            reject(new Error('Condition not met within timeout.'))
           } else {
-            resolve(false);
+            resolve(false)
           }
         }
-      }, hardTimeout_ms) as number; // No .then()!
+      }, hardTimeout_ms) as number // No .then()!
     }
-    poll(resolve, reject);
-  });
+    poll(resolve, reject)
+  })
 }
 
 // Wait for a given time in ms without interrupting the simulation
 export async function waitFor(ms: number): Promise<void> {
   const poll = (resolve: any) => {
-    setTimeout((_) => resolve(), ms);
-  };
-  return new Promise(poll);
+    setTimeout((_) => resolve(), ms)
+  }
+  return new Promise(poll)
 }
 
 // Module-level cache
-const cache: number[] = [];
+const cache: number[] = []
 
 // Save originals
-const _setTimeout = window.setTimeout;
-const _clearTimeout = window.clearTimeout;
+const _setTimeout = window.setTimeout
+const _clearTimeout = window.clearTimeout
 
 // ✅ Synchronous wrapper returning number
 export function setTimeout(
@@ -305,32 +289,32 @@ export function setTimeout(
 ): number {
   const wrappedCallback = function (...cbArgs: any[]) {
     try {
-      callback.apply(null, cbArgs);
+      callback.apply(null, cbArgs)
     } finally {
-      removeCacheItem(id, cache);
+      removeCacheItem(id, cache)
     }
-  };
+  }
 
-  const id = _setTimeout(wrappedCallback, duration || 0, ...args);
-  cache.push(id);
-  return id; // ✅ Return number synchronously
+  const id = _setTimeout(wrappedCallback, duration || 0, ...args)
+  cache.push(id)
+  return id // ✅ Return number synchronously
 }
 
 // ✅ Standard signature, optional cache param
 export function clearTimeout(id: number, timeOutCache: number[] = cache): void {
-  _clearTimeout(id);
-  removeCacheItem(id, timeOutCache);
+  _clearTimeout(id)
+  removeCacheItem(id, timeOutCache)
 }
 
 export const resetTimeouts = (): void => {
   // Create a copy to avoid mutation during iteration
-  [...cache].forEach((id) => _clearTimeout(id));
-  cache.length = 0;
-};
+  ;[...cache].forEach((id) => _clearTimeout(id))
+  cache.length = 0
+}
 
 const removeCacheItem = (id: number, timeOutCache: number[]): void => {
-  const idx = timeOutCache.indexOf(id);
+  const idx = timeOutCache.indexOf(id)
   if (idx > -1) {
-    timeOutCache.splice(idx, 1);
+    timeOutCache.splice(idx, 1)
   }
-};
+}
