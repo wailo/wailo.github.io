@@ -285,7 +285,7 @@
       data-layout="instructor pilot"
       :active="classRoomComponentState"
       >
-      <template #ClassRoom>
+      <template #Classroom>
         <div class="flex flex-col h-full w-full">
           <Accounts
           v-if="sim_module_loaded"
