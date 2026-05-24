@@ -10,6 +10,7 @@
   --color-panelHeaderBackground: 25 25 25;    /* #191919 */
   --color-panelStatusBackground: 223 228 226; /* #dfe4e2 */
   --color-panelContentBackground: 0 0 0;      /* #000000 */
+  --color-panelActive: 185 57 27;
   --color-simElementBorder: 89 89 89;     /* #595959 */
   --color-simInputBackground: 25 25 25;   /* #191919 */
   --color-simBackground: 0 0 0;           /* #000000 */
@@ -24,6 +25,7 @@
   --color-panelHeaderBackground: 210 214 216;
   --color-panelStatusBackground: 24 28 31;
   --color-panelContentBackground: 238 240 240;
+  --color-panelActive: 185 57 27;
   --color-simElementBorder: 24 28 31;
   --color-simInputBackground: 200 205 207;
   --color-simBackground: 238 240 240;
