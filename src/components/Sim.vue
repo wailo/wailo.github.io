@@ -34,10 +34,10 @@
             id="fullscreen-container"
             class="absolute inset-0 z-10 flex w-full h-full bg-transparent pointer-events-none"
           >
-            <div id="canvas-container" class="flex-grow w-full h-full pointer-events-none">
+            <div id="canvas-container" :class="['h-full', openLayersMapRef?.showNavMap ? 'w-[65%]' : 'w-full'] ">
               <canvas
                 id="canvas"
-                class="emscripten w-full h-full bg-transparent pointer-events-none"
+                class="emscripten bg-transparent h-full w-full"
                 @contextmenu.prevent
                 tabindex="-1"
               ></canvas>
