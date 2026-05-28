@@ -34,7 +34,10 @@
             id="fullscreen-container"
             class="absolute inset-0 z-10 flex w-full h-full bg-transparent pointer-events-none"
           >
-            <div id="canvas-container" :class="['h-full', openLayersMapRef?.showNavMap ? 'w-[65%]' : 'w-full'] ">
+            <div
+              id="canvas-container"
+              :class="['h-full', openLayersMapRef?.showNavMap ? 'w-[65%]' : 'w-full']"
+            >
               <canvas
                 id="canvas"
                 class="emscripten bg-transparent h-full w-full"
@@ -279,6 +282,25 @@
           </template>
         </div>
       </template>
+
+      <template #Joystick>
+        <Joystick
+          v-if="FlightSimModule"
+          :external-inputs="computedJoystickInputs"
+          @input="
+            (val) => {
+              FlightSimModule.flightModel.set_aileron_position(val.aileron)
+              FlightSimModule.flightModel.set_elevator_position(val.elevator)
+              FlightSimModule.flightModel.set_rudder_position(val.rudder)
+              FlightSimModule.flightModel.set_engine_throttle_position(val.throttle)
+              FlightSimModule.flightModel.set_aileron_trim_position(val.aileronTrim)
+              FlightSimModule.flightModel.set_elevator_trim_position(val.elevatorTrim)
+              FlightSimModule.flightModel.set_rudder_trim_position(val.rudderTrim)
+            }
+          "
+          class="w-full h-full p-1"
+        />
+      </template>
     </Panel>
     <!-- Panel 7 -->
     <Panel
@@ -345,6 +367,7 @@ import Accounts from './Accounts.vue'
 import SimDataDisplay from './DataDisplay.vue'
 import MarkDown from './MarkDown.vue'
 import { RemoteCallManager, RemoteCall, RemoteEvent } from '../RemoteCallManager'
+import Joystick, { JoystickInput } from './Joystick.vue'
 
 import {
   initializeModule,
@@ -541,6 +564,8 @@ let flightModelProps: ComputedRef<ReturnType<typeof getFlightModelParameters>>
 let simulationControlsProps: ComputedRef<ReturnType<typeof getSimulationControlsParameters>>
 let groupedSimProps: ComputedRef<Record<string, SimulationProperties[]>>
 
+let computedJoystickInputs: ComputedRef<JoystickInput>
+
 let simUpdateInterval: ReturnType<typeof setInterval>
 let manager: RemoteCallManager
 
@@ -716,6 +741,19 @@ function initFlightModelParams() {
       )
   })
 
+  computedJoystickInputs = computed(() => {
+    renderSignal.value
+    return {
+      aileron: FlightSimModule.flightModel.aileron_position,
+      elevator: FlightSimModule.flightModel.elevator_position,
+      rudder: FlightSimModule.flightModel.rudder_position,
+      throttle: FlightSimModule.flightModel.engine_throttle_position,
+      aileronTrim: FlightSimModule.flightModel.aileron_trim_position,
+      elevatorTrim: FlightSimModule.flightModel.elevator_trim_position,
+      rudderTrim: FlightSimModule.flightModel.rudder_trim_position,
+    }
+  })
+
   manager = createRemoteManager(FlightSimModule)
 }
 
@@ -824,24 +862,31 @@ function createRemoteManager(FlightSimModule: ExtendedMainModule) {
 .panel-cockpit {
   grid-area: cockpit;
 }
+
 .panel-realtimedata {
   grid-area: realtimedata;
 }
+
 .panel-simulationcontrols {
   grid-area: simulationcontrols;
 }
+
 .panel-learningmodules {
   grid-area: learningmodules;
 }
+
 .panel-autopilot {
   grid-area: autopilot;
 }
+
 .panel-flightmodel {
   grid-area: flightmodel;
 }
+
 .panel-classroom {
   grid-area: classroom;
 }
+
 .panel-userprompt {
   grid-area: userprompt;
 }
