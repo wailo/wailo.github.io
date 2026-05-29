@@ -2,12 +2,12 @@
   <input
     type="number"
     class="bg-simInputBackground border-l border-simElementBorder pl-1 h-full text-secondary"
-    :value.number="localValue"
+    v-model="localValue"
     :min="inputMin"
     :max="inputMax"
     :step="inputStep"
-    @input="onInput"
     @change="onChange"
+    @blur="onBlur"
   />
 </template>
 
@@ -15,73 +15,60 @@
 import { ref, watch } from 'vue'
 import { PropType } from 'vue'
 
-// The best thing to do is to seperate the button from text input
-// Props
 const props = defineProps({
   textInput: {
-    type: [Number, Boolean] as PropType<number | boolean>,
+    type: Number as PropType<number>,
     required: false,
   },
   inputChange: {
     type: Function,
   },
   inputMin: {
-    type: Number as PropType<number>,
+    type: Number,
     default: 0,
   },
   inputMax: {
-    type: Number as PropType<number>,
+    type: Number,
     default: 100,
   },
   inputStep: {
-    type: Number as PropType<number>,
+    type: Number,
     default: 1,
   },
 })
 
-// Local state
-const localValue = ref(props.textInput)
-const isEditing = ref(false)
-let editTimeout: ReturnType<typeof setTimeout> | null = null
+// STRING while editing
+const localValue = ref(String(props.textInput ?? ''))
 
-// External update sync logic
 watch(
   () => props.textInput,
   (newVal) => {
-    if (!isEditing.value) {
-      localValue.value = newVal
-    }
+    localValue.value = String(newVal ?? '')
   },
 )
 
-// User types → start editing session
-function onInput(event: Event) {
-  const newVal = parseFloat((event.target as HTMLInputElement).value)
-  if (!isNaN(newVal)) {
-    localValue.value = newVal
-    startEditSession()
+function commitValue() {
+  // user cleared field -> restore previous valid value
+  if (localValue.value === '') {
+    localValue.value = String(props.textInput ?? '')
+    return
+  }
+
+  const num = Number(localValue.value)
+
+  if (!isNaN(num) && num >= props.inputMin && num <= props.inputMax) {
+    props.inputChange?.(num)
+  } else {
+    // invalid -> revert
+    localValue.value = String(props.textInput ?? '')
   }
 }
 
-// Only commit on Change
-// Change happens when the user hit enter, blur or change with keyboard
 function onChange() {
-  if (!isNaN(localValue.value as number)) {
-    props.inputChange?.(localValue.value as number)
-  }
-  stopEditSession()
+  commitValue()
 }
 
-function startEditSession() {
-  isEditing.value = true
-  if (editTimeout) clearTimeout(editTimeout)
-  editTimeout = setTimeout(() => {
-    isEditing.value = false
-  }, 2000)
-}
-
-function stopEditSession() {
-  isEditing.value = false
-  if (editTimeout) clearTimeout(editTimeout)
+function onBlur() {
+  commitValue()
 }
 </script>

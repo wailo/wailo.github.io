@@ -26,31 +26,28 @@
 
     <slot></slot>
 
-    <!-- Smart input -->
-    <input
-      v-if="textInput != null || textInput != undefined"
-      type="number"
+    <!-- wInput owns 100% of input logic, state, and validation -->
+    <wInput
+      v-if="textInput != null"
       :class="[
         'bg-simInputBackground border-l border-simElementBorder pl-1 h-full text-secondary',
         inputWidth,
       ]"
-      :value.number="localValue"
-      :min="inputMin"
-      :max="inputMax"
-      :step="inputStep"
-      @input="onInput"
-      @change="onChange"
+      :text-input="textInput as number"
+      :input-change="inputChange"
+      :input-min="inputMin"
+      :input-max="inputMax"
+      :input-step="inputStep"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
-import { PropType } from 'vue'
+import { PropType, computed } from 'vue'
+import wInput from './wInput.vue'
 
-// The best thing to do is to seperate the button from text input
-// Props
 const props = defineProps({
+  // Button props
   buttonLabel: {
     type: String,
     required: true,
@@ -59,26 +56,28 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  buttonClick: {
+    type: Function as PropType<(event: MouseEvent) => void>,
+  },
+
+  // Input props
   textInput: {
     type: [Number, Boolean, String] as PropType<number | boolean | string>,
     required: false,
-  },
-  buttonClick: {
-    type: Function as PropType<(event: MouseEvent) => void>,
   },
   inputChange: {
     type: Function,
   },
   inputMin: {
-    type: Number as PropType<number>,
+    type: Number,
     default: 0,
   },
   inputMax: {
-    type: Number as PropType<number>,
+    type: Number,
     default: 100,
   },
   inputStep: {
-    type: Number as PropType<number>,
+    type: Number,
     default: 1,
   },
 })
@@ -86,52 +85,6 @@ const props = defineProps({
 // Layout
 const buttonWidth = computed(() => (props.textInput !== undefined ? 'w-6/12' : 'w-full'))
 const inputWidth = computed(() => (props.textInput !== undefined ? 'w-6/12' : 'w-full'))
-
-// Local state
-const localValue = ref(props.textInput)
-const isEditing = ref(false)
-let editTimeout: ReturnType<typeof setTimeout> | null = null
-
-// External update sync logic
-watch(
-  () => props.textInput,
-  (newVal) => {
-    if (!isEditing.value) {
-      localValue.value = newVal
-    }
-  },
-)
-
-// User types → start editing session
-function onInput(event: Event) {
-  const newVal = parseFloat((event.target as HTMLInputElement).value)
-  if (!isNaN(newVal)) {
-    localValue.value = newVal
-    startEditSession()
-  }
-}
-
-// Only commit on Change
-// Change happens when the user hit enter, blur or change with keyboard
-function onChange() {
-  if (!isNaN(localValue.value as number)) {
-    props.inputChange?.(localValue.value as number)
-  }
-  stopEditSession()
-}
-
-function startEditSession() {
-  isEditing.value = true
-  if (editTimeout) clearTimeout(editTimeout)
-  editTimeout = setTimeout(() => {
-    isEditing.value = false
-  }, 2000)
-}
-
-function stopEditSession() {
-  isEditing.value = false
-  if (editTimeout) clearTimeout(editTimeout)
-}
 </script>
 
 <style scoped></style>
