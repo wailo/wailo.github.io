@@ -3,7 +3,10 @@
     class="flex flex-col w-full h-full bg-simBackground text-secondary font-mono overflow-hidden select-none p-0 gap-0"
   >
     <!-- Combined & Compact Telemetry Panel -->
-    <div class="grid grid-cols-7 gap-1 pb-1 bg-panelContentBackground flex-shrink-0">
+    <div
+      class="grid gap-1 pb-1 bg-panelContentBackground flex-shrink-0"
+      :class="input.mixture !== undefined ? 'grid-cols-8' : 'grid-cols-7'"
+    >
       <!-- Primary Controls -->
       <div class="flex flex-col items-center justify-center h-8 border border-panelBorder">
         <span class="text-[8px] tracking-[0.15em] opacity-60">THR</span>
@@ -27,6 +30,17 @@
         <span class="text-[8px] tracking-[0.15em] opacity-60">RUD</span>
         <span class="text-[11px] font-bold text-simActiveButton">
           {{ input.rudder > 0 ? '+' : '' }}{{ Math.round(input.rudder * 100) }}
+        </span>
+      </div>
+
+      <!-- Mixture Telemetry (conditional) -->
+      <div
+        v-if="input.mixture !== undefined"
+        class="flex flex-col items-center justify-center h-8 border border-panelBorder"
+      >
+        <span class="text-[8px] tracking-[0.15em] opacity-60">MIX</span>
+        <span class="text-[11px] font-bold text-simActiveButton">
+          {{ Math.round(input.mixture * 100) }}%
         </span>
       </div>
 
@@ -58,53 +72,102 @@
     </div>
 
     <!-- Main Controls -->
-    <!-- Added: w-full, flex-1, min-h-0, overflow-y-auto for vertical scrolling -->
     <div class="grid grid-cols-2 gap-1 w-full flex-1 min-h-0 overflow-y-auto">
       <!-- LEFT PANEL -->
-      <!-- Changed: h-full to min-h-full, grid-rows-[1fr...] to grid-rows-[minmax(150px,1fr)...] -->
       <!-- LEFT PANEL -->
       <div
-        class="grid grid-rows-[minmax(0,1fr)_auto_auto] gap-1 min-h-full border border-panelBorder bg-panelContentBackground p-1 min-w-0"
+        class="grid gap-1 min-h-full border border-panelBorder bg-panelContentBackground p-1 min-w-0"
+        :class="
+          input.mixture !== undefined
+            ? 'grid-rows-[minmax(0,1fr)_auto_auto]'
+            : 'grid-rows-[minmax(0,1fr)_auto_auto]'
+        "
       >
-        <!-- THROTTLE -->
-        <div class="flex items-center justify-center gap-2 min-h-0">
-          <!-- Vertical Label -->
-          <div class="flex items-center justify-center h-full">
-            <span class="text-[9px] tracking-[0.2em] opacity-60 rotate-[-90deg] whitespace-nowrap">
-              THROTTLE
-            </span>
+        <!-- THROTTLE + MIXTURE -->
+        <div
+          class="flex items-stretch justify-center gap-4 min-h-0"
+          :class="input.mixture !== undefined ? 'flex-row' : 'justify-center'"
+        >
+          <!-- THROTTLE -->
+          <div class="flex items-center justify-center gap-2 min-h-0">
+            <!-- Vertical Label -->
+            <div class="flex items-center justify-center h-full">
+              <span
+                class="text-[9px] tracking-[0.2em] opacity-60 rotate-[-90deg] whitespace-nowrap"
+              >
+                THROTTLE
+              </span>
+            </div>
+
+            <!-- THROTTLE SLIDER -->
+            <div class="relative flex justify-center items-center min-h-0 h-full">
+              <div
+                ref="throttleBaseRef"
+                class="relative w-[18px] h-full bg-simInputBackground border border-simElementBorder overflow-hidden cursor-ns-resize touch-none"
+                @pointerdown="startThrottleDrag"
+              >
+                <!-- Tick Marks -->
+                <div
+                  v-for="i in 10"
+                  :key="'throttle-' + i"
+                  class="absolute left-[3px] right-[3px] h-px bg-panelBorder/40"
+                  :style="{ bottom: `${i * 10}%` }"
+                ></div>
+
+                <!-- Idle Mark -->
+                <div class="absolute left-0 right-0" style="bottom: 20%">
+                  <div class="h-px bg-simActiveButton w-full"></div>
+                  <span
+                    class="absolute left-full ml-2 -translate-y-1/2 top-1/2 text-[8px] text-simActiveButton opacity-90 whitespace-nowrap pointer-events-none"
+                  >
+                    IDLE
+                  </span>
+                </div>
+
+                <!-- Handle -->
+                <div
+                  class="absolute left-1/2 top-1/2 w-7 h-[10px] bg-simActiveButton border border-secondary/40 rounded-[2px] pointer-events-none"
+                  :style="throttleStyle"
+                ></div>
+              </div>
+            </div>
           </div>
 
-          <!-- THROTTLE SLIDER -->
-          <div class="relative flex justify-center items-center min-h-0 h-full">
-            <div
-              ref="throttleBaseRef"
-              class="relative w-[18px] h-full bg-simInputBackground border border-simElementBorder overflow-hidden cursor-ns-resize touch-none"
-              @pointerdown="startThrottleDrag"
-            >
-              <!-- Regular Tick Marks -->
-              <div
-                v-for="i in 10"
-                :key="'throttle-' + i"
-                class="absolute left-[3px] right-[3px] h-px bg-panelBorder/40"
-                :style="{ bottom: `${i * 10}%` }"
-              ></div>
+          <!-- MIXTURE -->
+          <div
+            v-if="input.mixture !== undefined"
+            class="flex items-center justify-center gap-2 min-h-0"
+          >
+            <!-- Vertical Label -->
+            <div class="flex items-center justify-center h-full">
+              <span
+                class="text-[9px] tracking-[0.2em] opacity-60 rotate-[-90deg] whitespace-nowrap"
+              >
+                MIXTURE
+              </span>
+            </div>
 
-              <!-- Idle Mark -->
-              <div class="absolute left-0 right-0" style="bottom: 20%">
-                <div class="h-px bg-simActiveButton w-full"></div>
-                <span
-                  class="absolute left-full ml-2 -translate-y-1/2 top-1/2 text-[8px] text-simActiveButton opacity-90 whitespace-nowrap pointer-events-none"
-                >
-                  IDLE
-                </span>
+            <!-- MIXTURE SLIDER -->
+            <div class="relative flex justify-center items-center min-h-0 h-full">
+              <div
+                ref="mixtureBaseRef"
+                class="relative w-[18px] h-full bg-simInputBackground border border-simElementBorder overflow-hidden cursor-ns-resize touch-none"
+                @pointerdown="startMixtureDrag"
+              >
+                <!-- Tick Marks -->
+                <div
+                  v-for="i in 10"
+                  :key="'mixture-' + i"
+                  class="absolute left-[3px] right-[3px] h-px bg-panelBorder/40"
+                  :style="{ bottom: `${i * 10}%` }"
+                ></div>
+
+                <!-- Handle -->
+                <div
+                  class="absolute left-1/2 top-1/2 w-7 h-[10px] bg-simActiveButton border border-secondary/40 rounded-[2px] pointer-events-none"
+                  :style="mixtureStyle"
+                ></div>
               </div>
-
-              <!-- Handle -->
-              <div
-                class="absolute left-1/2 top-1/2 w-7 h-[10px] bg-simActiveButton border border-secondary/40 rounded-[2px] pointer-events-none"
-                :style="throttleStyle"
-              ></div>
             </div>
           </div>
         </div>
@@ -118,10 +181,8 @@
             class="relative w-full max-w-[180px] h-[18px] bg-simInputBackground border border-simElementBorder overflow-hidden cursor-ew-resize touch-none flex-shrink-0"
             @pointerdown="startRudderDrag"
           >
-            <!-- Center Line -->
             <div class="absolute top-0 bottom-0 left-1/2 w-px bg-panelBorder/50"></div>
 
-            <!-- Tick Marks -->
             <div
               v-for="i in 10"
               :key="'rudder-' + i"
@@ -129,7 +190,6 @@
               :style="{ left: `${i * 10}%` }"
             ></div>
 
-            <!-- Handle -->
             <div
               class="absolute left-1/2 top-1/2 w-[10px] h-7 bg-simActiveButton border border-secondary/40 rounded-[2px] pointer-events-none"
               :style="rudderStyle"
@@ -202,7 +262,6 @@
       </div>
 
       <!-- RIGHT PANEL - Flight Stick -->
-      <!-- Changed: h-full to min-h-full -->
       <div
         class="flex items-center justify-center border border-panelBorder bg-panelContentBackground relative min-w-0 min-h-full overflow-hidden"
       >
@@ -266,6 +325,7 @@ export interface JoystickInput {
   elevatorTrim: number
   aileronTrim: number
   rudderTrim: number
+  mixture?: number // 0 (lean) to 1 (rich)
 }
 
 // --- Input Channel (Props) ---
@@ -280,6 +340,7 @@ const emit = defineEmits<{
 
 // DOM Elements
 const throttleBaseRef = ref<HTMLDivElement | null>(null)
+const mixtureBaseRef = ref<HTMLDivElement | null>(null) // NEW
 const rudderBaseRef = ref<HTMLDivElement | null>(null)
 const rightBaseRef = ref<HTMLDivElement | null>(null)
 const elevTrimRef = ref<HTMLDivElement | null>(null)
@@ -295,10 +356,12 @@ const input = reactive<JoystickInput>({
   elevatorTrim: 0,
   aileronTrim: 0,
   rudderTrim: 0,
+  mixture: 1, // Default to full rich
 })
 
 // Position state for visual handles
 const throttlePos = reactive({ y: 0 })
+const mixturePos = reactive({ y: 0 }) // NEW
 const rudderPos = reactive({ x: 0 })
 const rightPos = reactive({ x: 0, y: 0 })
 const elevTrimPos = reactive({ x: 0 })
@@ -307,6 +370,7 @@ const rudTrimPos = reactive({ x: 0 })
 
 // Active pointer IDs for drag handling
 let activeThrottleId: number | null = null
+let activeMixtureId: number | null = null // NEW
 let activeRudderId: number | null = null
 let activeRightId: number | null = null
 let activeElevTrimId: number | null = null
@@ -315,10 +379,11 @@ let activeRudTrimId: number | null = null
 
 // --- Handle Dimensions (MUST match CSS) ---
 const HANDLE = {
-  throttle: { height: 10 }, // matches h-[10px]
-  rudder: { width: 10, height: 28 }, // matches w-[10px] h-7 (28px)
-  trim: { width: 8, height: 20 }, // matches w-[8px] h-5 (20px)
-  stick: { size: 10 }, // matches w-[10%] h-[10%] of container
+  throttle: { height: 10 },
+  mixture: { height: 10 }, // NEW - same as throttle
+  rudder: { width: 10, height: 28 },
+  trim: { width: 8, height: 20 },
+  stick: { size: 10 },
 }
 
 // Computed Styles for handle positioning
@@ -327,8 +392,13 @@ const throttleStyle = computed(() => ({
   top: `${throttlePos.y}px`,
 }))
 
+const mixtureStyle = computed(() => ({
+  // NEW
+  transform: 'translateX(-50%)',
+  top: `${mixturePos.y}px`,
+}))
+
 const rudderStyle = computed(() => ({
-  // ✅ Fixed: Added calc(-50% + ...) for proper horizontal centering
   transform: `translate(calc(-50% + ${rudderPos.x}px), -50%)`,
 }))
 
@@ -353,12 +423,20 @@ const syncPositionsFromControls = () => {
   // Throttle (vertical slider)
   if (activeThrottleId === null && throttleBaseRef.value) {
     const rect = throttleBaseRef.value.getBoundingClientRect()
-
     if (rect.height > 0) {
       const handleHeight = HANDLE.throttle.height
       const maxTravel = rect.height - handleHeight
-
       throttlePos.y = (1 - input.throttle) * maxTravel
+    }
+  }
+
+  // Mixture (vertical slider)
+  if (input.mixture !== undefined && activeMixtureId === null && mixtureBaseRef.value) {
+    const rect = mixtureBaseRef.value.getBoundingClientRect()
+    if (rect.height > 0) {
+      const handleHeight = HANDLE.mixture.height
+      const maxTravel = rect.height - handleHeight
+      mixturePos.y = (1 - input.mixture!) * maxTravel
     }
   }
 
@@ -407,6 +485,7 @@ onMounted(() => {
     syncPositionsFromControls()
   })
   if (throttleBaseRef.value) resizeObserver.observe(throttleBaseRef.value)
+  if (mixtureBaseRef.value) resizeObserver.observe(mixtureBaseRef.value) // NEW
   if (rudderBaseRef.value) resizeObserver.observe(rudderBaseRef.value)
   if (rightBaseRef.value) resizeObserver.observe(rightBaseRef.value)
   if (elevTrimRef.value) resizeObserver.observe(elevTrimRef.value)
@@ -426,6 +505,8 @@ watch(
     input.elevatorTrim = Math.max(-1, Math.min(1, newVal.elevatorTrim ?? 0))
     input.aileronTrim = Math.max(-1, Math.min(1, newVal.aileronTrim ?? 0))
     input.rudderTrim = Math.max(-1, Math.min(1, newVal.rudderTrim ?? 0))
+    input.mixture =
+      newVal.mixture !== undefined ? Math.max(0, Math.min(1, newVal.mixture)) : undefined
     syncPositionsFromControls()
   },
   { deep: true, flush: 'post' },
@@ -468,12 +549,49 @@ const onThrottleUp = (e: PointerEvent) => {
   activeThrottleId = null
 }
 
+// --- Mixture Logic (NEW - mirrors throttle) ---
+const handleMixtureMove = (event: PointerEvent) => {
+  if (!mixtureBaseRef.value) return
+  const rect = mixtureBaseRef.value.getBoundingClientRect()
+  const handleHeight = HANDLE.mixture.height
+  const maxTravel = rect.height - handleHeight
+  let y = event.clientY - rect.top - handleHeight / 2
+  y = Math.max(0, Math.min(maxTravel, y))
+  mixturePos.y = y
+  input.mixture = 1 - y / maxTravel
+  emit('input', { ...input })
+}
+
+const startMixtureDrag = (e: PointerEvent) => {
+  if (activeMixtureId !== null || !mixtureBaseRef.value) return
+  activeMixtureId = e.pointerId
+  mixtureBaseRef.value.setPointerCapture(e.pointerId)
+  handleMixtureMove(e)
+  mixtureBaseRef.value.addEventListener('pointermove', onMixtureMove)
+  mixtureBaseRef.value.addEventListener('pointerup', onMixtureUp)
+  mixtureBaseRef.value.addEventListener('pointercancel', onMixtureUp)
+}
+
+const onMixtureMove = (e: PointerEvent) => {
+  if (e.pointerId !== activeMixtureId || !mixtureBaseRef.value) return
+  handleMixtureMove(e)
+}
+
+const onMixtureUp = (e: PointerEvent) => {
+  if (e.pointerId !== activeMixtureId || !mixtureBaseRef.value) return
+  mixtureBaseRef.value.releasePointerCapture(e.pointerId)
+  mixtureBaseRef.value.removeEventListener('pointermove', onMixtureMove)
+  mixtureBaseRef.value.removeEventListener('pointerup', onMixtureUp)
+  mixtureBaseRef.value.removeEventListener('pointercancel', onMixtureUp)
+  activeMixtureId = null
+}
+
 // --- Yaw/Rudder Logic ---
 const handleRudderMove = (event: PointerEvent) => {
   if (!rudderBaseRef.value) return
   const rect = rudderBaseRef.value.getBoundingClientRect()
   const centerX = rect.left + rect.width / 2
-  const handleWidth = HANDLE.rudder.width // ✅ Fixed: was 24, now 10
+  const handleWidth = HANDLE.rudder.width
   const maxTravel = (rect.width - handleWidth) / 2
   let deltaX = event.clientX - centerX
   deltaX = Math.max(-maxTravel, Math.min(maxTravel, deltaX))
@@ -571,7 +689,7 @@ const createTrimHandlers = (
     if (!elRef.value) return
     const rect = elRef.value.getBoundingClientRect()
     const centerX = rect.left + rect.width / 2
-    const handleWidth = HANDLE.trim.width // ✅ Already correct at 8px
+    const handleWidth = HANDLE.trim.width
     const maxTravel = (rect.width - handleWidth) / 2
     let deltaX = event.clientX - centerX
     deltaX = Math.max(-maxTravel, Math.min(maxTravel, deltaX))
@@ -660,6 +778,7 @@ onBeforeUnmount(() => {
     }
   }
   cleanup(throttleBaseRef.value, onThrottleMove, onThrottleUp)
+  cleanup(mixtureBaseRef.value, onMixtureMove, onMixtureUp) // NEW
   cleanup(rudderBaseRef.value, onRudderMove, onRudderUp)
   cleanup(rightBaseRef.value, onRightMove, onRightUp)
   cleanup(elevTrimRef.value, onElevTrimMove, onElevTrimUp)

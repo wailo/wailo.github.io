@@ -293,6 +293,9 @@
               FlightSimModule.flightModel.set_elevator_position(val.elevator)
               FlightSimModule.flightModel.set_rudder_position(val.rudder)
               FlightSimModule.flightModel.set_engine_throttle_position(val.throttle)
+              if (val.mixture !== undefined) {
+                ;(FlightSimModule.flightModel as c172).set_engine_mixture_position(val.mixture)
+              }
               FlightSimModule.flightModel.set_aileron_trim_position(val.aileronTrim)
               FlightSimModule.flightModel.set_elevator_trim_position(val.elevatorTrim)
               FlightSimModule.flightModel.set_rudder_trim_position(val.rudderTrim)
@@ -382,7 +385,7 @@ import {
 } from '../wasm/siminterface.ts'
 
 import Editor, { ScriptStatus } from './Editor.vue'
-import { MainModule } from '../../src/wasm/generated/flightsimulator_exec'
+import { c172, MainModule } from '../../src/wasm/generated/flightsimulator_exec'
 import OpenLayersMap from './OpenLayersMap.vue'
 
 const renderSignal = ref(0)
@@ -748,10 +751,11 @@ function initFlightModelParams() {
       elevator: FlightSimModule.flightModel.elevator_position,
       rudder: FlightSimModule.flightModel.rudder_position,
       throttle: FlightSimModule.flightModel.engine_throttle_position,
+      mixture: (FlightSimModule.flightModel as c172).engine_mixture_position, // if the property does not exist, it will be undefined, and the joystick component will ignore it
       aileronTrim: FlightSimModule.flightModel.aileron_trim_position,
       elevatorTrim: FlightSimModule.flightModel.elevator_trim_position,
       rudderTrim: FlightSimModule.flightModel.rudder_trim_position,
-    }
+    } as JoystickInput
   })
 
   manager = createRemoteManager(FlightSimModule)
