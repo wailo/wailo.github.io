@@ -789,6 +789,7 @@ function createRemoteManager(FlightSimModule: ExtendedMainModule) {
     'resetComponents',
     'setPlotView',
     'setLayout',
+    'setVisuals',
     'toggleMap',
   ])
   remoteManager.wrapObject('FlightSimModule', FlightSimModule, ['onKeydown', 'onKeyup'])
