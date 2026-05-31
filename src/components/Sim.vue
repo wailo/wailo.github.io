@@ -331,6 +331,11 @@
               (receviedScript: PeerScriptData) =>
                 editorComponentRef?.executeExternalCode(receviedScript.tite, receviedScript.script)
             "
+            @wb-event="
+              (receivedData: PeerWhiteBoardata) => {
+                whiteBoardComponentRef?.UpdateState(receivedData.wb)
+              }
+            "
             ref="classroomComponentRef"
             @classroomConnection="
               (isOnline) => {
@@ -355,6 +360,18 @@
       <template #Prompt>
         <MarkDown class="w-full h-full p-1" :content="userPromptText" />
       </template>
+      <template #whiteboard>
+        <Whiteboard
+          ref="whiteBoardComponentRef"
+          v-if="sim_module_loaded"
+          class="w-full h-full p-1"
+          @history-updated="
+            (obj) => {
+              classroomComponentRef?.sendWhiteboardState(obj.serialized)
+            }
+          "
+        />
+      </template>
     </Panel>
   </div>
 </template>
@@ -371,6 +388,7 @@ import SimDataDisplay from './DataDisplay.vue'
 import MarkDown from './MarkDown.vue'
 import { RemoteCallManager, RemoteCall, RemoteEvent } from '../RemoteCallManager'
 import Joystick, { JoystickInput } from './Joystick.vue'
+import Whiteboard from './Whiteboard.vue'
 
 import {
   initializeModule,
@@ -520,6 +538,7 @@ const dataDisplayRef = ref<InstanceType<typeof SimDataDisplay> | null>(null) // 
 const markdownRef = ref<InstanceType<typeof MarkDown> | null>(null) // Use the MarkDown component type
 // const accountsComponentRef = ref<InstanceType<typeof Accounts> | null>(null); // Use the Accounts component type
 const openLayersMapRef = ref<InstanceType<typeof OpenLayersMap> | null>(null) // Use the OpenLayersMap component type
+const whiteBoardComponentRef = ref<InstanceType<typeof Whiteboard> | null>(null)
 
 // Layout controls as computed
 const layoutControls: ComputedRef<Record<string, SimulationProperties>> = computed(() => ({

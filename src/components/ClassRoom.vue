@@ -146,6 +146,7 @@ const emit = defineEmits<{
   (event: 'classroomConnection', newValue: boolean): void
   (event: 'apiDataEvent', receivedData: PeerApiData): void
   (event: 'apiScriptEvent', receivedData: PeerScriptData): void
+  (event: 'wbEvent', receivedData: PeerWhiteBoardata): void
   (event: 'error', errorMessage: string): void
 }>()
 
@@ -287,6 +288,8 @@ const onData = (data: PeerData, conn: PeerJS.DataConnection) => {
     incomingConns.value[conn.peer].metadata.checkPoint = data.checkpoint
   } else if ('script' in data) {
     emit('apiScriptEvent', data)
+  } else if ('wb' in data) {
+    emit('wbEvent', data)
   } else {
     emit('error', `Unknown data: ${data}`)
   }
@@ -406,6 +409,14 @@ const send = (data: any) => {
     peer.conn.send(data)
   })
 }
+const sendWhiteboardState = (whiteboardState: string) => {
+  // Must be online and mirror mode activated
+  if (!isOnline.value || !followMode.value) {
+    return
+  }
+  const data = { wb: whiteboardState }
+  send(data)
+}
 
 const sendApiCall = (apiCall: string) => {
   // Must be online and mirror mode activated
@@ -471,7 +482,7 @@ const reset = () => {
   instructorConnection = undefined as any
 }
 
-defineExpose({ sendApiCall, sendStatus, sendScript, sendCheckPoint, reset })
+defineExpose({ sendApiCall, sendStatus, sendScript, sendCheckPoint, sendWhiteboardState, reset })
 
 const trace = (text: string) => {
   if (isDevelopment === false) {

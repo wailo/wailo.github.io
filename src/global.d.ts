@@ -11,4 +11,5 @@ type PeerApiData = { api: string }
 type PeerStatusData = { status: string }
 type PeerCheckPointData = { checkpoint: string }
 type PeerScriptData = { tite: string; script: string }
+type PeerWhiteBoardata = { wb: string }
 type PeerData = PeerApiData | PeerStatusData | PeerScriptData | PeerCheckPointData
