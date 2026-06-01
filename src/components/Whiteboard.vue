@@ -18,7 +18,7 @@ const emit = defineEmits<{
 defineExpose({
   UpdateState: (state: string) => {
     boardState.value = JSON.parse(state)
-    if (state && state.length == 0) {
+    if (boardState.value.length == 0) {
       clear()
       return
     }
