@@ -229,7 +229,7 @@ export async function waitForCondition(
   const maxAttempts = Math.ceil(confirmation_ms / pollInterval_ms)
   let attempts = 0
   let resolved = false
-  let timeoutHandle: number
+  let timeoutHandle: NodeJS.Timeout
 
   const poll = (resolve: (value: boolean) => void, reject: (reason?: any) => void) => {
     if (resolved) return
@@ -260,7 +260,7 @@ export async function waitForCondition(
             resolve(false)
           }
         }
-      }, hardTimeout_ms) as number // No .then()!
+      }, hardTimeout_ms)
     }
     poll(resolve, reject)
   })
@@ -275,46 +275,46 @@ export async function waitFor(ms: number): Promise<void> {
 }
 
 // Module-level cache
-const cache: number[] = []
+const cache = new Set<number>()
 
 // Save originals
 const _setTimeout = window.setTimeout
 const _clearTimeout = window.clearTimeout
 
-// ✅ Synchronous wrapper returning number
-export function setTimeout(
-  callback: (...args: any[]) => void,
-  duration?: number,
-  ...args: any[]
-): number {
+// Override global setTimeout
+window.setTimeout = function (handler: TimerHandler, timeout?: number, ...args: any[]): number {
+  let id: number
+
   const wrappedCallback = function (...cbArgs: any[]) {
     try {
-      callback.apply(null, cbArgs)
+      if (typeof handler === 'function') {
+        handler.apply(null, cbArgs)
+      } else {
+        // Fallback for string handlers (part of the standard setTimeout API)
+        new Function(handler as string)()
+      }
     } finally {
-      removeCacheItem(id, cache)
+      cache.delete(id)
     }
   }
 
-  const id = _setTimeout(wrappedCallback, duration || 0, ...args)
-  cache.push(id)
-  return id // ✅ Return number synchronously
-}
+  id = _setTimeout(wrappedCallback as any, timeout || 0, ...args)
+  cache.add(id)
 
-// ✅ Standard signature, optional cache param
-export function clearTimeout(id: number, timeOutCache: number[] = cache): void {
+  return id
+} as typeof window.setTimeout
+
+// Override global clearTimeout
+window.clearTimeout = function (id?: number): void {
   _clearTimeout(id)
-  removeCacheItem(id, timeOutCache)
-}
-
-export const resetTimeouts = (): void => {
-  // Create a copy to avoid mutation during iteration
-  ;[...cache].forEach((id) => _clearTimeout(id))
-  cache.length = 0
-}
-
-const removeCacheItem = (id: number, timeOutCache: number[]): void => {
-  const idx = timeOutCache.indexOf(id)
-  if (idx > -1) {
-    timeOutCache.splice(idx, 1)
+  if (id !== undefined) {
+    cache.delete(id)
   }
+} as typeof window.clearTimeout
+
+// Reset all active timeouts
+export const resetTimeouts = (): void => {
+  console.log(`Resetting ${cache.size} timeouts...`)
+  cache.forEach((id) => _clearTimeout(id))
+  cache.clear()
 }
