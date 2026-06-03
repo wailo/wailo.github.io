@@ -78,7 +78,7 @@ export async function main(context: ScriptContext) {
 **Progress:** \`[${bar}]\` ${progress}%
 ${turnAlert}
 
-> Instruction: Maintain systematic cross-check. Return focus to attitude indicator after each peripheral instrument scan.
+Instruction: Maintain systematic cross-check. Return focus to attitude indicator after each peripheral instrument scan.
 `.trim()
   }
 
@@ -94,14 +94,14 @@ Primary reference: Attitude Indicator
 > Protocol: Systematic cross-check. Avoid fixation on single instruments.
 > Legend: ● = Primary Focus | ○ = Peripheral Reference
 
-**Training sequence initiating in 3 seconds...**`,
+**Training sequence initiating in 7 seconds...**`,
     7000,
   )
 
   // -----------------------------
   // PULSE & PAIR
   // -----------------------------
-  const totalCycles = 20
+  const totalCycles = 40
   let turnActive = false
 
   async function pulse(
@@ -133,7 +133,7 @@ Primary reference: Attitude Indicator
   // -----------------------------
   for (let i = 0; i < totalCycles; i++) {
     const cycleNum = i + 1
-    const pace = Math.max(0.2, 1 - i * 0.03)
+    const pace = Math.max(0.3, 1 - i * 0.02)
     const beat = 900 * pace
     const pause = 250 * pace
 
@@ -142,8 +142,8 @@ Primary reference: Attitude Indicator
       turnActive = true
       const fm = context.controls.flightModel
       // Execute standard rate turn: 25° bank with pitch compensation
-      fm.set_autopilot_bank_target(25)
-      fm.set_autopilot_pitch_target(2)
+      fm.set_autopilot_bank_target(10)
+      fm.set_autopilot_pitch_target(8)
       fm.set_autopilot_master_switch(true)
       fm.set_autopilot_bank_hold(true)
       fm.set_autopilot_pitch_hold(true)
@@ -152,7 +152,6 @@ Primary reference: Attitude Indicator
         'Maneuver Notification',
         renderScanUI('att', cycleNum, totalCycles, pace, '🔄 TURN EXECUTION', true),
       )
-      await waitFor(1500)
     }
 
     // 1–2 (Attitude ↔ Airspeed)
