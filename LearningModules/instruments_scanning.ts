@@ -22,16 +22,18 @@ export async function main(context: ScriptContext) {
     phase: string,
     turnActive: boolean,
   ) {
-    const activeCol = '#00E676' // Bright green
-    const inactiveCol = '#546E7A' // Muted blue-gray
-    const alertCol = '#FF5252' // Alert red
+    const activeCol = '#00E676'
+    const inactiveCol = '#546E7A'
+    const alertCol = '#FF5252'
 
-    // Color-coded dots with increased size for visibility (2.5em)
+    // Returns an object containing the dot HTML and the label HTML
     const dot = (id: string) => {
-      if (id === '-') return `<span style="color:#444; font-size:2.5em">·</span>`
-      return id === active
-        ? `<span style="color:${activeCol}; font-size:2.5em">●</span>`
-        : `<span style="color:${inactiveCol}; font-size:2.5em">○</span>`
+      const color = id === active ? activeCol : inactiveCol
+      const symbol = id === active ? '●' : '○'
+      return {
+        dot: `<span style="color:${color}; font-size:4.5em">${symbol}</span>`,
+        label: `<span style="color:${color}; font-weight: bold; letter-spacing: 1px;">${id.toUpperCase()}</span>`,
+      }
     }
 
     const progress = Math.round((cycle / total) * 100)
@@ -46,23 +48,44 @@ export async function main(context: ScriptContext) {
       ? `\n<span style="color:${alertCol}">⚠️ <b>TURN MANEUVER ACTIVE</b> — Maintain instrument cross-check</span>`
       : ''
 
+    // Pre-generate the dot and label elements
+    const spd = dot('spd')
+    const att = dot('att')
+    const alt = dot('alt')
+    const hdg = dot('hdg')
+
     return `
 ### Instrument Scan Pattern: T-Configuration
-${dot('spd')} ${dot('att')} ${dot('alt')}
-${dot('-')} ${dot('hdg')} ${dot('-')}
+
+<div style="text-align:center; margin:12px 0;">
+  <!-- Added border="0", cellpadding, cellspacing, and inline border:none to force hide borders -->
+  <table border="0" cellpadding="0" cellspacing="0" style="margin: 0 auto; text-align: center; border-collapse: collapse; border: none; border-spacing: 0;">
+    <tr style="border: none;">
+      <td style="padding: 0 25px; border: none;">${spd.dot}<br>${spd.label}</td>
+      <td style="padding: 0 25px; border: none;">${att.dot}<br>${att.label}</td>
+      <td style="padding: 0 25px; border: none;">${alt.dot}<br>${alt.label}</td>
+    </tr>
+    <tr style="border: none;">
+      <td style="border: none;"></td>
+      <td style="padding: 0 25px; padding-top: 15px; border: none;">${hdg.dot}<br>${hdg.label}</td>
+      <td style="border: none;"></td>
+    </tr>
+  </table>
+</div>
 
 **Phase:** ${phase}  
 **Cycle:** ${cycle}/${total} | **Pace:** <span style="color:${paceCol}">${paceIcon} ${pacePct}%</span>  
 **Progress:** \`[${bar}]\` ${progress}%
 ${turnAlert}
-> Instruction: Maintain systematic cross-check. Return focus to attitude indicator after each peripheral instrument scan.
+
+Instruction: Maintain systematic cross-check. Return focus to attitude indicator after each peripheral instrument scan.
 `.trim()
   }
 
   // -----------------------------
   // INTRO
   // -----------------------------
-  notifyUser(
+  await notifyUser(
     'Instrument Scan Training Module',
     `### Training Objective
 Execute the standardized T-Scan procedure: Attitude → Peripheral Instruments → Attitude
@@ -71,14 +94,14 @@ Primary reference: Attitude Indicator
 > Protocol: Systematic cross-check. Avoid fixation on single instruments.
 > Legend: ● = Primary Focus | ○ = Peripheral Reference
 
-**Training sequence initiating in 3 seconds...**`,
+**Training sequence initiating in 7 seconds...**`,
+    7000,
   )
-  await waitFor(3000)
 
   // -----------------------------
   // PULSE & PAIR
   // -----------------------------
-  const totalCycles = 20
+  const totalCycles = 40
   let turnActive = false
 
   async function pulse(
@@ -110,7 +133,7 @@ Primary reference: Attitude Indicator
   // -----------------------------
   for (let i = 0; i < totalCycles; i++) {
     const cycleNum = i + 1
-    const pace = Math.max(0.2, 1 - i * 0.03)
+    const pace = Math.max(0.3, 1 - i * 0.02)
     const beat = 900 * pace
     const pause = 250 * pace
 
@@ -119,8 +142,8 @@ Primary reference: Attitude Indicator
       turnActive = true
       const fm = context.controls.flightModel
       // Execute standard rate turn: 25° bank with pitch compensation
-      fm.set_autopilot_bank_target(25)
-      fm.set_autopilot_pitch_target(2)
+      fm.set_autopilot_bank_target(10)
+      fm.set_autopilot_pitch_target(8)
       fm.set_autopilot_master_switch(true)
       fm.set_autopilot_bank_hold(true)
       fm.set_autopilot_pitch_hold(true)
@@ -129,7 +152,6 @@ Primary reference: Attitude Indicator
         'Maneuver Notification',
         renderScanUI('att', cycleNum, totalCycles, pace, '🔄 TURN EXECUTION', true),
       )
-      await waitFor(1500)
     }
 
     // 1–2 (Attitude ↔ Airspeed)
