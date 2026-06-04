@@ -6,7 +6,7 @@
         <input
           v-model="searchQuery"
           type="text"
-          placeholder="Search..."
+          :placeholder="`🔍 Search...`"
           class="w-1/3 text-secondary bg-transparent border border-simElementBorder p-1"
           @focus="isFocused = true"
         />
@@ -14,7 +14,7 @@
         <!--   Show All -->
         <!-- </button> -->
         <button @click="hideAll" class="w-1/3 border border-simElementBorder text-secondary">
-          Close All
+          Clear
         </button>
         <button
           @click="timePlotRef?.reset_x_axis()"
@@ -26,7 +26,11 @@
 
       <!-- Dropdown -->
       <div v-if="isDropdownVisible" class="border rounded shadow max-h-48 overflow-auto">
-        <div class="flex justify-end p-1 border-b">
+        <div class="flex bg-simInputBackground justify-between items-center p-1 border-b">
+          <span class="text-simActiveButton">
+            {{ searchResults.length }} /
+            <span class="text-secondary">{{ totalVariablesCount }}</span>
+          </span>
           <button @click="isFocused = false">✖ Close</button>
         </div>
 
@@ -158,6 +162,7 @@ const searchResults = computed(() => {
 })
 
 const isDropdownVisible = computed(() => isFocused.value && searchResults.value.length > 0)
+const totalVariablesCount = computed(() => Object.keys(props.simProps).length)
 
 // Functions
 function reset() {
