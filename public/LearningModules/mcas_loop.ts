@@ -136,7 +136,7 @@ export async function main(context: ScriptContext) {
           '🟡 System Reset Pause',
           `<div style="font-family:monospace; background-color:#222; padding:8px; border-radius:4px; color:#f0ad4e;">
             <strong>MCAS IDLE:</strong> Resetting timer... [${remainingPause}s remaining]
-            <br><span style="color:#aaa; font-size:11px;">Stabilizer locked at: ${flightModel.elevator_trim_position.toFixed(3)}°</span>
+            <br><span style="color:#aaa; font-size:11px;">Stabilizer locked at: ${flightModel.elevator_trim_position_deg.toFixed(3)}°</span>
            </div>`,
         )
         mcasActive = false
