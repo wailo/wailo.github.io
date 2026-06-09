@@ -26,7 +26,6 @@
 
     <slot></slot>
 
-    <!-- wInput owns 100% of input logic, state, and validation -->
     <wInput
       v-if="textInput != null"
       :class="[

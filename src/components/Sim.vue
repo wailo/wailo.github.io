@@ -351,14 +351,9 @@
       </template>
     </Panel>
     <!-- Panel 8 -->
-    <Panel
-      :status="userPromptStatus"
-      :active="userPromptActive"
-      class="panel-userprompt"
-      data-layout="focus instructor pilot"
-    >
+    <Panel class="panel-userprompt" data-layout="focus instructor pilot">
       <template #Prompt>
-        <MarkDown class="w-full h-full p-1" :content="userPromptText" />
+        <MarkDown ref="markdownRef" class="w-full h-full p-1" />
       </template>
       <template #whiteboard>
         <Whiteboard
@@ -442,25 +437,13 @@ const simulationStatus = computed(() => {
 // These functions will be mirrored to the clients
 // They need to be inside an object to have a path.
 const simFunctions = {
-  notifyUser: async function notifyUser(
+  notifyUser: async function (
     title: string,
     message?: string,
     time: number = 0,
-  ): Promise<void> {
-    userPromptStatus.value = '☀︎'
-    userPromptText.value = `# ${title}\n\n${message || ''}`
-    userPromptActive.value = true
-
-    if (time <= 0) {
-      return Promise.resolve()
-    }
-
-    return new Promise<void>((resolve) => {
-      setTimeout(() => {
-        userPromptActive.value = false
-        resolve()
-      }, time)
-    })
+    options?: { append?: boolean },
+  ) {
+    await markdownRef.value?.write(title, message, time, options)
   },
 
   // Logic to reset components, triggered with simulation module is reset
@@ -470,6 +453,9 @@ const simFunctions = {
     classroomComponentRef.value?.reset()
     dataDisplayRef.value?.reset()
     markdownRef.value?.reset()
+    openLayersMapRef.value?.reset()
+    this.setVisuals(false)
+    this.setLayout(LayoutTypes.INSTRUCTOR)
   },
   setPlotView: function (item: SimulationProperties, state: boolean) {
     dataDisplayRef.value?.setPlotView(item, state)
@@ -498,9 +484,6 @@ let isLicenceValid = ref(false)
 let classRoomComponentState = ref(false)
 let scriptComponentStatus = ref<ScriptStatus>('IDLE')
 const update_interval_ms = 200
-const userPromptText = ref<string>('')
-const userPromptStatus = ref<string>('----')
-const userPromptActive = ref<boolean>(false)
 const isFullscreen = ref(false)
 const fullscreenContainer = ref<HTMLElement | null>(null)
 const isDarkMode = ref(true)

@@ -20,7 +20,15 @@ export declare function dataView(simPropitem: SimulationProperties, state: boole
 // Reset All simulation displays
 export declare function dataDisplayReset(): void
 // Send a prompt that is visible to the user
-export declare function notifyUser(title: string, body?: string, timeOut?: number): void
+export declare function notifyUser(
+  title: string,
+  message?: string,
+  time?: number,
+  options?: {
+    append?: boolean
+  },
+): Promise<void>
+
 // Create a checkpoint to inform the instructor about the progress of the a script
 export declare function checkPoint(content: string): void
 

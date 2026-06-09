@@ -2,7 +2,12 @@
 // 1. TYPES (Single Source of Truth)
 // ==============================
 
-import { ExtendedMainModule, SimulationProperties, repositionWithAutopilot } from './core'
+import {
+  ExtendedMainModule,
+  SimulationProperties,
+  repositionWithAutopilot,
+  notifyUser,
+} from './core'
 
 import { LayoutTypes } from '../src/wasm/siminterface.ts'
 
@@ -19,7 +24,7 @@ export interface ScriptContext {
     throwOnTimeout?: boolean,
   ) => Promise<boolean>
 
-  notifyUser: (title: string, body?: string, timeout?: number) => void
+  notifyUser: typeof notifyUser
   dataView: (prop: SimulationProperties, state: boolean) => void
   plotView: (prop: SimulationProperties | SimulationProperties[], state: boolean) => void
   dataDisplayReset: () => void

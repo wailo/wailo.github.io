@@ -4,8 +4,11 @@
 </template>
 
 <script lang="ts" setup>
-import { watch, PropType, ref } from 'vue'
+import { ref } from 'vue'
 import { marked } from 'marked'
+
+let content = '' // Initialize content as an empty string
+const parsedHtml = ref<string>('')
 
 // Configure marked options synchronously
 marked.setOptions({
@@ -15,32 +18,42 @@ marked.setOptions({
   breaks: true,
 })
 
+async function write(
+  title: string,
+  message?: string,
+  time: number = 0,
+  options: {
+    append?: boolean
+  } = {},
+): Promise<void> {
+  const { append = false } = options
+  // userPromptStatus.value = '☀︎'
+
+  const newText = `# ${title}\n---\n${message || ''}`
+  content = append && content ? `${content}\n\n---\n\n${newText}` : newText
+
+  // userPromptActive.value = true
+  Promise.resolve(marked.parse(content)).then((html: string) => {
+    parsedHtml.value = html
+  })
+
+  if (time <= 0) {
+    return Promise.resolve()
+  }
+
+  return new Promise<void>((resolve) => {
+    setTimeout(() => {
+      // userPromptActive.value = false
+      resolve()
+    }, time)
+  })
+}
+
 const reset = () => {
   parsedHtml.value = ''
 }
 
-// Define props with runtime validation and TS typing
-const props = defineProps({
-  content: {
-    type: String as PropType<string>,
-    required: true,
-  },
-})
-
-defineExpose({ reset })
-
-const parsedHtml = ref<string>('')
-
-// Watch the content prop and update parsedHtml when it changes
-watch(
-  () => props.content,
-  async (newContent) => {
-    if (newContent) {
-      parsedHtml.value = await marked.parse(newContent)
-    }
-  },
-  { immediate: true },
-)
+defineExpose({ reset, write })
 </script>
 
 <style>
@@ -185,6 +198,9 @@ watch(
 .markdown th {
   color: rgb(var(--color-simActiveButton));
   border-bottom: 1px solid rgb(var(--color-simActiveButton));
+}
+.markdown hr {
+  border-color: rgb(var(--color-secondary));
 }
 
 /* Terminal Theme Scrollbar Customization - Removes the harsh white native look */
