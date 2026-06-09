@@ -175,7 +175,7 @@ export async function repositionWithAutopilot(
         Math.abs(flightModel.altitude_ft - target_altitude) < 0.5 &&
         Math.abs(flightModel.speed_indicated_knots - target_speed) < 0.05 &&
         angleDiffDeg(flightModel.yaw_deg, target_heading) < 0.01 &&
-        Math.abs(flightModel.elevator_position) < 0.005
+        (flightModel.autopilot_auto_trim ? Math.abs(flightModel.elevator_position) < 0.005 : true)
       )
     },
     400,
@@ -208,6 +208,8 @@ export async function repositionWithAutopilot(
   flightModel.set_autopilot_speed_indicated_hold(false)
   flightModel.set_autopilot_heading_hold(false)
   flightModel.set_autopilot_pitch_hold(false)
+  flightModel.set_autopilot_vertical_speed_target(0)
+  flightModel.set_autopilot_pitch_target(0)
 
   await waitFor(100)
   return success
