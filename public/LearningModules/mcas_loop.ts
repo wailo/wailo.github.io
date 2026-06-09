@@ -20,7 +20,12 @@ export async function main(context: ScriptContext) {
   const flightModel = simControls.flightModel
 
   // Reposition aircraft to initial conditions: 4000 ft altitude, 200 spd, 90 heading.
-  await repositionWithAutopilot(context, 7000, 330, 90)
+  await repositionWithAutopilot(context, 7000, 290, 90, 10000, () => {
+    flightModel.set_center_of_gravity(-0.45)
+    flightModel.set_empty_mass(flightModel.empty_mass + 100000) // Simulate heavier weight to make it more challenging for MCAS.
+    flightModel.set_autopilot_auto_trim(false)
+    flightModel.set_elevator_trim_position(0)
+  })
 
   // Initialize loop control variables for MCAS simulation state.
   let mcasActive = false
@@ -79,10 +84,10 @@ export async function main(context: ScriptContext) {
 
       // Step 3: Check aircraft configuration (flaps/autopilot).
       // if the flaps is not full retracted or the autopilot is engaged, deactivate MCAS and restart loop.
-      debugger
       if (
-        flightModel.flaps_selector_position != simControls.B747FlapSelector.ZERO ||
-        flightModel.autopilot_master_switch === true
+        flightModel.flaps_selector_position != simControls.B747FlapSelector.ZERO
+        // ||
+        // flightModel.autopilot_master_switch === true
       ) {
         notifyUser(
           '⚙️ Configuration Changed',
@@ -109,7 +114,7 @@ export async function main(context: ScriptContext) {
             `<div style="background-color:#1e3d2f; padding:10px; border-radius:5px; color:#fff; font-family:sans-serif; border-left:5px solid #5cb85c;">
               <span style="color:#5cb85c; font-weight:bold;">⚡ PILOT INPUT DETECTED</span>
               <p style="margin:5px 0 0 0; font-size:12px;">Crew applied thumb switch trim up. MCAS nose-down drive has yielded immediately.</p>
-              <p style="margin:2px 0 0 0; font-size:11px; color:#a2cbb5;">New baseline set to: ${flightModel.elevator_trim_position.toFixed(3)}°</p>
+              <p style="margin:2px 0 0 0; font-size:11px; color:#a2cbb5;">New baseline set to: ${flightModel.elevator_trim_position_deg.toFixed(3)}°</p>
              </div>`,
           )
         } else {
@@ -154,7 +159,7 @@ export async function main(context: ScriptContext) {
         `<div style="background-color:#3a0000; padding:10px; border-radius:5px; color:#fff; font-family:sans-serif; border-left:5px solid #d9534f;">
           <strong style="color:#d9534f;">⚡ COMMANDING NOSE-DOWN TRIM</strong>
           <p style="margin:5px 0 0 0; font-size:12px;">System driving motorized jackscrew at <span style="color:#ff6b6b;">0.27°/sec</span>.</p>
-          <p style="margin:2px 0 0 0; font-size:11px; color:#cca6a6;">Current Stabilizer: <strong>${flightModel.elevator_trim_position.toFixed(3)}°</strong></p>
+          <p style="margin:2px 0 0 0; font-size:11px; color:#cca6a6;">Current Stabilizer: <strong>${flightModel.elevator_trim_position_deg.toFixed(3)}°</strong></p>
          </div>`,
       )
 
@@ -168,6 +173,6 @@ export async function main(context: ScriptContext) {
     },
     0,
     dt,
-    120000,
+    240000,
   )
 }
