@@ -1,4 +1,4 @@
-ƒ<template>
+<template>
   <div class="map-wrapper">
     <!-- =====================================================
          MAIN 3D
@@ -106,7 +106,10 @@ const props = defineProps<{
 
 defineExpose({
   updateMap,
-  showNavMap
+  showNavMap,
+  reset() {
+    showNavMap.value = false
+  },
 })
 
 // ============================================================
@@ -128,26 +131,25 @@ let map2d: Map | null = null
 // Create an airplace icon marker for the 2D map
 
 // 1. Correctly create the Point geometry using coordinates
-const vehiclePoint2D = new Point(fromLonLat([props.lon, props.lat]));
+const vehiclePoint2D = new Point(fromLonLat([props.lon, props.lat]))
 
 // 2. Create the Feature and pass the Point geometry into it
 const vehicleFeature2D = new Feature({
   geometry: vehiclePoint2D,
-});
-
+})
 
 const markerStyle = new Style({
   image: new RegularShape({
     fill: new Fill({ color: '#3388ff' }),
     stroke: new Stroke({ color: '#ffffff', width: 2 }),
     points: 3,
-    radius: 16,    // Length from center to the sharp front tip (makes it longer)
-    radius2: 6,     // Length from center to the two back corners (makes it narrower)
+    radius: 16, // Length from center to the sharp front tip (makes it longer)
+    radius2: 6, // Length from center to the two back corners (makes it narrower)
     rotation: 0,
     scale: [0.5, 1],
-    rotateWithView: true
-  })
-});
+    rotateWithView: true,
+  }),
+})
 
 // ============================================================
 // CAMERA STATES
@@ -249,7 +251,7 @@ function updateMap(
   // --------------------------------------------------------
   // update marker immediately
   // --------------------------------------------------------
-//   vehiclePoint.setCoordinates(fromLonLat([lon, lat]))
+  //   vehiclePoint.setCoordinates(fromLonLat([lon, lat]))
   vehiclePoint2D.setCoordinates(fromLonLat([lon, lat]))
   markerStyle.getImage()?.setRotation(heading)
   currentLonLat.value = [lon, lat]
@@ -328,7 +330,7 @@ onMounted(() => {
 
   const vectorLayer3D = new VectorLayer({
     source: new VectorSource({
-    //   features: [vehicleFeature],
+      //   features: [vehicleFeature],
     }),
     // style: markerStyle,
   })
@@ -354,12 +356,12 @@ onMounted(() => {
         }),
       }),
 
-      new TileLayer({
-        opacity: 0.7,
-        source: new XYZ({
-          url: 'https://{a-d}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png',
-        }),
-      }),
+      // new TileLayer({
+      //   opacity: 0.7,
+      //   source: new XYZ({
+      //     url: 'https://{a-d}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png',
+      //   }),
+      // }),
 
       vectorLayer3D,
     ],
@@ -378,23 +380,23 @@ onMounted(() => {
     target: map2dContainer.value,
 
     layers: [
-        new TileLayer({
-            source: new OSM(),
-            }),
+      new TileLayer({
+        source: new OSM(),
+      }),
 
-  new TileLayer({
-  source: new XYZ({
-    url: 'https://{a-c}://{z}/{x}/{y}{r}.png',
-    // attributions: '© <a href="https://openstreetmap.org">OpenStreetMap</a> contributors © <a href="https://carto.com">CARTO</a>'
-  })
-}),
+      new TileLayer({
+        source: new XYZ({
+          url: 'https://{a-c}://{z}/{x}/{y}{r}.png',
+          // attributions: '© <a href="https://openstreetmap.org">OpenStreetMap</a> contributors © <a href="https://carto.com">CARTO</a>'
+        }),
+      }),
 
-    //   new TileLayer({
-    //     opacity: 0.7,
-    //     source: new XYZ({
-    //       url: 'https://{a-d}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png',
-    //     }),
-    //   }),
+      //   new TileLayer({
+      //     opacity: 0.7,
+      //     source: new XYZ({
+      //       url: 'https://{a-d}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png',
+      //     }),
+      //   }),
 
       vectorLayer2D,
     ],
@@ -410,12 +412,12 @@ onMounted(() => {
   })
 
   map3d.on('click', () => {
-  const active : HTMLElement | null = document.activeElement as HTMLElement
-  // Only blur actual form controls, not <body> or <html>
-  if (active && active !== document.body && active !== document.documentElement) {
-    active.blur()
-  }
-})
+    const active: HTMLElement | null = document.activeElement as HTMLElement
+    // Only blur actual form controls, not <body> or <html>
+    if (active && active !== document.body && active !== document.documentElement) {
+      active.blur()
+    }
+  })
 
   // =====================================================
   // CESIUM
