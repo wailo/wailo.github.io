@@ -27,7 +27,6 @@ function generateRawTable(results: any[]): string {
   const snapshotKeys = Object.keys(results[0])
 
   const headers = ['#', ...snapshotKeys]
-
   const widths = headers.map((h, i) => {
     if (i === 0) return 4
 
@@ -202,72 +201,80 @@ const configureAutoPilotForDutchRoll = (
 // ---------------------------------------------------
 
 const measureDamping = async (label: string, measurementPeriod: number, context: ScriptContext) => {
-  let prev = 0
-  let rising = false
+  let prevYaw = 0
+  let prevBank = 0
+  let risingYaw = false
+  let risingBank = false
 
-  let lastPeakTime = -999
+  let lastPeakTimeYaw = -999
+  let lastPeakTimeBank = -999
 
-  const MIN_PEAK = 0.03 // ignore tiny oscillations
-  const MIN_DELTA = 0.01 // hysteresis
-  const MIN_PERIOD = 0.2 // sec between peaks
-
-  const peaks: {
-    time: number
-    yaw_rate_deg: number
-  }[] = []
+  const MIN_PEAK = 0.03
+  const MIN_DELTA = 0.01
+  const MIN_PERIOD = 0.2
+  const yawPeaks: { time: number; yaw_rate_deg: number }[] = []
+  const bankPeaks: { time: number; bank_rate_deg: number }[] = []
 
   const startTime = context.controls.simulation.simulation_time
-
   const endTime = startTime + measurementPeriod
 
   await context.waitForCondition(
     () => {
       const now = context.controls.simulation.simulation_time
+      const elapsed = now - startTime
 
-      const r = Math.abs(context.controls.flightModel.yaw_dot_deg)
+      const yawRate = Math.abs(context.controls.flightModel.yaw_dot_deg)
+      const bankRate = Math.abs(context.controls.flightModel.bank_dot_deg)
 
-      // ----------------------------------------
-      // Rising edge detection with hysteresis
-      // ----------------------------------------
-
-      if (r > prev + MIN_DELTA) {
-        rising = true
-      }
-
-      // ----------------------------------------
-      // Peak detection
-      // ----------------------------------------
-      else if (r < prev - MIN_DELTA && rising) {
-        const peakValue = prev
-        const peakTime = now - startTime
-
-        // Reject tiny/noisy peaks
-        const validAmplitude = peakValue > MIN_PEAK
-
-        // Reject duplicate peaks
-        const validSpacing = peakTime - lastPeakTime > MIN_PERIOD
-
-        if (validAmplitude && validSpacing) {
-          peaks.push({
-            time: peakTime,
-            yaw_rate_deg: peakValue,
-          })
-
-          lastPeakTime = peakTime
+      // --- Yaw peak detection ---
+      if (yawRate > prevYaw + MIN_DELTA) {
+        risingYaw = true
+      } else if (yawRate < prevYaw - MIN_DELTA && risingYaw) {
+        const peakValue = prevYaw
+        if (peakValue > MIN_PEAK && elapsed - lastPeakTimeYaw > MIN_PERIOD) {
+          yawPeaks.push({ time: elapsed, yaw_rate_deg: peakValue })
+          lastPeakTimeYaw = elapsed
         }
-
-        rising = false
+        risingYaw = false
       }
+      prevYaw = yawRate
 
-      prev = r
+      // --- Bank peak detection ---
+      if (bankRate > prevBank + MIN_DELTA) {
+        risingBank = true
+      } else if (bankRate < prevBank - MIN_DELTA && risingBank) {
+        const peakValue = prevBank
+        if (peakValue > MIN_PEAK && elapsed - lastPeakTimeBank > MIN_PERIOD) {
+          bankPeaks.push({ time: elapsed, bank_rate_deg: peakValue })
+          lastPeakTimeBank = elapsed
+        }
+        risingBank = false
+      }
+      prevBank = bankRate
+
+      // Display combined table (yaw + bank peaks)
+      const combinedPeaks = [
+        ...yawPeaks.map((p) => ({
+          time: p.time,
+          yaw: p.yaw_rate_deg as number | null,
+          bank: null as number | null,
+        })),
+        ...bankPeaks.map((p) => ({
+          time: p.time,
+          yaw: null as number | null,
+          bank: p.bank_rate_deg as number | null,
+        })),
+      ].sort((a, b) => a.time - b.time)
+
+      const displayPeaks = combinedPeaks.map((p) => ({
+        time: p.time,
+        'yaw °/s': p.yaw !== null ? p.yaw : '',
+        'bank °/s': p.bank !== null ? p.bank : '',
+      }))
 
       context.notifyUser(
         'Oscillations',
-        `
-${label}: ${(endTime - now).toFixed(0)}s remaining
-
-${generateRawTable(peaks)}
-`,
+        `${label}: ${(endTime - now).toFixed(0)}s remaining\n\n${generateRawTable(displayPeaks)}`,
       )
 
       return now >= endTime
@@ -276,54 +283,55 @@ ${generateRawTable(peaks)}
     40,
   )
 
-  if (peaks.length < 2) {
-    await context.notifyUser(`**Damping Result: ${label}**`, `Not enough peaks detected.`, 4000)
-
+  // Proceed with yaw-based damping analysis (standard practice)
+  if (yawPeaks.length < 2) {
+    await context.notifyUser(`**Damping Result: ${label}**`, `Not enough YAW peaks detected.`, 4000)
     return null
   }
 
-  // Reference peak
-  const refPeak = peaks[1]
-
-  // Half amplitude peak
-  const halfPeak = peaks.find((p, i) => i > 1 && p.yaw_rate_deg <= refPeak.yaw_rate_deg * 0.5)
-
+  const refPeak = yawPeaks[1]
+  const halfPeak = yawPeaks.find((p, i) => i > 1 && p.yaw_rate_deg <= refPeak.yaw_rate_deg * 0.5)
   const halfTime = halfPeak ? halfPeak.time - refPeak.time : null
 
-  // Log decrement
   let deltas: number[] = []
-
-  for (let i = 1; i < peaks.length; i++) {
-    const ratio = peaks[i - 1].yaw_rate_deg / peaks[i].yaw_rate_deg
-
-    if (ratio > 1) {
-      deltas.push(Math.log(ratio))
-    }
+  for (let i = 1; i < yawPeaks.length; i++) {
+    const ratio = yawPeaks[i - 1].yaw_rate_deg / yawPeaks[i].yaw_rate_deg
+    if (ratio > 1) deltas.push(Math.log(ratio))
   }
-
   const logDec = deltas.length > 0 ? deltas.reduce((a, b) => a + b, 0) / deltas.length : null
+  const zeta = logDec !== null ? logDec / Math.sqrt(4 * Math.PI * Math.PI + logDec * logDec) : null
+  const naturalFrequency = calculateNaturalFrequency(yawPeaks)
 
-  // Damping ratio
-  let zeta: number | null = null
-
-  if (logDec !== null) {
-    zeta = logDec / Math.sqrt(4 * Math.PI * Math.PI + logDec * logDec)
-  }
-
-  // Natural frequency
-  const naturalFrequency = calculateNaturalFrequency(peaks)
-
-  // Peak summary
-  const peakValues = peaks.map((p) => p.yaw_rate_deg)
-  const maxPeak = Math.max(...peakValues)
+  const maxYawPeak = Math.max(...yawPeaks.map((p) => p.yaw_rate_deg))
+  const maxBankPeak = bankPeaks.length ? Math.max(...bankPeaks.map((p) => p.bank_rate_deg)) : 0
 
   await context.notifyUser(
     `**Damping Result: ${label}**`,
-    `${generateRawTable(peaks)}
+    `${generateRawTable(
+      [
+        ...yawPeaks.map((p) => ({
+          time: p.time,
+          yaw: p.yaw_rate_deg as number | null,
+          bank: null as number | null,
+        })),
+        ...bankPeaks.map((p) => ({
+          time: p.time,
+          yaw: null as number | null,
+          bank: p.bank_rate_deg as number | null,
+        })),
+      ]
+        .sort((a, b) => a.time - b.time)
+        .map((p) => ({
+          time: p.time,
+          'yaw °/s': p.yaw !== null ? p.yaw : '',
+          'bank °/s': p.bank !== null ? p.bank : '',
+        })),
+    )}
 
-Peaks detected: **${peaks.length}**
-Max peak: **${maxPeak.toFixed(3)}**
-Time to half amplitude: **${halfTime?.toFixed(2) ?? 'N/A'} sec**
+Peaks detected – Yaw: **${yawPeaks.length}**, Bank: **${bankPeaks.length}**
+Max yaw peak: **${maxYawPeak.toFixed(3)} °/s**
+Max bank peak: **${maxBankPeak.toFixed(3)} °/s**
+Time to half amplitude (yaw): **${halfTime?.toFixed(2) ?? 'N/A'} sec**
 Log decrement: **${logDec?.toFixed(3) ?? 'N/A'}**
 Damping ratio ζ: **${zeta?.toFixed(3) ?? 'N/A'}**
 Natural frequency ωₙ: **${naturalFrequency.omega_n?.toFixed(3) ?? 'N/A'} rad/s**
@@ -332,9 +340,17 @@ Oscillation period: **${naturalFrequency.period?.toFixed(3) ?? 'N/A'} sec**`,
     5500,
   )
 
-  return { peaks, halfTime, logDec, zeta, naturalFrequency }
+  return {
+    yawPeaks,
+    bankPeaks,
+    halfTime,
+    logDec,
+    zeta,
+    naturalFrequency,
+    maxYawPeak,
+    maxBankPeak,
+  }
 }
-
 // Apply a controlled rudder impulse
 const applyRudderImpulse = async (flightModel: FlightModelInstance, context: ScriptContext) => {
   flightModel.set_rudder_position(-0.5)
@@ -512,10 +528,9 @@ The disturbance will excite the aircraft’s natural lateral-directional motion 
   // Summary
   // ---------------------------------------------------
 
-  const getMaxPeak = (res: any) =>
-    res?.peaks?.length ? Math.max(...res.peaks.map((p: any) => p.yaw_rate_deg)) : null
-
-  const getPeakCount = (res: any) => res?.peaks?.length ?? 0
+  const getMaxYaw = (res: any) => res?.maxYawPeak ?? null
+  const getMaxBank = (res: any) => res?.maxBankPeak ?? null
+  const getPeakCount = (arr: any[]) => arr?.length ?? 0
 
   simulation.set_simulation_pause(true)
 
@@ -523,15 +538,17 @@ The disturbance will excite the aircraft’s natural lateral-directional motion 
     'Summary',
     `**Damping Comparison**
 
-${generateComparisonTable(test1Results?.peaks || [], test2Results?.peaks || [])}
+${generateComparisonTable(test1Results?.yawPeaks || [], test2Results?.yawPeaks || [])}
 
 **Damping Results**
 
 ${generateRawTable([
   {
     yaw_damper: 'OFF',
-    max_peak: getMaxPeak(test1Results) ?? 0,
-    peaks: getPeakCount(test1Results),
+    max_yaw: getMaxYaw(test1Results) ?? 0,
+    max_bank: getMaxBank(test1Results) ?? 0,
+    yaw_peaks: getPeakCount(test1Results ? test1Results.yawPeaks : []),
+    bank_peaks: getPeakCount(test1Results ? test1Results.bankPeaks : []),
     zeta: test1Results?.zeta ?? 0,
     omega_n: test1Results?.naturalFrequency?.omega_n ?? 0,
     period: test1Results?.naturalFrequency?.period ?? 0,
@@ -539,8 +556,10 @@ ${generateRawTable([
   },
   {
     yaw_damper: 'ON',
-    max_peak: getMaxPeak(test2Results) ?? 0,
-    peaks: getPeakCount(test2Results),
+    max_yaw: getMaxYaw(test2Results) ?? 0,
+    max_bank: getMaxBank(test2Results) ?? 0,
+    yaw_peaks: getPeakCount(test2Results ? test2Results.yawPeaks : []),
+    bank_peaks: getPeakCount(test2Results ? test2Results.bankPeaks : []),
     zeta: test2Results?.zeta ?? 0,
     omega_n: test2Results?.naturalFrequency?.omega_n ?? 0,
     period: test2Results?.naturalFrequency?.period ?? 0,
