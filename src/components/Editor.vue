@@ -50,7 +50,7 @@ export async function main(context: ScriptContext) {
           <li v-for="(folder, folderName) in fileTree" :key="folderName">
             <!-- Folder -->
             <div
-              @click.stop="toggleFolder(folderName); isEditing = false"
+              @click.stop="(toggleFolder(folderName), (isEditing = false))"
               class="cursor-pointer font-semibold text-secondary py-[0px] border-b border-panelBorder p-1 rounded flex items-center justify-between"
             >
               {{ folderName }}
@@ -219,6 +219,8 @@ const isLLMPending = ref(false)
 const ModuleTitle = ref('')
 const selectedFile = ref<string>('')
 let isEditing = ref(false)
+const routeHash = window.location.href
+
 // let monacoEditor: monaco.editor.IStandaloneCodeEditor | null = null;
 
 // Define the event emitter
@@ -470,11 +472,11 @@ const sendToLLM = async (content: string) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'instructor-lesson-planner:latest',
+        model: 'flightsimModel:latest',
         messages: [
           {
             role: 'user',
-            content: `English only, respond to the following prompt: "${content}"`,
+            content: `"${content}"`,
           },
         ],
         stream: false,
@@ -563,6 +565,28 @@ onMounted(() => {
     // setTimeout(() => {
     //   executeCode();
     // }, 5000);
+  }
+
+  const hashString = routeHash.split('?')[1]
+  const urlParams = new URLSearchParams(hashString)
+  const lessonid = urlParams.get('lessonId')
+
+  if (lessonid) {
+    const found = Object.values(fileTree.value)
+      .flat()
+      .find((file) => file.name.toLocaleLowerCase() === lessonid.toLowerCase())
+    if (!found) {
+      props.utilityFuncs.notifyUser('Error', `Lesson with ID "${lessonid}" not found`, 5000)
+      return
+    }
+
+    props.utilityFuncs
+      .notifyUser(`${found.name}`, `Lesson will start in 5 seconds`, 5000)
+      .then(() => {
+        loadFileContent(found).then(() => {
+          executeCode()
+        })
+      })
   }
 })
 </script>
