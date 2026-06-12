@@ -324,7 +324,6 @@ window.clearTimeout = function (id?: number): void {
 
 // Reset all active timeouts
 export const resetTimeouts = (): void => {
-  console.log(`Resetting ${cache.size} timeouts...`)
   cache.forEach((id) => _clearTimeout(id))
   cache.clear()
 }
