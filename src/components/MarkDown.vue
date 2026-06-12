@@ -29,7 +29,7 @@ async function write(
   const { append = false } = options
   // userPromptStatus.value = '☀︎'
 
-  const newText = `# ${title}\n---\n${message || ''}`
+  const newText = title ? `# ${title}\n---\n${message || ''}` : message || ''
   content = append && content ? `${content}\n\n---\n\n${newText}` : newText
 
   // userPromptActive.value = true
@@ -97,17 +97,17 @@ defineExpose({ reset, write })
   margin: 0.3em 0 0.15em;
 }
 .markdown h2 {
-  font-size: 1.1em;
+  font-size: 1.2em;
   margin: 0.3em 0 0.15em;
 }
 .markdown h3 {
-  font-size: 1.05em;
+  font-size: 1.1em;
   margin: 0.3em 0 0.15em;
 }
 .markdown h4,
 .markdown h5,
 .markdown h6 {
-  font-size: 1em;
+  font-size: 1.1em;
   margin: 0.3em 0 0.15em;
 }
 
@@ -118,7 +118,7 @@ defineExpose({ reset, write })
 
 /* Paragraphs and links */
 .markdown p {
-  font-size: 1em;
+  font-size: 1.1em;
   margin: 0.15em 0;
   padding: 0.1em 0;
 }
