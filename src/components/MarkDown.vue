@@ -29,7 +29,7 @@ async function write(
   const { append = false } = options
   // userPromptStatus.value = '☀︎'
 
-  const newText = title ? `# ${title}\n---\n${message || ''}` : message || ''
+  const newText = title ? `# ${title}\n${message || ''}` : message || ''
   content = append && content ? `${content}\n\n---\n\n${newText}` : newText
 
   // userPromptActive.value = true
