@@ -1,4 +1,3 @@
-
 import { ScriptContext } from '../../src/core'
 
 export async function main(context: ScriptContext) {
@@ -12,6 +11,7 @@ export async function main(context: ScriptContext) {
 
   repositionWithAutopilot(context, 3000, 100, 45)
   await waitFor(1000)
+  context.setVisuals(true)
 
   const totalCycles = 40
   let turnActive = false
@@ -31,10 +31,9 @@ export async function main(context: ScriptContext) {
     const inactiveCol = '#546E7A'
     const alertCol = '#FF5252'
 
-    // Returns an object containing the dot HTML and the label HTML
     const dot = (id: string) => {
       const color = id === active ? activeCol : inactiveCol
-      const symbol = id === active ? '●' : '○'
+      const symbol = id === active ? '○' : '○'
 
       return {
         dot: `<span style="color:${color}; font-size:4.5em">${symbol}</span>`,
@@ -51,7 +50,7 @@ export async function main(context: ScriptContext) {
     const paceCol = pace > 0.7 ? '#4CAF50' : pace > 0.4 ? '#FF9800' : '#F44336'
 
     const turnAlert = turnActive
-      ? `\n<span style="color:${alertCol}">⚠️ <b>TURN MANEUVER ACTIVE</b> — Maintain instrument cross-check</span>`
+      ? `\n<span style="color:${alertCol}">⚠️ <b>TURN MANEUVER ACTIVE</b></span>`
       : ''
 
     const spd = dot('spd')
@@ -60,10 +59,9 @@ export async function main(context: ScriptContext) {
     const hdg = dot('hdg')
 
     return `
-### Instrument Scan Pattern: T-Configuration
+### T-Scan Pattern
 
 <div style="text-align:center; margin:12px 0;">
-  <!-- Added border="0", cellpadding, cellspacing, and inline border:none to force hide borders -->
   <table border="0" cellpadding="0" cellspacing="0" style="margin: 0 auto; text-align: center; border-collapse: collapse; border: none; border-spacing: 0;">
     <tr style="border: none;">
       <td style="padding: 0 25px; border: none;">${spd.dot}<br>${spd.label}</td>
@@ -78,12 +76,9 @@ export async function main(context: ScriptContext) {
   </table>
 </div>
 
-**Phase:** ${phase}  
-**Cycle:** ${cycle}/${total} | **Pace:** <span style="color:${paceCol}">${paceIcon} ${pacePct}%</span>  
-**Progress:** \`[${bar}]\` ${progress}%
+**Phase:** ${phase} | **Cycle:** ${cycle}/${total}  
+**Pace:** <span style="color:${paceCol}">${paceIcon} ${pacePct}%</span> | **Progress:** \`[${bar}]\` ${progress}%
 ${turnAlert}
-
-Instruction: Maintain systematic cross-check. Return focus to the attitude indicator after each peripheral scan.
 `.trim()
   }
 
@@ -98,15 +93,17 @@ Instruction: Maintain systematic cross-check. Return focus to the attitude indic
     pace: number,
     phase: string,
   ) {
-    notifyUser(
-      'Instrument Scan Procedure',
-      renderScanUI(name, cycle, totalCycles, pace, phase, turnActive),
-    )
+    const totalTime = delay * 1.15
 
-    setter(false)
-    await waitFor(delay * 0.15)
-    setter(true)
-    await waitFor(delay)
+    await Promise.all([
+      notifyUser(phase, renderScanUI(name, cycle, totalCycles, pace, phase, turnActive), totalTime),
+      (async () => {
+        setter(false)
+        await waitFor(delay * 0.15)
+        setter(true)
+        await waitFor(delay)
+      })(),
+    ])
   }
 
   async function pair(a: () => Promise<void>, b: () => Promise<void>, pause: number) {
@@ -120,22 +117,21 @@ Instruction: Maintain systematic cross-check. Return focus to the attitude indic
   // -----------------------------
   async function showInstrument(
     instrument: 'att' | 'spd' | 'alt' | 'hdg',
-    title: string,
-    explanation: string,
+    titles: string[],
+    texts: string[],
     setter: (v: boolean) => void,
   ) {
-    notifyUser(
-      title,
-      `${renderScanUI(instrument, 0, totalCycles, 0.25, 'INTRODUCTION', false)}
-
-${explanation}`,
-    )
-
     setter(false)
-    await waitFor(400)
+    await waitFor(200)
     setter(true)
 
-    await waitFor(3500)
+    for (let i = 0; i < titles.length; i++) {
+      await notifyUser(
+        titles[i],
+        `${renderScanUI(instrument, 0, totalCycles, 0.25, 'INTRODUCTION', false)}\n\n${texts[i]}`,
+        3000,
+      )
+    }
   }
 
   async function demonstratePair(
@@ -143,86 +139,90 @@ ${explanation}`,
     peripheralSetter: (v: boolean) => void,
     label: string,
   ) {
-    notifyUser(
-      'Guided Demonstration',
-      `${renderScanUI('att', 0, totalCycles, 0.25, label, false)}
-
-### Demonstration
-
-Observe the rhythm:
-
-**Attitude → Peripheral Instrument → Attitude**
-
-The attitude indicator remains the primary reference.`,
+    await notifyUser(
+      `Demonstration ${label}`,
+      'Observing the established rhythm: **Attitude → Peripheral → Attitude**.',
+      3000,
     )
 
-    await waitFor(2000)
-
     // ATTITUDE
-    notifyUser('Guided Demonstration', renderScanUI('att', 0, totalCycles, 0.25, label, false))
-
-    simulation.set_analog_attitude_indicator_visible(false)
-    await waitFor(300)
-    simulation.set_analog_attitude_indicator_visible(true)
-    await waitFor(1800)
+    await Promise.all([
+      notifyUser('Phase 1: Attitude', 'The scan originates at the Attitude Indicator.', 2100),
+      (async () => {
+        simulation.set_analog_attitude_indicator_visible(false)
+        await waitFor(300)
+        simulation.set_analog_attitude_indicator_visible(true)
+        await waitFor(1800)
+      })(),
+    ])
 
     // PERIPHERAL
-    notifyUser('Guided Demonstration', renderScanUI(peripheral, 0, totalCycles, 0.25, label, false))
-
-    peripheralSetter(false)
-    await waitFor(300)
-    peripheralSetter(true)
-    await waitFor(1800)
+    await Promise.all([
+      notifyUser(
+        'Phase 2: Peripheral',
+        `A rapid visual check is directed to the ${peripheral.toUpperCase()}.`,
+        2100,
+        { append: true },
+      ),
+      (async () => {
+        peripheralSetter(false)
+        await waitFor(300)
+        peripheralSetter(true)
+        await waitFor(1800)
+      })(),
+    ])
 
     // RETURN TO ATTITUDE
-    notifyUser('Guided Demonstration', renderScanUI('att', 0, totalCycles, 0.25, label, false))
-
-    simulation.set_analog_attitude_indicator_visible(false)
-    await waitFor(300)
-    simulation.set_analog_attitude_indicator_visible(true)
-    await waitFor(1800)
+    await Promise.all([
+      notifyUser(
+        'Phase 3: Return',
+        'Visual focus immediately returns to the Attitude Indicator.',
+        2100,
+        { append: true },
+      ),
+      (async () => {
+        simulation.set_analog_attitude_indicator_visible(false)
+        await waitFor(300)
+        simulation.set_analog_attitude_indicator_visible(true)
+        await waitFor(1800)
+      })(),
+    ])
   }
 
   // -----------------------------
   // INTRODUCTION
   // -----------------------------
   await notifyUser(
-    'Instrument Scan Training Module',
-    `### Training Objective
-
-Learn the standard T-scan instrument cross-check.
-
-The **Attitude Indicator** is the primary reference instrument.
-
-Every scan briefly leaves attitude to gather information from another instrument, then returns immediately to attitude.
-
-We will first introduce each scan pair individually before transitioning to a continuous scan rhythm.`,
-    7000,
+    'Module Overview',
+    'This module covers the standard T-scan instrument cross-check.',
+    5000,
+  )
+  await notifyUser('', 'The **Attitude Indicator** serves as the primary reference.', 5000, {
+    append: true,
+  })
+  await notifyUser(
+    'Scan Pattern',
+    'The scan involves a brief observation of a peripheral instrument, followed by an immediate return to the Attitude Indicator.',
+    5500,
   )
 
   await showInstrument(
     'att',
-    'Primary Instrument: Attitude Indicator',
-    `
-### Attitude Indicator
-
-The center of the instrument scan.
-
-This instrument provides immediate pitch and bank information and remains the primary reference throughout the exercise.
-`,
+    ['Primary Instrument', 'Operational Role'],
+    [
+      'The Attitude Indicator is positioned at the center of the instrument panel.',
+      'It provides immediate pitch and bank information, functioning as the primary reference throughout the exercise.',
+    ],
     simulation.set_analog_attitude_indicator_visible,
   )
 
   await showInstrument(
     'spd',
-    'Peripheral Instrument: Airspeed Indicator',
-    `
-### Airspeed Indicator
-
-Provides aircraft performance information.
-
-Take a quick reading, then return immediately to the attitude indicator.
-`,
+    ['Peripheral Instrument', 'Scanning Technique'],
+    [
+      'The Airspeed Indicator provides critical aircraft performance data.',
+      'The pilot must execute a brief visual check before immediately returning focus to the Attitude Indicator.',
+    ],
     simulation.set_analog_speed_indicator_visible,
   )
 
@@ -230,14 +230,11 @@ Take a quick reading, then return immediately to the attitude indicator.
 
   await showInstrument(
     'alt',
-    'Peripheral Instrument: Altimeter',
-    `
-### Altimeter
-
-Provides altitude information.
-
-Cross-check altitude briefly while maintaining attitude as the primary reference.
-`,
+    ['Peripheral Instrument', 'Scanning Technique'],
+    [
+      'The Altimeter provides essential altitude data.',
+      'Altitude must be cross-checked briefly while maintaining the Attitude Indicator as the primary reference.',
+    ],
     simulation.set_analog_altimeter_visible,
   )
 
@@ -245,35 +242,30 @@ Cross-check altitude briefly while maintaining attitude as the primary reference
 
   await showInstrument(
     'hdg',
-    'Peripheral Instrument: Heading Indicator',
-    `
-### Heading Indicator
-
-Provides directional information.
-
-Check heading briefly, then return immediately to the attitude indicator.
-`,
+    ['Peripheral Instrument', 'Scanning Technique'],
+    [
+      'The Heading Indicator provides directional information.',
+      'Heading is checked briefly before visual focus immediately returns to the Attitude Indicator.',
+    ],
     simulation.set_analog_heading_indicator_visible,
   )
 
   await demonstratePair('hdg', simulation.set_analog_heading_indicator_visible, 'ATT ↔ HDG')
 
   await notifyUser(
-    'Transitioning to Continuous Scan',
-    `### Full Instrument Cross-Check
-
-You have practiced:
-
-• Attitude ↔ Airspeed
-
-• Attitude ↔ Altimeter
-
-• Attitude ↔ Heading
-
-The exercise will now combine all scan pairs into a continuous T-pattern.
-
-The pace will begin slowly and gradually increase.`,
-    7000,
+    'Demonstration Concluded',
+    'All individual scan pairs have now been demonstrated.',
+    3000,
+  )
+  await notifyUser(
+    'Continuous Scan',
+    'The individual pairs will now be combined into a continuous T-pattern.',
+    3000,
+  )
+  await notifyUser(
+    'Pacing Parameters',
+    'The scan sequence will commence at a reduced pace and accelerate progressively.',
+    3000,
   )
 
   // -----------------------------
@@ -285,10 +277,8 @@ The pace will begin slowly and gradually increase.`,
     let pace: number
 
     if (i < 5) {
-      // Gentle transition from introduction
       pace = 1.4 - i * 0.15
     } else {
-      // Progressive acceleration
       pace = Math.max(0.3, 0.8 - (i - 5) * 0.02)
     }
 
@@ -299,8 +289,7 @@ The pace will begin slowly and gradually increase.`,
       turnActive = true
 
       const fm = context.controls.flightModel
-
-      context.setVisuals(true)
+      context.setVisuals(false)
 
       fm.set_autopilot_bank_target(10)
       fm.set_autopilot_pitch_target(8)
@@ -308,9 +297,16 @@ The pace will begin slowly and gradually increase.`,
       fm.set_autopilot_bank_hold(true)
       fm.set_autopilot_pitch_hold(true)
 
-      notifyUser(
+      // After a delay, adjust the autopilot targets to simulate a maneuver that requires attention
+      waitFor(10000).then(() => {
+        fm.set_autopilot_pitch_target(-3)
+        fm.set_autopilot_bank_target(-2)
+      })
+
+      await notifyUser(
         'Maneuver Notification',
         renderScanUI('att', cycleNum, totalCycles, pace, '🔄 TURN EXECUTION', true),
+        3000,
       )
     }
 
@@ -387,22 +383,24 @@ The pace will begin slowly and gradually increase.`,
   // -----------------------------
   // COMPLETE
   // -----------------------------
-  notifyUser(
-    'Training Module Complete',
-    `### Session Summary
-
-Instrument scan procedure executed for **${totalCycles} cycles**.
-
-**Key Takeaways**
-
-• Attitude indicator remains the primary reference
-
-• Brief peripheral scans prevent fixation
-
-• Systematic cross-check improves situational awareness
-
-• Scan pace increased progressively throughout the session
-
-Training complete.`,
+  await notifyUser(
+    'Training Module Concluded',
+    `The instrument scan procedure has been executed for **${totalCycles} cycles**.`,
+    3000,
+  )
+  await notifyUser(
+    'Core Principle 1',
+    'The Attitude Indicator remains the primary reference at all times.',
+    3000,
+  )
+  await notifyUser(
+    'Core Principle 2',
+    'Brief peripheral observations prevent fixation and enhance situational awareness.',
+    3000,
+  )
+  await notifyUser(
+    'Session Summary',
+    'The scan pace was increased progressively throughout the session. Training sequence complete.',
+    3000,
   )
 }
