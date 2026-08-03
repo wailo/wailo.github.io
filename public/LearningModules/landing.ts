@@ -306,15 +306,20 @@ All actions will follow standard operating procedures.`,
     'Landing Procedure',
     `<div style="background-color:#f59e0b;color:#1f2937;padding:10px;border-radius:6px;font-weight:500">
     <b>[EVENT]</b> Weight on wheels confirmed.
-    <p style="margin:8px 0 0 0">Main landing gear has made ground contact.</p>
+    <p style="margin:8px 0 0 0">Main landing gear has made ground contact. Engaging Thrust Reverse</p>
     </div>`,
     4000,
   )
 
   // Disengage autopilot
   flightModel.set_autopilot_master_switch(false)
-  // Set engine throttle to idle
+  // Engage thrust reverse
   flightModel.set_engine_throttle_position(0)
+
+  await waitForCondition(() => flightModel.speed_indicated_knots < 90)
+  flightModel.set_engine_throttle_position(0.275)
+
+  await waitFor(2000)
   // 🟢 [ACTION] Apply Braking
   flightModel.set_parking_brake(true)
 
