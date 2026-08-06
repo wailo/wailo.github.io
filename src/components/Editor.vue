@@ -227,7 +227,8 @@ const routeHash = window.location.href
 const emit = defineEmits<{
   (event: 'start', code: string): void
   (event: 'reset'): void
-  (event: 'error', error: any): void
+  (event: 'error', error: any, title?: string): void
+  (event: 'completed', title: string): void
   (event: 'broadcastScript', title: string, content: string): void
 }>()
 
@@ -364,6 +365,7 @@ const broadacast = async (title: string, content: string) => {
 
 const executeExternalCode = (title: string, content: string) => {
   props.utilityFuncs.notifyUser(`Running a script from instrutor`, title, 2000)
+  ModuleTitle.value = title
   code.value = content
   executeCode()
 }
@@ -411,12 +413,13 @@ const executeCode = async () => {
     const startStime = new Date()
     runUserScript(finalUserCode, ctx)
       .then(() => {
+        emit('completed', ModuleTitle.value)
         emit('reset')
       })
       .catch((error: any) => {
         console.log(`Script error: ${error}`)
         executionResult.value = error
-        emit('error', error)
+        emit('error', error, ModuleTitle.value)
       })
       .finally(() => {
         const endTime = new Date()
@@ -429,11 +432,13 @@ const executeCode = async () => {
           ui_version: import.meta.env.VITE_GIT_SHA,
           raw_metrics: metrics,
         }).catch((err) => {
-          emit('error', err)
+          emit('error', err, ModuleTitle.value)
         })
       })
   } catch (err) {
     console.error(err)
+    emit('error', err, ModuleTitle.value)
+    isScriptRunning.value = false
   }
 }
 
