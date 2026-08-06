@@ -5,7 +5,7 @@ import { type RecordModel } from 'pocketbase'
 
 // Define the event emitter
 const emit = defineEmits<{
-  (event: 'onLogin', url: string, authToken: string): void
+  (event: 'onLogin', url: string, authToken: string, name: string): void
   (event: 'onLogout'): void
 }>()
 
@@ -25,7 +25,7 @@ const login = async (email: string, password: string) => {
     userInfo.value = authResult.record
     token = authResult.token
     // const payload = getTokenPayload(token);
-    emit('onLogin', pb.baseURL, token) // Emit the login event with the JWT token
+    emit('onLogin', pb.baseURL, token, String(authResult.record.name || ''))
     //     {
     //     "collectionId": "_pb_users_auth_",
     //     "exp": 1752856419,
@@ -72,27 +72,33 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="w-full rounded-lg shadow-md">
-    <div class="flex flex-col gap-1">
-      <input
-        v-model="email"
-        type="email"
-        placeholder="Email"
-        :disabled="isLoggedIn"
-        v-on:focus="loginFailed = false"
-        class="pl-1 text-secondary bg-primary w-full border border-simElementBorder"
-      />
-      <input
-        v-model="password"
-        type="password"
-        placeholder="Password"
-        :disabled="isLoggedIn"
-        v-on:focus="loginFailed = false"
-        class="pl-1 text-secondary bg-primary w-full border border-simElementBorder"
-      />
+  <div class="w-full min-w-0 rounded-lg shadow-md">
+    <div class="grid min-w-0 grid-cols-2 gap-1">
+      <label class="min-w-0">
+        <span class="block text-secondary">EMAIL</span>
+        <input
+          v-model="email"
+          type="email"
+          placeholder="Email"
+          :disabled="isLoggedIn"
+          v-on:focus="loginFailed = false"
+          class="min-w-0 max-w-full pl-1 text-secondary bg-primary w-full border border-simElementBorder"
+        />
+      </label>
+      <label class="min-w-0">
+        <span class="block text-secondary">PASSWORD</span>
+        <input
+          v-model="password"
+          type="password"
+          placeholder="Password"
+          :disabled="isLoggedIn"
+          v-on:focus="loginFailed = false"
+          class="min-w-0 max-w-full pl-1 text-secondary bg-primary w-full border border-simElementBorder"
+        />
+      </label>
       <button
         @click="toggleAuth"
-        class="border border-simElementBorder w-full"
+        class="col-span-2 border border-simElementBorder w-full"
         :class="
           loginFailed
             ? 'bg-panelActive text-primary'
