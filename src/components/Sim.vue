@@ -12,7 +12,7 @@
       :flash="FlightSimModule?.simulation.simulation_pause || FlightSimModule?.flightModel.damaged"
       :active="FlightSimModule?.simulation.simulation_pause || FlightSimModule?.flightModel.damaged"
       class="panel-cockpit"
-      data-layout="focus instructor pilot"
+      data-layout="focus instructor pilot classroom"
     >
       <template #Cockpit>
         <div class="relative w-full h-full overflow-hidden">
@@ -142,7 +142,7 @@
     <!-- Panel 2 -->
     <Panel
       class="panel-learningmodules"
-      data-layout="instructor"
+      data-layout="instructor classroom"
       :status="scriptComponentStatus"
       :active="scriptComponentStatus != 'IDLE'"
     >
@@ -167,10 +167,15 @@
             }
           "
           @reset="scriptComponentStatus = 'IDLE'"
+          @completed="
+            (title: string) =>
+              classroomComponentRef?.reportExerciseResult('completed', title, title)
+          "
           @error="
-            (error: any) => {
+            (error: any, title?: string) => {
               simFunctions.notifyUser('Editor Error', error, 5000)
               scriptComponentStatus = 'ERROR'
+              classroomComponentRef?.reportExerciseResult('error', String(error), title)
             }
           "
           @broadcastScript="
@@ -189,7 +194,7 @@
       :status="FlightSimModule.flightModel.autopilot_master_switch ? 'Engaged' : 'Disengaged'"
       :active="FlightSimModule.flightModel.autopilot_master_switch"
       class="panel-autopilot"
-      data-layout="instructor pilot"
+      data-layout="instructor pilot classroom"
     >
       <template #Autopilot>
         <div class="w-full h-full">
@@ -309,7 +314,7 @@
     <Panel
       :status="classRoomComponentState ? 'Online' : 'Offline'"
       class="panel-classroom"
-      data-layout="instructor pilot"
+      data-layout="instructor pilot classroom"
       :active="classRoomComponentState"
     >
       <template #Classroom>
@@ -317,13 +322,23 @@
           <Accounts
             v-if="sim_module_loaded"
             @onLogin="
-              (url: string, authToken: string) => FlightSimModule.check_licence(url, authToken)
+              (url: string, authToken: string, name: string) => {
+                accountName = name
+                FlightSimModule.check_licence(url, authToken)
+              }
             "
-            @onLogout="() => FlightSimModule.check_licence('', '')"
+            @onLogout="
+              () => {
+                accountName = ''
+                FlightSimModule.check_licence('', '')
+              }
+            "
             ref="accountsComponentRef"
           />
           <ClassRoom
             v-if="dataDisplayRef"
+            class="min-h-0 flex-1"
+            :account-name="accountName"
             @apiDataEvent="
               (receivedApiCall: PeerApiData) => manager.handleIncomingMessage(receivedApiCall?.api)
             "
@@ -336,6 +351,13 @@
                 whiteBoardComponentRef?.UpdateState(receivedData.wb)
               }
             "
+            @instructor-command="handleInstructorCommand"
+            @announcement="handleClassroomAnnouncement"
+            @exercise-start="
+              (exercise: ClassroomExerciseAssignment) =>
+                editorComponentRef?.executeExternalCode(exercise.name, exercise.source)
+            "
+            @exercise-stop="editorComponentRef?.reset()"
             ref="classroomComponentRef"
             @classroomConnection="
               (isOnline) => {
@@ -351,7 +373,7 @@
       </template>
     </Panel>
     <!-- Panel 8 -->
-    <Panel class="panel-userprompt" data-layout="focus instructor pilot">
+    <Panel class="panel-userprompt" data-layout="focus instructor pilot classroom">
       <template #Prompt>
         <MarkDown ref="markdownRef" class="w-full h-full p-1" />
       </template>
@@ -360,11 +382,7 @@
           ref="whiteBoardComponentRef"
           v-if="sim_module_loaded"
           class="w-full h-full p-1"
-          @history-updated="
-            (obj) => {
-              classroomComponentRef?.sendWhiteboardState(obj.serialized)
-            }
-          "
+          @history-updated="handleWhiteboardHistory"
         />
       </template>
     </Panel>
@@ -408,6 +426,42 @@ function broadcast(call: RemoteCall | RemoteEvent) {
   if (classroomComponentRef.value) {
     classroomComponentRef.value.sendApiCall(JSON.stringify(call))
   }
+}
+
+const handleWhiteboardHistory = (obj: { serialized: string }) => {
+  classroomComponentRef.value?.sendWhiteboardState(obj.serialized)
+}
+
+const handleInstructorCommand = (command: ClassroomCommand) => {
+  if (!FlightSimModule) return
+  switch (command) {
+    case 'pause':
+      FlightSimModule.simulation.set_simulation_pause(true)
+      break
+    case 'resume':
+      FlightSimModule.simulation.set_simulation_pause(false)
+      break
+    case 'reset':
+      FlightSimModule.simulation.reset_simulation()
+      dataDisplayRef.value?.reset()
+      break
+    case 'layout-instructor':
+      simFunctions.setLayout(LayoutTypes.INSTRUCTOR)
+      break
+    case 'layout-pilot':
+      simFunctions.setLayout(LayoutTypes.PILOT)
+      break
+    case 'layout-focus':
+      simFunctions.setLayout(LayoutTypes.FOCUS)
+      break
+    case 'clear-whiteboard':
+      whiteBoardComponentRef.value?.clear()
+      break
+  }
+}
+
+const handleClassroomAnnouncement = (message: string) => {
+  if (message) simFunctions.notifyUser('Instructor', message, 8000)
 }
 
 const toggleFullscreen = async () => {
@@ -482,6 +536,7 @@ let FlightSimModule: ExtendedMainModule
 let sim_module_loaded = ref(false)
 let isLicenceValid = ref(false)
 let classRoomComponentState = ref(false)
+let accountName = ref('')
 let scriptComponentStatus = ref<ScriptStatus>('IDLE')
 const update_interval_ms = 200
 const isFullscreen = ref(false)
@@ -541,6 +596,7 @@ const layoutControls: ComputedRef<Record<string, SimulationProperties>> = comput
     group: 'simulation',
     enumValues: [
       { enumName: 'Instructor', enumValue: LayoutTypes.INSTRUCTOR },
+      { enumName: 'Classroom', enumValue: LayoutTypes.CLASSROOM },
       { enumName: 'Pilot', enumValue: LayoutTypes.PILOT },
       { enumName: 'Focus', enumValue: LayoutTypes.FOCUS },
     ],
@@ -671,7 +727,8 @@ onMounted(async () => {
           const nextLayout = {
             [LayoutTypes.INSTRUCTOR]: LayoutTypes.PILOT,
             [LayoutTypes.PILOT]: LayoutTypes.FOCUS,
-            [LayoutTypes.FOCUS]: LayoutTypes.INSTRUCTOR,
+            [LayoutTypes.FOCUS]: LayoutTypes.CLASSROOM,
+            [LayoutTypes.CLASSROOM]: LayoutTypes.INSTRUCTOR,
           }
           simFunctions.setLayout(nextLayout[layout.value])
         }
@@ -815,6 +872,10 @@ function createRemoteManager(FlightSimModule: ExtendedMainModule) {
   display: none;
 }
 
+.container.layout-classroom > *:not([data-layout~='classroom']) {
+  display: none;
+}
+
 /* ===== Instructor LAYOUT ===== */
 .container.layout-instructor {
   display: grid;
@@ -863,6 +924,22 @@ function createRemoteManager(FlightSimModule: ExtendedMainModule) {
     'realtimedata cockpit userprompt'
     'realtimedata cockpit userprompt'
     'realtimedata simulationcontrols userprompt';
+}
+
+/* ===== Classroom LAYOUT ===== */
+.container.layout-classroom {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-rows: repeat(8, minmax(0, 1fr));
+  grid-template-areas:
+    'cockpit userprompt classroom'
+    'cockpit userprompt classroom'
+    'cockpit userprompt classroom'
+    'cockpit userprompt classroom'
+    'autopilot userprompt classroom'
+    'learningmodules userprompt classroom'
+    'learningmodules userprompt classroom'
+    'learningmodules userprompt classroom';
 }
 
 /* Panel bindings */

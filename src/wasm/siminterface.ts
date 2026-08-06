@@ -23,6 +23,7 @@ export { type graphics } from './generated/flightsimulator_exec'
 
 export enum LayoutTypes {
   INSTRUCTOR = 'instructor',
+  CLASSROOM = 'classroom',
   PILOT = 'pilot',
   FOCUS = 'focus',
 }
