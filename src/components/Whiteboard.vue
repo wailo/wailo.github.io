@@ -15,7 +15,15 @@ const emit = defineEmits<{
   (e: 'history-updated', payload: { serialized: string }): void
 }>()
 
+const { undo, redo, canUndo, canRedo, clear, serialize, currentIndex } = useWhiteboard(svgRef, {
+  color,
+  size,
+  backgroundColor: 'transparent',
+  initialState: JSON.parse(localStorage.getItem('drawing') || '[]'),
+})
+
 defineExpose({
+  clear,
   UpdateState: (state: string) => {
     boardState.value = JSON.parse(state)
     if (boardState.value.length == 0) {
@@ -30,13 +38,6 @@ defineExpose({
       initialState: boardState.value,
     })
   },
-})
-
-const { undo, redo, canUndo, canRedo, clear, serialize, currentIndex } = useWhiteboard(svgRef, {
-  color,
-  size,
-  backgroundColor: 'transparent',
-  initialState: JSON.parse(localStorage.getItem('drawing') || '[]'),
 })
 
 // Watch for currentIndex changes and emit serialized history
