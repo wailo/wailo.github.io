@@ -1,18 +1,24 @@
 <template>
-  <div class="w-full max-h-full grid grid-flow-row grid-cols-1 gap-2">
-    <div class="w-full grid grid-flow-row grid-cols-1 gap-1">
-      <div>
-        <input
-          v-model="selfPeerId"
-          :readonly="isOnline"
-          placeholder="Classroom name (optional)"
-          class="pl-1 text-secondary bg-primary w-1/2 border border-simElementBorder"
-        />
-        <input
-          v-model="displayname"
-          placeholder="Enter your display name (optional)"
-          class="pl-1 text-secondary bg-primary w-1/2 border border-simElementBorder"
-        />
+  <div class="flex h-full min-h-0 w-full flex-col gap-1 overflow-auto">
+    <div class="order-1 w-full grid grid-flow-row grid-cols-1 gap-1">
+      <div class="grid grid-cols-2 gap-1">
+        <label class="min-w-0">
+          <span class="block text-secondary">CLASS</span>
+          <input
+            v-model="selfPeerId"
+            :readonly="isOnline"
+            placeholder="room name"
+            class="w-full min-w-0 pl-1 text-secondary bg-primary border border-simElementBorder"
+          />
+        </label>
+        <label class="min-w-0">
+          <span class="block text-secondary">CALLSIGN</span>
+          <input
+            v-model="displayname"
+            placeholder="callsign"
+            class="w-full min-w-0 pl-1 text-secondary bg-primary border border-simElementBorder"
+          />
+        </label>
       </div>
       <!-- <button-switch
         id="share"
@@ -38,26 +44,203 @@
           :button-click="() => (followMode = !followMode)"
         />
       </div>
+      <div v-if="isInstructor && isOnline" class="grid grid-cols-1 gap-1">
+        <wButton
+          :button-label="
+            selectedPeerIds.length ? `Selected: ${selectedPeerIds.length}` : 'Select all'
+          "
+          :button-state="selectedPeerIds.length > 0"
+          class="border border-simElementBorder"
+          :button-click="toggleSelectAll"
+        />
+      </div>
+      <button
+        v-if="!isInstructor && isOnline"
+        class="border border-simElementBorder"
+        :class="
+          studentHandState === 'raised'
+            ? 'animate-pulse bg-simActiveButton text-primary'
+            : 'text-secondary'
+        "
+        @click="toggleHand"
+      >
+        {{ studentHandLabel }}
+      </button>
     </div>
 
-    <div class="grid grid-flow-row grid-cols-1">
-      <table class="table-fixed text-left border">
-        <thead class="border-b border-t border-simElementBorder bg-panelHeaderBackground">
+    <section
+      v-if="!isInstructor && currentAssignment"
+      class="grid gap-1 border border-simElementBorder p-2"
+    >
+      <div class="font-bold">Assigned: {{ currentAssignment.name }}</div>
+      <div>Status: {{ currentAssignment.status }}</div>
+      <div>Time remaining: {{ assignmentTimeRemaining }}</div>
+      <div class="grid grid-cols-2 gap-1">
+        <button
+          class="border border-simElementBorder"
+          :disabled="currentAssignment.status === 'running'"
+          @click="startAssignedExercise"
+        >
+          Start exercise
+        </button>
+        <button
+          class="border border-simElementBorder"
+          :disabled="currentAssignment.status !== 'running'"
+          @click="stopAssignedExercise"
+        >
+          Stop
+        </button>
+      </div>
+    </section>
+
+    <section
+      v-if="isInstructor && isOnline"
+      class="order-3 grid gap-1 border border-simElementBorder p-1"
+    >
+      <div
+        v-if="overdueCount"
+        class="border border-panelActive bg-panelStatusBackground px-2 py-1 font-bold text-secondary"
+      >
+        {{ overdueCount }} student{{ overdueCount === 1 ? '' : 's' }} overdue
+      </div>
+      <div class="grid grid-cols-2 gap-1">
+        <button
+          class="border border-simElementBorder"
+          :disabled="!actionTargetIds.length || !targetHaveAssignments"
+          @click="sendExerciseControl('start', actionTargetIds)"
+        >
+          ▶ Start [S]
+        </button>
+        <button
+          class="border border-simElementBorder"
+          :disabled="!actionTargetIds.length"
+          @click="sendExerciseControl('stop', actionTargetIds)"
+        >
+          ■ Stop
+        </button>
+      </div>
+      <div class="flex gap-1">
+        <input
+          v-model.trim="announcement"
+          class="min-w-0 flex-1 pl-1 text-secondary bg-primary border border-simElementBorder"
+          placeholder="Message selected students"
+          @keyup.enter="sendAnnouncement"
+        />
+        <button
+          class="px-2 border border-simElementBorder"
+          :disabled="!announcement"
+          @click="sendAnnouncement"
+        >
+          Send
+        </button>
+      </div>
+      <div class="grid grid-cols-[1fr_auto] gap-1">
+        <button
+          class="truncate border border-simElementBorder px-1 text-left"
+          :disabled="!actionTargetIds.length"
+          @click="openExercisePalette"
+        >
+          {{ selectedExercise()?.name || 'Exercise' }} [a]
+        </button>
+        <input
+          v-model.number="exerciseMinutes"
+          type="number"
+          min="1"
+          class="w-14 pl-1 text-secondary bg-primary border border-simElementBorder"
+          title="Minutes"
+        />
+      </div>
+      <div class="flex gap-1">
+        <input
+          ref="groupInputRef"
+          v-model.trim="groupName"
+          class="min-w-0 flex-1 pl-1 text-secondary bg-primary border border-simElementBorder"
+          placeholder="Group name"
+          @keyup.enter="assignGroup"
+        />
+        <button
+          class="px-2 border border-simElementBorder"
+          :disabled="!groupName || !actionTargetIds.length"
+          @click="assignGroup"
+        >
+          Set group
+        </button>
+        <button class="px-2 border border-simElementBorder" @click="exportSession">Export</button>
+      </div>
+      <small class="text-secondary"
+        >↑↓ move · space select · / find · a exercise · g group · A all · S start · esc clear</small
+      >
+    </section>
+
+    <div
+      v-if="isInstructor && isOnline"
+      class="order-2 min-h-24 flex-1 overflow-auto font-panelFont"
+    >
+      <div
+        class="sticky top-0 z-20 flex items-center border border-simElementBorder bg-panelHeaderBackground px-1"
+      >
+        <span class="pr-1">/</span>
+        <input
+          ref="rosterSearchRef"
+          v-model="rosterSearch"
+          class="min-w-0 flex-1 bg-transparent text-secondary outline-none"
+          placeholder="filter user / group / exercise / status"
+          @keydown.esc.prevent="clearRosterSearch"
+          @keydown.down.prevent="moveRosterFocus(1)"
+          @keydown.up.prevent="moveRosterFocus(-1)"
+          @keydown.ctrl.n.prevent="moveRosterFocus(1)"
+          @keydown.ctrl.p.prevent="moveRosterFocus(-1)"
+          @keydown.ctrl.a.prevent="selectAllPeers"
+          @keydown.meta.a.prevent="selectAllPeers"
+        />
+        <span>{{ filteredParticipants.length }}/{{ Object.keys(incomingConns).length }}</span>
+      </div>
+      <table
+        class="h-fit min-w-[52rem] table-fixed text-left border-x border-b border-simElementBorder whitespace-nowrap"
+      >
+        <thead
+          class="sticky top-5 z-10 border-b border-t border-simElementBorder bg-panelHeaderBackground"
+        >
           <tr>
-            <th class="flex-1">Callsign [{{ Object.keys(incomingConns).length }}]</th>
-            <th class="flex-1">Status</th>
-            <th class="flex-1">Message</th>
-            <th class="flex-1">Disconnect</th>
+            <th class="w-10 min-w-10 max-w-10 px-1 text-center">S!</th>
+            <th class="w-[14%] px-1">NAME</th>
+            <th class="w-[14%] px-1">CALLSIGN</th>
+            <th class="w-[12%] px-1">SIM</th>
+            <th class="w-[30%] px-1">EXERCISE</th>
+            <th class="w-[12%] px-1">GROUP</th>
+            <th class="w-[10%] px-1">NET</th>
+            <th class="w-6">×</th>
           </tr>
         </thead>
         <tbody>
-          <tr class="nowrap border-b" v-for="(peer, peerId) in incomingConns" :key="peerId">
-            <!-- Display name -->
-            <td class="pl-1">{{ peer.conn.metadata.displayName }}</td>
+          <tr
+            v-for="({ peer, peerId }, index) in filteredParticipants"
+            :key="peerId"
+            :ref="(element) => setRosterRowRef(element, index)"
+            class="h-5 nowrap cursor-pointer border-b border-panelBorder transition-colors"
+            :class="rowClass(peerId)"
+            @click="focusAndTogglePeer(peerId)"
+          >
+            <td class="w-10 min-w-10 max-w-10 px-1 text-center">
+              <span class="grid w-8 grid-cols-2">
+                <span class="block w-4 text-center">{{ selectionMarker(peerId) || '\u00a0' }}</span>
+                <span
+                  class="block w-4 text-center"
+                  :class="peer.handState === 'raised' ? 'animate-pulse font-bold' : ''"
+                  >{{ peer.handState === 'raised' ? '!' : '\u00a0' }}</span
+                >
+              </span>
+            </td>
+            <td class="overflow-hidden text-ellipsis px-1">
+              <b>{{ peer.metadata.name || '—' }}</b>
+            </td>
+            <td class="overflow-hidden text-ellipsis border-l border-simElementBorder px-1">
+              {{ peer.metadata.callsign || peer.metadata.displayName || '—' }}
+            </td>
             <!-- Status -->
-            <td class="pl-1 border-l border-simElementBorder">
+            <td class="overflow-hidden text-ellipsis border-l border-simElementBorder px-1">
               <button class="">
-                {{ peer.conn.metadata.status }}
+                {{ compactStatus(peer.metadata.status) }}
                 <!-- <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 16 16"
@@ -72,12 +255,30 @@
                 </svg> -->
               </button>
             </td>
-            <td class="pl-1 border-l border-simElementBorder">
-              {{ peer.conn.metadata.checkPoint }}
+            <td
+              class="overflow-hidden text-ellipsis border-l border-simElementBorder px-1"
+              :title="peer.exercise?.name || ''"
+            >
+              <span v-if="peer.exercise">
+                {{ exerciseStatusSymbol(peer.exercise.status) }} {{ peer.exercise.name }} ·
+                <span :class="exerciseStatusClass(peer.exercise.status)">{{
+                  peer.exercise.status
+                }}</span>
+              </span>
+              <span v-else>—</span>
+            </td>
+            <td class="overflow-hidden text-ellipsis border-l border-simElementBorder px-1">
+              {{ peer.metadata.group || '—' }}
+            </td>
+            <td class="overflow-hidden text-ellipsis border-l border-simElementBorder px-1">
+              {{ connectionAge(peer) > 15 ? 'STALE' : `${peer.latency ?? '—'}ms` }}
+              <span v-if="peer.handState === 'raised'" class="font-bold">
+                ! HAND {{ handWaitTime(peer) }}</span
+              >
             </td>
             <!-- Disconnect -->
             <td class="pl-1 border-l border-simElementBorder">
-              <button @click="peer.conn.close()">
+              <button @click.stop="confirmDisconnect(peerId, peer)">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 16 16"
@@ -95,6 +296,56 @@
           </tr>
         </tbody>
       </table>
+    </div>
+  </div>
+
+  <div
+    v-if="exercisePaletteOpen"
+    class="fixed inset-0 z-50 flex items-start justify-center bg-panelContentBackground/80 pt-[12vh]"
+    @click.self="closeExercisePalette"
+  >
+    <div class="w-1/2 min-w-80 border border-panelActive bg-panelContentBackground shadow-lg">
+      <div
+        class="border-b border-panelBorder bg-panelHeaderBackground px-2 py-1 font-bold text-secondary"
+      >
+        ASSIGN · {{ actionTargetIds.length }} TARGET{{ actionTargetIds.length === 1 ? '' : 'S' }}
+      </div>
+      <div class="flex border-b border-simElementBorder px-2 py-1">
+        <span class="pr-2">&gt;</span>
+        <input
+          ref="exerciseSearchRef"
+          v-model="exerciseQuery"
+          class="min-w-0 flex-1 bg-transparent text-secondary outline-none"
+          placeholder="fuzzy search exercise"
+          @input="exerciseResultIndex = 0"
+          @keydown="handleExercisePaletteKeydown"
+        />
+        <span>{{ exerciseMinutes }}m</span>
+      </div>
+      <div class="max-h-[50vh] overflow-auto py-1 font-panelFont">
+        <button
+          v-for="(exercise, index) in exerciseResults"
+          :key="exercise.path"
+          class="flex w-full gap-2 px-2 py-1 text-left"
+          :class="
+            index === exerciseResultIndex
+              ? 'bg-simActiveButton text-primary'
+              : 'text-secondary hover:bg-simInputBackground'
+          "
+          @mouseenter="exerciseResultIndex = index"
+          @click="chooseExercise(exercise)"
+        >
+          <span>{{ index === exerciseResultIndex ? '›' : ' ' }}</span>
+          <span class="min-w-0 flex-1 truncate">{{ exercise.name }}</span>
+          <span class="opacity-60">{{ exercise.category }}</span>
+        </button>
+        <div v-if="!exerciseResults.length" class="px-2 py-3 text-center text-secondary">
+          NO MATCHES
+        </div>
+      </div>
+      <div class="border-t border-panelBorder px-2 py-1 text-secondary">
+        ↑↓/C-n/C-p · enter assign · esc cancel
+      </div>
     </div>
   </div>
 
@@ -135,10 +386,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import {
+  computed,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  ref,
+  watch,
+  type ComponentPublicInstance,
+} from 'vue'
+import Fuse from 'fuse.js'
 import wButton from './wButton.vue'
 import * as PeerJS from 'peerjs'
 import { DataConnection } from 'peerjs'
+import { moduleTree, type ModuleEntry } from './data/EASAModules'
 // import vueQr from "vue-qr/src/packages/vue-qr.vue";
 
 // Define the event emitter
@@ -147,8 +408,14 @@ const emit = defineEmits<{
   (event: 'apiDataEvent', receivedData: PeerApiData): void
   (event: 'apiScriptEvent', receivedData: PeerScriptData): void
   (event: 'wbEvent', receivedData: PeerWhiteBoardata): void
+  (event: 'instructorCommand', command: ClassroomCommand): void
+  (event: 'announcement', message: string): void
+  (event: 'exerciseStart', exercise: ClassroomExerciseAssignment): void
+  (event: 'exerciseStop'): void
   (event: 'error', errorMessage: string): void
 }>()
+
+const props = defineProps<{ accountName?: string }>()
 
 const isDevelopment = import.meta.env.DEV
 const baseUrl = window.location.origin
@@ -161,6 +428,8 @@ let displayname = ref<string>()
 let isOnline = ref(false)
 type ConnectionMeta = {
   displayName?: string
+  callsign?: string
+  name?: string
   status?: string
   checkPoint?: string
   [key: string]: any
@@ -170,18 +439,146 @@ type ConnectionsList = {
   [peerId: string]: {
     metadata: ConnectionMeta
     conn: PeerJS.DataConnection
+    lastSeen: number
+    latency?: number
+    handRaised?: boolean
+    handState?: ClassroomHandState
+    handRaisedAt?: number
+    exercise?: {
+      id: string
+      name: string
+      status: ClassroomExerciseStatus
+      updatedAt: number
+      deadline?: number
+      detail?: string
+    }
   }
 }
 const incomingConns = ref<ConnectionsList>({})
 const routeHash = window.location.href
 const isQrPopupOpen = ref(false)
 const followMode = ref(false)
+const selectedPeerIds = ref<string[]>([])
+const focusedPeerId = ref('')
+const rosterSearch = ref('')
+const rosterSearchRef = ref<HTMLInputElement | null>(null)
+const groupInputRef = ref<HTMLInputElement | null>(null)
+const exercisePaletteOpen = ref(false)
+const exerciseQuery = ref('')
+const exerciseSearchRef = ref<HTMLInputElement | null>(null)
+const exerciseResultIndex = ref(0)
+const rosterRowRefs = ref<HTMLElement[]>([])
+const announcement = ref('')
+const exercisePath = ref('')
+const exerciseMinutes = ref(30)
+const groupName = ref('')
+const studentHandState = ref<ClassroomHandState>('idle')
+const currentAssignment = ref<
+  (ClassroomExerciseAssignment & { status: ClassroomExerciseStatus }) | null
+>(null)
+const exerciseModules = Object.entries(moduleTree).flatMap(([category, entries]) =>
+  entries.map((entry) => ({ ...entry, category })),
+)
+const sessionStartedAt = ref(Date.now())
+const sessionEvents = ref<
+  Array<{ timestamp: number; type: string; target: string; detail: string }>
+>([])
+const clock = ref(Date.now())
+let healthTimer: ReturnType<typeof setInterval> | undefined
+const allSelected = computed(
+  () =>
+    Object.keys(incomingConns.value).length > 0 &&
+    selectedPeerIds.value.length === Object.keys(incomingConns.value).length,
+)
+const overdueCount = computed(
+  () =>
+    Object.values(incomingConns.value).filter((peer) => peer.exercise?.status === 'overdue').length,
+)
+const participantRecords = computed(() => {
+  const handPriority: Record<ClassroomHandState, number> = {
+    raised: 0,
+    acknowledged: 1,
+    idle: 2,
+    resolved: 3,
+  }
+  return Object.entries(incomingConns.value)
+    .map(([peerId, peer]) => ({ peerId, peer }))
+    .sort(
+      (a, b) => handPriority[a.peer.handState || 'idle'] - handPriority[b.peer.handState || 'idle'],
+    )
+})
+const filteredParticipants = computed(() => {
+  if (!rosterSearch.value.trim()) return participantRecords.value
+  return new Fuse(participantRecords.value, {
+    threshold: 0.35,
+    keys: [
+      'peerId',
+      'peer.metadata.displayName',
+      'peer.metadata.callsign',
+      'peer.metadata.name',
+      'peer.metadata.status',
+      'peer.metadata.checkPoint',
+      'peer.metadata.group',
+      'peer.exercise.name',
+      'peer.exercise.status',
+    ],
+  })
+    .search(rosterSearch.value)
+    .map((result) => result.item)
+})
+const exerciseResults = computed(() => {
+  if (!exerciseQuery.value.trim()) return exerciseModules
+  return new Fuse(exerciseModules, { threshold: 0.35, keys: ['name', 'category'] })
+    .search(exerciseQuery.value)
+    .map((result) => result.item)
+})
+const actionTargetIds = computed(() =>
+  selectedPeerIds.value.length
+    ? selectedPeerIds.value
+    : focusedPeerId.value && incomingConns.value[focusedPeerId.value]
+      ? [focusedPeerId.value]
+      : [],
+)
+const targetHaveAssignments = computed(() =>
+  actionTargetIds.value.some((id) => Boolean(incomingConns.value[id]?.exercise)),
+)
+const studentHandLabel = computed(() => {
+  if (studentHandState.value === 'raised') return 'Hand raised · Cancel'
+  return 'Raise hand'
+})
+const assignmentTimeRemaining = computed(() => {
+  clock.value
+  if (!currentAssignment.value) return '—'
+  const remaining = Math.max(0, currentAssignment.value.deadline - Date.now())
+  const minutes = Math.floor(remaining / 60_000)
+  const seconds = Math.floor((remaining % 60_000) / 1000)
+  return remaining ? `${minutes}:${seconds.toString().padStart(2, '0')}` : 'Deadline passed'
+})
 
 // Watch the booleanVariable and emit an event when it changes
 watch(isOnline, (newValue: boolean) => {
   emit('classroomConnection', newValue)
   followMode.value = true
 })
+
+watch(rosterSearch, () => {
+  const visible = filteredParticipants.value
+  if (!visible.some((row) => row.peerId === focusedPeerId.value)) {
+    focusedPeerId.value = visible[0]?.peerId || ''
+  }
+})
+
+watch(
+  () => props.accountName,
+  (name) => {
+    if (instructorConnectionOpen && instructorConnection) {
+      sendEnvelopeToConnection(instructorConnection, 'identity', {
+        name: name || '',
+        callsign: displayname.value || '',
+      })
+    }
+  },
+)
 
 const copyToClipboard = () => {
   const textToCopy = `${baseUrl}/#sim?roomId=${selfPeerId}`
@@ -199,6 +596,16 @@ onMounted(() => {
   // There is no hook in Vuejs to detect when a tab is closed.
   // When the user closes the tab, disconnect
   window.addEventListener('beforeunload', disconnect)
+  window.addEventListener('keydown', handleClassroomKeydown)
+  healthTimer = setInterval(() => {
+    clock.value = Date.now()
+    updateOverdueAssignments()
+    if (isInstructor.value && isOnline.value) {
+      Object.values(incomingConns.value).forEach((peer) =>
+        sendEnvelopeToConnection(peer.conn, 'ping', { sentAt: Date.now() }),
+      )
+    }
+  }, 5000)
 
   const match = /roomId=(.*)/g.exec(routeHash)
   if (match && match[1]) {
@@ -209,13 +616,19 @@ onMounted(() => {
   }
 })
 
+onUnmounted(() => {
+  window.removeEventListener('beforeunload', disconnect)
+  window.removeEventListener('keydown', handleClassroomKeydown)
+  if (healthTimer) clearInterval(healthTimer)
+})
+
 const setupConnection = (incomingConnection: DataConnection) => {
   // Connection request from remote peer
   trace(`Received a connection data from ${incomingConnection.peer}`)
 
   // Data from remote peer
   incomingConnection.on('data', (data: unknown) => {
-    onData(data as PeerApiData, incomingConnection)
+    onData(data as PeerData, incomingConnection)
   })
   // Connected to remote peer.
   incomingConnection.on('open', () => {
@@ -225,6 +638,7 @@ const setupConnection = (incomingConnection: DataConnection) => {
     incomingConns.value[incomingConnection.peer] = {
       metadata: incomingConnection.metadata || {},
       conn: incomingConnection,
+      lastSeen: Date.now(),
     }
   })
 
@@ -272,26 +686,164 @@ const onConnectionClose = (peerId: string) => {
   else {
     // delete from the list
     delete incomingConns.value[peerId]
+    selectedPeerIds.value = selectedPeerIds.value.filter((id) => id !== peerId)
   }
 }
 
 const onData = (data: PeerData, conn: PeerJS.DataConnection) => {
   trace(`Received data from ${conn.peer} ${JSON.stringify(data)}`)
+  const participant = incomingConns.value[conn.peer]
+  if (participant) participant.lastSeen = Date.now()
+
+  if (isEnvelope(data)) {
+    const privilegedTypes: ClassroomEnvelope['type'][] = [
+      'api',
+      'script',
+      'whiteboard',
+      'command',
+      'announcement',
+      'exercise',
+      'exercise-control',
+      'hand-control',
+    ]
+    // Students only accept privileged messages from their instructor connection.
+    if (data.senderRole === 'instructor' && conn !== instructorConnection && !isInstructor.value) {
+      onError(`Rejected instructor message from ${conn.peer}`)
+      return
+    }
+    if (
+      isInstructor.value &&
+      data.senderRole === 'student' &&
+      privilegedTypes.includes(data.type)
+    ) {
+      onError(`Rejected privileged student message from ${conn.peer}`)
+      return
+    }
+    handleEnvelope(data, conn)
+    return
+  }
   // trace(`Received ${JSON.stringify(data)} from ${conn.peer}`);
   if ('api' in data) {
     emit('apiDataEvent', data as PeerApiData)
   } else if ('status' in data) {
     // some logic to update the student status.
-    incomingConns.value[conn.peer].metadata.status = data.status
+    if (participant) participant.metadata.status = data.status
   } else if ('checkpoint' in data) {
     // some logic to update the student status.
-    incomingConns.value[conn.peer].metadata.checkPoint = data.checkpoint
+    if (participant) participant.metadata.checkPoint = data.checkpoint
   } else if ('script' in data) {
     emit('apiScriptEvent', data)
   } else if ('wb' in data) {
     emit('wbEvent', data)
   } else {
     emit('error', `Unknown data: ${data}`)
+  }
+}
+
+const isEnvelope = (data: PeerData): data is ClassroomEnvelope =>
+  typeof data === 'object' && data !== null && 'version' in data && 'type' in data
+
+const handleEnvelope = (message: ClassroomEnvelope, conn: PeerJS.DataConnection) => {
+  const payload = message.payload as any
+  const participant = incomingConns.value[conn.peer]
+  switch (message.type) {
+    case 'api':
+      emit('apiDataEvent', { api: String(payload.api || '') })
+      break
+    case 'status':
+      if (participant) participant.metadata.status = String(payload.status || '')
+      break
+    case 'checkpoint':
+      if (participant) participant.metadata.checkPoint = String(payload.checkpoint || '')
+      break
+    case 'script':
+      emit('apiScriptEvent', {
+        tite: String(payload.title || ''),
+        script: String(payload.script || ''),
+      })
+      break
+    case 'whiteboard':
+      emit('wbEvent', { wb: String(payload.wb || '') })
+      break
+    case 'command':
+      if (!isInstructor.value) {
+        emit('instructorCommand', payload.command as ClassroomCommand)
+        sendEnvelopeToConnection(conn, 'ack', { messageId: message.id, command: payload.command })
+      }
+      break
+    case 'announcement':
+      emit('announcement', String(payload.message || ''))
+      break
+    case 'exercise':
+      if (!isInstructor.value) {
+        if (currentAssignment.value?.status === 'running') emit('exerciseStop')
+        currentAssignment.value = {
+          id: String(payload.id || message.id),
+          name: String(payload.name || ''),
+          source: String(payload.source || ''),
+          deadline: Number(payload.deadline || Date.now()),
+          status: 'assigned',
+        }
+        sendExerciseStatus('assigned')
+        emit('announcement', `New exercise assigned: ${currentAssignment.value.name}`)
+      }
+      break
+    case 'exercise-status':
+      if (participant) {
+        const existingExercise = participant.exercise
+        participant.exercise = {
+          id: String(payload.id || ''),
+          name: String(payload.name || ''),
+          status: payload.status as ClassroomExerciseStatus,
+          updatedAt: message.timestamp,
+          deadline:
+            existingExercise?.id === String(payload.id || '')
+              ? existingExercise.deadline
+              : undefined,
+          detail: payload.detail ? String(payload.detail) : undefined,
+        }
+        logSessionEvent(
+          'exercise-status',
+          conn.peer,
+          `${participant.exercise.name}: ${participant.exercise.status}`,
+        )
+      }
+      break
+    case 'exercise-control':
+      if (!isInstructor.value) {
+        if (payload.action === 'start') startAssignedExercise()
+        if (payload.action === 'stop') stopAssignedExercise()
+      }
+      break
+    case 'hand':
+      if (participant) {
+        const state: ClassroomHandState = payload.state || (payload.raised ? 'raised' : 'idle')
+        participant.handState = state
+        participant.handRaised = state === 'raised'
+        if (state === 'raised') participant.handRaisedAt = message.timestamp
+        logSessionEvent('hand', conn.peer, state)
+      }
+      break
+    case 'hand-control':
+      if (!isInstructor.value) {
+        studentHandState.value = 'idle'
+      }
+      break
+    case 'ping':
+      sendEnvelopeToConnection(conn, 'pong', { sentAt: payload.sentAt })
+      break
+    case 'pong':
+      if (participant) participant.latency = Math.max(0, Date.now() - Number(payload.sentAt))
+      break
+    case 'ack':
+      logSessionEvent('ack', conn.peer, String(payload.command || payload.messageId || 'message'))
+      break
+    case 'identity':
+      if (participant) {
+        participant.metadata.name = String(payload.name || '')
+        participant.metadata.callsign = String(payload.callsign || '')
+      }
+      break
   }
 }
 
@@ -380,7 +932,11 @@ const disconnect = () => {
 const connectToPeer = async (remotePeerId: string) => {
   trace(`Connecting to a peer ${remotePeerId}`)
   instructorConnection = selfPeer.connect(remotePeerId, {
-    metadata: { displayName: displayname.value },
+    metadata: {
+      displayName: displayname.value,
+      callsign: displayname.value,
+      name: props.accountName || '',
+    },
   })
 
   // conn.on('disconnected', this.onDisconnected)
@@ -395,6 +951,10 @@ const connectToPeer = async (remotePeerId: string) => {
   instructorConnection.on('open', () => {
     instructorConnectionOpen = true
     trace(`OPEN Connected to a peer ${remotePeerId}`)
+    sendEnvelopeToConnection(instructorConnection, 'identity', {
+      name: props.accountName || '',
+      callsign: displayname.value || '',
+    })
     // Data received from remote peer
     instructorConnection.on('data', (data: unknown) => {
       onData(data as PeerData, instructorConnection)
@@ -402,20 +962,376 @@ const connectToPeer = async (remotePeerId: string) => {
   })
 }
 
-const send = (data: any) => {
-  // Send data to all peers
-  Object.entries(incomingConns.value).forEach(([, peer]) => {
-    trace(`Sending data to ${peer.conn.peer}:  ${JSON.stringify(data)}`)
-    peer.conn.send(data)
+const createEnvelope = (type: ClassroomEnvelope['type'], payload: unknown): ClassroomEnvelope => ({
+  version: 1,
+  id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+  type,
+  senderRole: isInstructor.value ? 'instructor' : 'student',
+  timestamp: Date.now(),
+  payload,
+})
+
+const sendEnvelopeToConnection = (
+  conn: PeerJS.DataConnection,
+  type: ClassroomEnvelope['type'],
+  payload: unknown,
+) => {
+  if (conn.open) conn.send(createEnvelope(type, payload))
+}
+
+const targetConnections = () => {
+  const selected = new Set(selectedPeerIds.value)
+  const peers = Object.entries(incomingConns.value)
+  return selected.size ? peers.filter(([id]) => selected.has(id)) : peers
+}
+
+const sendEnvelope = (type: ClassroomEnvelope['type'], payload: unknown) => {
+  targetConnections().forEach(([, peer]) => sendEnvelopeToConnection(peer.conn, type, payload))
+}
+
+const sendEnvelopeToIds = (
+  peerIds: string[],
+  type: ClassroomEnvelope['type'],
+  payload: unknown,
+) => {
+  peerIds.forEach((id) => {
+    const peer = incomingConns.value[id]
+    if (peer) sendEnvelopeToConnection(peer.conn, type, payload)
   })
 }
+
+const logSessionEvent = (type: string, target: string, detail: string) => {
+  sessionEvents.value.push({ timestamp: Date.now(), type, target, detail })
+}
+
+const targetLabel = () =>
+  selectedPeerIds.value.length ? selectedPeerIds.value.join(', ') : 'entire class'
+const idsLabel = (ids: string[]) => ids.join(', ')
+
+const toggleSelectAll = () => {
+  selectedPeerIds.value = allSelected.value ? [] : Object.keys(incomingConns.value)
+}
+const selectAllPeers = () => {
+  selectedPeerIds.value = Object.keys(incomingConns.value)
+}
+
+const isPeerSelected = (peerId: string) => selectedPeerIds.value.includes(peerId)
+const selectionMarker = (peerId: string) => {
+  if (isPeerSelected(peerId) && focusedPeerId.value === peerId) return '◆'
+  if (isPeerSelected(peerId)) return '●'
+  if (focusedPeerId.value === peerId) return '›'
+  return ''
+}
+
+const togglePeerSelection = (peerId: string) => {
+  acknowledgeHandRequest(peerId)
+  selectedPeerIds.value = isPeerSelected(peerId)
+    ? selectedPeerIds.value.filter((id) => id !== peerId)
+    : [...selectedPeerIds.value, peerId]
+}
+
+const focusAndTogglePeer = (peerId: string) => {
+  focusedPeerId.value = peerId
+  togglePeerSelection(peerId)
+}
+
+const moveRosterFocus = (amount: number) => {
+  const rows = filteredParticipants.value
+  if (!rows.length) return
+  const current = rows.findIndex((row) => row.peerId === focusedPeerId.value)
+  const next =
+    current < 0
+      ? amount > 0
+        ? 0
+        : rows.length - 1
+      : Math.max(0, Math.min(rows.length - 1, current + amount))
+  focusedPeerId.value = rows[next].peerId
+  nextTick(() => rosterRowRefs.value[next]?.scrollIntoView({ block: 'nearest' }))
+}
+
+const setRosterRowRef = (element: Element | ComponentPublicInstance | null, index: number) => {
+  if (element instanceof HTMLElement) rosterRowRefs.value[index] = element
+}
+
+const clearRosterSearch = () => {
+  rosterSearch.value = ''
+  rosterSearchRef.value?.blur()
+}
+
+const openExercisePalette = () => {
+  if (!actionTargetIds.value.length) return
+  exercisePaletteOpen.value = true
+  exerciseQuery.value = ''
+  exerciseResultIndex.value = 0
+  nextTick(() => exerciseSearchRef.value?.focus())
+}
+
+const closeExercisePalette = () => {
+  exercisePaletteOpen.value = false
+  exerciseQuery.value = ''
+}
+
+const chooseExercise = (exercise: ModuleEntry) => {
+  exercisePath.value = exercise.path
+  closeExercisePalette()
+  assignExercise()
+}
+
+const moveExerciseResult = (amount: number) => {
+  const count = exerciseResults.value.length
+  if (!count) return
+  exerciseResultIndex.value = (exerciseResultIndex.value + amount + count) % count
+}
+
+const handleExercisePaletteKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'ArrowDown' || (event.ctrlKey && event.key.toLowerCase() === 'n')) {
+    event.preventDefault()
+    moveExerciseResult(1)
+  } else if (event.key === 'ArrowUp' || (event.ctrlKey && event.key.toLowerCase() === 'p')) {
+    event.preventDefault()
+    moveExerciseResult(-1)
+  } else if (event.key === 'Enter') {
+    event.preventDefault()
+    const exercise = exerciseResults.value[exerciseResultIndex.value]
+    if (exercise) chooseExercise(exercise)
+  } else if (event.key === 'Escape') {
+    event.preventDefault()
+    closeExercisePalette()
+  }
+}
+
+const handleClassroomKeydown = (event: KeyboardEvent) => {
+  if (!isInstructor.value || !isOnline.value || exercisePaletteOpen.value) return
+  const target = event.target as HTMLElement | null
+  const editing = target?.matches('input, textarea, select, [contenteditable="true"]')
+  if (editing) return
+  if (event.key === 'ArrowDown' || (event.ctrlKey && event.key.toLowerCase() === 'n')) {
+    event.preventDefault()
+    moveRosterFocus(1)
+  } else if (event.key === 'ArrowUp' || (event.ctrlKey && event.key.toLowerCase() === 'p')) {
+    event.preventDefault()
+    moveRosterFocus(-1)
+  } else if (event.key === ' ' && focusedPeerId.value) {
+    event.preventDefault()
+    togglePeerSelection(focusedPeerId.value)
+  } else if (event.key === '/') {
+    event.preventDefault()
+    rosterSearchRef.value?.focus()
+  } else if (event.key === 'A' || ((event.ctrlKey || event.metaKey) && event.key === 'a')) {
+    event.preventDefault()
+    selectAllPeers()
+  } else if (event.key === 'a') {
+    event.preventDefault()
+    openExercisePalette()
+  } else if (event.key === 'g' && actionTargetIds.value.length) {
+    event.preventDefault()
+    groupInputRef.value?.focus()
+  } else if (event.key.toLowerCase() === 's') {
+    event.preventDefault()
+    sendExerciseControl('start', actionTargetIds.value)
+  } else if (event.key === 'Escape') {
+    event.preventDefault()
+    if (rosterSearch.value) clearRosterSearch()
+    else selectedPeerIds.value = []
+  }
+}
+
+const rowClass = (_peerId: string) => 'text-secondary hover:bg-simInputBackground'
+
+const compactStatus = (status?: string) =>
+  status?.replace('Structural Damage', 'DAMAGE') || 'ONLINE'
+const exerciseStatusSymbol = (status: ClassroomExerciseStatus) =>
+  ({ assigned: '○', running: '▶', completed: '✓', stopped: '■', error: '!', overdue: '!' })[status]
+
+const connectionAge = (peer: ConnectionsList[string]) => {
+  clock.value
+  return Math.floor((Date.now() - peer.lastSeen) / 1000)
+}
+
+const updateOverdueAssignments = () => {
+  const now = Date.now()
+  Object.entries(incomingConns.value).forEach(([peerId, peer]) => {
+    const exercise = peer.exercise
+    if (
+      exercise?.deadline &&
+      exercise.deadline < now &&
+      ['assigned', 'running', 'stopped'].includes(exercise.status)
+    ) {
+      exercise.status = 'overdue'
+      exercise.updatedAt = now
+      exercise.detail = `Deadline passed at ${new Date(exercise.deadline).toLocaleTimeString()}`
+      logSessionEvent('exercise-status', peerId, `${exercise.name}: overdue`)
+    }
+  })
+}
+
+const sendAnnouncement = () => {
+  if (!announcement.value) return
+  sendEnvelope('announcement', { message: announcement.value })
+  logSessionEvent('announcement', targetLabel(), announcement.value)
+  announcement.value = ''
+}
+
+const selectedExercise = (): ModuleEntry | undefined =>
+  exerciseModules.find((entry) => entry.path === exercisePath.value)
+
+const assignExercise = async () => {
+  const exercise = selectedExercise()
+  const targets = [...actionTargetIds.value]
+  if (!exercise || !targets.length) return
+  let source: string
+  try {
+    const response = await fetch(exercise.path)
+    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`)
+    source = await response.text()
+  } catch (error) {
+    onError(`Unable to load ${exercise.name}: ${String(error)}`)
+    return
+  }
+  const deadline = Date.now() + Math.max(1, exerciseMinutes.value || 1) * 60_000
+  const assignment: ClassroomExerciseAssignment = {
+    id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    name: exercise.name,
+    source,
+    deadline,
+  }
+  sendEnvelopeToIds(targets, 'exercise', assignment)
+  targets.forEach((id) => {
+    const peer = incomingConns.value[id]
+    if (peer) {
+      peer.exercise = {
+        id: assignment.id,
+        name: assignment.name,
+        status: 'assigned',
+        updatedAt: Date.now(),
+        deadline,
+      }
+      peer.metadata.checkPoint = ''
+    }
+  })
+  logSessionEvent('exercise', idsLabel(targets), `${exercise.name} (${exerciseMinutes.value} min)`)
+}
+
+const sendExerciseStatus = (status: ClassroomExerciseStatus, detail?: string) => {
+  if (!currentAssignment.value || !instructorConnectionOpen || !instructorConnection) return
+  currentAssignment.value.status = status
+  sendEnvelopeToConnection(instructorConnection, 'exercise-status', {
+    id: currentAssignment.value.id,
+    name: currentAssignment.value.name,
+    status,
+    detail,
+  })
+}
+
+const startAssignedExercise = () => {
+  if (!currentAssignment.value || currentAssignment.value.status === 'running') return
+  sendExerciseStatus('running')
+  emit('exerciseStart', currentAssignment.value)
+}
+
+const stopAssignedExercise = () => {
+  if (!currentAssignment.value || currentAssignment.value.status !== 'running') return
+  emit('exerciseStop')
+  sendExerciseStatus('stopped')
+}
+
+const sendExerciseControl = (action: 'start' | 'stop', targets = actionTargetIds.value) => {
+  if (!targets.length) return
+  sendEnvelopeToIds(targets, 'exercise-control', { action })
+  logSessionEvent('exercise-control', idsLabel(targets), action)
+}
+
+const reportExerciseResult = (
+  status: 'completed' | 'error',
+  detail?: string,
+  exerciseName?: string,
+) => {
+  if (currentAssignment.value?.status !== 'running') return
+  if (exerciseName && exerciseName !== currentAssignment.value.name) return
+  sendExerciseStatus(status, detail)
+}
+
+const exerciseStatusClass = (status: ClassroomExerciseStatus) => ({
+  'font-bold text-secondary': ['completed', 'running', 'error', 'overdue'].includes(status),
+  'opacity-60': ['assigned', 'stopped'].includes(status),
+})
+
+const assignGroup = () => {
+  const targets = [...actionTargetIds.value]
+  if (!targets.length || !groupName.value) return
+  const selected = new Set(targets)
+  Object.entries(incomingConns.value).forEach(([id, peer]) => {
+    if (selected.has(id)) peer.metadata.group = groupName.value
+  })
+  logSessionEvent('group', idsLabel(targets), groupName.value)
+  groupName.value = ''
+}
+
+const confirmDisconnect = (peerId: string, peer: ConnectionsList[string]) => {
+  const name = peer.metadata.displayName || peerId
+  if (window.confirm(`Disconnect ${name}?`)) peer.conn.close()
+}
+
+const toggleHand = () => {
+  if (!instructorConnectionOpen || !instructorConnection) return
+  studentHandState.value = studentHandState.value === 'raised' ? 'idle' : 'raised'
+  sendEnvelopeToConnection(instructorConnection, 'hand', { state: studentHandState.value })
+}
+
+const acknowledgeHandRequest = (peerId: string) => {
+  const peer = incomingConns.value[peerId]
+  if (peer?.handState !== 'raised') return
+  peer.handState = 'idle'
+  peer.handRaised = false
+  sendEnvelopeToConnection(peer.conn, 'hand-control', { state: 'acknowledged' })
+  logSessionEvent('hand', peerId, 'acknowledged')
+}
+
+const handWaitTime = (peer: ConnectionsList[string]) => {
+  clock.value
+  if (!peer.handRaisedAt) return ''
+  const seconds = Math.max(0, Math.floor((Date.now() - peer.handRaisedAt) / 1000))
+  const minutes = Math.floor(seconds / 60)
+  return `${minutes}:${(seconds % 60).toString().padStart(2, '0')}`
+}
+
+const exportSession = () => {
+  const participants = Object.entries(incomingConns.value).map(([id, peer]) => ({
+    id,
+    displayName: peer.metadata.displayName,
+    group: peer.metadata.group,
+    status: peer.metadata.status,
+    checkpoint: peer.metadata.checkPoint,
+    latency: peer.latency,
+    exercise: peer.exercise,
+    handState: peer.handState,
+    handRaisedAt: peer.handRaisedAt,
+  }))
+  const report = JSON.stringify(
+    {
+      classroom: selfPeerId.value,
+      startedAt: new Date(sessionStartedAt.value).toISOString(),
+      exportedAt: new Date().toISOString(),
+      participants,
+      events: sessionEvents.value,
+    },
+    null,
+    2,
+  )
+  const url = URL.createObjectURL(new Blob([report], { type: 'application/json' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `classroom-${selfPeerId.value}-${new Date().toISOString().slice(0, 10)}.json`
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
 const sendWhiteboardState = (whiteboardState: string) => {
   // Must be online and mirror mode activated
   if (!isOnline.value || !followMode.value) {
     return
   }
-  const data = { wb: whiteboardState }
-  send(data)
+  sendEnvelope('whiteboard', { wb: whiteboardState })
 }
 
 const sendApiCall = (apiCall: string) => {
@@ -424,9 +1340,7 @@ const sendApiCall = (apiCall: string) => {
     return
   }
 
-  const data = { api: apiCall }
-  // Send data to all peers
-  send(data)
+  sendEnvelope('api', { api: apiCall })
 }
 
 const sendStatus = (status: string) => {
@@ -439,11 +1353,7 @@ const sendStatus = (status: string) => {
     return
   }
 
-  const data = { status: status }
-  // Send data to all peers
-  // send(data);
-
-  instructorConnection.send(data)
+  sendEnvelopeToConnection(instructorConnection, 'status', { status })
 }
 
 const sendCheckPoint = (checkpoint: string) => {
@@ -456,19 +1366,10 @@ const sendCheckPoint = (checkpoint: string) => {
     return
   }
 
-  const data = { checkpoint: checkpoint }
-  // Send data to all peers
-  // send(data);
-
-  instructorConnection.send(data)
+  sendEnvelopeToConnection(instructorConnection, 'checkpoint', { checkpoint })
 }
 const sendScript = (title: string, content: string) => {
-  const scriptData = {
-    title: title,
-    script: content,
-  }
-
-  send(scriptData)
+  sendEnvelope('script', { title, script: content })
 }
 
 const reset = () => {
@@ -482,7 +1383,15 @@ const reset = () => {
   instructorConnection = undefined as any
 }
 
-defineExpose({ sendApiCall, sendStatus, sendScript, sendCheckPoint, sendWhiteboardState, reset })
+defineExpose({
+  sendApiCall,
+  sendStatus,
+  sendScript,
+  sendCheckPoint,
+  sendWhiteboardState,
+  reportExerciseResult,
+  reset,
+})
 
 const trace = (text: string) => {
   if (isDevelopment === false) {
