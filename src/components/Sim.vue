@@ -204,7 +204,7 @@
               v-if="sim_module_loaded"
               v-for="(input, i) in autopilotControls"
               :key="i"
-              class="border border-simElementBorder w-full"
+              class="w-full"
               :buttonClick="(_e: MouseEvent) => input.stateCommand.setterFunc?.()"
               :buttonState="input.stateCommand?.inputValue as boolean"
               :buttonLabel="input.label.replace('Hold', '').replace('Angle', '').trim()"
@@ -226,66 +226,156 @@
       data-layout="instructor pilot"
     >
       <template #Flight-Model>
-        <div class="w-full max-h-full grid gap-1">
-          <template v-if="sim_module_loaded" v-for="sim_group in groupedSimProps">
-            <span class="font-bold text-secondary">{{ sim_group[0].group.toUpperCase() }}</span>
-            <!-- label + control -->
-            <div
-              v-for="sim_prop in Object.values(sim_group)"
-              :key="sim_prop.id"
-              class="flex items-center pl-1 border border-simElementBorder"
+        <div class="w-full min-w-[24rem] self-start">
+          <div
+            class="sticky top-0 z-20 flex h-6 items-center border-b border-simElementBorder bg-panelHeaderBackground"
+          >
+            <span aria-hidden="true" class="px-1 text-secondary">/</span>
+            <input
+              v-model="flightModelFilter"
+              type="search"
+              placeholder="Filter controls"
+              aria-label="Filter flight model controls"
+              class="min-w-0 flex-1 bg-transparent px-1 text-secondary outline-none placeholder:text-secondary/60"
+            />
+            <button
+              v-if="flightModelFilter"
+              type="button"
+              class="h-full border-l border-simElementBorder px-2 text-secondary hover:bg-simInputBackground"
+              title="Clear filter"
+              aria-label="Clear filter"
+              @click="flightModelFilter = ''"
             >
-              <span class="w-3/5">
-                {{ sim_prop.label }} <span v-if="sim_prop.unit">({{ sim_prop.unit }})</span>
-              </span>
-              <wInput
-                v-if="sim_prop.type === 'number'"
-                type="number"
-                class="bg-simInputBackground border-l border-simElementBorder pl-1 h-full text-secondary w-2/5"
-                :textInput="sim_prop.inputValue as number"
-                :inputChange="sim_prop.setterFunc"
-                :inputMin="sim_prop.min"
-                :inputMax="sim_prop.max"
-                :inputStep="sim_prop.step"
-              />
-              <wButton
-                v-else-if="sim_prop.type === 'boolean'"
-                class="border-l border-simElementBorder w-2/5 text-left pl-1"
-                :class="sim_prop.inputValue ? 'bg-simActiveButton text-primary' : 'text-secondary'"
-                :buttonLabel="sim_prop.inputValue ? 'On' : 'Off'"
-                :buttonClick="() => sim_prop.setterFunc?.()"
-                :buttonState="sim_prop.inputValue as boolean"
-              />
-              <wButton
-                v-else-if="sim_prop.type === 'void'"
-                class="border-l border-simElementBorder w-2/5 text-left pl-1"
-                :class="sim_prop.inputValue ? 'bg-simActiveButton text-primary' : 'text-secondary'"
-                buttonLabel="▶"
-                :buttonClick="() => sim_prop.setterFunc?.()"
-              />
-              <!-- Enum Input -->
-              <select
-                v-else-if="sim_prop.type === 'enum' && sim_prop.enumValues"
-                class="bg-simInputBackground border-l border-simElementBorder pl-1 h-full text-secondary w-2/5"
-                :value="sim_prop.inputValue"
-                @change="
-                  (e) => {
-                    const value = (e.target as HTMLSelectElement).value
-                    const selected = sim_prop.enumValues?.find((v) => String(v.enumValue) === value)
-                    sim_prop.setterFunc?.(selected?.enumValue)
-                  }
-                "
+              ×
+            </button>
+            <button
+              type="button"
+              class="h-full border-l border-simElementBorder px-2 text-secondary hover:bg-simInputBackground"
+              title="Collapse all categories"
+              aria-label="Collapse all categories"
+              @click="collapseAllFlightModelGroups"
+            >
+              −
+            </button>
+            <button
+              type="button"
+              class="h-full border-l border-simElementBorder px-2 text-secondary hover:bg-simInputBackground"
+              title="Expand all categories"
+              aria-label="Expand all categories"
+              @click="expandAllFlightModelGroups"
+            >
+              +
+            </button>
+          </div>
+
+          <template
+            v-if="sim_module_loaded"
+            v-for="[groupName, simGroup] in filteredGroupedSimProps"
+            :key="groupName"
+          >
+            <button
+              type="button"
+              class="sticky top-6 z-10 grid h-5 w-full grid-cols-[1rem_minmax(0,1fr)_3rem] items-center border-b border-simElementBorder bg-panelHeaderBackground px-1 text-left font-bold text-secondary"
+              :aria-expanded="flightModelFilter !== '' || !collapsedFlightModelGroups.has(groupName)"
+              @click="toggleFlightModelGroup(groupName)"
+            >
+              <span aria-hidden="true">{{
+                flightModelFilter || !collapsedFlightModelGroups.has(groupName) ? '▼' : '▶'
+              }}</span>
+              <span class="truncate">{{ groupName.toUpperCase() }}</span>
+              <span class="text-right font-normal">{{ simGroup.length }}</span>
+            </button>
+
+            <div
+              v-for="sim_prop in flightModelFilter || !collapsedFlightModelGroups.has(groupName)
+                ? simGroup
+                : []"
+              :key="sim_prop.id"
+              class="grid min-h-6 grid-cols-[minmax(10rem,1fr)_minmax(9rem,12rem)] items-stretch py-px hover:bg-simInputBackground/40"
+            >
+              <span
+                class="flex min-w-0 items-center gap-1 self-center overflow-hidden px-1"
+                :title="sim_prop.label"
               >
-                <option
-                  v-for="value in sim_prop.enumValues"
-                  :key="value.enumName"
-                  :value="String(value.enumValue)"
+                <span class="shrink truncate">
+                  {{ sim_prop.label }}
+                  <span v-if="sim_prop.unit" class="text-secondary">
+                    ({{ sim_prop.unit.toLowerCase() === 'x' ? '×' : sim_prop.unit }})
+                  </span>
+                </span>
+                <span
+                  aria-hidden="true"
+                  class="min-w-3 flex-1 border-b border-dotted border-simElementBorder opacity-40"
+                ></span>
+              </span>
+              <label
+                v-if="sim_prop.type === 'number'"
+                class="flightmodel-value flex min-w-0 items-stretch border border-simElementBorder bg-simInputBackground"
+              >
+                <wInput
+                  type="number"
+                  class="min-w-0 w-full !border-0 !bg-transparent"
+                  :textInput="sim_prop.inputValue as number"
+                  :inputChange="sim_prop.setterFunc"
+                  :inputMin="sim_prop.min"
+                  :inputMax="sim_prop.max"
+                  :inputStep="sim_prop.step"
+                />
+              </label>
+              <div
+                v-else-if="sim_prop.type === 'boolean'"
+                class="min-h-0"
+              >
+                <wButton
+                  class="h-full w-full"
+                  :buttonLabel="sim_prop.inputValue ? 'On' : 'Off'"
+                  :buttonClick="() => sim_prop.setterFunc?.()"
+                  :buttonState="sim_prop.inputValue as boolean"
+                />
+              </div>
+              <div v-else-if="sim_prop.type === 'void'" class="min-h-0">
+                <wButton
+                  class="h-full w-full"
+                  buttonLabel="▶"
+                  :buttonClick="() => sim_prop.setterFunc?.()"
+                />
+              </div>
+              <!-- Enum Input -->
+              <label
+                v-else-if="sim_prop.type === 'enum' && sim_prop.enumValues"
+                class="flightmodel-value flex min-w-0 items-stretch border border-simElementBorder bg-simInputBackground"
+              >
+                <select
+                  class="h-full min-w-0 flex-1 bg-transparent px-1 text-secondary"
+                  :value="sim_prop.inputValue"
+                  @change="
+                    (e) => {
+                      const value = (e.target as HTMLSelectElement).value
+                      const selected = sim_prop.enumValues?.find(
+                        (v) => String(v.enumValue) === value,
+                      )
+                      sim_prop.setterFunc?.(selected?.enumValue)
+                    }
+                  "
                 >
-                  {{ value.enumName }}
-                </option>
-              </select>
+                  <option
+                    v-for="value in sim_prop.enumValues"
+                    :key="value.enumName"
+                    :value="String(value.enumValue)"
+                  >
+                    {{ value.enumName }}
+                  </option>
+                </select>
+              </label>
             </div>
           </template>
+
+          <div
+            v-if="flightModelFilter && filteredGroupedSimProps.length === 0"
+            class="border-b border-simElementBorder p-3 text-center text-secondary"
+          >
+            No matching controls
+          </div>
         </div>
       </template>
 
@@ -761,6 +851,37 @@ let autopilotControls: ComputedRef<ReturnType<typeof getAutopilotProperties>>
 let flightModelProps: ComputedRef<ReturnType<typeof getFlightModelParameters>>
 let simulationControlsProps: ComputedRef<ReturnType<typeof getSimulationControlsParameters>>
 let groupedSimProps: ComputedRef<Record<string, SimulationProperties[]>>
+let filteredGroupedSimProps: ComputedRef<Array<[string, SimulationProperties[]]>>
+
+const flightModelFilter = ref('')
+const collapsedFlightModelGroups = ref(new Set<string>())
+const flightModelGroupsStorageKey = 'sim-flight-model-collapsed-groups'
+
+const saveCollapsedFlightModelGroups = () => {
+  localStorage.setItem(
+    flightModelGroupsStorageKey,
+    JSON.stringify([...collapsedFlightModelGroups.value]),
+  )
+}
+
+const toggleFlightModelGroup = (groupName: string) => {
+  if (flightModelFilter.value) return
+  const next = new Set(collapsedFlightModelGroups.value)
+  if (next.has(groupName)) next.delete(groupName)
+  else next.add(groupName)
+  collapsedFlightModelGroups.value = next
+  saveCollapsedFlightModelGroups()
+}
+
+const collapseAllFlightModelGroups = () => {
+  collapsedFlightModelGroups.value = new Set(Object.keys(groupedSimProps.value))
+  saveCollapsedFlightModelGroups()
+}
+
+const expandAllFlightModelGroups = () => {
+  collapsedFlightModelGroups.value = new Set()
+  saveCollapsedFlightModelGroups()
+}
 
 let computedJoystickInputs: ComputedRef<JoystickInput>
 
@@ -771,6 +892,16 @@ let manager: RemoteCallManager
 onBeforeMount(() => {
   initializeTheme()
   loadLayoutSizing(layout.value)
+  try {
+    const savedGroups = JSON.parse(localStorage.getItem(flightModelGroupsStorageKey) || '[]')
+    if (Array.isArray(savedGroups)) {
+      collapsedFlightModelGroups.value = new Set(
+        savedGroups.filter((group): group is string => typeof group === 'string'),
+      )
+    }
+  } catch {
+    collapsedFlightModelGroups.value = new Set()
+  }
 })
 
 onMounted(async () => {
@@ -939,6 +1070,21 @@ function initFlightModelParams() {
         },
         {} as Record<string, SimulationProperties[]>,
       )
+  })
+
+  filteredGroupedSimProps = computed(() => {
+    const query = flightModelFilter.value.trim().toLocaleLowerCase()
+    return Object.entries(groupedSimProps.value)
+      .map(([groupName, controls]) => {
+        if (!query) return [groupName, controls] as [string, SimulationProperties[]]
+        const matchingControls = controls.filter((control) =>
+          [groupName, control.label, control.id, control.unit]
+            .filter((value) => value != null)
+            .some((value) => String(value).toLocaleLowerCase().includes(query)),
+        )
+        return [groupName, matchingControls] as [string, SimulationProperties[]]
+      })
+      .filter(([, controls]) => controls.length > 0)
   })
 
   computedJoystickInputs = computed(() => {
