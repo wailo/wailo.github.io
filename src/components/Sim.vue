@@ -3,8 +3,9 @@
 
   <div
     ref="fullscreenContainer"
-    class="container max-w-full h-screen gap-1 p-1 bg-simBackground"
+    class="container relative max-w-full h-screen gap-1 p-1 bg-simBackground"
     :class="`layout-${layout}`"
+    :style="layoutGridStyle"
   >
     <!-- Panel 1 -->
     <Panel
@@ -386,6 +387,32 @@
         />
       </template>
     </Panel>
+
+    <button
+      v-for="divider in verticalDividers"
+      :key="divider"
+      data-layout="focus instructor pilot classroom"
+      type="button"
+      class="layout-divider layout-divider-vertical border-simElementBorder bg-panelHeaderBackground"
+      :class="`layout-divider-${divider}`"
+      :aria-label="`Resize layout column ${divider}`"
+      title="Drag to resize columns · Double-click to reset layout"
+      @pointerdown="startLayoutResize('column', divider, $event)"
+      @dblclick="resetLayoutSizing"
+    >
+      <span class="bg-panelBorder"></span>
+    </button>
+    <button
+      type="button"
+      data-layout="focus instructor pilot classroom"
+      class="layout-divider layout-divider-horizontal border-simElementBorder bg-panelHeaderBackground"
+      aria-label="Resize layout rows"
+      title="Drag to resize rows · Double-click to reset layout"
+      @pointerdown="startLayoutResize('row', 0, $event)"
+      @dblclick="resetLayoutSizing"
+    >
+      <span class="bg-panelBorder"></span>
+    </button>
   </div>
 </template>
 
@@ -545,6 +572,116 @@ const isDarkMode = ref(true)
 const isVisuals = ref(false)
 const layout = ref<LayoutTypes>(LayoutTypes.INSTRUCTOR)
 
+type LayoutSizing = { columns: [number, number, number]; row: number }
+const defaultLayoutSizing: Record<LayoutTypes, LayoutSizing> = {
+  [LayoutTypes.INSTRUCTOR]: { columns: [50, 25, 25], row: 62.5 },
+  [LayoutTypes.PILOT]: { columns: [50, 25, 25], row: 87.5 },
+  [LayoutTypes.FOCUS]: { columns: [25, 50, 25], row: 87.5 },
+  [LayoutTypes.CLASSROOM]: { columns: [50, 25, 25], row: 62.5 },
+}
+const layoutSizing = ref<LayoutSizing>({ ...defaultLayoutSizing[layout.value] })
+const verticalDividers = [0, 1] as const
+
+const layoutGridStyle = computed(() => ({
+  '--layout-column-1': `${layoutSizing.value.columns[0]}fr`,
+  '--layout-column-2': `${layoutSizing.value.columns[1]}fr`,
+  '--layout-column-3': `${layoutSizing.value.columns[2]}fr`,
+  '--layout-divider-1': `${layoutSizing.value.columns[0]}%`,
+  '--layout-divider-2': `${layoutSizing.value.columns[0] + layoutSizing.value.columns[1]}%`,
+  '--layout-row-top': `${layoutSizing.value.row}%`,
+  '--layout-row-top-track': `${layoutSizing.value.row / 5}fr`,
+  '--layout-row-top-track-seven': `${layoutSizing.value.row / 7}fr`,
+  '--layout-row-bottom-track': `${(100 - layoutSizing.value.row) / 3}fr`,
+  '--layout-row-bottom': `${100 - layoutSizing.value.row}fr`,
+}))
+
+const layoutSizingStorageKey = (mode: LayoutTypes) => `sim-layout-sizing-${mode}`
+
+const loadLayoutSizing = (mode: LayoutTypes) => {
+  const fallback = defaultLayoutSizing[mode]
+  try {
+    const saved = JSON.parse(localStorage.getItem(layoutSizingStorageKey(mode)) || '')
+    if (
+      Array.isArray(saved?.columns) &&
+      saved.columns.length === 3 &&
+      saved.columns.every((value: unknown) => typeof value === 'number') &&
+      typeof saved.row === 'number'
+    ) {
+      layoutSizing.value = saved
+      return
+    }
+  } catch {
+    // Ignore missing or stale layout preferences.
+  }
+  layoutSizing.value = { columns: [...fallback.columns], row: fallback.row }
+}
+
+const saveLayoutSizing = () => {
+  localStorage.setItem(layoutSizingStorageKey(layout.value), JSON.stringify(layoutSizing.value))
+}
+
+const resetLayoutSizing = () => {
+  const fallback = defaultLayoutSizing[layout.value]
+  layoutSizing.value = { columns: [...fallback.columns], row: fallback.row }
+  saveLayoutSizing()
+  window.dispatchEvent(new Event('resize'))
+}
+
+const startLayoutResize = (
+  axis: 'column' | 'row',
+  divider: (typeof verticalDividers)[number] | 0,
+  event: PointerEvent,
+) => {
+  const container = fullscreenContainer.value
+  if (!container) return
+  event.preventDefault()
+  const target = event.currentTarget as HTMLElement
+  target.setPointerCapture(event.pointerId)
+  const startX = event.clientX
+  const startY = event.clientY
+  const start = {
+    columns: [...layoutSizing.value.columns] as [number, number, number],
+    row: layoutSizing.value.row,
+  }
+  const minimumColumnPercent = Math.min(20, (180 / container.clientWidth) * 100)
+  const minimumRowPercent = Math.min(25, (140 / container.clientHeight) * 100)
+
+  const onPointerMove = (moveEvent: PointerEvent) => {
+    if (axis === 'column') {
+      const delta = ((moveEvent.clientX - startX) / container.clientWidth) * 100
+      const leftIndex = divider
+      const rightIndex = divider + 1
+      const combined = start.columns[leftIndex] + start.columns[rightIndex]
+      const left = Math.max(
+        minimumColumnPercent,
+        Math.min(combined - minimumColumnPercent, start.columns[leftIndex] + delta),
+      )
+      const columns = [...start.columns] as [number, number, number]
+      columns[leftIndex] = left
+      columns[rightIndex] = combined - left
+      layoutSizing.value = { ...layoutSizing.value, columns }
+    } else {
+      const delta = ((moveEvent.clientY - startY) / container.clientHeight) * 100
+      layoutSizing.value = {
+        ...layoutSizing.value,
+        row: Math.max(minimumRowPercent, Math.min(100 - minimumRowPercent, start.row + delta)),
+      }
+    }
+    window.dispatchEvent(new Event('resize'))
+  }
+  const onPointerUp = () => {
+    target.removeEventListener('pointermove', onPointerMove)
+    target.removeEventListener('pointerup', onPointerUp)
+    target.removeEventListener('pointercancel', onPointerUp)
+    saveLayoutSizing()
+  }
+  target.addEventListener('pointermove', onPointerMove)
+  target.addEventListener('pointerup', onPointerUp)
+  target.addEventListener('pointercancel', onPointerUp)
+}
+
+watch(layout, (mode) => loadLayoutSizing(mode))
+
 // Initialize theme from localStorage
 const initializeTheme = () => {
   const savedTheme = localStorage.getItem('theme') || 'light'
@@ -633,6 +770,7 @@ let manager: RemoteCallManager
 // Lifecycle hooks
 onBeforeMount(() => {
   initializeTheme()
+  loadLayoutSizing(layout.value)
 })
 
 onMounted(async () => {
@@ -879,8 +1017,11 @@ function createRemoteManager(FlightSimModule: ExtendedMainModule) {
 /* ===== Instructor LAYOUT ===== */
 .container.layout-instructor {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  grid-template-rows: repeat(8, 1fr);
+  grid-template-columns: var(--layout-column-1) var(--layout-column-2) var(--layout-column-3);
+  grid-template-rows: repeat(5, minmax(0, var(--layout-row-top-track))) repeat(
+      3,
+      minmax(0, var(--layout-row-bottom-track))
+    );
   grid-template-areas:
     'cockpit userprompt realtimedata'
     'cockpit userprompt realtimedata'
@@ -889,16 +1030,17 @@ function createRemoteManager(FlightSimModule: ExtendedMainModule) {
     'autopilot userprompt realtimedata'
     'learningmodules classroom flightmodel'
     'learningmodules classroom flightmodel'
-    'learningmodules classroom flightmodel'
-    'learningmodules classroom flightmodel'
     'learningmodules classroom flightmodel';
 }
 
 /* ===== Pilot LAYOUT ===== */
 .container.layout-pilot {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  grid-template-rows: repeat(8, 1fr);
+  grid-template-columns: var(--layout-column-1) var(--layout-column-2) var(--layout-column-3);
+  grid-template-rows: repeat(7, minmax(0, var(--layout-row-top-track-seven))) minmax(
+      0,
+      var(--layout-row-bottom)
+    );
   grid-template-areas:
     'cockpit userprompt realtimedata'
     'cockpit userprompt realtimedata'
@@ -913,8 +1055,11 @@ function createRemoteManager(FlightSimModule: ExtendedMainModule) {
 /* ===== Focus LAYOUT ===== */
 .container.layout-focus {
   display: grid;
-  grid-template-columns: 1fr 2fr 1fr;
-  grid-template-rows: repeat(8, 1fr);
+  grid-template-columns: var(--layout-column-1) var(--layout-column-2) var(--layout-column-3);
+  grid-template-rows: repeat(7, minmax(0, var(--layout-row-top-track-seven))) minmax(
+      0,
+      var(--layout-row-bottom)
+    );
   grid-template-areas:
     'realtimedata cockpit userprompt'
     'realtimedata cockpit userprompt'
@@ -929,8 +1074,11 @@ function createRemoteManager(FlightSimModule: ExtendedMainModule) {
 /* ===== Classroom LAYOUT ===== */
 .container.layout-classroom {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  grid-template-rows: repeat(8, minmax(0, 1fr));
+  grid-template-columns: var(--layout-column-1) var(--layout-column-2) var(--layout-column-3);
+  grid-template-rows: repeat(5, minmax(0, var(--layout-row-top-track))) repeat(
+      3,
+      minmax(0, var(--layout-row-bottom-track))
+    );
   grid-template-areas:
     'cockpit userprompt classroom'
     'cockpit userprompt classroom'
@@ -973,6 +1121,63 @@ function createRemoteManager(FlightSimModule: ExtendedMainModule) {
 
 .panel-userprompt {
   grid-area: userprompt;
+}
+
+.layout-divider {
+  position: absolute;
+  z-index: 40;
+  margin: 0;
+  padding: 0;
+  touch-action: none;
+  opacity: 0.45;
+}
+
+.layout-divider:hover,
+.layout-divider:focus-visible {
+  opacity: 1;
+}
+
+.layout-divider-vertical {
+  top: 0.25rem;
+  bottom: 0.25rem;
+  width: 0.5rem;
+  transform: translateX(-50%);
+  cursor: col-resize;
+  border-left-width: 1px;
+  border-right-width: 1px;
+}
+
+.layout-divider-vertical span {
+  display: block;
+  width: 1px;
+  height: 2rem;
+  margin: calc(50vh - 1rem) auto 0;
+}
+
+.layout-divider-0 {
+  left: var(--layout-divider-1);
+}
+
+.layout-divider-1 {
+  left: var(--layout-divider-2);
+}
+
+.layout-divider-horizontal {
+  left: 0.25rem;
+  right: 0.25rem;
+  top: var(--layout-row-top);
+  height: 0.5rem;
+  transform: translateY(-50%);
+  cursor: row-resize;
+  border-top-width: 1px;
+  border-bottom-width: 1px;
+}
+
+.layout-divider-horizontal span {
+  display: block;
+  width: 2rem;
+  height: 1px;
+  margin: 0.2rem auto 0;
 }
 
 /* Canvas fit */
