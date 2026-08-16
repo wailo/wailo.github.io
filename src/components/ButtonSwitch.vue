@@ -1,18 +1,13 @@
 <template>
   <div class="flex">
     <!-- Button or Label -->
-    <button
+    <wButton
       v-if="buttonClick != null"
-      :class="[
-        'outline-none flex items-center justify-center w-full h-full text-nowrap',
-        buttonWidth,
-        buttonState ? 'bg-simActiveButton text-primary' : 'bg-primary text-secondary',
-        'cursor-pointer font-medium border-transparent',
-      ]"
-      @click="buttonClick"
-    >
-      {{ buttonLabel }}
-    </button>
+      :class="buttonWidth"
+      :button-label="buttonLabel"
+      :button-state="buttonState"
+      :button-click="buttonClick"
+    />
     <div
       v-else
       :class="[
@@ -43,6 +38,7 @@
 
 <script setup lang="ts">
 import { PropType, computed } from 'vue'
+import wButton from './wButton.vue'
 import wInput from './wInput.vue'
 
 const props = defineProps({

@@ -2,9 +2,12 @@
   <!-- Button or Label -->
   <button
     :class="[
-      'outline-none items-center justify-center h-full text-nowrap',
-      props.buttonState === true ? 'bg-simActiveButton text-primary' : 'bg-primary text-secondary',
-      'cursor-pointer font-medium',
+      'efis-button inline-flex h-full items-center justify-center text-nowrap px-1',
+      'border border-panelBorder outline-none cursor-pointer font-medium',
+      'active:translate-y-px focus-visible:outline focus-visible:outline-1 focus-visible:outline-panelActive',
+      props.buttonState === true
+        ? 'bg-simActiveButton text-primary'
+        : 'bg-panelHeaderBackground text-secondary',
     ]"
     @click="props.buttonClick"
   >
@@ -27,8 +30,22 @@ const props = defineProps({
     default: false,
   },
   buttonClick: {
-    type: Function as PropType<() => void>,
+    type: Function as PropType<(event: MouseEvent) => void>,
     required: true,
   },
 })
 </script>
+
+<style scoped>
+.efis-button {
+  box-shadow:
+    inset 1px 1px 0 rgb(var(--color-simElementBorder)),
+    inset -1px -1px 0 rgb(var(--color-panelBorder));
+}
+
+.efis-button:active {
+  box-shadow:
+    inset -1px -1px 0 rgb(var(--color-simElementBorder)),
+    inset 1px 1px 0 rgb(var(--color-panelBorder));
+}
+</style>
