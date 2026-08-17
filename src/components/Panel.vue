@@ -81,7 +81,14 @@ watchEffect(() => {
     <div
       class="h-5/6 flex flex-1 box-border items-start justify-center pt-2 p-1 overflow-auto text-panelFont text-secondary bg-panelContentBackground w-full"
     >
-      <slot :name="activeTab" />
+      <div
+        v-for="tab in tabMap"
+        v-show="activeTab === tab.name"
+        :key="tab.name"
+        class="h-full w-full min-h-0 min-w-0"
+      >
+        <slot :name="tab.name" />
+      </div>
     </div>
   </div>
 </template>
