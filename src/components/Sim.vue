@@ -65,6 +65,13 @@
           v-if="sim_module_loaded"
         />
       </template>
+      <template #Airflow>
+        <Airflow
+          v-if="sim_module_loaded"
+          class="h-full w-full"
+          :sim-props="{ ...simulationControlsProps, ...flightModelProps }"
+        />
+      </template>
     </Panel>
     <!-- Panel 3 -->
     <Panel
@@ -535,6 +542,7 @@ import {
 import Editor, { ScriptStatus } from './Editor.vue'
 import { c172, MainModule } from '../../src/wasm/generated/flightsimulator_exec'
 import OpenLayersMap from './OpenLayersMap.vue'
+import Airflow from './Airflow.vue'
 
 const renderSignal = ref(0)
 
