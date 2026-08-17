@@ -1,7 +1,7 @@
 <template>
   <input
     type="number"
-    class="bg-simInputBackground border-l border-simElementBorder pl-1 h-full text-secondary"
+    class="inset-input bg-simInputBackground border-l border-simElementBorder pl-1 h-full text-secondary"
     v-model="localValue"
     :min="inputMin"
     :max="inputMax"
@@ -72,3 +72,11 @@ function onBlur() {
   commitValue()
 }
 </script>
+
+<style scoped>
+.inset-input {
+  box-shadow:
+    inset 1px 1px 0 rgb(var(--color-panelBorder)),
+    inset -1px -1px 0 rgb(var(--color-simElementBorder));
+}
+</style>
