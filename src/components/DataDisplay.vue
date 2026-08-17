@@ -1,101 +1,131 @@
 <template>
-  <div class="flex flex-col w-full h-full">
-    <div ref="wrapper" class="w-full space-y-2">
+  <div ref="displayRoot" class="flex flex-col w-full h-full">
+    <div class="relative w-full space-y-1">
       <!-- Input + Buttons Row -->
-      <div class="flex gap-2">
+      <div class="flex h-6 gap-1">
         <input
           v-model="searchQuery"
           type="text"
-          :placeholder="`🔍 Search...`"
-          class="w-1/3 text-secondary bg-transparent border border-simElementBorder p-1"
+          placeholder="/ Search signals"
+          class="min-w-0 flex-1 text-secondary bg-simInputBackground border border-simElementBorder px-1 outline-none focus:border-panelActive"
           @focus="isFocused = true"
         />
-        <!-- <button @click="showAll" class="w-1/4 border border-simElementBorder text-secondary"> -->
-        <!--   Show All -->
-        <!-- </button> -->
-        <button @click="hideAll" class="w-1/3 border border-simElementBorder text-secondary">
-          Clear
-        </button>
-        <button
-          @click="timePlotRef?.reset_x_axis()"
-          class="w-1/3 border border-simElementBorder text-secondary"
-        >
-          Reset Plots
-        </button>
+        <wButton class="w-14" button-label="Clear" :button-click="hideAll" />
+        <wButton
+          class="w-14"
+          button-label="Reset"
+          :button-click="() => timePlotRef?.reset_x_axis()"
+        />
       </div>
 
-      <!-- Dropdown -->
-      <div v-if="isDropdownVisible" class="border rounded shadow max-h-48 overflow-auto">
-        <div class="flex bg-simInputBackground justify-between items-center p-1 border-b">
-          <span class="text-simActiveButton">
-            {{ searchResults.length }} /
-            <span class="text-secondary">{{ totalVariablesCount }}</span>
-          </span>
-          <button @click="isFocused = false">✖ Close</button>
+      <!-- Signal palette -->
+      <div
+        v-if="isDropdownVisible"
+        class="absolute left-0 right-0 top-6 z-30 max-h-64 overflow-auto border border-simElementBorder bg-panelContentBackground shadow-lg"
+      >
+        <div
+          class="sticky top-0 z-10 flex min-h-6 bg-panelHeaderBackground justify-between items-center px-1 border-b border-simElementBorder"
+        >
+          <div class="min-w-0 truncate">
+            <span v-if="plotComposer" class="text-simActiveButton">
+              ADD SERIES · {{ plotSelection.size }} SELECTED
+            </span>
+            <span v-else class="text-simActiveButton">
+              {{ searchResults.length }} /
+              <span class="text-secondary">{{ totalVariablesCount }}</span>
+            </span>
+          </div>
+          <button class="px-1 text-secondary" @click="closePalette">×</button>
         </div>
 
         <div
-          v-for="item in Object.values(searchResults)"
+          v-for="item in paletteSearchResults"
           :key="item.id"
-          class="cursor-pointer p-1 transition hover:bg-primary flex items-center justify-between"
-          @click="setDataView(item, true)"
+          class="flex min-h-7 items-center gap-1 px-1 hover:bg-simInputBackground"
         >
-          <div>
-            {{ `${item.label} ${item.unit ? `(${item.unit})` : ''}` }}
+          <div class="min-w-0 flex-1">
+            <div class="truncate text-secondary">
+              {{ `${item.label} ${item.unit ? `(${item.unit})` : ''}` }}
+            </div>
+            <div class="truncate text-secondary opacity-60">{{ item.group }}</div>
           </div>
-          <div class="flex gap-2">
-            <button
-              disabled
-              class="text-xs hover:font-bold transition text-secondary"
-              :title="`${item.id}`"
-            >
-              i
-            </button>
-            <button
-              class="rounded-full text-xs hover:font-bold transition text-secondary"
-              @click.stop="plot(item.id)"
-              title="Toggle Plot"
-            >
-              ⦿
-            </button>
+          <div class="grid w-[6.25rem] shrink-0 grid-cols-2 gap-1">
+            <wButton
+              v-if="plotComposer"
+              class="col-span-2 h-5 w-full"
+              button-label="Series"
+              :button-state="plotSelection.has(item.id.toLowerCase())"
+              :button-click="() => togglePlotSelection(item.id)"
+            />
+            <template v-else>
+              <wButton
+                class="h-5 w-full"
+                button-label="Value"
+                :button-state="visibleItems.has(item.id.toLowerCase())"
+                :button-click="() => toggleDataView(item)"
+              />
+              <wButton
+                v-if="item.type === 'number'"
+                class="h-5 w-full"
+                button-label="Plot"
+                :button-click="() => plot(item.id)"
+              />
+            </template>
           </div>
+        </div>
+
+        <div v-if="paletteSearchResults.length === 0" class="p-3 text-center text-secondary">
+          No matching signals
+        </div>
+
+        <div
+          v-if="plotComposer"
+          class="sticky bottom-0 flex min-h-7 items-center gap-1 border-t border-simElementBorder bg-panelHeaderBackground px-1"
+        >
+          <span
+            class="min-w-0 flex-1 truncate"
+            :class="plotSelectionUnits.length > 1 ? 'text-panelActive' : 'text-secondary'"
+          >
+            {{
+              plotSelectionUnits.length > 1
+                ? `! MIXED UNITS: ${plotSelectionUnits.join(', ')}`
+                : plotSelectionUnits[0] || 'SELECT SERIES'
+            }}
+          </span>
+          <wButton class="h-5 w-14" button-label="Cancel" :button-click="closePalette" />
+          <wButton
+            class="h-5 w-14"
+            :button-label="`Apply ${plotSelection.size}`"
+            :button-state="plotSelection.size > 0"
+            :button-click="applyPlotSelection"
+          />
         </div>
       </div>
 
       <!-- Visible Items Table -->
-      <table class="flex w-full h-full">
+      <table v-if="displayedItems.length" class="flex w-full h-full table-fixed">
         <tbody class="w-full">
           <tr
-            class="flex w-full border-b border-simElementBorder items-center"
+            class="flex min-h-6 w-full items-center hover:bg-simInputBackground/40"
             v-for="item in displayedItems"
             :key="item.id"
           >
-            <td class="font-medium w-3/5">
+            <td class="min-w-0 flex-1 truncate font-medium">
               {{ `${item.label} ${item.unit ? `(${item.unit})` : ''}` }}
             </td>
-            <td class="w-1/5">{{ item.inputValue }}</td>
-            <td class="w-1/5 text-right flex justify-end items-center gap-2">
-              <button
-                disabled
-                class="text-xs hover:font-bold transition text-secondary"
-                :title="`${item.id}`"
-              >
-                i
-              </button>
-              <button
-                class="rounded-full text-xs hover:font-bold transition text-secondary"
-                @click="plot(item.id)"
-                title="Toggle Plot"
-              >
-                ⦿
-              </button>
-              <button
-                @click="setDataView(item, false)"
-                class="hover:text-red-700 transition"
-                title="Remove"
-              >
-                ⅹ
-              </button>
+            <td class="w-1/4 truncate text-right">{{ item.inputValue }}</td>
+            <td class="flex w-24 justify-end gap-1 pl-1">
+              <wButton
+                v-if="item.type === 'number'"
+                class="h-5 w-12"
+                button-label="Plot"
+                :button-click="() => plot(item.id)"
+              />
+              <wButton
+                class="h-5 w-6"
+                button-label="×"
+                :button-click="() => setDataView(item, false)"
+              />
             </td>
           </tr>
         </tbody>
@@ -107,6 +137,7 @@
       :pause="props.plotPause"
       :update_intervals="props.plotUpdateIntervals"
       :sources="props.simProps"
+      @edit-plot="openPlotComposer"
     />
   </div>
 </template>
@@ -116,6 +147,7 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount, PropType } from 'v
 import Fuse from 'fuse.js'
 import { type SimulationProperties } from '../wasm/siminterface'
 import TimePlot from './TimePlot.vue'
+import wButton from './wButton.vue'
 
 // Props
 const props = defineProps({
@@ -136,19 +168,25 @@ const props = defineProps({
 // UI state
 const searchQuery = ref('')
 const isFocused = ref(false)
-const wrapper = ref<HTMLElement | null>(null)
+const displayRoot = ref<HTMLElement | null>(null)
 const timePlotRef = ref<InstanceType<typeof TimePlot> | null>(null)
+const plotComposer = ref<{ plotId: string; sourceIds: string[] } | null>(null)
+const plotSelection = ref(new Set<string>())
 
 // Sets
 const visibleItems = reactive(new Set<string>())
 
 // Computed
-const displayedItems = computed(() => Array.from(visibleItems).map((id) => props.simProps[id]))
+const displayedItems = computed(() =>
+  Array.from(visibleItems)
+    .map((id) => props.simProps[id])
+    .filter((item): item is SimulationProperties => item != null),
+)
 
 const fuse = computed(
   () =>
     new Fuse(Object.values(props.simProps), {
-      keys: ['group', 'label'],
+      keys: ['group', 'label', 'id', 'unit'],
 
       threshold: 0.4,
     }),
@@ -161,7 +199,21 @@ const searchResults = computed(() => {
   return []
 })
 
-const isDropdownVisible = computed(() => isFocused.value && searchResults.value.length > 0)
+const paletteSearchResults = computed(() =>
+  plotComposer.value
+    ? searchResults.value.filter((item) => item.type === 'number')
+    : searchResults.value,
+)
+
+const plotSelectionUnits = computed(() => [
+  ...new Set(
+    [...plotSelection.value]
+      .map((id) => props.simProps[id]?.unit || 'unitless')
+      .filter((unit): unit is string => Boolean(unit)),
+  ),
+])
+
+const isDropdownVisible = computed(() => isFocused.value)
 const totalVariablesCount = computed(() => Object.keys(props.simProps).length)
 
 // Functions
@@ -177,12 +229,43 @@ function setDataView(item: SimulationProperties, state: boolean) {
   const id = item.id.toLowerCase()
   if (state) {
     visibleItems.add(id)
-    searchQuery.value = ''
-    isFocused.value = false
   } else {
     visibleItems.delete(id)
     // timePlotRef.value?.removePlot(id)
   }
+}
+
+function toggleDataView(item: SimulationProperties) {
+  const id = item.id.toLowerCase()
+  setDataView(item, !visibleItems.has(id))
+}
+
+function openPlotComposer(plot: { plotId: string; sourceIds: string[] }) {
+  plotComposer.value = plot
+  plotSelection.value = new Set(plot.sourceIds.map((id) => id.toLowerCase()))
+  searchQuery.value = ''
+  isFocused.value = true
+}
+
+function togglePlotSelection(id: string) {
+  const normalizedId = id.toLowerCase()
+  const next = new Set(plotSelection.value)
+  if (next.has(normalizedId)) next.delete(normalizedId)
+  else next.add(normalizedId)
+  plotSelection.value = next
+}
+
+function applyPlotSelection() {
+  if (!plotComposer.value || plotSelection.value.size === 0) return
+  timePlotRef.value?.replacePlot(plotComposer.value.plotId, [...plotSelection.value])
+  closePalette()
+}
+
+function closePalette() {
+  isFocused.value = false
+  plotComposer.value = null
+  plotSelection.value = new Set()
+  searchQuery.value = ''
 }
 
 function plot(id: string) {
@@ -230,8 +313,8 @@ function tickPlot() {
 }
 
 function handleClickOutside(e: MouseEvent) {
-  if (wrapper.value && !wrapper.value.contains(e.target as Node)) {
-    isFocused.value = false
+  if (displayRoot.value && !displayRoot.value.contains(e.target as Node)) {
+    closePalette()
   }
 }
 

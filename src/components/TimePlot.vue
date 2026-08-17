@@ -6,31 +6,17 @@
   >
     <!-- Overlay -->
     <div
-      class="absolute top-1 left-2 right-1 z-10 flex items-start justify-between pointer-events-none"
+      class="absolute top-1 left-2 right-1 z-10 flex items-start justify-end pointer-events-none"
     >
-      <!-- Labels -->
-      <div class="flex flex-col gap-0.5 pointer-events-auto">
-        <div
-          v-for="sourceId in plot.sourceIds"
-          :key="sourceId"
-          class="text-secondary bg-opacity-50 px-2 rounded font-mono text-left"
-        >
-          <span>
-            <!-- {{ props.sources[sourceId]?.label || sourceId }} -->
-          </span>
-
-          <span class="ml-2 inline-block min-w-[80px] text-right">
-            <!-- {{ props.sources[sourceId]?.inputValue }} -->
-          </span>
-
-          <span class="ml-1">
-            <!-- {{ props.sources[sourceId]?.unit || '' }} -->
-          </span>
-        </div>
-      </div>
-
       <!-- Buttons -->
       <div class="flex gap-1 pointer-events-auto">
+        <button
+          @click="emit('editPlot', { plotId: plot.id, sourceIds: [...plot.sourceIds] })"
+          class="border border-simElementBorder bg-opacity-60 text-secondary text-xs px-0.5 py-0.5 rounded hover:bg-simInputBackground"
+          title="Add or remove series"
+        >
+          +
+        </button>
         <button
           @click="resetPlot(plot.id)"
           class="border border-simElementBorder bg-opacity-60 text-secondary text-xs px-0.5 py-0.5 rounded hover:bg-simInputBackground"
@@ -66,6 +52,10 @@ import uPlot from 'uplot'
 import 'uplot/dist/uPlot.min.css'
 
 import type { SimulationProperties } from '../wasm/siminterface'
+
+const emit = defineEmits<{
+  editPlot: [plot: { plotId: string; sourceIds: string[] }]
+}>()
 
 // -------------------------------------------------------------------------------------------------
 // TYPES
@@ -114,6 +104,7 @@ const props = defineProps({
 
 defineExpose({
   addPlot,
+  replacePlot,
   removePlot,
   reset,
   reset_x_axis,
@@ -223,6 +214,33 @@ function removePlot(plotId: string) {
   }
 
   recreateAllPlots()
+}
+
+function replacePlot(plotId: string, sourceIds: string[]) {
+  const filtered = [...new Set(sourceIds)].filter((id) => props.sources[id]?.type === 'number')
+  if (filtered.length === 0) {
+    removePlot(plotId)
+    return
+  }
+
+  const index = plotDefinitions.value.findIndex((plot) => plot.id === plotId)
+  if (index < 0) return
+
+  const nextId = createPlotId(filtered)
+  const duplicateIndex = plotDefinitions.value.findIndex(
+    (plot, candidateIndex) => candidateIndex !== index && plot.id === nextId,
+  )
+  if (duplicateIndex >= 0) {
+    plotDefinitions.value.splice(index, 1)
+  } else {
+    filtered.forEach(initBuffer)
+    plotDefinitions.value.splice(index, 1, { id: nextId, sourceIds: filtered })
+  }
+
+  const existingPlot = plots.get(plotId)
+  existingPlot?.destroy()
+  plots.delete(plotId)
+  setTimeout(recreateAllPlots, 0)
 }
 
 function resetPlot(plotId: string) {
