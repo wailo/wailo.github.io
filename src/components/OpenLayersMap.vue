@@ -23,10 +23,10 @@
         <button class="nav-map-btn" @click="recenterNavMap" title="Center aircraft">◎</button>
 
         <!-- CLOSE -->
-        <button class="nav-map-btn" @click="closeNavMap" title="Close navigation map">✕</button>
+        <button class="nav-map-btn" @click="requestMap(false)" title="Close navigation map">✕</button>
       </div>
     </div>
-    <button v-if="!showNavMap" class="nav-toggle-btn" @click="showNavMap = true">🗺</button>
+    <button v-if="!showNavMap" class="nav-toggle-btn" @click="requestMap(true)">🗺</button>
   </div>
 </template>
 
@@ -40,6 +40,17 @@ declare global {
 import { onMounted, onUnmounted, ref } from 'vue'
 
 const showNavMap = ref(false)
+const emit = defineEmits<{
+  setMap: [state: boolean]
+}>()
+
+function setMap(state: boolean) {
+  showNavMap.value = state
+}
+
+function requestMap(state: boolean) {
+  emit('setMap', state)
+}
 
 import Map from 'ol/Map'
 import View from 'ol/View'
@@ -106,6 +117,7 @@ const props = defineProps<{
 
 defineExpose({
   updateMap,
+  setMap,
   showNavMap,
   reset() {
     showNavMap.value = false
@@ -188,10 +200,6 @@ const SMOOTHING = 8.0
 // ============================================================
 // HELPERS
 // ============================================================
-
-function closeNavMap() {
-  showNavMap.value = false
-}
 
 function recenterNavMap() {
   if (!map2d) return

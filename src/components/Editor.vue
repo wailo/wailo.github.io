@@ -273,6 +273,7 @@ const props = defineProps({
       dataDisplayReset: () => void
       setLayout: (mode: LayoutTypes) => void
       setVisuals: (state: boolean) => void
+      setMap: (state: boolean) => void
       checkPoint: (content: string) => void
     }>,
     required: true,
@@ -397,6 +398,7 @@ const executeCode = async () => {
       dataDisplayReset: props.utilityFuncs.dataDisplayReset,
       setLayout: props.utilityFuncs.setLayout,
       setVisuals: props.utilityFuncs.setVisuals,
+      setMap: props.utilityFuncs.setMap,
       layoutTypes: LayoutTypes,
       checkPoint: props.utilityFuncs.checkPoint,
       metrics: metrics,

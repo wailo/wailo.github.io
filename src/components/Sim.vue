@@ -27,6 +27,7 @@
             :heading-deg="FlightSimModule.flightModel.yaw_deg"
             :pitch-deg="FlightSimModule.flightModel.pitch_deg"
             :bank-deg="FlightSimModule.flightModel.bank_deg"
+            @set-map="simFunctions.setMap"
             class="absolute inset-0 w-full h-full z-0"
           />
 
@@ -171,6 +172,7 @@
             setLayout: simFunctions.setLayout,
             checkPoint: classroomComponentRef.sendCheckPoint,
             setVisuals: simFunctions.setVisuals,
+            setMap: simFunctions.setMap,
           }"
           @start="
             (_code: string) => {
@@ -517,7 +519,16 @@
 </template>
 
 <script setup lang="ts">
-import { watch, ComputedRef, computed, ref, onMounted, onUnmounted, onBeforeMount } from 'vue'
+import {
+  watch,
+  ComputedRef,
+  computed,
+  ref,
+  onMounted,
+  onUnmounted,
+  onBeforeMount,
+  nextTick,
+} from 'vue'
 import Panel from './Panel.vue'
 import ButtonSwitch from './ButtonSwitch.vue'
 import wButton from './wButton.vue'
@@ -655,6 +666,13 @@ const simFunctions = {
   },
   setVisuals: function (state: boolean) {
     isVisuals.value = state
+  },
+  setMap: async function (state: boolean) {
+    if (state && !isVisuals.value) {
+      this.setVisuals(true)
+      await nextTick()
+    }
+    openLayersMapRef.value?.setMap(state)
   },
 }
 
@@ -1125,7 +1143,7 @@ function createRemoteManager(FlightSimModule: ExtendedMainModule) {
     'setPlotView',
     'setLayout',
     'setVisuals',
-    'toggleMap',
+    'setMap',
   ])
   remoteManager.wrapObject('FlightSimModule', FlightSimModule, ['onKeydown', 'onKeyup'])
   remoteManager.wrapObject('FlightSimModule.simulation', FlightSimModule.simulation, [
