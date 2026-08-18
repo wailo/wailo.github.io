@@ -48,6 +48,13 @@
               ></canvas>
             </div>
           </div>
+
+          <CockpitControls
+            v-if="sim_module_loaded"
+            :pfd-group="cockpitPfdGroup"
+            :six-group="cockpitSixGroup"
+            :utility-controls="cockpitUtilityControls"
+          />
         </div>
       </template>
     </Panel>
@@ -288,7 +295,9 @@
             <button
               type="button"
               class="sticky top-6 z-10 grid h-5 w-full grid-cols-[1rem_minmax(0,1fr)_3rem] items-center border-b border-simElementBorder bg-panelHeaderBackground px-1 text-left font-bold text-secondary"
-              :aria-expanded="flightModelFilter !== '' || !collapsedFlightModelGroups.has(groupName)"
+              :aria-expanded="
+                flightModelFilter !== '' || !collapsedFlightModelGroups.has(groupName)
+              "
               @click="toggleFlightModelGroup(groupName)"
             >
               <span aria-hidden="true">{{
@@ -334,10 +343,7 @@
                   :inputStep="sim_prop.step"
                 />
               </label>
-              <div
-                v-else-if="sim_prop.type === 'boolean'"
-                class="min-h-0"
-              >
+              <div v-else-if="sim_prop.type === 'boolean'" class="min-h-0">
                 <wButton
                   class="h-full w-full"
                   :buttonLabel="sim_prop.inputValue ? 'On' : 'Off'"
@@ -557,6 +563,7 @@ import Editor, { ScriptStatus } from './Editor.vue'
 import { c172, MainModule } from '../../src/wasm/generated/flightsimulator_exec'
 import OpenLayersMap from './OpenLayersMap.vue'
 import Airflow from './Airflow.vue'
+import CockpitControls from './CockpitControls.vue'
 
 const renderSignal = ref(0)
 
@@ -648,6 +655,7 @@ const simFunctions = {
     markdownRef.value?.reset()
     openLayersMapRef.value?.reset()
     this.setVisuals(false)
+    this.setMap(false)
     this.setLayout(LayoutTypes.INSTRUCTOR)
   },
   setPlotView: function (item: SimulationProperties, state: boolean) {
@@ -834,6 +842,151 @@ const markdownRef = ref<InstanceType<typeof MarkDown> | null>(null) // Use the M
 const openLayersMapRef = ref<InstanceType<typeof OpenLayersMap> | null>(null) // Use the OpenLayersMap component type
 const whiteBoardComponentRef = ref<InstanceType<typeof Whiteboard> | null>(null)
 
+const cockpitPfdGroup = computed(() => {
+  renderSignal.value
+  const model = FlightSimModule.simulation
+  return {
+    master: {
+      id: 'pfd',
+      label: 'PFD',
+      value: model.pfd_display,
+      setValue: (state: boolean) => model.set_pfd_display(state),
+    },
+    children: [
+      {
+        id: 'pfd-alt',
+        label: 'ALT',
+        value: model.pfd_altimeter_visible,
+        setValue: (state: boolean) => model.set_pfd_altimeter_visible(state),
+      },
+      {
+        id: 'pfd-speed',
+        label: 'SPD',
+        value: model.pfd_speed_indicator_visible,
+        setValue: (state: boolean) => model.set_pfd_speed_indicator_visible(state),
+      },
+      {
+        id: 'pfd-vsi',
+        label: 'VSI',
+        value: model.pfd_vertical_speed_indicator_visible,
+        setValue: (state: boolean) => model.set_pfd_vertical_speed_indicator_visible(state),
+      },
+      {
+        id: 'pfd-heading',
+        label: 'HDG',
+        value: model.pfd_heading_indicator_visible,
+        setValue: (state: boolean) => model.set_pfd_heading_indicator_visible(state),
+      },
+      {
+        id: 'pfd-attitude',
+        label: 'ATT',
+        value: model.pfd_attitude_indicator_visible,
+        setValue: (state: boolean) => model.set_pfd_attitude_indicator_visible(state),
+      },
+      {
+        id: 'pfd-turn',
+        label: 'TURN',
+        value: model.pfd_turn_coordinator_visible,
+        setValue: (state: boolean) => model.set_pfd_turn_coordinator_visible(state),
+      },
+      {
+        id: 'pfd-horizon',
+        label: 'HORIZ',
+        value: model.pfd_horizon_visible,
+        setValue: (state: boolean) => model.set_pfd_horizon_visible(state),
+      },
+      {
+        id: 'pfd-fma',
+        label: 'FMA',
+        value: model.pfd_flight_mode_annunciator_visible,
+        setValue: (state: boolean) => model.set_pfd_flight_mode_annunciator_visible(state),
+      },
+    ],
+  }
+})
+
+const cockpitSixGroup = computed(() => {
+  renderSignal.value
+  const model = FlightSimModule.simulation
+  return {
+    master: {
+      id: 'six',
+      label: 'SIX',
+      value: model.six_instruments_display,
+      setValue: (state: boolean) => model.set_six_instruments_display(state),
+    },
+    children: [
+      {
+        id: 'six-alt',
+        label: 'ALT',
+        value: model.analog_altimeter_visible,
+        setValue: (state: boolean) => model.set_analog_altimeter_visible(state),
+      },
+      {
+        id: 'six-speed',
+        label: 'SPD',
+        value: model.analog_speed_indicator_visible,
+        setValue: (state: boolean) => model.set_analog_speed_indicator_visible(state),
+      },
+      {
+        id: 'six-vsi',
+        label: 'VSI',
+        value: model.analog_vertical_speed_indicator_visible,
+        setValue: (state: boolean) => model.set_analog_vertical_speed_indicator_visible(state),
+      },
+      {
+        id: 'six-heading',
+        label: 'HDG',
+        value: model.analog_heading_indicator_visible,
+        setValue: (state: boolean) => model.set_analog_heading_indicator_visible(state),
+      },
+      {
+        id: 'six-attitude',
+        label: 'ATT',
+        value: model.analog_attitude_indicator_visible,
+        setValue: (state: boolean) => model.set_analog_attitude_indicator_visible(state),
+      },
+      {
+        id: 'six-turn',
+        label: 'TURN',
+        value: model.analog_turn_coordinator_visible,
+        setValue: (state: boolean) => model.set_analog_turn_coordinator_visible(state),
+      },
+    ],
+  }
+})
+
+const cockpitUtilityControls = computed(() => {
+  renderSignal.value
+  const model = FlightSimModule.simulation
+  return [
+    {
+      id: 'visual',
+      label: '3D WORLD',
+      value: isVisuals.value,
+      setValue: (state: boolean) => simFunctions.setVisuals(state),
+    },
+    {
+      id: 'map',
+      label: '2D MAP',
+      value: Boolean(openLayersMapRef.value?.showNavMap),
+      setValue: (state: boolean) => simFunctions.setMap(state),
+    },
+    {
+      id: 'motion',
+      label: 'MOTION',
+      value: model.motion_cues,
+      setValue: (state: boolean) => model.set_motion_cues(state),
+    },
+    {
+      id: 'audio',
+      label: 'AUDIO',
+      value: model.audio,
+      setValue: (state: boolean) => model.set_audio(state),
+    },
+  ]
+})
+
 // Layout controls as computed
 const layoutControls: ComputedRef<Record<string, SimulationProperties>> = computed(() => ({
   toggle_fullscreen: {
@@ -872,6 +1025,14 @@ const layoutControls: ComputedRef<Record<string, SimulationProperties>> = comput
     label: 'Visuals',
     setterFunc: () => simFunctions.setVisuals(!isVisuals.value),
     inputValue: isVisuals.value,
+    group: 'simulation',
+  },
+  toggle_map: {
+    id: 'toggle_map',
+    type: 'boolean',
+    label: 'Map',
+    setterFunc: () => simFunctions.setMap(!openLayersMapRef.value?.showNavMap),
+    inputValue: Boolean(openLayersMapRef.value?.showNavMap),
     group: 'simulation',
   },
 }))

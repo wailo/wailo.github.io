@@ -26,7 +26,6 @@
         <button class="nav-map-btn" @click="requestMap(false)" title="Close navigation map">✕</button>
       </div>
     </div>
-    <button v-if="!showNavMap" class="nav-toggle-btn" @click="requestMap(true)">🗺</button>
   </div>
 </template>
 
@@ -545,40 +544,6 @@ onUnmounted(() => {
   height: 100%;
 
   /* filter: invert(100%) hue-rotate(180deg); */
-}
-
-/* =========================================================
-   OPENLAYERS STYLE BUTTON
-========================================================= */
-
-.nav-toggle-btn {
-  position: absolute;
-
-  right: 24px;
-  top: 24px;
-
-  z-index: 200;
-
-  width: 34px;
-  height: 34px;
-
-  border: none;
-  border-radius: 4px;
-
-  cursor: pointer;
-
-  font-size: 22px;
-  line-height: 1;
-
-  color: white;
-
-  background: rgba(0, 60, 136, 0.7);
-
-  transition: background 0.15s ease;
-}
-
-.nav-toggle-btn:hover {
-  background: rgba(0, 60, 136, 0.9);
 }
 
 /* =========================================================
