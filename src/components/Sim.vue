@@ -70,6 +70,9 @@
           v-if="sim_module_loaded"
           class="h-full w-full"
           :sim-props="{ ...simulationControlsProps, ...flightModelProps }"
+          :lift-coefficient="FlightSimModule.flightModel.cl"
+          :max-angle-of-attack="FlightSimModule.flightModel.max_aoa_deg"
+          :stalling="FlightSimModule.flightModel.stalling"
         />
       </template>
     </Panel>
