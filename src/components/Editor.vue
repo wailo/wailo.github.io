@@ -1,132 +1,119 @@
 <template>
-  <div class="flex h-full w-full">
-    <!-- Sidebar -->
-    <div
-      class="transition-all duration-50 flex flex-col"
-      :class="isEditing === false ? 'w-full' : 'border-r border-simElementBorder w-1/6'"
-      @click="isEditing = false"
-    >
-      <!-- Header -->
-      <!-- <div class="px-4 py-1 mb-1 border-b border-slate-700 text-xs font-semibold">
-      {{ ModuleTitle || "Select a Module" }}
-    </div> -->
+  <div class="flex h-full min-h-0 w-full flex-col font-panelFont text-panelFont text-secondary">
+    <div class="flex h-7 shrink-0 items-center gap-1 border-b border-simElementBorder px-1">
+      <button
+        v-for="mode in viewModes"
+        :key="mode"
+        class="h-5 px-2"
+        :class="viewMode === mode ? 'bg-panelActive text-primary' : 'bg-panelHeaderBackground'"
+        @click="viewMode = mode"
+      >
+        {{ mode.toUpperCase() }}
+      </button>
+      <span class="ml-auto truncate opacity-60">{{ ModuleTitle || 'NO LESSON SELECTED' }}</span>
+    </div>
 
-      <!-- File Tree -->
-      <div class="flex-1 overflow-y-auto px-1 py-1">
-        <!-- New -->
-        <button
-          @click.stop="
-            () => {
-              isEditing = true
-              code = `
-export async function main(context: ScriptContext) {
-      // You can write a code,
-      // or ask AI to write a code for you
-      // example: Reposition to FL150, speed 230 knots, heading 90 degrees
+    <div v-if="viewMode === 'lessons'" class="flex min-h-0 flex-1 flex-col p-1">
+      <div class="flex h-7 shrink-0 items-center border border-simElementBorder bg-simInputBackground">
+        <span class="px-2 opacity-60">/</span>
+        <input
+          v-model="lessonFilter"
+          type="search"
+          placeholder="Search title or category"
+          class="min-w-0 flex-1 bg-transparent outline-none placeholder:text-secondary/50"
+        />
+        <button class="px-2" title="New playground" @click="openPlayground">+ NEW</button>
+      </div>
 
-      context.notifyUser('Hello, World!');
-      const simControls = context.controls;
-      const simProps = context.props;
-      const repositionWithAutopilot = context.repositionWithAutopilot;
-      const waitForCondition = context.waitForCondition;
-      const dataView = context.dataView;
-      const plotView = context.plotView;
-      const dataDisplayReset = context.dataDisplayReset;
-      const notifyUser = context.notifyUser;
-      const checkPoint = context.checkPoint;
-      const waitFor = context.waitFor;
-      const flightmodel = simControls.simulation.set_flight_model_b747();
-}`
-            }
-          "
-          class="m-1 p-1 rounded text-secondary border border-simElementBorder"
-        >
-          Playground
-        </button>
-
-        <hr class="mb-2 border-simElementBorder" />
-
-        <ul class="space-y-[2px]">
-          <li v-for="(folder, folderName) in fileTree" :key="folderName">
-            <!-- Folder -->
-            <div
-              @click.stop="(toggleFolder(folderName), (isEditing = false))"
-              class="cursor-pointer font-semibold text-secondary py-[0px] border-b border-panelBorder p-1 rounded flex items-center justify-between"
+      <div class="mt-1 min-h-0 flex-1 overflow-y-auto border-y border-simElementBorder">
+        <div v-if="filteredLessons.length === 0" class="p-2 opacity-60">NO MATCHING LESSONS</div>
+        <section v-for="group in filteredLessonGroups" :key="group.category">
+          <button
+            class="flex h-6 w-full items-center justify-between border-b border-simElementBorder bg-panelHeaderBackground px-1 text-left font-medium"
+            @click="toggleLessonGroup(group.category)"
+          >
+            <span>{{ isLessonGroupOpen(group.category) ? '▾' : '▸' }} {{ group.category }}</span>
+            <span class="opacity-60">{{ group.lessons.length }}</span>
+          </button>
+          <div v-show="isLessonGroupOpen(group.category)">
+            <button
+              v-for="lesson in group.lessons"
+              :key="lesson.path"
+              class="grid min-h-4 w-full grid-cols-[1rem_minmax(0,1fr)_auto] items-center gap-1 px-2 py-0 text-left leading-tight hover:bg-simInputBackground"
+              :class="selectedFile === lesson.name ? 'border-l-2 border-l-panelActive bg-panelHeaderBackground' : ''"
+              @click="selectLesson(lesson)"
             >
-              {{ folderName }}
-            </div>
-
-            <!-- Files -->
-            <ul v-show="openFolders[folderName]" class="ml-3 space-y-[0px]">
-              <li
-                v-for="file in folder"
-                @click="selectedFile = file.name"
-                :key="file.name"
-                class="flex items-center justify-between px-2 py-[0px] rounded hover:bg-simInputBackground"
-                :class="[
-                  'transition-colors duration-200',
-                  selectedFile === file.name ? 'bg-simInputBackground' : 'text-secondary',
-                  selectedFile === file.name && isScriptRunning ? 'animate-pulse' : '',
-                ]"
+              <span>{{ lessonMarker(lesson.name) }}</span>
+              <span
+                class="truncate font-medium"
+                :class="selectedFile === lesson.name ? 'text-panelActive' : 'text-secondary'"
               >
-                <!-- File name -->
-                <div class="flex-1 truncate pr-3 cursor-default">+ {{ file.name }}</div>
+                {{ lesson.name }}
+              </span>
+              <span class="flex gap-2 opacity-60">
+                <span v-if="lesson.durationMinutes">~{{ lesson.durationMinutes }}m</span>
+              </span>
+            </button>
+          </div>
+        </section>
+      </div>
 
-                <!-- Icon Actions -->
-                <div class="flex items-center gap-[2px]">
-                  <!-- Edit -->
-                  <button
-                    class="w-5 flex items-center justify-center rounded text-secondary hover:bg-simInputBackground"
-                    title="Edit"
-                    @click.stop="
-                      async () => {
-                        await loadFileContent(file)
-                        isEditing = true
-                      }
-                    "
-                  >
-                    ✎
-                  </button>
-
-                  <!-- Play / Stop -->
-                  <button
-                    class="w-5 flex items-center justify-center rounded text-secondary hover:bg-simInputBackground"
-                    :title="isScriptRunning ? 'Stop' : 'Run'"
-                    @click.stop="
-                      async () => {
-                        await loadFileContent(file)
-                        isScriptRunning ? reset() : executeCode()
-                      }
-                    "
-                  >
-                    {{ isScriptRunning && selectedFile === file.name ? '■' : '▶' }}
-                  </button>
-
-                  <!-- Broadcast -->
-                  <button
-                    class="w-5 flex items-center justify-center rounded text-secondary hover:bg-simInputBackground"
-                    title="Broadcast"
-                    @click.stop="
-                      async () => {
-                        await loadFileContent(file)
-                        broadacast(selectedFile, code)
-                      }
-                    "
-                  >
-                    ⟡
-                  </button>
-                </div>
-              </li>
-            </ul>
-          </li>
-        </ul>
+      <div class="mt-1 flex shrink-0 items-center gap-1">
+        <button class="action-button" :disabled="!selectedModule" @click="runSelectedLesson">▶ RUN</button>
+        <button class="action-button" :disabled="!selectedModule" @click="editSelectedLesson">EDIT</button>
+        <span v-if="selectedModule?.description" class="ml-1 truncate opacity-60">
+          {{ selectedModule.description }}
+        </span>
       </div>
     </div>
 
-    <!-- Editor -->
-    <div v-if="isEditing" class="flex flex-col min-w-0 transition-all duration-300 w-5/6">
-      <!-- Monaco Editor -->
-      <div class="flex-1 overflow-auto">
+    <div v-else-if="viewMode === 'run'" class="flex min-h-0 flex-1 flex-col p-1">
+      <div class="grid grid-cols-3 border border-simElementBorder bg-panelHeaderBackground">
+        <div class="p-1">
+          <span class="block opacity-60">STATUS</span>
+          <span class="font-medium" :class="isScriptRunning ? 'text-panelActive' : 'text-secondary'">
+            {{ runStatus }}
+          </span>
+        </div>
+        <div class="border-l border-simElementBorder p-1">
+          <span class="block opacity-60">ELAPSED</span>
+          <span class="font-medium text-secondary">{{ elapsedDisplay }}</span>
+        </div>
+        <div class="border-l border-simElementBorder p-1">
+          <span class="block opacity-60">AIRCRAFT</span>
+          <span class="font-medium text-secondary">ANY</span>
+        </div>
+      </div>
+
+      <div class="mt-1 min-h-0 flex-1 overflow-y-auto border border-simElementBorder">
+        <div class="border-b border-simElementBorder bg-panelHeaderBackground px-2 py-1 opacity-60">
+          EVENT LOG
+        </div>
+        <div v-if="runEvents.length === 0" class="p-2 opacity-60">Run a lesson to see progress.</div>
+        <div
+          v-for="event in runEvents"
+          :key="event.id"
+          class="grid grid-cols-[4.5rem_1fr] gap-2 border-b border-simElementBorder px-2 py-1"
+        >
+          <span class="opacity-60">{{ event.time }}</span>
+          <span>{{ event.message }}</span>
+        </div>
+      </div>
+
+      <div class="mt-1 flex shrink-0 gap-1">
+        <button class="action-button" @click="isScriptRunning ? reset() : runSelectedLesson()">
+          {{ isScriptRunning ? '■ STOP' : '▶ RUN' }}
+        </button>
+        <button class="action-button" :disabled="!selectedModule" @click="runSelectedLesson">
+          ↻ RESTART
+        </button>
+        <button class="action-button" @click="viewMode = 'code'">CODE</button>
+        <span v-if="executionResult" class="ml-auto truncate opacity-60">{{ executionResult }}</span>
+      </div>
+    </div>
+
+    <div v-else class="relative flex min-h-0 flex-1 flex-col">
+      <div class="min-h-0 flex-1">
         <MonacoEditor
           :theme="isDarkMode ? 'vs-dark' : 'vs-light'"
           :options="options"
@@ -134,58 +121,109 @@ export async function main(context: ScriptContext) {
           v-model:value="code"
           @editorWillMount="SetupTypes"
           @editorDidMount="setupMonaco"
-          @click="isEditing = true"
         />
       </div>
+      <aside
+        v-if="aiPanelOpen"
+        class="absolute bottom-9 right-1 top-1 z-30 flex w-[46%] min-w-72 flex-col border border-panelBorder bg-panelContentBackground p-1 shadow-lg"
+      >
+        <div class="flex h-6 shrink-0 items-center justify-between border-b border-simElementBorder">
+          <span>AI LESSON GENERATOR</span>
+          <button class="px-1" title="Close" @click="aiPanelOpen = false">×</button>
+        </div>
 
-      <!-- Controls -->
-      <div class="flex items-center gap-1 px-1 py-1 bg-panelContentBackground">
-        <button
-          class="px-4 border transition"
-          :class="[
-            isScriptRunning
-              ? 'border-red-500 text-red-400 hover:bg-red-500/10'
-              : 'border-green-500 text-green-400 hover:bg-green-500/10',
-          ]"
-          @click="isScriptRunning === true ? reset() : executeCode()"
-        >
-          {{ isScriptRunning ? `■ Stop` : `▶ Run` }}
+        <template v-if="!aiGeneratedCode">
+          <label class="mt-1 opacity-60" for="ai-lesson-request">REQUEST</label>
+          <textarea
+            id="ai-lesson-request"
+            v-model="aiPrompt"
+            class="min-h-24 resize-y border border-simElementBorder bg-simInputBackground p-1 text-secondary outline-none focus:border-panelActive"
+            placeholder="Describe the lesson, initial conditions, student actions and completion condition..."
+            @keydown.ctrl.enter.prevent="generateLesson"
+          />
+
+          <div class="mt-1 grid grid-cols-3 gap-1">
+            <label class="ai-field">
+              <span>AIRCRAFT</span>
+              <select v-model="aiAircraft">
+                <option>B747</option>
+                <option>C172</option>
+                <option>ANY</option>
+              </select>
+            </label>
+            <label class="ai-field">
+              <span>DIFFICULTY</span>
+              <select v-model="aiDifficulty">
+                <option>INTRODUCTORY</option>
+                <option>INTERMEDIATE</option>
+                <option>ADVANCED</option>
+              </select>
+            </label>
+            <label class="ai-field">
+              <span>DURATION</span>
+              <select v-model="aiDurationMinutes">
+                <option :value="3">3 MIN</option>
+                <option :value="5">5 MIN</option>
+                <option :value="10">10 MIN</option>
+                <option :value="15">15 MIN</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="mt-1 flex flex-wrap gap-1">
+            <button
+              class="action-button"
+              :class="aiIncludeCurrentCode ? 'border-panelActive text-panelActive' : ''"
+              @click="aiIncludeCurrentCode = !aiIncludeCurrentCode"
+            >
+              CURRENT CODE {{ aiIncludeCurrentCode ? 'ON' : 'OFF' }}
+            </button>
+            <span class="self-center opacity-60">SIM API ON · AUTHORING GUIDE ON</span>
+          </div>
+
+          <div class="mt-auto flex gap-1 pt-1">
+            <button class="action-button" :disabled="!aiPrompt.trim() || isLLMPending" @click="generateLesson">
+              {{ isLLMPending ? 'GENERATING…' : 'GENERATE' }}
+            </button>
+            <button class="action-button" @click="aiPanelOpen = false">CANCEL</button>
+            <span class="ml-auto self-center opacity-60">CTRL+ENTER</span>
+          </div>
+          <div v-if="aiError" class="mt-1 border border-panelActive p-1 text-panelActive">{{ aiError }}</div>
+        </template>
+
+        <template v-else>
+          <div class="flex h-6 shrink-0 items-center justify-between">
+            <span>GENERATED LESSON</span>
+            <span :class="aiValidationIssues.length ? 'text-panelActive' : 'text-secondary'">
+              {{ aiValidationIssues.length ? `${aiValidationIssues.length} ISSUE(S)` : 'TS OK' }}
+            </span>
+          </div>
+          <pre class="min-h-0 flex-1 overflow-auto border border-simElementBorder bg-simInputBackground p-1 text-secondary">{{ aiGeneratedCode }}</pre>
+          <div v-if="aiValidationIssues.length" class="max-h-20 overflow-auto border-x border-b border-panelActive p-1">
+            <div v-for="issue in aiValidationIssues" :key="issue">! {{ issue }}</div>
+          </div>
+          <div class="mt-1 flex gap-1">
+            <button class="action-button" @click="applyGeneratedLesson(false)">CREATE NEW</button>
+            <button class="action-button" @click="applyGeneratedLesson(true)">REPLACE</button>
+            <button class="action-button" @click="aiGeneratedCode = ''">REVISE</button>
+          </div>
+        </template>
+      </aside>
+      <div class="flex h-8 shrink-0 items-center gap-1 border-t border-simElementBorder px-1">
+        <button class="action-button" @click="isScriptRunning ? reset() : executeCode()">
+          {{ isScriptRunning ? '■ STOP' : '▶ RUN' }}
         </button>
-        <button
-          class="px-4 border border-simElementBorder transition"
-          @click="() => broadacast(selectedFile, code)"
-        >
-          ◉ Broadcast
+        <button class="action-button" :class="aiPanelOpen ? 'text-panelActive' : ''" @click="aiPanelOpen = true">
+          ASK AI
         </button>
-        <button
-          class="px-4 border transition"
-          :class="[
-            isLLMPending
-              ? 'border-amber-500 text-amber-400 hover:bg-red-500/10'
-              : 'border-simElementBorder text-secondary',
-          ]"
-          title="AI"
-          @click.stop="
-            async () => {
-              sendToLLM(code)
-            }
-          "
-        >
-          Ask AI
-        </button>
-        <button class="px-4 border border-simElementBorder transition" @click="isEditing = false">
-          x Close
-        </button>
-        <span v-if="executionResult" class="ml-auto truncate text-secondary bo">
-          <span class="opacity-60">Result:</span> {{ executionResult }}
-        </span>
+        <span v-if="executionResult" class="ml-auto truncate opacity-60">{{ executionResult }}</span>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, PropType, onMounted } from 'vue'
+import { computed, ref, PropType, onMounted, onUnmounted } from 'vue'
 import {
   ExtendedMainModule,
   repositionWithAutopilot,
@@ -218,8 +256,25 @@ const isScriptRunning = ref(false)
 const isLLMPending = ref(false)
 const ModuleTitle = ref('')
 const selectedFile = ref<string>('')
-let isEditing = ref(false)
 const routeHash = window.location.href
+const viewModes = ['lessons', 'run', 'code'] as const
+const viewMode = ref<(typeof viewModes)[number]>('lessons')
+const lessonFilter = ref('')
+const runStatus = ref<'IDLE' | 'RUNNING' | 'COMPLETED' | 'STOPPED' | 'ERROR'>('IDLE')
+const runStartedAt = ref<number | null>(null)
+const runClock = ref(Date.now())
+const completedLessons = ref(new Set<string>())
+const runEvents = ref<Array<{ id: number; time: string; message: string }>>([])
+const aiPanelOpen = ref(false)
+const aiPrompt = ref('')
+const aiAircraft = ref<'B747' | 'C172' | 'ANY'>('B747')
+const aiDifficulty = ref<'INTRODUCTORY' | 'INTERMEDIATE' | 'ADVANCED'>('INTRODUCTORY')
+const aiDurationMinutes = ref(5)
+const aiIncludeCurrentCode = ref(false)
+const aiGeneratedCode = ref('')
+const aiError = ref('')
+let runEventId = 0
+let runClockTimer: ReturnType<typeof setInterval> | undefined
 
 // let monacoEditor: monaco.editor.IStandaloneCodeEditor | null = null;
 
@@ -229,7 +284,6 @@ const emit = defineEmits<{
   (event: 'reset'): void
   (event: 'error', error: any, title?: string): void
   (event: 'completed', title: string): void
-  (event: 'broadcastScript', title: string, content: string): void
 }>()
 
 export type ScriptStatus = 'IN-PROGRESS' | 'IDLE' | 'ERROR'
@@ -353,22 +407,23 @@ function loadUserScript(code: string): UserScript {
 const executionResult = ref<string | null>(null)
 const code = ref(``)
 
-const reset = () => {
+const reset = (markStopped = true) => {
   executionResult.value = null
   resetTimeouts()
   isScriptRunning.value = false
+  if (markStopped && runStatus.value === 'RUNNING') {
+    runStatus.value = 'STOPPED'
+    addRunEvent('Lesson stopped')
+  }
   emit('reset')
-}
-
-const broadacast = async (title: string, content: string) => {
-  props.utilityFuncs.notifyUser('Broadcast', `Broadcasting ${title}`, 2000)
-  emit('broadcastScript', title, content)
 }
 
 const executeExternalCode = (title: string, content: string) => {
   props.utilityFuncs.notifyUser(`Running a script from instrutor`, title, 2000)
   ModuleTitle.value = title
+  selectedFile.value = title
   code.value = content
+  viewMode.value = 'run'
   executeCode()
 }
 
@@ -376,7 +431,7 @@ defineExpose({ reset, executeExternalCode })
 
 // Function to execute code in the context of the provided object
 const executeCode = async () => {
-  reset()
+  reset(false)
   let coreCode = coreSimJs
   coreCode = stripImportsExports(coreCode)
   code.value = stripImportsExports(code.value)
@@ -385,6 +440,11 @@ const executeCode = async () => {
   executionResult.value = null
   try {
     isScriptRunning.value = true
+    runStatus.value = 'RUNNING'
+    runStartedAt.value = Date.now()
+    runClock.value = Date.now()
+    runEvents.value = []
+    addRunEvent(`Started ${ModuleTitle.value || 'lesson'}`)
     emit('start', code.value)
 
     const deps: ScriptContext = {
@@ -393,7 +453,10 @@ const executeCode = async () => {
       repositionWithAutopilot: repositionWithAutopilot,
       waitFor: waitFor,
       waitForCondition: waitForCondition,
-      notifyUser: props.utilityFuncs.notifyUser,
+      notifyUser: async (title: string, body?: string, timeOut?: number) => {
+        addRunEvent(`Prompt: ${title}`)
+        await props.utilityFuncs.notifyUser(title, body, timeOut)
+      },
       dataView: props.utilityFuncs.dataView,
       plotView: props.utilityFuncs.plotView,
       dataDisplayReset: props.utilityFuncs.dataDisplayReset,
@@ -402,7 +465,10 @@ const executeCode = async () => {
       setMap: props.utilityFuncs.setMap,
       setTab: props.utilityFuncs.setTab,
       layoutTypes: LayoutTypes,
-      checkPoint: props.utilityFuncs.checkPoint,
+      checkPoint: (content: string) => {
+        addRunEvent(content)
+        props.utilityFuncs.checkPoint(content)
+      },
       metrics: metrics,
     }
 
@@ -417,12 +483,17 @@ const executeCode = async () => {
     const startStime = new Date()
     runUserScript(finalUserCode, ctx)
       .then(() => {
+        runStatus.value = 'COMPLETED'
+        completedLessons.value = new Set([...completedLessons.value, ModuleTitle.value])
+        addRunEvent('Lesson completed')
         emit('completed', ModuleTitle.value)
         emit('reset')
       })
       .catch((error: any) => {
         console.log(`Script error: ${error}`)
         executionResult.value = error
+        runStatus.value = 'ERROR'
+        addRunEvent(`Error: ${String(error)}`)
         emit('error', error, ModuleTitle.value)
       })
       .finally(() => {
@@ -441,6 +512,8 @@ const executeCode = async () => {
       })
   } catch (err) {
     console.error(err)
+    runStatus.value = 'ERROR'
+    addRunEvent(`Error: ${String(err)}`)
     emit('error', err, ModuleTitle.value)
     isScriptRunning.value = false
   }
@@ -453,16 +526,147 @@ const { submitSession } = useTrainingSessions()
 
 // Reactive copy of the fileTree
 const fileTree = ref(importedNModuleTree)
-
-const openFolders = ref<Record<string, boolean>>(
-  Object.fromEntries(Object.keys(fileTree.value).map((key) => [key, true])),
+const openLessonGroups = ref(new Set(Object.keys(importedNModuleTree)))
+type LessonListEntry = ModuleEntry & { category: string }
+const lessons = computed<LessonListEntry[]>(() =>
+  Object.entries(fileTree.value).flatMap(([category, entries]) =>
+    entries.map((entry) => ({ ...entry, category })),
+  ),
 )
-const toggleFolder = (folderName: string) => {
-  openFolders.value[folderName] = !openFolders.value[folderName]
+const filteredLessons = computed(() => {
+  const query = lessonFilter.value.trim().toLocaleLowerCase()
+  if (!query) return lessons.value
+  return lessons.value.filter((lesson) =>
+    [lesson.name, lesson.category, lesson.description, lesson.difficulty]
+      .filter(Boolean)
+      .some((value) => String(value).toLocaleLowerCase().includes(query)),
+  )
+})
+const filteredLessonGroups = computed(() =>
+  Object.keys(fileTree.value)
+    .map((category) => ({
+      category,
+      lessons: filteredLessons.value.filter((lesson) => lesson.category === category),
+    }))
+    .filter((group) => group.lessons.length > 0),
+)
+const isLessonGroupOpen = (category: string) =>
+  Boolean(lessonFilter.value.trim()) || openLessonGroups.value.has(category)
+const toggleLessonGroup = (category: string) => {
+  if (lessonFilter.value.trim()) return
+  const next = new Set(openLessonGroups.value)
+  if (next.has(category)) next.delete(category)
+  else next.add(category)
+  openLessonGroups.value = next
+}
+const selectedModule = computed(() =>
+  lessons.value.find((lesson) => lesson.name === selectedFile.value),
+)
+const elapsedDisplay = computed(() => {
+  if (!runStartedAt.value) return '00:00'
+  const elapsedSeconds = Math.max(0, Math.floor((runClock.value - runStartedAt.value) / 1000))
+  const minutes = Math.floor(elapsedSeconds / 60)
+  const seconds = elapsedSeconds % 60
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+})
+
+const addRunEvent = (message: string) => {
+  const elapsed = runStartedAt.value ? Date.now() - runStartedAt.value : 0
+  const minutes = Math.floor(elapsed / 60000)
+  const seconds = Math.floor((elapsed % 60000) / 1000)
+  runEvents.value.push({
+    id: ++runEventId,
+    time: `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`,
+    message,
+  })
 }
 
-const sendToLLM = async (content: string) => {
-  executionResult.value = 'Pending AI response...'
+const lessonMarker = (name: string) => {
+  if (isScriptRunning.value && selectedFile.value === name) return '▶'
+  if (completedLessons.value.has(name)) return '✓'
+  return '+'
+}
+
+const selectLesson = async (lesson: ModuleEntry) => {
+  await loadFileContent(lesson)
+}
+
+const runSelectedLesson = async () => {
+  if (!selectedModule.value) return
+  await loadFileContent(selectedModule.value)
+  viewMode.value = 'run'
+  await executeCode()
+}
+
+const editSelectedLesson = async () => {
+  if (!selectedModule.value) return
+  await loadFileContent(selectedModule.value)
+  viewMode.value = 'code'
+}
+
+const openPlayground = () => {
+  selectedFile.value = 'Playground'
+  ModuleTitle.value = 'Playground'
+  code.value = `export async function main(context: ScriptContext) {
+  context.notifyUser('Hello, World!')
+  const simControls = context.controls
+  const flightModel = simControls.simulation.set_flight_model_b747()
+}`
+  viewMode.value = 'code'
+}
+
+const aiValidationIssues = computed(() => {
+  if (!aiGeneratedCode.value) return []
+  const issues: string[] = []
+  if (!/export\s+async\s+function\s+main\s*\(/.test(aiGeneratedCode.value)) {
+    issues.push('Missing export async function main(context: ScriptContext).')
+  }
+  const output = ts_compiler.transpileModule(aiGeneratedCode.value, {
+    compilerOptions: {
+      target: ts_compiler.ScriptTarget.ES2020,
+      module: ts_compiler.ModuleKind.ESNext,
+    },
+    reportDiagnostics: true,
+  })
+  output.diagnostics?.forEach((diagnostic) => {
+    issues.push(ts_compiler.flattenDiagnosticMessageText(diagnostic.messageText, ' '))
+  })
+  return [...new Set(issues)]
+})
+
+const generatedLessonRequest = () => {
+  const currentCodeContext = aiIncludeCurrentCode.value
+    ? `\n\nRevise or use this current lesson as context:\n\n${code.value}`
+    : ''
+  return `Create a complete flight-simulator learning lesson in TypeScript.
+
+User request:
+${aiPrompt.value.trim()}
+
+Configuration:
+- Aircraft: ${aiAircraft.value}
+- Difficulty: ${aiDifficulty.value.toLocaleLowerCase()}
+- Approximate duration: ${aiDurationMinutes.value} minutes
+
+Authoring requirements:
+- Export exactly one async function named main with a ScriptContext parameter.
+- Use context.controls and the documented ScriptContext utilities.
+- Use context.notifyUser for concise instructional prompts.
+- Use context.checkPoint for observable lesson progress.
+- Give every waitForCondition a finite hard timeout.
+- Avoid infinite loops and conflicting autopilot modes.
+- Return only TypeScript source code without Markdown fences.${currentCodeContext}`
+}
+
+const cleanGeneratedCode = (content: string) => {
+  const withoutThinking = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
+  const fencedCode = /```(?:typescript|ts)?\s*([\s\S]*?)```/i.exec(withoutThinking)
+  return (fencedCode?.[1] || withoutThinking).trim()
+}
+
+const generateLesson = async () => {
+  if (!aiPrompt.value.trim() || isLLMPending.value) return
+  aiError.value = ''
   isLLMPending.value = true
 
   const llm_api_host = import.meta.env.DEV
@@ -473,7 +677,7 @@ const sendToLLM = async (content: string) => {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000) // 5 minutes
 
-  let response
+  let response: Response
   try {
     response = await fetch(llm_api_host, {
       method: 'POST',
@@ -485,7 +689,7 @@ const sendToLLM = async (content: string) => {
         messages: [
           {
             role: 'user',
-            content: `"${content}"`,
+            content: generatedLessonRequest(),
           },
         ],
         stream: false,
@@ -493,59 +697,57 @@ const sendToLLM = async (content: string) => {
       signal: controller.signal,
     })
   } catch (err: unknown) {
-    isLLMPending.value = false
     if (err instanceof DOMException && err.name === 'AbortError') {
-      executionResult.value = 'AI request timed out after 5 minutes.'
+      aiError.value = 'AI request timed out after 5 minutes.'
     } else if (err instanceof Error) {
-      executionResult.value = `AI request failed: ${err.message}`
+      aiError.value = `AI request failed: ${err.message}`
     } else {
-      executionResult.value = 'AI request failed with an unknown error.'
+      aiError.value = 'AI request failed with an unknown error.'
     }
+    isLLMPending.value = false
     return
   } finally {
     clearTimeout(timeoutId)
   }
 
   if (!response.ok) {
-    executionResult.value = `AI request failed: ${response.statusText}`
+    aiError.value = `AI request failed: ${response.statusText}`
     isLLMPending.value = false
     return
   }
 
-  if (!response.body) {
-    executionResult.value = 'No response body from AI request'
-    isLLMPending.value = false
-    return
-  }
-
-  // Read and decode stream
-  const reader = response.body.getReader()
-  const decoder = new TextDecoder()
-  let result = ''
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    result += decoder.decode(value, { stream: true })
-  }
-
-  // Try to parse final JSON
   try {
-    const jsonResponse = JSON.parse(result)
-    if (jsonResponse?.message?.content) {
-      result = jsonResponse.message.content
-    } else {
-      throw new Error('Invalid AI response format')
-    }
+    const jsonResponse = await response.json()
+    const result = jsonResponse?.message?.content
+    if (typeof result !== 'string') throw new Error('Invalid AI response format')
+    aiGeneratedCode.value = cleanGeneratedCode(result)
   } catch (error) {
     console.error('Failed to parse AI response:', error)
-    executionResult.value = 'Failed to parse AI response: ' + error
+    aiError.value = `Failed to read AI response: ${String(error)}`
+  } finally {
     isLLMPending.value = false
-    return
   }
+}
 
-  isLLMPending.value = false
-  executionResult.value = 'Done'
-  code.value = `/*\n${code.value}*/\n\n` + result.replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
+const applyGeneratedLesson = (replaceCurrent: boolean) => {
+  if (!aiGeneratedCode.value) return
+  if (replaceCurrent && !window.confirm('Replace the current editor contents?')) return
+  code.value = aiGeneratedCode.value
+  if (!replaceCurrent) {
+    selectedFile.value = 'AI Draft'
+    ModuleTitle.value = 'AI Draft'
+  }
+  executionResult.value = aiValidationIssues.value.length
+    ? `Generated with ${aiValidationIssues.value.length} validation issue(s)`
+    : 'Generated lesson ready'
+  aiPanelOpen.value = false
+  aiGeneratedCode.value = ''
+}
+
+const handleEditorKeydown = (event: KeyboardEvent) => {
+  if (event.key !== 'Escape' || !aiPanelOpen.value) return
+  event.stopPropagation()
+  aiPanelOpen.value = false
 }
 
 const loadFileContent = async (file: ModuleEntry) => {
@@ -563,6 +765,11 @@ const loadFileContent = async (file: ModuleEntry) => {
 }
 
 onMounted(() => {
+  window.addEventListener('keydown', handleEditorKeydown, true)
+  runClockTimer = setInterval(() => {
+    runClock.value = Date.now()
+  }, 1000)
+
   // Load the first file in the first folder by default
   const firstFolder = Object.keys(fileTree.value)[0]
   const firstFile = fileTree.value[firstFolder][0]
@@ -598,6 +805,54 @@ onMounted(() => {
       })
   }
 })
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleEditorKeydown, true)
+  if (runClockTimer) clearInterval(runClockTimer)
+})
 </script>
 
-<style></style>
+<style scoped>
+.action-button {
+  height: 1.5rem;
+  border: 1px solid rgb(var(--color-simElementBorder));
+  background: rgb(var(--color-panelHeaderBackground));
+  padding-inline: 0.5rem;
+  color: rgb(var(--color-secondary));
+}
+
+.action-button:hover:not(:disabled),
+.action-button:focus-visible {
+  border-color: rgb(var(--color-panelActive));
+  outline: none;
+}
+
+.action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.ai-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.ai-field > span {
+  opacity: 0.6;
+}
+
+.ai-field select {
+  min-width: 0;
+  border: 1px solid rgb(var(--color-simElementBorder));
+  background: rgb(var(--color-simInputBackground));
+  padding: 0.125rem;
+  color: rgb(var(--color-secondary));
+  outline: none;
+}
+
+.ai-field select:focus {
+  border-color: rgb(var(--color-panelActive));
+}
+</style>

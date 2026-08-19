@@ -1,6 +1,9 @@
 export type ModuleEntry = {
   name: string
   path: string
+  description?: string
+  durationMinutes?: number
+  difficulty?: 'introductory' | 'intermediate' | 'advanced'
 }
 
 export type ModuleTree = Record<string, ModuleEntry[]>
@@ -39,7 +42,13 @@ export const moduleTree: ModuleTree = {
     },
   ],
   'Angle of Attack (AoA) and Stall': [
-    { name: 'Stall', path: '/LearningModules/stall.ts' },
+    {
+      name: 'Stall',
+      path: '/LearningModules/stall.ts',
+      description: 'Observe how Flaps 10 affects critical AoA, lift coefficient and flow separation.',
+      durationMinutes: 3,
+      difficulty: 'introductory',
+    },
   ],
   // "Angle of Attack (AoA) and Its Influence on Lift and Drag": [
   //     { name: "Monitor AoA and Lift in Straight and Level Flight", content: "" },

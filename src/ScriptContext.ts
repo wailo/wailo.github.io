@@ -74,6 +74,7 @@ export async function runUserScript(script: UserScript, ctx: ScriptContext) {
   } catch (err) {
     console.error('Script execution failed:', err)
     ctx.notifyUser('Script Error', String(err))
+    throw err
   }
 }
 

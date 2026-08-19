@@ -203,11 +203,6 @@
               classroomComponentRef?.reportExerciseResult('error', String(error), title)
             }
           "
-          @broadcastScript="
-            (title: string, content: string) => {
-              classroomComponentRef?.sendScript(title, content)
-            }
-          "
           class="w-full h-full"
           ref="editorComponentRef"
         />
@@ -1149,6 +1144,7 @@ onMounted(async () => {
       window.removeEventListener('keypress', GLFWModule.GLFW.onKeyPress, true)
       window.removeEventListener('keyup', GLFWModule.GLFW.onKeyup, true)
       window.removeEventListener('blur', GLFWModule.GLFW.onBlur, true)
+
       const canvas = document.getElementById('canvas')
       canvas?.focus()
       canvas?.addEventListener(
