@@ -479,10 +479,6 @@
             @classroomConnection="
               (isOnline) => {
                 classRoomComponentState = isOnline
-                // if the connection to the server is established, create a proxy object that mirrors all actions
-                if (isOnline === true) {
-                  manager = createRemoteManager(FlightSimModule)
-                }
               }
             "
           />
@@ -1146,6 +1142,7 @@ onMounted(async () => {
       GLFWModule.GLFW.requestFullscreen = toggleFullscreen // Replace with custom implementation
 
       initFlightModelParams()
+      manager = createRemoteManager(FlightSimModule)
 
       // key presses are handled inside the canvas only
       window.removeEventListener('keydown', GLFWModule.GLFW.onKeydown, true)
@@ -1315,13 +1312,25 @@ function initFlightModelParams() {
     } as JoystickInput
   })
 
-  manager = createRemoteManager(FlightSimModule)
 }
 
 function createRemoteManager(FlightSimModule: ExtendedMainModule) {
   // todo, enable broadcast only if instructor
   // Rationale: student does not send data
-  const remoteManager = new RemoteCallManager(broadcast)
+  let remoteManager: RemoteCallManager
+  remoteManager = new RemoteCallManager(broadcast, (path, result) => {
+    const root = path[0]
+    const method = path.at(-1)
+    const isFlightModelSwitch =
+      root === 'FlightSimModule.simulation' &&
+      (method === 'set_flight_model_b747' || method === 'set_flight_model_c172')
+
+    if (!isFlightModelSwitch || !result) return
+
+    FlightSimModule.flightModel = result as ExtendedMainModule['flightModel']
+    remoteManager.wrapObject('FlightSimModule.flightModel', FlightSimModule.flightModel, ['set'])
+    initFlightModelParams()
+  })
   remoteManager.wrapObject('simFunctions', simFunctions, [
     'notifyUser',
     'resetComponents',
@@ -1331,7 +1340,7 @@ function createRemoteManager(FlightSimModule: ExtendedMainModule) {
     'setMap',
     'setTab',
   ])
-  remoteManager.wrapObject('FlightSimModule', FlightSimModule, ['onKeydown', 'onKeyup'])
+  remoteManager.wrapObject('GLFW', GLFWModule.GLFW, ['onKeydown', 'onKeyup'])
   remoteManager.wrapObject('FlightSimModule.simulation', FlightSimModule.simulation, [
     'set',
     'reset',

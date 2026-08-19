@@ -24,6 +24,8 @@ export type RemoteEvent = {
   timestamp?: number
 }
 
+type CallResultHandler = (path: string[], result: unknown) => void
+
 const getAllKeys = (obj: any) => {
   const ownKeys = Object.keys(obj)
   const proto = Object.getPrototypeOf(obj)
@@ -39,11 +41,16 @@ export class RemoteCallManager {
   // private proxyCache = new WeakMap<object, any>();
   private contextRoot: Record<string, any> = {}
   private allowedPrefixes = new WeakMap<object, string[]>()
+  private executingRemoteCall = false
 
-  constructor(private send: (call: RemoteCall | RemoteEvent) => void) {}
+  constructor(
+    private send: (call: RemoteCall | RemoteEvent) => void,
+    private onCallResult?: CallResultHandler,
+  ) {}
 
   // Updated: Takes a name to register in contextRoot
   public wrapObject(name: string, obj: any, allowedFnPrefixes: string[]): void {
+    if (this.contextRoot[name] === obj) return
     this.contextRoot[name] = obj
     this.allowedPrefixes.set(obj, allowedFnPrefixes)
 
@@ -75,8 +82,7 @@ export class RemoteCallManager {
 
   private wrapFunction(fn: (...args: any[]) => any, path: string[]): (...args: any[]) => any {
     return (...args: any[]) => {
-      const fromRemote = args[0]?.__fromRemote
-      if (!fromRemote) {
+      if (!this.executingRemoteCall) {
         let payload: RemoteCall
 
         const functionName = path[path.length - 1]
@@ -97,7 +103,9 @@ export class RemoteCallManager {
         }
       }
 
-      return fn(...args)
+      const result = fn(...args)
+      this.onCallResult?.(path, result)
+      return result
     }
   }
 
@@ -154,9 +162,12 @@ export class RemoteCallManager {
 
     if (typeof func === 'function') {
       try {
+        this.executingRemoteCall = true
         func.apply(context, args)
       } catch (err) {
         console.error('Function execution error:', err)
+      } finally {
+        this.executingRemoteCall = false
       }
     } else {
       console.warn('Function not found or invalid:', path.join('.'))
@@ -164,7 +175,8 @@ export class RemoteCallManager {
   }
 
   private regenerateKeyboardEvent(msg: RemoteEvent) {
-    const event = new KeyboardEvent('keydown', {
+    const eventType = msg.type === 'onKeyup' ? 'keyup' : 'keydown'
+    const event = new KeyboardEvent(eventType, {
       key: msg.key,
       code: msg.code,
       charCode: msg.charCode,
@@ -177,7 +189,12 @@ export class RemoteCallManager {
       cancelable: true,
     })
 
-    this.contextRoot.FlightSimModule?.GLFW?.[msg.type]?.(event)
+    try {
+      this.executingRemoteCall = true
+      this.contextRoot.GLFW?.[msg.type]?.(event)
+    } finally {
+      this.executingRemoteCall = false
+    }
   }
 
   private isPlainObject(val: any): val is Record<string, any> {
