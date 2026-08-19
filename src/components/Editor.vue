@@ -81,7 +81,7 @@
         </div>
         <div class="border-l border-simElementBorder p-1">
           <span class="block opacity-60">AIRCRAFT</span>
-          <span class="font-medium text-secondary">ANY</span>
+          <span class="font-medium text-secondary">{{ aircraftType }}</span>
         </div>
       </div>
 
@@ -318,6 +318,10 @@ const props = defineProps({
   isDarkMode: {
     type: Boolean,
     default: false,
+  },
+  aircraftType: {
+    type: String,
+    default: 'UNKNOWN',
   },
   utilityFuncs: {
     type: Object as PropType<{

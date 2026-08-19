@@ -175,6 +175,7 @@
           :context-object="FlightSimModule"
           :simProps="flightModelProps"
           :is-dark-mode="isDarkMode"
+          :aircraft-type="activeAircraftType"
           :utility-funcs="{
             plotView: dataDisplayRef.setPlotView,
             dataView: dataDisplayRef.setDataView,
@@ -694,6 +695,17 @@ const simFunctions = {
 
 let GLFWModule: MainModule
 let FlightSimModule: ExtendedMainModule
+const activeAircraftType = computed(() => {
+  renderSignal.value
+  if (!FlightSimModule) return 'UNKNOWN'
+
+  const activeModel = FlightSimModule.simulation.flight_model
+  const modelName = Object.entries(FlightSimModule.GRAPHICSEFlightModel).find(
+    ([, enumValue]) => enumValue === activeModel,
+  )?.[0]
+
+  return modelName || `UNKNOWN (${activeModel})`
+})
 // let utilsFuncs: any;
 let sim_module_loaded = ref(false)
 let isLicenceValid = ref(false)
