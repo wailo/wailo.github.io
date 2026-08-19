@@ -1149,13 +1149,17 @@ onMounted(async () => {
       GLFWModule.GLFW.requestFullscreen = toggleFullscreen // Replace with custom implementation
 
       initFlightModelParams()
-      manager = createRemoteManager(FlightSimModule)
 
       // key presses are handled inside the canvas only
       window.removeEventListener('keydown', GLFWModule.GLFW.onKeydown, true)
       window.removeEventListener('keypress', GLFWModule.GLFW.onKeyPress, true)
       window.removeEventListener('keyup', GLFWModule.GLFW.onKeyup, true)
       window.removeEventListener('blur', GLFWModule.GLFW.onBlur, true)
+
+      // Wrap keyboard handlers only after detaching Emscripten's original window listeners.
+      // addEventListener/removeEventListener require the same function reference; wrapping first
+      // leaves the original global handler active and causes Backspace/Tab to be prevented in inputs.
+      manager = createRemoteManager(FlightSimModule)
 
       const canvas = document.getElementById('canvas')
       canvas?.focus()
