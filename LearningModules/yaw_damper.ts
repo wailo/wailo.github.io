@@ -592,7 +592,7 @@ ${generateRawTable([
 • Repeat the test using stronger or weaker rudder inputs and observe how oscillation amplitude and damping behavior change.
 • Observe how yaw rate and bank angle oscillate together during Dutch roll motion.
 • Compare how quickly different aircraft return to coordinated flight after the disturbance.`,
-    60000,
+    7000,
   )
   context.setLayout(context.layoutTypes.INSTRUCTOR)
 }
