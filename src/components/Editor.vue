@@ -274,6 +274,7 @@ const props = defineProps({
       setLayout: (mode: LayoutTypes) => void
       setVisuals: (state: boolean) => void
       setMap: (state: boolean) => void
+      setTab: (panelId: string, tabName: string) => void
       checkPoint: (content: string) => void
     }>,
     required: true,
@@ -399,6 +400,7 @@ const executeCode = async () => {
       setLayout: props.utilityFuncs.setLayout,
       setVisuals: props.utilityFuncs.setVisuals,
       setMap: props.utilityFuncs.setMap,
+      setTab: props.utilityFuncs.setTab,
       layoutTypes: LayoutTypes,
       checkPoint: props.utilityFuncs.checkPoint,
       metrics: metrics,

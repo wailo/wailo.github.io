@@ -9,6 +9,7 @@
   >
     <!-- Panel 1 -->
     <Panel
+      panel-id="cockpit"
       :status="simulationStatus"
       :flash="FlightSimModule?.simulation.simulation_pause || FlightSimModule?.flightModel.damaged"
       :active="FlightSimModule?.simulation.simulation_pause || FlightSimModule?.flightModel.damaged"
@@ -60,6 +61,7 @@
     </Panel>
     <!-- Panel 2 -->
     <Panel
+      panel-id="realtime"
       :status="`${1000 / update_interval_ms} HZ`"
       class="panel-realtimedata gap-1"
       data-layout="focus instructor pilot"
@@ -86,6 +88,7 @@
     </Panel>
     <!-- Panel 3 -->
     <Panel
+      panel-id="simulation"
       v-if="sim_module_loaded"
       :status="
         FlightSimModule.simulation.simulation_pause
@@ -160,6 +163,7 @@
 
     <!-- Panel 2 -->
     <Panel
+      panel-id="learning-modules"
       class="panel-learningmodules"
       data-layout="instructor classroom"
       :status="scriptComponentStatus"
@@ -180,6 +184,7 @@
             checkPoint: classroomComponentRef.sendCheckPoint,
             setVisuals: simFunctions.setVisuals,
             setMap: simFunctions.setMap,
+            setTab: simFunctions.setTab,
           }"
           @start="
             (_code: string) => {
@@ -210,6 +215,7 @@
     </Panel>
     <!-- Panel 5 -->
     <Panel
+      panel-id="autopilot"
       v-if="sim_module_loaded"
       :status="FlightSimModule.flightModel.autopilot_master_switch ? 'Engaged' : 'Disengaged'"
       :active="FlightSimModule.flightModel.autopilot_master_switch"
@@ -239,6 +245,7 @@
     </Panel>
     <!-- Panel 6 -->
     <Panel
+      panel-id="flight-model"
       :status="FlightSimModule.flightModel.name"
       v-if="sim_module_loaded"
       class="panel-flightmodel"
@@ -421,6 +428,7 @@
     </Panel>
     <!-- Panel 7 -->
     <Panel
+      panel-id="classroom"
       :status="classRoomComponentState ? 'Online' : 'Offline'"
       class="panel-classroom"
       data-layout="instructor pilot classroom"
@@ -482,7 +490,11 @@
       </template>
     </Panel>
     <!-- Panel 8 -->
-    <Panel class="panel-userprompt" data-layout="focus instructor pilot classroom">
+    <Panel
+      panel-id="prompt"
+      class="panel-userprompt"
+      data-layout="focus instructor pilot classroom"
+    >
       <template #Prompt>
         <MarkDown ref="markdownRef" class="w-full h-full p-1" />
       </template>
@@ -681,6 +693,11 @@ const simFunctions = {
       await nextTick()
     }
     openLayersMapRef.value?.setMap(state)
+  },
+  setTab: function (panelId: string, tabName: string) {
+    window.dispatchEvent(
+      new CustomEvent('sim:set-panel-tab', { detail: { panelId, tabName } }),
+    )
   },
 }
 
@@ -1078,6 +1095,11 @@ let computedJoystickInputs: ComputedRef<JoystickInput>
 let simUpdateInterval: ReturnType<typeof setInterval>
 let manager: RemoteCallManager
 
+const handlePanelTabRequest = (event: Event) => {
+  const detail = (event as CustomEvent<{ panelId: string; tabName: string }>).detail
+  if (detail?.panelId && detail?.tabName) simFunctions.setTab(detail.panelId, detail.tabName)
+}
+
 // Lifecycle hooks
 onBeforeMount(() => {
   initializeTheme()
@@ -1095,6 +1117,7 @@ onBeforeMount(() => {
 })
 
 onMounted(async () => {
+  window.addEventListener('sim:request-panel-tab', handlePanelTabRequest)
   initializeModule({
     locateFile: (path: string, prefix: string) => {
       if (path.endsWith('.wasm') || path.endsWith('.data')) {
@@ -1223,6 +1246,7 @@ onMounted(async () => {
 onUnmounted(() => {
   clearInterval(simUpdateInterval)
   document.removeEventListener('fullscreenchange', onFullscreenChange)
+  window.removeEventListener('sim:request-panel-tab', handlePanelTabRequest)
 })
 
 function initFlightModelParams() {
@@ -1305,6 +1329,7 @@ function createRemoteManager(FlightSimModule: ExtendedMainModule) {
     'setLayout',
     'setVisuals',
     'setMap',
+    'setTab',
   ])
   remoteManager.wrapObject('FlightSimModule', FlightSimModule, ['onKeydown', 'onKeyup'])
   remoteManager.wrapObject('FlightSimModule.simulation', FlightSimModule.simulation, [

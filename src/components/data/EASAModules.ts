@@ -38,6 +38,9 @@ export const moduleTree: ModuleTree = {
       path: '/LearningModules/speed_lift_vs_flap.ts',
     },
   ],
+  'Angle of Attack (AoA) and Stall': [
+    { name: 'Stall', path: '/LearningModules/stall.ts' },
+  ],
   // "Angle of Attack (AoA) and Its Influence on Lift and Drag": [
   //     { name: "Monitor AoA and Lift in Straight and Level Flight", content: "" },
   //     { name: "Increase AoA Until Stall", content: "" },

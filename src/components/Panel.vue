@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watchEffect, useSlots, PropType } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watchEffect, useSlots, PropType } from 'vue'
 
 const props = defineProps({
   status: {
@@ -14,12 +14,42 @@ const props = defineProps({
     type: Boolean as PropType<boolean>,
     default: false,
   },
+  panelId: {
+    type: String,
+    default: '',
+  },
 })
 
 // Dynamic tab detection via named slots
 const tabSlots = useSlots()
 const tabMap = ref<{ name: string; display: string }[]>([])
 const activeTab = ref<string | null>(null)
+
+const setActiveTab = (tabName: string) => {
+  if (tabMap.value.some((tab) => tab.name === tabName)) activeTab.value = tabName
+}
+
+const requestActiveTab = (tabName: string) => {
+  if (!props.panelId) {
+    setActiveTab(tabName)
+    return
+  }
+  window.dispatchEvent(
+    new CustomEvent('sim:request-panel-tab', {
+      detail: { panelId: props.panelId, tabName },
+    }),
+  )
+}
+
+defineExpose({ setActiveTab })
+
+const handleSetTab = (event: Event) => {
+  const detail = (event as CustomEvent<{ panelId: string; tabName: string }>).detail
+  if (detail?.panelId === props.panelId) setActiveTab(detail.tabName)
+}
+
+onMounted(() => window.addEventListener('sim:set-panel-tab', handleSetTab))
+onBeforeUnmount(() => window.removeEventListener('sim:set-panel-tab', handleSetTab))
 
 watchEffect(() => {
   tabMap.value = Object.keys(tabSlots)
@@ -56,7 +86,7 @@ watchEffect(() => {
         <button
           v-for="tab in tabMap"
           :key="tab.name"
-          @click="activeTab = tab.name"
+          @click="requestActiveTab(tab.name)"
           :class="[
             'px-1 rounded-t flex items-center',
             tabMap.length > 1 ? (activeTab === tab.name ? 'bg-panelActive' : 'text-xs') : '',

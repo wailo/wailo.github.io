@@ -32,6 +32,7 @@ export interface ScriptContext {
   layoutTypes: typeof LayoutTypes
   setVisuals: (state: boolean) => void
   setMap: (state: boolean) => void
+  setTab: (panelId: string, tabName: string) => void
   checkPoint: (content: string) => void
   metrics: any[]
 }
@@ -56,6 +57,7 @@ export function createScriptContext(deps: ScriptContext): ScriptContext {
     layoutTypes: LayoutTypes,
     setVisuals: deps.setVisuals,
     setMap: deps.setMap,
+    setTab: deps.setTab,
     metrics: deps.metrics,
   }
 }
