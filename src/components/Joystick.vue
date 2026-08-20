@@ -71,6 +71,46 @@
       </div>
     </div>
 
+    <div
+      class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-y border-panelBorder bg-panelContentBackground px-1 py-1"
+    >
+      <div class="flex min-w-0 items-center gap-1">
+        <span class="mr-1 text-[8px] tracking-[0.15em] opacity-60">FLAPS</span>
+        <button
+          v-for="option in flapOptions"
+          :key="`flap-${option.value}`"
+          type="button"
+          class="h-5 min-w-7 border border-simElementBorder bg-panelHeaderBackground px-1 text-[9px]"
+          :class="
+            input.flaps === option.value
+              ? 'border-simActiveButton bg-simInputBackground text-simActiveButton'
+              : ''
+          "
+          @click="setFlaps(option.value)"
+        >
+          {{ option.label }}
+        </button>
+      </div>
+      <div class="flex min-w-0 items-center gap-1">
+        <span class="mr-1 text-[8px] tracking-[0.15em] opacity-60">GEAR</span>
+        <button
+          v-for="option in gearOptions"
+          :key="`gear-${option.value}`"
+          type="button"
+          :disabled="gearOptions.length === 1"
+          class="h-5 min-w-7 border border-simElementBorder bg-panelHeaderBackground px-1 text-[9px] disabled:opacity-50"
+          :class="
+            input.gear === option.value
+              ? 'border-simActiveButton bg-simInputBackground text-simActiveButton'
+              : ''
+          "
+          @click="setGear(option.value)"
+        >
+          {{ option.label }}
+        </button>
+      </div>
+    </div>
+
     <!-- Main Controls -->
     <div class="grid grid-cols-2 gap-1 w-full flex-1 min-h-0 overflow-y-auto">
       <!-- LEFT PANEL -->
@@ -326,11 +366,17 @@ export interface JoystickInput {
   aileronTrim: number
   rudderTrim: number
   mixture?: number // 0 (lean) to 1 (rich)
+  flaps: number
+  gear: number
 }
+
+export type JoystickControlOption = { label: string; value: number }
 
 // --- Input Channel (Props) ---
 const props = defineProps<{
   externalInputs?: JoystickInput
+  flapOptions: JoystickControlOption[]
+  gearOptions: JoystickControlOption[]
 }>()
 
 // --- Output Channel (Emits) ---
@@ -357,6 +403,8 @@ const input = reactive<JoystickInput>({
   aileronTrim: 0,
   rudderTrim: 0,
   mixture: 1, // Default to full rich
+  flaps: 0,
+  gear: 0,
 })
 
 // Position state for visual handles
@@ -507,10 +555,23 @@ watch(
     input.rudderTrim = Math.max(-1, Math.min(1, newVal.rudderTrim ?? 0))
     input.mixture =
       newVal.mixture !== undefined ? Math.max(0, Math.min(1, newVal.mixture)) : undefined
+    input.flaps = newVal.flaps
+    input.gear = newVal.gear
     syncPositionsFromControls()
   },
   { deep: true, flush: 'post' },
 )
+
+const setFlaps = (value: number) => {
+  input.flaps = value
+  emit('input', { ...input })
+}
+
+const setGear = (value: number) => {
+  if (props.gearOptions.length === 1) return
+  input.gear = value
+  emit('input', { ...input })
+}
 
 // --- Throttle Logic ---
 const handleThrottleMove = (event: PointerEvent) => {

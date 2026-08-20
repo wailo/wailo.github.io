@@ -404,6 +404,8 @@
         <Joystick
           v-if="FlightSimModule"
           :external-inputs="computedJoystickInputs"
+          :flap-options="computedJoystickOptions.flaps"
+          :gear-options="computedJoystickOptions.gear"
           @input="
             (val) => {
               FlightSimModule.flightModel.set_aileron_position(val.aileron)
@@ -412,6 +414,12 @@
               FlightSimModule.flightModel.set_engine_throttle_position(val.throttle)
               if (val.mixture !== undefined) {
                 ;(FlightSimModule.flightModel as c172).set_engine_mixture_position(val.mixture)
+              }
+              if (val.flaps !== FlightSimModule.flightModel.flaps_selector_position) {
+                ;(FlightSimModule.flightModel as any).set_flaps_selector_position(val.flaps)
+              }
+              if (val.gear !== FlightSimModule.flightModel.landing_gear_selector_position) {
+                ;(FlightSimModule.flightModel as any).set_landing_gear_selector_position(val.gear)
               }
               FlightSimModule.flightModel.set_aileron_trim_position(val.aileronTrim)
               FlightSimModule.flightModel.set_elevator_trim_position(val.elevatorTrim)
@@ -1094,6 +1102,10 @@ const expandAllFlightModelGroups = () => {
 }
 
 let computedJoystickInputs: ComputedRef<JoystickInput>
+let computedJoystickOptions: ComputedRef<{
+  flaps: Array<{ label: string; value: number }>
+  gear: Array<{ label: string; value: number }>
+}>
 
 let simUpdateInterval: ReturnType<typeof setInterval>
 let manager: RemoteCallManager
@@ -1318,10 +1330,31 @@ function initFlightModelParams() {
       rudder: FlightSimModule.flightModel.rudder_position,
       throttle: FlightSimModule.flightModel.engine_throttle_position,
       mixture: (FlightSimModule.flightModel as c172).engine_mixture_position, // if the property does not exist, it will be undefined, and the joystick component will ignore it
+      flaps: FlightSimModule.flightModel.flaps_selector_position,
+      gear: FlightSimModule.flightModel.landing_gear_selector_position,
       aileronTrim: FlightSimModule.flightModel.aileron_trim_position,
       elevatorTrim: FlightSimModule.flightModel.elevator_trim_position,
       rudderTrim: FlightSimModule.flightModel.rudder_trim_position,
     } as JoystickInput
+  })
+
+  computedJoystickOptions = computed(() => {
+    renderSignal.value
+    const isB747 =
+      FlightSimModule.simulation.flight_model === FlightSimModule.GRAPHICSEFlightModel.B747
+    return isB747
+      ? {
+          flaps: [0, 1, 5, 10, 20, 25, 30].map((value) => ({ label: String(value), value })),
+          gear: [
+            { label: 'DN', value: 0 },
+            { label: 'UP', value: 1 },
+            { label: 'OFF', value: 2 },
+          ],
+        }
+      : {
+          flaps: [0, 10, 20, 30].map((value) => ({ label: String(value), value })),
+          gear: [{ label: 'FIXED', value: 0 }],
+        }
   })
 
 }
