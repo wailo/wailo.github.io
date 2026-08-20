@@ -1,78 +1,16 @@
 <template>
   <div
-    class="flex flex-col w-full h-full bg-simBackground text-secondary font-mono overflow-hidden select-none p-0 gap-0"
+    class="flex h-full w-full select-none flex-col gap-1 overflow-hidden bg-simBackground p-1 font-mono text-secondary"
   >
-    <!-- Combined & Compact Telemetry Panel -->
-    <div
-      class="grid gap-1 pb-1 bg-panelContentBackground flex-shrink-0"
-      :class="input.mixture !== undefined ? 'grid-cols-8' : 'grid-cols-7'"
-    >
-      <!-- Primary Controls -->
-      <div class="flex flex-col items-center justify-center h-8 border border-panelBorder">
-        <span class="text-[8px] tracking-[0.15em] opacity-60">THR</span>
-        <span class="text-[11px] font-bold text-simActiveButton">
-          {{ Math.round(input.throttle * 100) }}%
-        </span>
-      </div>
-      <div class="flex flex-col items-center justify-center h-8 border border-panelBorder">
-        <span class="text-[8px] tracking-[0.15em] opacity-60">ELEV</span>
-        <span class="text-[11px] font-bold text-simActiveButton">
-          {{ input.elevator > 0 ? '+' : '' }}{{ Math.round(input.elevator * 100) }}
-        </span>
-      </div>
-      <div class="flex flex-col items-center justify-center h-8 border border-panelBorder">
-        <span class="text-[8px] tracking-[0.15em] opacity-60">AIL</span>
-        <span class="text-[11px] font-bold text-simActiveButton">
-          {{ input.aileron > 0 ? '+' : '' }}{{ Math.round(input.aileron * 100) }}
-        </span>
-      </div>
-      <div class="flex flex-col items-center justify-center h-8 border border-panelBorder">
-        <span class="text-[8px] tracking-[0.15em] opacity-60">RUD</span>
-        <span class="text-[11px] font-bold text-simActiveButton">
-          {{ input.rudder > 0 ? '+' : '' }}{{ Math.round(input.rudder * 100) }}
-        </span>
-      </div>
-
-      <!-- Mixture Telemetry (conditional) -->
-      <div
-        v-if="input.mixture !== undefined"
-        class="flex flex-col items-center justify-center h-8 border border-panelBorder"
-      >
-        <span class="text-[8px] tracking-[0.15em] opacity-60">MIX</span>
-        <span class="text-[11px] font-bold text-simActiveButton">
-          {{ Math.round(input.mixture * 100) }}%
-        </span>
-      </div>
-
-      <!-- Trim Values (Visual separation using subtle background change) -->
-      <div
-        class="flex flex-col items-center justify-center h-8 border border-panelBorder/60 bg-panelContentBackground/40"
-      >
-        <span class="text-[8px] tracking-[0.15em] opacity-60">E.TRM</span>
-        <span class="text-[11px] font-bold text-simActiveButton/90">
-          {{ input.elevatorTrim > 0 ? '+' : '' }}{{ Math.round(input.elevatorTrim * 100) }}
-        </span>
-      </div>
-      <div
-        class="flex flex-col items-center justify-center h-8 border border-panelBorder/60 bg-panelContentBackground/40"
-      >
-        <span class="text-[8px] tracking-[0.15em] opacity-60">A.TRM</span>
-        <span class="text-[11px] font-bold text-simActiveButton/90">
-          {{ input.aileronTrim > 0 ? '+' : '' }}{{ Math.round(input.aileronTrim * 100) }}
-        </span>
-      </div>
-      <div
-        class="flex flex-col items-center justify-center h-8 border border-panelBorder/60 bg-panelContentBackground/40"
-      >
-        <span class="text-[8px] tracking-[0.15em] opacity-60">R.TRM</span>
-        <span class="text-[11px] font-bold text-simActiveButton/90">
-          {{ input.rudderTrim > 0 ? '+' : '' }}{{ Math.round(input.rudderTrim * 100) }}
-        </span>
-      </div>
+    <div class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-0.5 px-1 text-[9px]">
+      <span v-for="item in telemetry" :key="item.label" class="whitespace-nowrap">
+        <span class="opacity-60">{{ item.label }}</span>
+        <span class="ml-1 tabular-nums text-simActiveButton">{{ item.value }}</span>
+      </span>
     </div>
 
     <div
-      class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-y border-panelBorder bg-panelContentBackground px-1 py-1"
+      class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-y border-panelBorder bg-panelContentBackground px-2 py-1"
     >
       <div class="flex min-w-0 items-center gap-1">
         <span class="mr-1 text-[8px] tracking-[0.15em] opacity-60">FLAPS</span>
@@ -111,42 +49,28 @@
       </div>
     </div>
 
-    <!-- Main Controls -->
-    <div class="grid grid-cols-2 gap-1 w-full flex-1 min-h-0 overflow-y-auto">
-      <!-- LEFT PANEL -->
-      <!-- LEFT PANEL -->
-      <div
-        class="grid gap-1 min-h-full border border-panelBorder bg-panelContentBackground p-1 min-w-0"
-        :class="
-          input.mixture !== undefined
-            ? 'grid-rows-[minmax(0,1fr)_auto_auto]'
-            : 'grid-rows-[minmax(0,1fr)_auto_auto]'
-        "
-      >
-        <!-- THROTTLE + MIXTURE -->
-        <div
-          class="flex items-stretch justify-center gap-4 min-h-0"
-          :class="input.mixture !== undefined ? 'flex-row' : 'justify-center'"
-        >
-          <!-- THROTTLE -->
-          <div class="flex items-center justify-center gap-2 min-h-0">
-            <!-- Vertical Label -->
-            <div class="flex items-center justify-center h-full">
-              <span
-                class="text-[9px] tracking-[0.2em] opacity-60 rotate-[-90deg] whitespace-nowrap"
-              >
-                THROTTLE
+    <div
+      class="grid min-h-0 flex-1 grid-cols-[minmax(85px,0.85fr)_minmax(140px,1.25fr)_minmax(90px,0.9fr)] gap-px overflow-auto bg-panelBorder"
+    >
+      <section class="flex min-h-[140px] min-w-0 flex-col bg-panelContentBackground p-1.5">
+        <h3 class="mb-1 border-b border-panelBorder pb-1 text-[9px] tracking-[0.18em] opacity-70">
+          ENGINE
+        </h3>
+        <div class="flex min-h-0 flex-1 items-stretch justify-center gap-2 pt-1">
+          <div class="flex min-h-0 flex-col items-center gap-1">
+            <div class="text-center text-[8px]">
+              <span class="block opacity-70">THR</span>
+              <span class="block opacity-50">Throttle</span>
+              <span class="block tabular-nums text-[10px] text-simActiveButton">
+                {{ percent(input.throttle) }}%
               </span>
             </div>
-
-            <!-- THROTTLE SLIDER -->
-            <div class="relative flex justify-center items-center min-h-0 h-full">
+            <div class="relative flex min-h-0 flex-1 justify-center">
               <div
                 ref="throttleBaseRef"
-                class="relative w-[18px] h-full bg-simInputBackground border border-simElementBorder overflow-hidden cursor-ns-resize touch-none"
+                class="relative h-full min-h-20 w-[18px] touch-none cursor-ns-resize overflow-hidden border border-simElementBorder bg-simInputBackground"
                 @pointerdown="startThrottleDrag"
               >
-                <!-- Tick Marks -->
                 <div
                   v-for="i in 10"
                   :key="'throttle-' + i"
@@ -154,7 +78,6 @@
                   :style="{ bottom: `${i * 10}%` }"
                 ></div>
 
-                <!-- Idle Mark -->
                 <div class="absolute left-0 right-0" style="bottom: 20%">
                   <div class="h-px bg-simActiveButton w-full"></div>
                   <span
@@ -164,7 +87,6 @@
                   </span>
                 </div>
 
-                <!-- Handle -->
                 <div
                   class="absolute left-1/2 top-1/2 w-7 h-[10px] bg-simActiveButton border border-secondary/40 rounded-[2px] pointer-events-none"
                   :style="throttleStyle"
@@ -173,25 +95,18 @@
             </div>
           </div>
 
-          <!-- MIXTURE -->
-          <div
-            v-if="input.mixture !== undefined"
-            class="flex items-center justify-center gap-2 min-h-0"
-          >
-            <!-- Vertical Label -->
-            <div class="flex items-center justify-center h-full">
-              <span
-                class="text-[9px] tracking-[0.2em] opacity-60 rotate-[-90deg] whitespace-nowrap"
-              >
-                MIXTURE
+          <div v-if="input.mixture !== undefined" class="flex min-h-0 flex-col items-center gap-1">
+            <div class="text-center text-[8px]">
+              <span class="block opacity-70">MIX</span>
+              <span class="block opacity-50">Mixture</span>
+              <span class="block tabular-nums text-[10px] text-simActiveButton">
+                {{ percent(input.mixture) }}%
               </span>
             </div>
-
-            <!-- MIXTURE SLIDER -->
-            <div class="relative flex justify-center items-center min-h-0 h-full">
+            <div class="relative flex min-h-0 flex-1 justify-center">
               <div
                 ref="mixtureBaseRef"
-                class="relative w-[18px] h-full bg-simInputBackground border border-simElementBorder overflow-hidden cursor-ns-resize touch-none"
+                class="relative h-full min-h-20 w-[18px] touch-none cursor-ns-resize overflow-hidden border border-simElementBorder bg-simInputBackground"
                 @pointerdown="startMixtureDrag"
               >
                 <!-- Tick Marks -->
@@ -211,43 +126,84 @@
             </div>
           </div>
         </div>
+      </section>
 
-        <!-- YAW / RUDDER -->
-        <div class="flex flex-col items-center justify-center min-h-0">
-          <span class="text-[9px] tracking-[0.2em] opacity-60 mb-1 flex-shrink-0"> RUDDER </span>
-
+      <section class="flex min-h-[140px] min-w-0 flex-col bg-panelContentBackground p-1.5">
+        <h3 class="mb-1 border-b border-panelBorder pb-1 text-[9px] tracking-[0.18em] opacity-70">
+          FLIGHT CONTROLS
+        </h3>
+        <div class="flex min-h-0 flex-1 flex-col items-center gap-3 pt-1">
           <div
-            ref="rudderBaseRef"
-            class="relative w-full max-w-[180px] h-[18px] bg-simInputBackground border border-simElementBorder overflow-hidden cursor-ew-resize touch-none flex-shrink-0"
-            @pointerdown="startRudderDrag"
+            class="grid min-h-0 w-full flex-1 grid-cols-[auto_minmax(60px,150px)_auto] grid-rows-[auto_minmax(60px,1fr)_auto] items-center justify-center gap-x-1 text-[8px]"
           >
-            <div class="absolute top-0 bottom-0 left-1/2 w-px bg-panelBorder/50"></div>
-
+            <span class="col-start-2 text-center opacity-60">
+              ELEV {{ signedPercent(input.elevator) }} ↑
+            </span>
+            <span class="row-start-2 text-right opacity-60">LEFT</span>
             <div
-              v-for="i in 10"
-              :key="'rudder-' + i"
-              class="absolute top-[3px] bottom-[3px] w-px bg-panelBorder/40"
-              :style="{ left: `${i * 10}%` }"
-            ></div>
-
+              ref="rightBaseRef"
+              class="relative col-start-2 row-start-2 aspect-square h-full max-h-[150px] min-h-[60px] touch-none cursor-crosshair overflow-hidden border border-simElementBorder bg-simInputBackground"
+              @pointerdown="startRightDrag"
+            >
+              <div class="absolute inset-x-0 top-1/2 h-px bg-panelBorder/50"></div>
+              <div class="absolute inset-y-0 left-1/2 w-px bg-panelBorder/50"></div>
+              <div class="absolute inset-[25%] border border-panelBorder/25"></div>
+              <div
+                class="absolute left-1/2 top-1/2 h-3 w-3 border border-secondary/40 bg-simActiveButton pointer-events-none"
+                :style="rightStickStyle"
+              ></div>
+            </div>
+            <span class="col-start-3 row-start-2 opacity-60">RIGHT</span>
+            <span class="col-start-2 row-start-3 text-center opacity-60">
+              ↓ ELEV &nbsp; AIL {{ signedPercent(input.aileron) }}
+            </span>
+          </div>
+          <div class="flex w-full items-center gap-2">
+            <span class="shrink-0 text-[8px] opacity-60">RUDDER&nbsp; L</span>
             <div
-              class="absolute left-1/2 top-1/2 w-[10px] h-7 bg-simActiveButton border border-secondary/40 rounded-[2px] pointer-events-none"
-              :style="rudderStyle"
-            ></div>
+              ref="rudderBaseRef"
+              class="relative h-[18px] min-w-0 flex-1 touch-none cursor-ew-resize overflow-hidden border border-simElementBorder bg-simInputBackground"
+              @pointerdown="startRudderDrag"
+            >
+              <div class="absolute top-0 bottom-0 left-1/2 w-px bg-panelBorder/50"></div>
+
+              <div
+                v-for="i in 10"
+                :key="'rudder-' + i"
+                class="absolute top-[3px] bottom-[3px] w-px bg-panelBorder/40"
+                :style="{ left: `${i * 10}%` }"
+              ></div>
+
+              <div
+                class="absolute left-1/2 top-1/2 w-[10px] h-7 bg-simActiveButton border border-secondary/40 rounded-[2px] pointer-events-none"
+                :style="rudderStyle"
+              ></div>
+            </div>
+            <span class="shrink-0 text-right text-[8px] opacity-60">
+              R
+              <span class="ml-1 tabular-nums text-[9px] text-simActiveButton">
+                {{ signedPercent(input.rudder) }}
+              </span>
+            </span>
           </div>
         </div>
+      </section>
 
-        <!-- TRIM CONTROLS -->
-        <div class="flex flex-col gap-3 pt-2 border-t border-panelBorder/40">
-          <!-- Elevator Trim -->
-          <div class="flex items-center gap-2">
-            <span class="text-[8px] tracking-[0.15em] opacity-60 w-16 flex-shrink-0">
-              ELEV TRIM
-            </span>
-
+      <section class="min-w-0 bg-panelContentBackground p-1.5">
+        <h3 class="mb-3 border-b border-panelBorder pb-1 text-[9px] tracking-[0.18em] opacity-70">
+          TRIM
+        </h3>
+        <div class="grid gap-4">
+          <div class="grid gap-1">
+            <div class="flex items-center justify-between text-[8px]">
+              <span class="opacity-60">ELEV TRIM</span>
+              <span class="tabular-nums text-[9px] text-simActiveButton">{{
+                signedPercent(input.elevatorTrim)
+              }}</span>
+            </div>
             <div
               ref="elevTrimRef"
-              class="relative flex-1 h-[14px] bg-simInputBackground border border-simElementBorder overflow-hidden cursor-ew-resize touch-none"
+              class="relative h-[14px] w-full bg-simInputBackground border border-simElementBorder overflow-hidden cursor-ew-resize touch-none"
               @pointerdown="startElevTrimDrag"
             >
               <div class="absolute top-0 bottom-0 left-1/2 w-px bg-simActiveButton/60"></div>
@@ -258,16 +214,16 @@
               ></div>
             </div>
           </div>
-
-          <!-- Aileron Trim -->
-          <div class="flex items-center gap-2">
-            <span class="text-[8px] tracking-[0.15em] opacity-60 w-16 flex-shrink-0">
-              AIL TRIM
-            </span>
-
+          <div class="grid gap-1">
+            <div class="flex items-center justify-between text-[8px]">
+              <span class="opacity-60">AIL TRIM</span>
+              <span class="tabular-nums text-[9px] text-simActiveButton">{{
+                signedPercent(input.aileronTrim)
+              }}</span>
+            </div>
             <div
               ref="ailTrimRef"
-              class="relative flex-1 h-[14px] bg-simInputBackground border border-simElementBorder overflow-hidden cursor-ew-resize touch-none"
+              class="relative h-[14px] w-full bg-simInputBackground border border-simElementBorder overflow-hidden cursor-ew-resize touch-none"
               @pointerdown="startAilTrimDrag"
             >
               <div class="absolute top-0 bottom-0 left-1/2 w-px bg-simActiveButton/60"></div>
@@ -278,16 +234,16 @@
               ></div>
             </div>
           </div>
-
-          <!-- Rudder Trim -->
-          <div class="flex items-center gap-2">
-            <span class="text-[8px] tracking-[0.15em] opacity-60 w-16 flex-shrink-0">
-              RUD TRIM
-            </span>
-
+          <div class="grid gap-1">
+            <div class="flex items-center justify-between text-[8px]">
+              <span class="opacity-60">RUD TRIM</span>
+              <span class="tabular-nums text-[9px] text-simActiveButton">{{
+                signedPercent(input.rudderTrim)
+              }}</span>
+            </div>
             <div
               ref="rudTrimRef"
-              class="relative flex-1 h-[14px] bg-simInputBackground border border-simElementBorder overflow-hidden cursor-ew-resize touch-none"
+              class="relative h-[14px] w-full bg-simInputBackground border border-simElementBorder overflow-hidden cursor-ew-resize touch-none"
               @pointerdown="startRudTrimDrag"
             >
               <div class="absolute top-0 bottom-0 left-1/2 w-px bg-simActiveButton/60"></div>
@@ -299,57 +255,7 @@
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- RIGHT PANEL - Flight Stick -->
-      <div
-        class="flex items-center justify-center border border-panelBorder bg-panelContentBackground relative min-w-0 min-h-full overflow-hidden"
-      >
-        <!-- Aileron Label (horizontal axis) -->
-        <span
-          class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full text-[9px] tracking-[0.2em] opacity-60 whitespace-nowrap pb-1 pointer-events-none flex-shrink-0"
-        >
-          AILERON
-        </span>
-
-        <!-- Elevator Label (vertical axis) -->
-        <span
-          class="absolute right-0 top-1/2 translate-x-full -translate-y-1/2 text-[9px] tracking-[0.2em] opacity-60 rotate-90 origin-top-left whitespace-nowrap pr-1 pointer-events-none flex-shrink-0"
-        >
-          ELEVATOR
-        </span>
-
-        <div
-          ref="rightBaseRef"
-          class="relative aspect-square w-full max-w-[180px] max-h-full rounded-full border border-simElementBorder bg-simInputBackground overflow-hidden cursor-crosshair touch-none"
-          @pointerdown="startRightDrag"
-        >
-          <!-- Crosshair -->
-          <div class="absolute inset-x-0 top-1/2 h-px bg-panelBorder/40"></div>
-          <div class="absolute inset-y-0 left-1/2 w-px bg-panelBorder/40"></div>
-          <!-- Outer Ring -->
-          <div class="absolute inset-[10%] rounded-full border border-panelBorder/40"></div>
-          <!-- Inner Ring -->
-          <div class="absolute inset-[28%] rounded-full border border-panelBorder/20"></div>
-          <!-- Radial Ring -->
-          <div
-            class="absolute inset-0 rounded-full opacity-40"
-            style="
-              background: radial-gradient(
-                circle,
-                transparent 68%,
-                rgba(255, 255, 255, 0.1) 69%,
-                transparent 70%
-              );
-            "
-          ></div>
-          <!-- Stick -->
-          <div
-            class="absolute left-1/2 top-1/2 w-[10%] h-[10%] rounded-full bg-simActiveButton border border-secondary/40 pointer-events-none"
-            :style="rightStickStyle"
-          ></div>
-        </div>
-      </div>
+      </section>
     </div>
   </div>
 </template>
@@ -405,6 +311,30 @@ const input = reactive<JoystickInput>({
   mixture: 1, // Default to full rich
   flaps: 0,
   gear: 0,
+})
+
+const percent = (value: number) => Math.round(value * 100)
+const signedPercent = (value: number) => {
+  const rounded = percent(value)
+  return `${rounded > 0 ? '+' : ''}${rounded}`
+}
+
+const telemetry = computed(() => {
+  const values = [
+    { label: 'THR', value: `${percent(input.throttle)}%` },
+    { label: 'ELEV', value: signedPercent(input.elevator) },
+    { label: 'AIL', value: signedPercent(input.aileron) },
+    { label: 'RUD', value: signedPercent(input.rudder) },
+  ]
+  if (input.mixture !== undefined) {
+    values.push({ label: 'MIX', value: `${percent(input.mixture)}%` })
+  }
+  values.push(
+    { label: 'E.TRIM', value: signedPercent(input.elevatorTrim) },
+    { label: 'A.TRIM', value: signedPercent(input.aileronTrim) },
+    { label: 'R.TRIM', value: signedPercent(input.rudderTrim) },
+  )
+  return values
 })
 
 // Position state for visual handles
@@ -501,10 +431,11 @@ const syncPositionsFromControls = () => {
   // Right Stick (2D flight stick)
   if (activeRightId === null && rightBaseRef.value) {
     const rect = rightBaseRef.value.getBoundingClientRect()
-    if (rect.width > 0) {
-      const maxRadius = rect.width * 0.425
-      rightPos.x = input.aileron * maxRadius
-      rightPos.y = -input.elevator * maxRadius
+    if (rect.width > 0 && rect.height > 0) {
+      const maxTravelX = (rect.width - HANDLE.stick.size) / 2
+      const maxTravelY = (rect.height - HANDLE.stick.size) / 2
+      rightPos.x = input.aileron * maxTravelX
+      rightPos.y = -input.elevator * maxTravelY
     }
   }
 
@@ -694,19 +625,16 @@ const handleRightMove = (event: PointerEvent) => {
   const rect = rightBaseRef.value.getBoundingClientRect()
   const centerX = rect.left + rect.width / 2
   const centerY = rect.top + rect.height / 2
-  const maxRadius = rect.width * 0.425
+  const maxTravelX = (rect.width - HANDLE.stick.size) / 2
+  const maxTravelY = (rect.height - HANDLE.stick.size) / 2
   let deltaX = event.clientX - centerX
   let deltaY = event.clientY - centerY
-  const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
-  if (distance > maxRadius) {
-    const angle = Math.atan2(deltaY, deltaX)
-    deltaX = Math.cos(angle) * maxRadius
-    deltaY = Math.sin(angle) * maxRadius
-  }
+  deltaX = Math.max(-maxTravelX, Math.min(maxTravelX, deltaX))
+  deltaY = Math.max(-maxTravelY, Math.min(maxTravelY, deltaY))
   rightPos.x = deltaX
   rightPos.y = deltaY
-  input.aileron = deltaX / maxRadius
-  input.elevator = -deltaY / maxRadius
+  input.aileron = deltaX / maxTravelX
+  input.elevator = -deltaY / maxTravelY
   emit('input', { ...input })
 }
 
