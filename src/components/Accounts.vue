@@ -17,6 +17,7 @@ const isLoggedIn = ref(pb.authStore.isValid) // Check if the user is logged in
 
 const userInfo = ref<RecordModel | null>(pb.authStore.record) // or `pb.authStore.record`
 const authError = ref<unknown>(null)
+const settingsOpen = ref(false)
 let token = ''
 
 const login = async (email: string, password: string) => {
@@ -72,33 +73,48 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="w-full min-w-0 rounded-lg shadow-md">
-    <div class="grid min-w-0 grid-cols-2 gap-1">
-      <label class="min-w-0">
-        <span class="block text-secondary">EMAIL</span>
+  <div class="w-full min-w-0 text-secondary">
+    <div class="flex h-6 min-w-0 items-center gap-2 bg-panelHeaderBackground px-1">
+      <span :class="isLoggedIn ? 'text-simActiveButton' : 'opacity-60'">●</span>
+      <span class="opacity-60">AUTH</span>
+      <span class="min-w-0 flex-1 truncate">
+        {{ isLoggedIn ? userInfo?.name || email : 'SIGNED OUT' }}
+      </span>
+      <button
+        class="px-1 hover:text-panelActive focus-visible:outline focus-visible:outline-1 focus-visible:outline-panelActive"
+        title="Account settings"
+        @click="settingsOpen = !settingsOpen"
+      >
+        {{ settingsOpen ? '×' : '⋯' }}
+      </button>
+    </div>
+
+    <div v-if="settingsOpen" class="grid min-w-0 gap-1 border-b border-simElementBorder p-1">
+      <label class="flex h-5 min-w-0 items-center gap-1">
+        <span class="w-16 shrink-0 opacity-60">EMAIL</span>
         <input
           v-model="email"
           type="email"
           placeholder="Email"
           :disabled="isLoggedIn"
           v-on:focus="loginFailed = false"
-          class="min-w-0 max-w-full pl-1 text-secondary bg-primary w-full border border-simElementBorder"
+          class="min-w-0 flex-1 bg-primary pl-1 text-secondary outline-none focus:border-panelActive border border-simElementBorder"
         />
       </label>
-      <label class="min-w-0">
-        <span class="block text-secondary">PASSWORD</span>
+      <label class="flex h-5 min-w-0 items-center gap-1">
+        <span class="w-16 shrink-0 opacity-60">PASSWORD</span>
         <input
           v-model="password"
           type="password"
           placeholder="Password"
           :disabled="isLoggedIn"
           v-on:focus="loginFailed = false"
-          class="min-w-0 max-w-full pl-1 text-secondary bg-primary w-full border border-simElementBorder"
+          class="min-w-0 flex-1 bg-primary pl-1 text-secondary outline-none focus:border-panelActive border border-simElementBorder"
         />
       </label>
       <button
         @click="toggleAuth"
-        class="col-span-2 border border-simElementBorder w-full"
+        class="h-5 w-full border border-simElementBorder"
         :class="
           loginFailed
             ? 'bg-panelActive text-primary'
@@ -111,7 +127,7 @@ onMounted(() => {
           loginFailed
             ? `Login Failed: ${authError}`
             : isLoggedIn
-              ? `Logout ${userInfo?.name} | ${userInfo?.role}`
+              ? `Logout ${userInfo?.name}`
               : 'Login'
         }}
       </button>

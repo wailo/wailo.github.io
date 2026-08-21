@@ -1,58 +1,72 @@
 <template>
-  <div class="flex h-full min-h-0 w-full flex-col gap-1 overflow-auto">
-    <div class="order-1 w-full grid grid-flow-row grid-cols-1 gap-1">
-      <div class="grid grid-cols-2 gap-1">
-        <label class="min-w-0">
-          <span class="block text-secondary">CLASS</span>
+  <div class="flex h-full min-h-0 w-full flex-col overflow-auto">
+    <div class="order-1 w-full">
+      <div class="flex h-6 min-w-0 items-center gap-2 bg-panelHeaderBackground px-1">
+        <span :class="isOnline ? 'text-simActiveButton' : 'opacity-60'">●</span>
+        <button
+          class="shrink-0"
+          @click="isOnline ? disconnect() : connectToPeerJsServer(selfPeerId)"
+        >
+          {{ isOnline ? 'ONLINE' : 'OFFLINE' }}
+        </button>
+        <span class="min-w-0 truncate opacity-60">ROOM {{ selfPeerId || '—' }}</span>
+        <span v-if="isInstructor" class="shrink-0"
+          >{{ Object.keys(incomingConns).length }} PEERS</span
+        >
+        <button
+          v-if="isInstructor"
+          class="ml-auto shrink-0"
+          :class="followMode ? 'text-simActiveButton' : 'opacity-60'"
+          @click="followMode = !followMode"
+        >
+          BCAST {{ followMode ? 'ON' : 'OFF' }}
+        </button>
+        <button
+          class="px-1 hover:text-panelActive focus-visible:outline focus-visible:outline-1 focus-visible:outline-panelActive"
+          title="Connection settings"
+          @click="connectionSettingsOpen = !connectionSettingsOpen"
+        >
+          {{ connectionSettingsOpen ? '×' : '⋯' }}
+        </button>
+      </div>
+
+      <div v-if="connectionSettingsOpen" class="grid gap-1 border-b border-simElementBorder p-1">
+        <label class="flex h-5 min-w-0 items-center gap-1">
+          <span class="w-14 shrink-0 opacity-60">CLASS</span>
           <input
             v-model="selfPeerId"
             :readonly="isOnline"
             placeholder="room name"
-            class="w-full min-w-0 pl-1 text-secondary bg-primary border border-simElementBorder"
+            class="min-w-0 flex-1 bg-primary pl-1 text-secondary border border-simElementBorder outline-none focus:border-panelActive"
           />
         </label>
-        <label class="min-w-0">
-          <span class="block text-secondary">CALLSIGN</span>
+        <label class="flex h-5 min-w-0 items-center gap-1">
+          <span class="w-14 shrink-0 opacity-60">CALLSIGN</span>
           <input
             v-model="displayname"
             placeholder="callsign"
-            class="w-full min-w-0 pl-1 text-secondary bg-primary border border-simElementBorder"
+            class="min-w-0 flex-1 bg-primary pl-1 text-secondary border border-simElementBorder outline-none focus:border-panelActive"
           />
         </label>
-      </div>
-      <!-- <button-switch
-        id="share"
-        button-label="Share"
-        class="border border-simElementBorder"
-        :buttonClick="() => (isQrPopupOpen = true)"
-      >
-      </button-switch> -->
-      <div>
         <wButton
           id="connect"
           :button-label="isOnline ? 'Disconnect' : 'Start'"
           :button-state="isOnline"
-          class="w-1/2 border border-simElementBorder"
+          class="h-5 w-full border border-simElementBorder"
           :buttonClick="() => (isOnline ? disconnect() : connectToPeerJsServer(selfPeerId))"
-        >
-        </wButton>
-        <wButton
-          v-if="isInstructor"
-          button-label="Broadcast Mode"
-          :button-state="followMode"
-          class="w-1/2 border border-simElementBorder"
-          :button-click="() => (followMode = !followMode)"
         />
       </div>
-      <div v-if="isInstructor && isOnline" class="grid grid-cols-1 gap-1">
-        <wButton
-          :button-label="
-            selectedPeerIds.length ? `Selected: ${selectedPeerIds.length}` : 'Select all'
-          "
-          :button-state="selectedPeerIds.length > 0"
-          class="border border-simElementBorder"
-          :button-click="toggleSelectAll"
-        />
+
+      <div v-if="isInstructor && isOnline" class="flex h-5 items-center gap-2 px-1 text-secondary">
+        <span>SEL {{ selectedPeerIds.length }}</span>
+        <span>ACTIVE {{ activeExerciseCount }}</span>
+        <span :class="raisedHandCount ? 'font-bold text-panelActive' : 'opacity-60'">
+          HAND {{ raisedHandCount }}
+        </span>
+        <span :class="overdueCount ? 'font-bold text-panelActive' : 'opacity-60'">
+          OVERDUE {{ overdueCount }}
+        </span>
+        <button class="ml-auto" @click="toggleSelectAll">{{ allSelected ? 'NONE' : 'ALL' }}</button>
       </div>
       <button
         v-if="!isInstructor && isOnline"
@@ -94,15 +108,9 @@
     </section>
 
     <section
-      v-if="isInstructor && isOnline"
-      class="order-3 grid gap-1 border border-simElementBorder p-1"
+      v-if="isInstructor && isOnline && actionTargetIds.length"
+      class="order-3 grid gap-1 border-t border-simElementBorder p-1"
     >
-      <div
-        v-if="overdueCount"
-        class="border border-panelActive bg-panelStatusBackground px-2 py-1 font-bold text-secondary"
-      >
-        {{ overdueCount }} student{{ overdueCount === 1 ? '' : 's' }} overdue
-      </div>
       <div class="grid grid-cols-2 gap-1">
         <button
           class="border border-simElementBorder"
@@ -195,12 +203,8 @@
         />
         <span>{{ filteredParticipants.length }}/{{ Object.keys(incomingConns).length }}</span>
       </div>
-      <table
-        class="h-fit min-w-[52rem] table-fixed text-left border-x border-b border-simElementBorder whitespace-nowrap"
-      >
-        <thead
-          class="sticky top-5 z-10 border-b border-t border-simElementBorder bg-panelHeaderBackground"
-        >
+      <table class="h-fit min-w-[48rem] table-fixed text-left whitespace-nowrap">
+        <thead class="sticky top-5 z-10 bg-panelHeaderBackground">
           <tr>
             <th class="w-10 min-w-10 max-w-10 px-1 text-center">S!</th>
             <th class="w-[14%] px-1">NAME</th>
@@ -217,7 +221,7 @@
             v-for="({ peer, peerId }, index) in filteredParticipants"
             :key="peerId"
             :ref="(element) => setRosterRowRef(element, index)"
-            class="h-5 nowrap cursor-pointer border-b border-panelBorder transition-colors"
+            class="h-5 nowrap cursor-pointer transition-colors"
             :class="rowClass(peerId)"
             @click="focusAndTogglePeer(peerId)"
           >
@@ -234,11 +238,11 @@
             <td class="overflow-hidden text-ellipsis px-1">
               <b>{{ peer.metadata.name || '—' }}</b>
             </td>
-            <td class="overflow-hidden text-ellipsis border-l border-simElementBorder px-1">
+            <td class="overflow-hidden text-ellipsis px-1">
               {{ peer.metadata.callsign || peer.metadata.displayName || '—' }}
             </td>
             <!-- Status -->
-            <td class="overflow-hidden text-ellipsis border-l border-simElementBorder px-1">
+            <td class="overflow-hidden text-ellipsis px-1">
               <button class="">
                 {{ compactStatus(peer.metadata.status) }}
                 <!-- <svg
@@ -255,10 +259,7 @@
                 </svg> -->
               </button>
             </td>
-            <td
-              class="overflow-hidden text-ellipsis border-l border-simElementBorder px-1"
-              :title="peer.exercise?.name || ''"
-            >
+            <td class="overflow-hidden text-ellipsis px-1" :title="peer.exercise?.name || ''">
               <span v-if="peer.exercise">
                 {{ exerciseStatusSymbol(peer.exercise.status) }} {{ peer.exercise.name }} ·
                 <span :class="exerciseStatusClass(peer.exercise.status)">{{
@@ -267,17 +268,17 @@
               </span>
               <span v-else>—</span>
             </td>
-            <td class="overflow-hidden text-ellipsis border-l border-simElementBorder px-1">
+            <td class="overflow-hidden text-ellipsis px-1">
               {{ peer.metadata.group || '—' }}
             </td>
-            <td class="overflow-hidden text-ellipsis border-l border-simElementBorder px-1">
+            <td class="overflow-hidden text-ellipsis px-1">
               {{ connectionAge(peer) > 15 ? 'STALE' : `${peer.latency ?? '—'}ms` }}
               <span v-if="peer.handState === 'raised'" class="font-bold">
                 ! HAND {{ handWaitTime(peer) }}</span
               >
             </td>
             <!-- Disconnect -->
-            <td class="pl-1 border-l border-simElementBorder">
+            <td class="pl-1">
               <button @click.stop="confirmDisconnect(peerId, peer)">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -458,6 +459,7 @@ const incomingConns = ref<ConnectionsList>({})
 const routeHash = window.location.href
 const isQrPopupOpen = ref(false)
 const followMode = ref(false)
+const connectionSettingsOpen = ref(false)
 const selectedPeerIds = ref<string[]>([])
 const focusedPeerId = ref('')
 const rosterSearch = ref('')
@@ -493,6 +495,13 @@ const allSelected = computed(
 const overdueCount = computed(
   () =>
     Object.values(incomingConns.value).filter((peer) => peer.exercise?.status === 'overdue').length,
+)
+const activeExerciseCount = computed(
+  () =>
+    Object.values(incomingConns.value).filter((peer) => peer.exercise?.status === 'running').length,
+)
+const raisedHandCount = computed(
+  () => Object.values(incomingConns.value).filter((peer) => peer.handState === 'raised').length,
 )
 const participantRecords = computed(() => {
   const handPriority: Record<ClassroomHandState, number> = {
