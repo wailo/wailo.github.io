@@ -1,5 +1,8 @@
 <template>
-  <div class="pointer-events-auto absolute left-1 top-1 z-30 font-mono text-xs text-secondary">
+  <div
+    ref="menuRoot"
+    class="pointer-events-auto absolute left-1 top-1 z-30 font-mono text-xs text-secondary"
+  >
     <wButton
       button-label="☰"
       :button-state="open"
@@ -29,13 +32,19 @@
       </div>
 
       <section class="control-group">
-        <div class="control-group-header">
-          <span class="group-label">APPEARANCE</span>
+        <div class="group-label">APPEARANCE</div>
+        <div class="mt-1 grid grid-cols-2 gap-1">
           <wButton
             button-label="DARK THEME"
             :button-state="themeControl.value"
             :button-click="() => toggleControl(themeControl)"
-            class="h-7 w-24"
+            class="h-7 min-w-0"
+          />
+          <wButton
+            button-label="FULLSCREEN"
+            :button-state="fullscreenControl.value"
+            :button-click="() => toggleControl(fullscreenControl)"
+            class="h-7 min-w-0"
           />
         </div>
         <div class="mt-1 grid grid-cols-4 gap-1">
@@ -153,6 +162,10 @@ defineProps({
     type: Object as PropType<CockpitToggle>,
     required: true,
   },
+  fullscreenControl: {
+    type: Object as PropType<CockpitToggle>,
+    required: true,
+  },
   layoutControls: {
     type: Array as PropType<CockpitToggle[]>,
     required: true,
@@ -160,6 +173,7 @@ defineProps({
 })
 
 const open = ref(false)
+const menuRoot = ref<HTMLElement | null>(null)
 const visualsOpen = ref(true)
 const pfdOpen = ref(false)
 const sixOpen = ref(false)
@@ -179,8 +193,19 @@ const handleKeydown = (event: KeyboardEvent) => {
   }
 }
 
-onMounted(() => window.addEventListener('keydown', handleKeydown, true))
-onBeforeUnmount(() => window.removeEventListener('keydown', handleKeydown, true))
+const handlePointerDown = (event: PointerEvent) => {
+  if (!open.value || menuRoot.value?.contains(event.target as Node)) return
+  open.value = false
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown, true)
+  document.addEventListener('pointerdown', handlePointerDown, true)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeydown, true)
+  document.removeEventListener('pointerdown', handlePointerDown, true)
+})
 </script>
 
 <style scoped>

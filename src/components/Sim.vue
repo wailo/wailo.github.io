@@ -66,6 +66,7 @@
                 :six-group="cockpitSixGroup"
                 :utility-controls="cockpitUtilityControls"
                 :theme-control="cockpitThemeControl"
+                :fullscreen-control="cockpitFullscreenControl"
                 :layout-controls="cockpitLayoutControls"
               />
             </div>
@@ -958,6 +959,13 @@ const cockpitThemeControl = computed(() => ({
     isDarkMode.value = state
     applyTheme(state)
   },
+}))
+
+const cockpitFullscreenControl = computed(() => ({
+  id: 'fullscreen',
+  label: 'FULLSCREEN',
+  value: isFullscreen.value,
+  setValue: () => void toggleFullscreen(),
 }))
 
 const cockpitLayoutControls = computed(() =>
