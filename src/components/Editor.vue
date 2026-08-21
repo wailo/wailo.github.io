@@ -120,40 +120,39 @@
     </div>
 
     <div v-else-if="viewMode === 'run'" class="flex min-h-0 flex-1 flex-col p-1">
-      <div class="grid grid-cols-3 border border-simElementBorder bg-panelHeaderBackground">
-        <div class="p-1">
-          <span class="block opacity-60">STATUS</span>
+      <div
+        class="grid h-6 shrink-0 grid-cols-3 items-center border border-simElementBorder bg-panelHeaderBackground"
+      >
+        <div class="flex min-w-0 items-center gap-1 px-1">
+          <span class="opacity-60">STATUS</span>
           <span
-            class="font-medium"
+            class="min-w-0 truncate font-medium"
             :class="isScriptRunning ? 'text-panelActive' : 'text-secondary'"
           >
             {{ runStatus }}
           </span>
         </div>
-        <div class="border-l border-simElementBorder p-1">
-          <span class="block opacity-60">ELAPSED</span>
-          <span class="font-medium text-secondary">{{ elapsedDisplay }}</span>
+        <div class="flex min-w-0 items-center gap-1 border-l border-simElementBorder px-1">
+          <span class="opacity-60">ELAPSED</span>
+          <span class="truncate font-medium text-secondary">{{ elapsedDisplay }}</span>
         </div>
-        <div class="border-l border-simElementBorder p-1">
-          <span class="block opacity-60">AIRCRAFT</span>
-          <span class="font-medium text-secondary">{{ aircraftType }}</span>
+        <div class="flex min-w-0 items-center gap-1 border-l border-simElementBorder px-1">
+          <span class="opacity-60">AIRCRAFT</span>
+          <span class="truncate font-medium text-secondary">{{ aircraftType }}</span>
         </div>
       </div>
 
-      <div class="mt-1 min-h-0 flex-1 overflow-y-auto border border-simElementBorder">
-        <div class="border-b border-simElementBorder bg-panelHeaderBackground px-2 py-1 opacity-60">
-          EVENT LOG
-        </div>
-        <div v-if="runEvents.length === 0" class="p-2 opacity-60">
+      <div class="mt-1 min-h-0 flex-1 overflow-y-auto">
+        <div v-if="runEvents.length === 0" class="px-1 py-0.5 opacity-60">
           Run a lesson to see progress.
         </div>
         <div
           v-for="event in runEvents"
           :key="event.id"
-          class="grid grid-cols-[4.5rem_1fr] gap-2 border-b border-simElementBorder px-2 py-1"
+          class="grid grid-cols-[3.5rem_minmax(0,1fr)] gap-1 px-1 py-0.5 leading-tight hover:bg-simInputBackground/40"
         >
           <span class="opacity-60">{{ event.time }}</span>
-          <span>{{ event.message }}</span>
+          <span class="min-w-0">{{ event.message }}</span>
         </div>
       </div>
 
