@@ -1,10 +1,12 @@
 <template>
   <div class="pointer-events-auto absolute left-1 top-1 z-30 font-mono text-xs text-secondary">
     <wButton
-      button-label="CTRL"
+      button-label="☰"
       :button-state="open"
       :button-click="() => (open = !open)"
-      class="h-6"
+      class="h-6 w-7"
+      title="Cockpit controls"
+      aria-label="Cockpit controls"
       aria-haspopup="true"
       :aria-expanded="open"
     />
@@ -25,6 +27,28 @@
           ×
         </button>
       </div>
+
+      <section class="control-group">
+        <div class="control-group-header">
+          <span class="group-label">APPEARANCE</span>
+          <wButton
+            button-label="DARK THEME"
+            :button-state="themeControl.value"
+            :button-click="() => toggleControl(themeControl)"
+            class="h-7 w-24"
+          />
+        </div>
+        <div class="mt-1 grid grid-cols-4 gap-1">
+          <wButton
+            v-for="control in layoutControls"
+            :key="control.id"
+            :button-label="control.label"
+            :button-state="control.value"
+            :button-click="() => control.setValue(true)"
+            class="h-7 min-w-0"
+          />
+        </div>
+      </section>
 
       <section class="control-group">
         <button class="group-toggle" @click="visualsOpen = !visualsOpen">
@@ -125,6 +149,14 @@ defineProps({
     type: Array as PropType<CockpitToggle[]>,
     required: true,
   },
+  themeControl: {
+    type: Object as PropType<CockpitToggle>,
+    required: true,
+  },
+  layoutControls: {
+    type: Array as PropType<CockpitToggle[]>,
+    required: true,
+  },
 })
 
 const open = ref(false)
@@ -184,6 +216,16 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleKeydown, true)
 .group-disclosure {
   min-width: 0;
   flex: 1;
+  border: 1px solid rgb(var(--color-simElementBorder));
+  background: rgb(var(--color-panelHeaderBackground));
+  padding: 0.2rem 0.3rem;
+}
+
+.group-label {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
   border: 1px solid rgb(var(--color-simElementBorder));
   background: rgb(var(--color-panelHeaderBackground));
   padding: 0.2rem 0.3rem;

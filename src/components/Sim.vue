@@ -65,6 +65,8 @@
                 :pfd-group="cockpitPfdGroup"
                 :six-group="cockpitSixGroup"
                 :utility-controls="cockpitUtilityControls"
+                :theme-control="cockpitThemeControl"
+                :layout-controls="cockpitLayoutControls"
               />
             </div>
           </template>
@@ -942,6 +944,30 @@ const cockpitUtilityControls = computed(() => {
     },
   ]
 })
+
+const cockpitThemeControl = computed(() => ({
+  id: 'dark-theme',
+  label: 'DARK THEME',
+  value: isDarkMode.value,
+  setValue: (state: boolean) => {
+    isDarkMode.value = state
+    applyTheme(state)
+  },
+}))
+
+const cockpitLayoutControls = computed(() =>
+  [
+    { id: LayoutTypes.INSTRUCTOR, label: 'INSTR' },
+    { id: LayoutTypes.CLASSROOM, label: 'CLASS' },
+    { id: LayoutTypes.PILOT, label: 'PILOT' },
+    { id: LayoutTypes.FOCUS, label: 'FOCUS' },
+  ].map(({ id, label }) => ({
+    id,
+    label,
+    value: layout.value === id,
+    setValue: () => simFunctions.setLayout(id),
+  })),
+)
 
 // Layout controls as computed
 const layoutControls: ComputedRef<Record<string, SimulationProperties>> = computed(() => ({
