@@ -560,6 +560,7 @@ setLayout: (mode: LayoutTypes) => void
 layoutTypes: typeof LayoutTypes
 setVisuals: (state: boolean) => void
 setMap: (state: boolean) => void
+setTheme: (dark: boolean) => void
 setTab: { (panelId: cockpit, tabName: Cockpit): void; (panelId: realtime, tabName: Real-Time-Data | Airflow): void; (panelId: simulation, tabName: Simulation): void; (panelId: learning-modules, tabName: Learning-Modules): void; (panelId: autopilot, tabName: Autopilot): void; (panelId: flight-model, tabName: Flight-Model | Joystick): void; (panelId: classroom, tabName: Classroom): void; (panelId: prompt, tabName: Prompt | whiteboard): void; }
 resetPanels: () => void
 checkPoint: (content: string) => void

@@ -32,6 +32,7 @@ export interface ScriptContext {
   layoutTypes: typeof LayoutTypes
   setVisuals: (state: boolean) => void
   setMap: (state: boolean) => void
+  setTheme: (dark: boolean) => void
   setTab: {
     (panelId: 'cockpit', tabName: 'Cockpit'): void
     (panelId: 'realtime', tabName: 'Real-Time-Data' | 'Airflow'): void
@@ -67,6 +68,7 @@ export function createScriptContext(deps: ScriptContext): ScriptContext {
     layoutTypes: LayoutTypes,
     setVisuals: deps.setVisuals,
     setMap: deps.setMap,
+    setTheme: deps.setTheme,
     setTab: deps.setTab,
     resetPanels: deps.resetPanels,
     metrics: deps.metrics,

@@ -419,6 +419,7 @@ const props = defineProps({
       setLayout: (mode: LayoutTypes) => void
       setVisuals: (state: boolean) => void
       setMap: (state: boolean) => void
+      setTheme: (dark: boolean) => void
       setTab: (panelId: string, tabName: string) => void
       resetPanels: () => void
       checkPoint: (content: string) => void
@@ -565,6 +566,7 @@ const executeCode = async (): Promise<boolean> => {
       setLayout: props.utilityFuncs.setLayout,
       setVisuals: props.utilityFuncs.setVisuals,
       setMap: props.utilityFuncs.setMap,
+      setTheme: props.utilityFuncs.setTheme,
       setTab: props.utilityFuncs.setTab,
       resetPanels: props.utilityFuncs.resetPanels,
       layoutTypes: LayoutTypes,

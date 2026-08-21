@@ -211,6 +211,7 @@
                 checkPoint: classroomComponentRef.sendCheckPoint,
                 setVisuals: simFunctions.setVisuals,
                 setMap: simFunctions.setMap,
+                setTheme: simFunctions.setTheme,
                 setTab: simFunctions.setTab,
                 resetPanels: simFunctions.resetPanels,
               }"
@@ -723,6 +724,10 @@ const simFunctions = {
   },
   setVisuals: function (state: boolean) {
     isVisuals.value = state
+  },
+  setTheme: function (dark: boolean) {
+    isDarkMode.value = dark
+    applyTheme(dark)
   },
   setMap: async function (state: boolean) {
     if (state && !isVisuals.value) {
@@ -1338,6 +1343,7 @@ function createRemoteManager(FlightSimModule: ExtendedMainModule) {
     'removePlot',
     'setLayout',
     'setVisuals',
+    'setTheme',
     'setMap',
     'setTab',
   ])
