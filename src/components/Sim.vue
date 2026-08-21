@@ -86,6 +86,10 @@
               :plotPause="FlightSimModule.simulation.simulation_pause"
               :plotUpdateIntervals="update_interval_ms"
               v-if="sim_module_loaded"
+              @set-data-view="simFunctions.setDataView"
+              @set-plot-view="simFunctions.setPlotView"
+              @replace-plot="simFunctions.replacePlot"
+              @remove-plot="simFunctions.removePlot"
             />
           </template>
           <template #Airflow>
@@ -197,8 +201,8 @@
               :is-dark-mode="isDarkMode"
               :aircraft-type="activeAircraftType"
               :utility-funcs="{
-                plotView: dataDisplayRef.setPlotView,
-                dataView: dataDisplayRef.setDataView,
+                plotView: simFunctions.setPlotView,
+                dataView: simFunctions.setDataView,
                 dataDisplayReset: dataDisplayRef.reset,
                 notifyUser: simFunctions.notifyUser,
                 setLayout: simFunctions.setLayout,
@@ -696,6 +700,12 @@ const simFunctions = {
   },
   setPlotView: function (item: SimulationProperties | SimulationProperties[], state: boolean) {
     dataDisplayRef.value?.setPlotView(item, state)
+  },
+  replacePlot: function (plotId: string, sourceIds: string[]) {
+    dataDisplayRef.value?.replacePlot(plotId, sourceIds)
+  },
+  removePlot: function (plotId: string) {
+    dataDisplayRef.value?.removePlot(plotId)
   },
   setLayout: function (mode: typeof layout.value) {
     maximizedPanelId.value = null
@@ -1298,6 +1308,8 @@ function createRemoteManager(FlightSimModule: ExtendedMainModule) {
     'resetPanels',
     'setDataView',
     'setPlotView',
+    'replacePlot',
+    'removePlot',
     'setLayout',
     'setVisuals',
     'setMap',

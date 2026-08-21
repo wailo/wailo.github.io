@@ -25,7 +25,7 @@
         </button>
 
         <button
-          @click="removePlot(plot.id)"
+          @click="emit('removePlotRequest', plot.id)"
           class="border border-simElementBorder bg-opacity-60 text-secondary text-xs px-0.5 py-0.5 rounded hover:bg-simInputBackground"
         >
           ✕
@@ -55,6 +55,8 @@ import type { SimulationProperties } from '../wasm/siminterface'
 
 const emit = defineEmits<{
   editPlot: [plot: { plotId: string; sourceIds: string[] }]
+  plotsChange: [plotIds: string[]]
+  removePlotRequest: [plotId: string]
 }>()
 
 // -------------------------------------------------------------------------------------------------
@@ -197,6 +199,10 @@ function addPlot(...sourceIds: string[]) {
     id: plotId,
     sourceIds: filtered,
   })
+  emit(
+    'plotsChange',
+    plotDefinitions.value.map((plot) => plot.id),
+  )
 
   setTimeout(() => {
     recreateAllPlots()
@@ -205,6 +211,10 @@ function addPlot(...sourceIds: string[]) {
 
 function removePlot(plotId: string) {
   plotDefinitions.value = plotDefinitions.value.filter((p) => p.id !== plotId)
+  emit(
+    'plotsChange',
+    plotDefinitions.value.map((plot) => plot.id),
+  )
 
   const plot = plots.get(plotId)
 
@@ -236,6 +246,10 @@ function replacePlot(plotId: string, sourceIds: string[]) {
     filtered.forEach(initBuffer)
     plotDefinitions.value.splice(index, 1, { id: nextId, sourceIds: filtered })
   }
+  emit(
+    'plotsChange',
+    plotDefinitions.value.map((plot) => plot.id),
+  )
 
   const existingPlot = plots.get(plotId)
   existingPlot?.destroy()
@@ -539,6 +553,7 @@ function reset() {
   plots.clear()
 
   plotDefinitions.value = []
+  emit('plotsChange', [])
 
   dataBuffers.clear()
 

@@ -38,41 +38,52 @@
           <button class="px-1 text-secondary" @click="closePalette">×</button>
         </div>
 
-        <div
-          v-for="item in paletteSearchResults"
-          :key="item.id"
-          class="flex min-h-7 items-center gap-1 px-1 hover:bg-simInputBackground"
-        >
-          <div class="min-w-0 flex-1">
-            <div class="truncate text-secondary">
-              {{ `${item.label} ${item.unit ? `(${item.unit})` : ''}` }}
+        <section v-for="group in paletteGroups" :key="group.name">
+          <button
+            type="button"
+            class="flex h-5 w-full items-center gap-1 bg-panelHeaderBackground px-1 text-left font-medium hover:text-panelActive"
+            @click="togglePaletteGroup(group.name)"
+          >
+            <span>{{ isPaletteGroupOpen(group.name) ? '▾' : '▸' }}</span>
+            <span class="min-w-0 flex-1 truncate">{{ group.name }}</span>
+            <span class="opacity-60">{{ group.items.length }}</span>
+          </button>
+
+          <div
+            v-for="item in isPaletteGroupOpen(group.name) ? group.items : []"
+            :key="item.id"
+            class="flex h-5 items-center gap-1 pl-3 pr-1 hover:bg-simInputBackground"
+          >
+            <div class="min-w-0 flex-1 truncate text-secondary">
+              {{ item.label }}
+              <span v-if="item.unit" class="opacity-60">({{ item.unit }})</span>
             </div>
-            <div class="truncate text-secondary opacity-60">{{ item.group }}</div>
-          </div>
-          <div class="grid w-[6.25rem] shrink-0 grid-cols-2 gap-1">
-            <wButton
-              v-if="plotComposer"
-              class="col-span-2 h-5 w-full"
-              button-label="Series"
-              :button-state="plotSelection.has(item.id.toLowerCase())"
-              :button-click="() => togglePlotSelection(item.id)"
-            />
-            <template v-else>
+            <div class="grid w-[6.25rem] shrink-0 grid-cols-2 gap-1">
               <wButton
-                class="h-5 w-full"
-                button-label="Value"
-                :button-state="visibleItems.has(item.id.toLowerCase())"
-                :button-click="() => toggleDataView(item)"
+                v-if="plotComposer"
+                class="col-span-2 h-4 w-full"
+                button-label="Series"
+                :button-state="plotSelection.has(item.id.toLowerCase())"
+                :button-click="() => togglePlotSelection(item.id)"
               />
-              <wButton
-                v-if="item.type === 'number'"
-                class="h-5 w-full"
-                button-label="Plot"
-                :button-click="() => plot(item.id)"
-              />
-            </template>
+              <template v-else>
+                <wButton
+                  class="h-4 w-full"
+                  button-label="Data"
+                  :button-state="visibleItems.has(item.id.toLowerCase())"
+                  :button-click="() => toggleDataView(item)"
+                />
+                <wButton
+                  v-if="item.type === 'number'"
+                  class="h-4 w-full"
+                  button-label="Plot"
+                  :button-state="activePlotIds.has(item.id.toLowerCase())"
+                  :button-click="() => togglePlot(item)"
+                />
+              </template>
+            </div>
           </div>
-        </div>
+        </section>
 
         <div v-if="paletteSearchResults.length === 0" class="p-3 text-center text-secondary">
           No matching signals
@@ -119,7 +130,8 @@
                 v-if="item.type === 'number'"
                 class="h-5 w-12"
                 button-label="Plot"
-                :button-click="() => plot(item.id)"
+                :button-state="activePlotIds.has(item.id.toLowerCase())"
+                :button-click="() => togglePlot(item)"
               />
               <wButton
                 class="h-5 w-6"
@@ -138,6 +150,8 @@
       :update_intervals="props.plotUpdateIntervals"
       :sources="props.simProps"
       @edit-plot="openPlotComposer"
+      @plots-change="syncActivePlots"
+      @remove-plot-request="(plotId) => emit('removePlot', plotId)"
     />
   </div>
 </template>
@@ -148,6 +162,13 @@ import Fuse from 'fuse.js'
 import { type SimulationProperties } from '../wasm/siminterface'
 import TimePlot from './TimePlot.vue'
 import wButton from './wButton.vue'
+
+const emit = defineEmits<{
+  setDataView: [item: SimulationProperties, state: boolean]
+  setPlotView: [item: SimulationProperties, state: boolean]
+  replacePlot: [plotId: string, sourceIds: string[]]
+  removePlot: [plotId: string]
+}>()
 
 // Props
 const props = defineProps({
@@ -172,6 +193,8 @@ const displayRoot = ref<HTMLElement | null>(null)
 const timePlotRef = ref<InstanceType<typeof TimePlot> | null>(null)
 const plotComposer = ref<{ plotId: string; sourceIds: string[] } | null>(null)
 const plotSelection = ref(new Set<string>())
+const collapsedPaletteGroups = ref(new Set<string>())
+const activePlotIds = ref(new Set<string>())
 
 // Sets
 const visibleItems = reactive(new Set<string>())
@@ -205,6 +228,17 @@ const paletteSearchResults = computed(() =>
     : searchResults.value,
 )
 
+const paletteGroups = computed(() => {
+  const groups = new Map<string, SimulationProperties[]>()
+  paletteSearchResults.value.forEach((item) => {
+    const name = item.group || 'Other'
+    const items = groups.get(name) || []
+    items.push(item)
+    groups.set(name, items)
+  })
+  return [...groups].map(([name, items]) => ({ name, items }))
+})
+
 const plotSelectionUnits = computed(() => [
   ...new Set(
     [...plotSelection.value]
@@ -215,6 +249,17 @@ const plotSelectionUnits = computed(() => [
 
 const isDropdownVisible = computed(() => isFocused.value)
 const totalVariablesCount = computed(() => Object.keys(props.simProps).length)
+
+const isPaletteGroupOpen = (group: string) =>
+  Boolean(searchQuery.value.trim()) || !collapsedPaletteGroups.value.has(group)
+
+const togglePaletteGroup = (group: string) => {
+  if (searchQuery.value.trim()) return
+  const next = new Set(collapsedPaletteGroups.value)
+  if (next.has(group)) next.delete(group)
+  else next.add(group)
+  collapsedPaletteGroups.value = next
+}
 
 // Functions
 function reset() {
@@ -237,7 +282,7 @@ function setDataView(item: SimulationProperties, state: boolean) {
 
 function toggleDataView(item: SimulationProperties) {
   const id = item.id.toLowerCase()
-  setDataView(item, !visibleItems.has(id))
+  emit('setDataView', item, !visibleItems.has(id))
 }
 
 function openPlotComposer(plot: { plotId: string; sourceIds: string[] }) {
@@ -257,7 +302,7 @@ function togglePlotSelection(id: string) {
 
 function applyPlotSelection() {
   if (!plotComposer.value || plotSelection.value.size === 0) return
-  timePlotRef.value?.replacePlot(plotComposer.value.plotId, [...plotSelection.value])
+  emit('replacePlot', plotComposer.value.plotId, [...plotSelection.value])
   closePalette()
 }
 
@@ -268,8 +313,21 @@ function closePalette() {
   searchQuery.value = ''
 }
 
-function plot(id: string) {
-  timePlotRef.value?.addPlot(id)
+function togglePlot(item: SimulationProperties) {
+  const id = item.id.toLowerCase()
+  emit('setPlotView', item, !activePlotIds.value.has(id))
+}
+
+function syncActivePlots(plotIds: string[]) {
+  activePlotIds.value = new Set(plotIds)
+}
+
+function replacePlot(plotId: string, sourceIds: string[]) {
+  timePlotRef.value?.replacePlot(plotId, sourceIds)
+}
+
+function removePlot(plotId: string) {
+  timePlotRef.value?.removePlot(plotId)
 }
 
 // function showAll() {
@@ -333,6 +391,8 @@ defineExpose({
   tickPlot,
   setDataView,
   setPlotView,
+  replacePlot,
+  removePlot,
 })
 </script>
 
