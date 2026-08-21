@@ -8,7 +8,7 @@ export async function main(context: ScriptContext) {
   const waitForCondition = context.waitForCondition
   // const dataView = context.dataView;
   // const plotView = context.plotView;
-  const dataDisplayReset = context.dataDisplayReset
+  const resetPanels = context.resetPanels
   const notifyUser = context.notifyUser
   // const checkPoint = context.checkPoint;
 
@@ -42,7 +42,7 @@ export async function main(context: ScriptContext) {
   }
 
   // 🔁 Setup: reset and position at 6000 ft and 230 knots
-  dataDisplayReset()
+  resetPanels()
   await repositionWithAutopilot(context, 6000, 230, 90)
   simControls.flightModel.set_autopilot_master_switch(true)
 

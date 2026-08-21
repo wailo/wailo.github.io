@@ -417,7 +417,7 @@ export async function main(context: ScriptContext) {
 
   const repositionWithAutopilot = context.repositionWithAutopilot
   const plotView = context.plotView
-  const dataDisplayReset = context.dataDisplayReset
+  const resetPanels = context.resetPanels
   const notifyUser = context.notifyUser
   const waitFor = context.waitFor
 
@@ -426,7 +426,7 @@ export async function main(context: ScriptContext) {
   const targetHeading = 0
   const measurementPeriod = 30 // seconds
 
-  dataDisplayReset()
+  resetPanels()
   simulation.reset_simulation()
   simulation.set_flight_model_b747()
   context.setLayout(context.layoutTypes.FOCUS)

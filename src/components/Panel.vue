@@ -52,8 +52,18 @@ const handleSetTab = (event: Event) => {
   if (detail?.panelId === props.panelId) setActiveTab(detail.tabName)
 }
 
-onMounted(() => window.addEventListener('sim:set-panel-tab', handleSetTab))
-onBeforeUnmount(() => window.removeEventListener('sim:set-panel-tab', handleSetTab))
+const resetActiveTab = () => {
+  activeTab.value = tabMap.value[0]?.name || null
+}
+
+onMounted(() => {
+  window.addEventListener('sim:set-panel-tab', handleSetTab)
+  window.addEventListener('sim:reset-panel-tabs', resetActiveTab)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('sim:set-panel-tab', handleSetTab)
+  window.removeEventListener('sim:reset-panel-tabs', resetActiveTab)
+})
 
 watchEffect(() => {
   tabMap.value = Object.keys(tabSlots)

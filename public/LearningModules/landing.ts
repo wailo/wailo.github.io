@@ -9,7 +9,7 @@ export async function main(context: ScriptContext) {
     waitFor,
     checkPoint,
     notifyUser,
-    dataDisplayReset,
+    resetPanels,
     plotView,
   } = context
 
@@ -17,7 +17,7 @@ export async function main(context: ScriptContext) {
 
   // 🟢 [ACTION] Reset Simulation Environment
   simulation.reset_simulation()
-  dataDisplayReset()
+  resetPanels()
   simulation.set_six_instruments_display(false)
   simulation.set_pfd_horizon_visible(false)
 

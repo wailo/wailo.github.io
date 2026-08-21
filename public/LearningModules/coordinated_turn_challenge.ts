@@ -7,12 +7,12 @@ export async function main(context: ScriptContext) {
   const waitFor = context.waitFor
   const waitForCondition = context.waitForCondition
   const plotView = context.plotView
-  const dataDisplayReset = context.dataDisplayReset
+  const resetPanels = context.resetPanels
   const notifyUser = context.notifyUser
   // const checkPoint = context.checkPoint;
   const metrics = context.metrics
 
-  dataDisplayReset()
+  resetPanels()
   simControls.simulation.reset_simulation()
 
   // 📘 Configurations for Cessna 172

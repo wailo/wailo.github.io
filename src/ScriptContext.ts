@@ -32,7 +32,17 @@ export interface ScriptContext {
   layoutTypes: typeof LayoutTypes
   setVisuals: (state: boolean) => void
   setMap: (state: boolean) => void
-  setTab: (panelId: string, tabName: string) => void
+  setTab: {
+    (panelId: 'cockpit', tabName: 'Cockpit'): void
+    (panelId: 'realtime', tabName: 'Real-Time-Data' | 'Airflow'): void
+    (panelId: 'simulation', tabName: 'Simulation'): void
+    (panelId: 'learning-modules', tabName: 'Learning-Modules'): void
+    (panelId: 'autopilot', tabName: 'Autopilot'): void
+    (panelId: 'flight-model', tabName: 'Flight-Model' | 'Joystick'): void
+    (panelId: 'classroom', tabName: 'Classroom'): void
+    (panelId: 'prompt', tabName: 'Prompt' | 'whiteboard'): void
+  }
+  resetPanels: () => void
   checkPoint: (content: string) => void
   metrics: any[]
 }
@@ -58,6 +68,7 @@ export function createScriptContext(deps: ScriptContext): ScriptContext {
     setVisuals: deps.setVisuals,
     setMap: deps.setMap,
     setTab: deps.setTab,
+    resetPanels: deps.resetPanels,
     metrics: deps.metrics,
   }
 }

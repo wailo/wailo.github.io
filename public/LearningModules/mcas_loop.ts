@@ -7,12 +7,12 @@ export async function main(context: ScriptContext) {
   const repositionWithAutopilot = context.repositionWithAutopilot
   const waitFor = context.waitFor
   const notifyUser = context.notifyUser
-  const dataDisplayReset = context.dataDisplayReset
+  const resetPanels = context.resetPanels
   const waitForCondition = context.waitForCondition
 
   // Reset simulation to ensure clean state for flight.
   simControls.simulation.reset_simulation()
-  dataDisplayReset()
+  resetPanels()
   simControls.simulation.set_six_instruments_display(false)
   simControls.simulation.set_pfd_horizon_visible(false)
   context.setVisuals(true)

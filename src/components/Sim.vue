@@ -203,9 +203,10 @@
                 notifyUser: simFunctions.notifyUser,
                 setLayout: simFunctions.setLayout,
                 checkPoint: classroomComponentRef.sendCheckPoint,
-            setVisuals: simFunctions.setVisuals,
-            setMap: simFunctions.setMap,
-            setTab: simFunctions.setTab,
+                setVisuals: simFunctions.setVisuals,
+                setMap: simFunctions.setMap,
+                setTab: simFunctions.setTab,
+                resetPanels: simFunctions.resetPanels,
               }"
               @start="
                 (_code: string) => {
@@ -668,7 +669,7 @@ const simFunctions = {
     title: string,
     message?: string,
     time: number = 0,
-    options?: { append?: boolean },
+    options?: { append?: boolean; replace?: boolean },
   ) {
     await markdownRef.value?.write(title, message, time, options)
   },
@@ -678,14 +679,22 @@ const simFunctions = {
     // Called when user invoke reset from a button, still can't tell if keyboard is pressed.
     editorComponentRef.value?.reset()
     classroomComponentRef.value?.reset()
+    this.resetPanels()
+  },
+  resetPanels: function () {
     dataDisplayRef.value?.reset()
     markdownRef.value?.reset()
     openLayersMapRef.value?.reset()
-    this.setVisuals(false)
-    this.setMap(false)
-    this.setLayout(LayoutTypes.INSTRUCTOR)
+    isVisuals.value = false
+    maximizedPanelId.value = null
+    layout.value = LayoutTypes.INSTRUCTOR
+    resizableLayoutRef.value?.reset(LayoutTypes.INSTRUCTOR)
+    window.dispatchEvent(new Event('sim:reset-panel-tabs'))
   },
-  setPlotView: function (item: SimulationProperties, state: boolean) {
+  setDataView: function (item: SimulationProperties, state: boolean) {
+    dataDisplayRef.value?.setDataView(item, state)
+  },
+  setPlotView: function (item: SimulationProperties | SimulationProperties[], state: boolean) {
     dataDisplayRef.value?.setPlotView(item, state)
   },
   setLayout: function (mode: typeof layout.value) {
@@ -1286,6 +1295,8 @@ function createRemoteManager(FlightSimModule: ExtendedMainModule) {
   remoteManager.wrapObject('simFunctions', simFunctions, [
     'notifyUser',
     'resetComponents',
+    'resetPanels',
+    'setDataView',
     'setPlotView',
     'setLayout',
     'setVisuals',

@@ -8,7 +8,7 @@ export async function main(context: ScriptContext) {
   // const waitForCondition = context.waitForCondition;
   const dataView = context.dataView
   const plotView = context.plotView
-  const dataDisplayReset = context.dataDisplayReset
+  const resetPanels = context.resetPanels
   const notifyUser = context.notifyUser
   // const checkPoint = context.checkPoint;
 
@@ -47,7 +47,7 @@ export async function main(context: ScriptContext) {
   )
   await waitFor(4000)
 
-  dataDisplayReset()
+  resetPanels()
 
   simControls.simulation.set_flight_model_b747()
   const flightModel = simControls.flightModel as b747
