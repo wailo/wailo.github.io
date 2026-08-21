@@ -5,534 +5,548 @@
     ref="fullscreenContainer"
     class="container relative max-w-full h-screen gap-1 p-1 bg-simBackground"
     :class="`layout-${layout}`"
-    :style="layoutGridStyle"
   >
-    <!-- Panel 1 -->
-    <Panel
-      panel-id="cockpit"
-      :status="simulationStatus"
-      :flash="FlightSimModule?.simulation.simulation_pause || FlightSimModule?.flightModel.damaged"
-      :active="FlightSimModule?.simulation.simulation_pause || FlightSimModule?.flightModel.damaged"
-      class="panel-cockpit"
-      data-layout="focus instructor pilot classroom"
+    <ResizableSimLayout
+      ref="resizableLayoutRef"
+      :layout="layout"
+      :maximized-panel="maximizedPanelId"
     >
-      <template #Cockpit>
-        <div class="relative w-full h-full overflow-hidden">
-          <!-- Background map -->
-          <OpenLayersMap
-            v-if="sim_module_loaded && isVisuals"
-            ref="openLayersMapRef"
-            :lat="FlightSimModule.flightModel.latitude"
-            :lon="FlightSimModule.flightModel.longitude"
-            :alt-ft="FlightSimModule.flightModel.altitude_ft"
-            :heading-deg="FlightSimModule.flightModel.yaw_deg"
-            :pitch-deg="FlightSimModule.flightModel.pitch_deg"
-            :bank-deg="FlightSimModule.flightModel.bank_deg"
-            @set-map="simFunctions.setMap"
-            class="absolute inset-0 w-full h-full z-0"
-          />
+      <template #cockpit>
+        <!-- Panel 1 -->
+        <Panel
+          panel-id="cockpit"
+          @header-dblclick="togglePanelMaximize"
+          :status="simulationStatus"
+          :flash="
+            FlightSimModule?.simulation.simulation_pause || FlightSimModule?.flightModel.damaged
+          "
+          :active="
+            FlightSimModule?.simulation.simulation_pause || FlightSimModule?.flightModel.damaged
+          "
+          class="panel-cockpit"
+          data-layout="focus instructor pilot classroom"
+        >
+          <template #Cockpit>
+            <div class="relative w-full h-full overflow-hidden">
+              <!-- Background map -->
+              <OpenLayersMap
+                v-if="sim_module_loaded && isVisuals"
+                ref="openLayersMapRef"
+                :lat="FlightSimModule.flightModel.latitude"
+                :lon="FlightSimModule.flightModel.longitude"
+                :alt-ft="FlightSimModule.flightModel.altitude_ft"
+                :heading-deg="FlightSimModule.flightModel.yaw_deg"
+                :pitch-deg="FlightSimModule.flightModel.pitch_deg"
+                :bank-deg="FlightSimModule.flightModel.bank_deg"
+                @set-map="simFunctions.setMap"
+                class="absolute inset-0 w-full h-full z-0"
+              />
 
-          <!-- Cockpit overlay -->
-          <div
-            id="fullscreen-container"
-            class="absolute inset-0 z-10 flex w-full h-full bg-transparent pointer-events-none"
-          >
-            <div
-              id="canvas-container"
-              :class="['h-full', openLayersMapRef?.showNavMap ? 'w-[65%]' : 'w-full']"
-            >
-              <canvas
-                id="canvas"
-                class="emscripten bg-transparent h-full w-full"
-                @contextmenu.prevent
-                tabindex="-1"
-              ></canvas>
+              <!-- Cockpit overlay -->
+              <div
+                id="fullscreen-container"
+                class="absolute inset-0 z-10 flex w-full h-full bg-transparent pointer-events-none"
+              >
+                <div
+                  id="canvas-container"
+                  :class="['h-full', openLayersMapRef?.showNavMap ? 'w-[65%]' : 'w-full']"
+                >
+                  <canvas
+                    id="canvas"
+                    class="emscripten bg-transparent h-full w-full"
+                    @contextmenu.prevent
+                    tabindex="-1"
+                  ></canvas>
+                </div>
+              </div>
+
+              <CockpitControls
+                v-if="sim_module_loaded"
+                :pfd-group="cockpitPfdGroup"
+                :six-group="cockpitSixGroup"
+                :utility-controls="cockpitUtilityControls"
+              />
             </div>
-          </div>
-
-          <CockpitControls
-            v-if="sim_module_loaded"
-            :pfd-group="cockpitPfdGroup"
-            :six-group="cockpitSixGroup"
-            :utility-controls="cockpitUtilityControls"
-          />
-        </div>
-      </template>
-    </Panel>
-    <!-- Panel 2 -->
-    <Panel
-      panel-id="realtime"
-      :status="`${1000 / update_interval_ms} HZ`"
-      class="panel-realtimedata gap-1"
-      data-layout="focus instructor pilot"
-    >
-      <template #Real-Time-Data display="Real Time Data">
-        <SimDataDisplay
-          ref="dataDisplayRef"
-          :simProps="{ ...simulationControlsProps, ...flightModelProps }"
-          :plotPause="FlightSimModule.simulation.simulation_pause"
-          :plotUpdateIntervals="update_interval_ms"
-          v-if="sim_module_loaded"
-        />
-      </template>
-      <template #Airflow>
-        <Airflow
-          v-if="sim_module_loaded"
-          class="h-full w-full"
-          :sim-props="{ ...simulationControlsProps, ...flightModelProps }"
-          :lift-coefficient="FlightSimModule.flightModel.cl"
-          :max-angle-of-attack="FlightSimModule.flightModel.max_aoa_deg"
-          :stalling="FlightSimModule.flightModel.stalling"
-        />
-      </template>
-    </Panel>
-    <!-- Panel 3 -->
-    <Panel
-      panel-id="simulation"
-      v-if="sim_module_loaded"
-      :status="
-        FlightSimModule.simulation.simulation_pause
-          ? `PAUSED`
-          : FlightSimModule.simulation.simulation_speed == 1
-            ? `RUNNING`
-            : `${FlightSimModule.simulation.simulation_speed}x`
-      "
-      :active="
-        FlightSimModule.simulation.simulation_pause ||
-        FlightSimModule.simulation.simulation_speed != 1
-      "
-      :flash="FlightSimModule.simulation.simulation_pause"
-      class="panel-simulationcontrols"
-      data-layout="focus"
-    >
-      <template #Simulation>
-        <div v-if="sim_module_loaded" class="w-full h-full grid grid-cols-3 gap-1">
-          <template
-            v-for="input in Object.values(simulationControlsProps)
-              .flatMap((arr) => arr)
-              .filter((v: SimulationProperties) => v.group === 'simulation' && v.setterFunc)
-              .sort((a: SimulationProperties) => (['boolean', 'void'].includes(a.type) ? -1 : 1))"
-            :key="input.id"
-          >
-            <!-- Boolean & Void -->
-            <wButton
-              v-if="['boolean', 'void'].includes(input.type)"
-              :buttonLabel="input.label"
-              :buttonClick="() => input.setterFunc?.()"
-              :button-state="input?.inputValue as boolean"
-              class="border border-simElementBorder"
-            />
-
-            <!-- Everything else -->
-            <ButtonSwitch
-              v-if="['string', 'number'].includes(input.type)"
-              :buttonLabel="input.label"
-              :buttonClick="() => input.setterFunc?.()"
-              :textInput="input?.inputValue"
-              :inputChange="input.setterFunc"
-              :button-state="input.type === 'boolean' && input?.inputValue == 1"
-              :inputMin="input.min"
-              :inputMax="input.max"
-              :inputStep="input.step"
-              class="border border-simElementBorder"
-            />
-            <select
-              v-else-if="input.type === 'enum' && input.enumValues"
-              class="border border-simElementBorder bg-simInputBackground text-secondary"
-              :value="input.inputValue"
-              @change="
-                (e) => {
-                  const value = (e.target as HTMLSelectElement).value
-                  const selected = input.enumValues?.find((v) => String(v.enumValue) === value)
-                  input.setterFunc?.(selected?.enumValue)
-                }
-              "
-            >
-              <option
-                v-for="value in input.enumValues"
-                :key="value.enumName"
-                :value="String(value.enumValue)"
-              >
-                {{ value.enumName }}
-              </option>
-            </select>
           </template>
-        </div>
+        </Panel>
       </template>
-    </Panel>
-
-    <!-- Panel 2 -->
-    <Panel
-      panel-id="learning-modules"
-      class="panel-learningmodules"
-      data-layout="instructor classroom"
-      :status="scriptComponentStatus"
-      :active="scriptComponentStatus != 'IDLE'"
-    >
-      <template #Learning-Modules>
-        <Editor
-          v-if="sim_module_loaded && dataDisplayRef && classroomComponentRef"
-          :context-object="FlightSimModule"
-          :simProps="flightModelProps"
-          :is-dark-mode="isDarkMode"
-          :aircraft-type="activeAircraftType"
-          :utility-funcs="{
-            plotView: dataDisplayRef.setPlotView,
-            dataView: dataDisplayRef.setDataView,
-            dataDisplayReset: dataDisplayRef.reset,
-            notifyUser: simFunctions.notifyUser,
-            setLayout: simFunctions.setLayout,
-            checkPoint: classroomComponentRef.sendCheckPoint,
-            setVisuals: simFunctions.setVisuals,
-            setMap: simFunctions.setMap,
-            setTab: simFunctions.setTab,
-          }"
-          @start="
-            (_code: string) => {
-              scriptComponentStatus = 'IN-PROGRESS'
-            }
-          "
-          @reset="scriptComponentStatus = 'IDLE'"
-          @completed="
-            (title: string) =>
-              classroomComponentRef?.reportExerciseResult('completed', title, title)
-          "
-          @error="
-            (error: any, title?: string) => {
-              simFunctions.notifyUser('Editor Error', error, 5000)
-              scriptComponentStatus = 'ERROR'
-              classroomComponentRef?.reportExerciseResult('error', String(error), title)
-            }
-          "
-          class="w-full h-full"
-          ref="editorComponentRef"
-        />
-      </template>
-    </Panel>
-    <!-- Panel 5 -->
-    <Panel
-      panel-id="autopilot"
-      v-if="sim_module_loaded"
-      :status="FlightSimModule.flightModel.autopilot_master_switch ? 'Engaged' : 'Disengaged'"
-      :active="FlightSimModule.flightModel.autopilot_master_switch"
-      class="panel-autopilot"
-      data-layout="instructor pilot classroom"
-    >
-      <template #Autopilot>
-        <div class="w-full h-full">
-          <div class="col-span-1 grid grid-cols-4 gap-1">
-            <button-switch
+      <template #realtime>
+        <!-- Panel 2 -->
+        <Panel
+          panel-id="realtime"
+          @header-dblclick="togglePanelMaximize"
+          :status="`${1000 / update_interval_ms} HZ`"
+          class="panel-realtimedata gap-1"
+          data-layout="focus instructor pilot"
+        >
+          <template #Real-Time-Data display="Real Time Data">
+            <SimDataDisplay
+              ref="dataDisplayRef"
+              :simProps="{ ...simulationControlsProps, ...flightModelProps }"
+              :plotPause="FlightSimModule.simulation.simulation_pause"
+              :plotUpdateIntervals="update_interval_ms"
               v-if="sim_module_loaded"
-              v-for="(input, i) in autopilotControls"
-              :key="i"
-              class="w-full"
-              :buttonClick="(_e: MouseEvent) => input.stateCommand.setterFunc?.()"
-              :buttonState="input.stateCommand?.inputValue as boolean"
-              :buttonLabel="input.label.replace('Hold', '').replace('Angle', '').trim()"
-              :textInput="input.targetCommand?.inputValue"
-              :inputChange="input.targetCommand?.setterFunc"
-              :inputMin="input.targetCommand?.min"
-              :inputMax="input.targetCommand?.max"
-              :inputStep="input.targetCommand?.step"
-            ></button-switch>
-          </div>
-        </div>
-      </template>
-    </Panel>
-    <!-- Panel 6 -->
-    <Panel
-      panel-id="flight-model"
-      :status="FlightSimModule.flightModel.name"
-      v-if="sim_module_loaded"
-      class="panel-flightmodel"
-      data-layout="instructor pilot"
-    >
-      <template #Flight-Model>
-        <div class="w-full min-w-[24rem] self-start">
-          <div
-            class="sticky top-0 z-20 flex h-6 items-center border-b border-simElementBorder bg-panelHeaderBackground"
-          >
-            <span aria-hidden="true" class="px-1 text-secondary">/</span>
-            <input
-              v-model="flightModelFilter"
-              type="search"
-              placeholder="Filter controls"
-              aria-label="Filter flight model controls"
-              class="min-w-0 flex-1 bg-transparent px-1 text-secondary outline-none placeholder:text-secondary/60"
             />
-            <button
-              v-if="flightModelFilter"
-              type="button"
-              class="h-full border-l border-simElementBorder px-2 text-secondary hover:bg-simInputBackground"
-              title="Clear filter"
-              aria-label="Clear filter"
-              @click="flightModelFilter = ''"
-            >
-              ×
-            </button>
-            <button
-              type="button"
-              class="h-full border-l border-simElementBorder px-2 text-secondary hover:bg-simInputBackground"
-              title="Collapse all categories"
-              aria-label="Collapse all categories"
-              @click="collapseAllFlightModelGroups"
-            >
-              −
-            </button>
-            <button
-              type="button"
-              class="h-full border-l border-simElementBorder px-2 text-secondary hover:bg-simInputBackground"
-              title="Expand all categories"
-              aria-label="Expand all categories"
-              @click="expandAllFlightModelGroups"
-            >
-              +
-            </button>
-          </div>
-
-          <template
-            v-if="sim_module_loaded"
-            v-for="[groupName, simGroup] in filteredGroupedSimProps"
-            :key="groupName"
-          >
-            <button
-              type="button"
-              class="sticky top-6 z-10 grid h-5 w-full grid-cols-[1rem_minmax(0,1fr)_3rem] items-center border-b border-simElementBorder bg-panelHeaderBackground px-1 text-left font-bold text-secondary"
-              :aria-expanded="
-                flightModelFilter !== '' || !collapsedFlightModelGroups.has(groupName)
-              "
-              @click="toggleFlightModelGroup(groupName)"
-            >
-              <span aria-hidden="true">{{
-                flightModelFilter || !collapsedFlightModelGroups.has(groupName) ? '▼' : '▶'
-              }}</span>
-              <span class="truncate">{{ groupName.toUpperCase() }}</span>
-              <span class="text-right font-normal">{{ simGroup.length }}</span>
-            </button>
-
-            <div
-              v-for="sim_prop in flightModelFilter || !collapsedFlightModelGroups.has(groupName)
-                ? simGroup
-                : []"
-              :key="sim_prop.id"
-              class="grid min-h-6 grid-cols-[minmax(10rem,1fr)_minmax(9rem,12rem)] items-stretch py-px hover:bg-simInputBackground/40"
-            >
-              <span
-                class="flex min-w-0 items-center gap-1 self-center overflow-hidden px-1"
-                :title="sim_prop.label"
+          </template>
+          <template #Airflow>
+            <Airflow
+              v-if="sim_module_loaded"
+              class="h-full w-full"
+              :sim-props="{ ...simulationControlsProps, ...flightModelProps }"
+              :lift-coefficient="FlightSimModule.flightModel.cl"
+              :max-angle-of-attack="FlightSimModule.flightModel.max_aoa_deg"
+              :stalling="FlightSimModule.flightModel.stalling"
+            />
+          </template>
+        </Panel>
+      </template>
+      <template #simulation>
+        <!-- Panel 3 -->
+        <Panel
+          panel-id="simulation"
+          @header-dblclick="togglePanelMaximize"
+          v-if="sim_module_loaded"
+          :status="
+            FlightSimModule.simulation.simulation_pause
+              ? `PAUSED`
+              : FlightSimModule.simulation.simulation_speed == 1
+                ? `RUNNING`
+                : `${FlightSimModule.simulation.simulation_speed}x`
+          "
+          :active="
+            FlightSimModule.simulation.simulation_pause ||
+            FlightSimModule.simulation.simulation_speed != 1
+          "
+          :flash="FlightSimModule.simulation.simulation_pause"
+          class="panel-simulationcontrols"
+          data-layout="focus"
+        >
+          <template #Simulation>
+            <div v-if="sim_module_loaded" class="w-full h-full grid grid-cols-3 gap-1">
+              <template
+                v-for="input in Object.values(simulationControlsProps)
+                  .flatMap((arr) => arr)
+                  .filter((v: SimulationProperties) => v.group === 'simulation' && v.setterFunc)
+                  .sort((a: SimulationProperties) =>
+                    ['boolean', 'void'].includes(a.type) ? -1 : 1,
+                  )"
+                :key="input.id"
               >
-                <span class="shrink truncate">
-                  {{ sim_prop.label }}
-                  <span v-if="sim_prop.unit" class="text-secondary">
-                    ({{ sim_prop.unit.toLowerCase() === 'x' ? '×' : sim_prop.unit }})
-                  </span>
-                </span>
-                <span
-                  aria-hidden="true"
-                  class="min-w-3 flex-1 border-b border-dotted border-simElementBorder opacity-40"
-                ></span>
-              </span>
-              <label
-                v-if="sim_prop.type === 'number'"
-                class="flightmodel-value flex min-w-0 items-stretch border border-simElementBorder bg-simInputBackground"
-              >
-                <wInput
-                  type="number"
-                  class="min-w-0 w-full !border-0 !bg-transparent"
-                  :textInput="sim_prop.inputValue as number"
-                  :inputChange="sim_prop.setterFunc"
-                  :inputMin="sim_prop.min"
-                  :inputMax="sim_prop.max"
-                  :inputStep="sim_prop.step"
-                />
-              </label>
-              <div v-else-if="sim_prop.type === 'boolean'" class="min-h-0">
+                <!-- Boolean & Void -->
                 <wButton
-                  class="h-full w-full"
-                  :buttonLabel="sim_prop.inputValue ? 'On' : 'Off'"
-                  :buttonClick="() => sim_prop.setterFunc?.()"
-                  :buttonState="sim_prop.inputValue as boolean"
+                  v-if="['boolean', 'void'].includes(input.type)"
+                  :buttonLabel="input.label"
+                  :buttonClick="() => input.setterFunc?.()"
+                  :button-state="input?.inputValue as boolean"
+                  class="border border-simElementBorder"
                 />
-              </div>
-              <div v-else-if="sim_prop.type === 'void'" class="min-h-0">
-                <wButton
-                  class="h-full w-full"
-                  buttonLabel="▶"
-                  :buttonClick="() => sim_prop.setterFunc?.()"
+
+                <!-- Everything else -->
+                <ButtonSwitch
+                  v-if="['string', 'number'].includes(input.type)"
+                  :buttonLabel="input.label"
+                  :buttonClick="() => input.setterFunc?.()"
+                  :textInput="input?.inputValue"
+                  :inputChange="input.setterFunc"
+                  :button-state="input.type === 'boolean' && input?.inputValue == 1"
+                  :inputMin="input.min"
+                  :inputMax="input.max"
+                  :inputStep="input.step"
+                  class="border border-simElementBorder"
                 />
-              </div>
-              <!-- Enum Input -->
-              <label
-                v-else-if="sim_prop.type === 'enum' && sim_prop.enumValues"
-                class="flightmodel-value flex min-w-0 items-stretch border border-simElementBorder bg-simInputBackground"
-              >
                 <select
-                  class="h-full min-w-0 flex-1 bg-transparent px-1 text-secondary"
-                  :value="sim_prop.inputValue"
+                  v-else-if="input.type === 'enum' && input.enumValues"
+                  class="border border-simElementBorder bg-simInputBackground text-secondary"
+                  :value="input.inputValue"
                   @change="
                     (e) => {
                       const value = (e.target as HTMLSelectElement).value
-                      const selected = sim_prop.enumValues?.find(
-                        (v) => String(v.enumValue) === value,
-                      )
-                      sim_prop.setterFunc?.(selected?.enumValue)
+                      const selected = input.enumValues?.find((v) => String(v.enumValue) === value)
+                      input.setterFunc?.(selected?.enumValue)
                     }
                   "
                 >
                   <option
-                    v-for="value in sim_prop.enumValues"
+                    v-for="value in input.enumValues"
                     :key="value.enumName"
                     :value="String(value.enumValue)"
                   >
                     {{ value.enumName }}
                   </option>
                 </select>
-              </label>
+              </template>
+            </div>
+          </template>
+        </Panel>
+      </template>
+      <template #learningmodules>
+        <!-- Panel 2 -->
+        <Panel
+          panel-id="learning-modules"
+          @header-dblclick="togglePanelMaximize"
+          class="panel-learningmodules"
+          data-layout="instructor classroom"
+          :status="scriptComponentStatus"
+          :active="scriptComponentStatus != 'IDLE'"
+        >
+          <template #Learning-Modules>
+            <Editor
+              v-if="sim_module_loaded && dataDisplayRef && classroomComponentRef"
+              :context-object="FlightSimModule"
+              :simProps="flightModelProps"
+              :is-dark-mode="isDarkMode"
+              :aircraft-type="activeAircraftType"
+              :utility-funcs="{
+                plotView: dataDisplayRef.setPlotView,
+                dataView: dataDisplayRef.setDataView,
+                dataDisplayReset: dataDisplayRef.reset,
+                notifyUser: simFunctions.notifyUser,
+                setLayout: simFunctions.setLayout,
+                checkPoint: classroomComponentRef.sendCheckPoint,
+            setVisuals: simFunctions.setVisuals,
+            setMap: simFunctions.setMap,
+            setTab: simFunctions.setTab,
+              }"
+              @start="
+                (_code: string) => {
+                  scriptComponentStatus = 'IN-PROGRESS'
+                }
+              "
+              @reset="scriptComponentStatus = 'IDLE'"
+              @completed="
+                (title: string) =>
+                  classroomComponentRef?.reportExerciseResult('completed', title, title)
+              "
+              @error="
+                (error: any, title?: string) => {
+                  simFunctions.notifyUser('Editor Error', error, 5000)
+                  scriptComponentStatus = 'ERROR'
+                  classroomComponentRef?.reportExerciseResult('error', String(error), title)
+                }
+              "
+              class="w-full h-full"
+              ref="editorComponentRef"
+            />
+          </template>
+        </Panel>
+      </template>
+      <template #autopilot>
+        <!-- Panel 5 -->
+        <Panel
+          panel-id="autopilot"
+          @header-dblclick="togglePanelMaximize"
+          v-if="sim_module_loaded"
+          :status="FlightSimModule.flightModel.autopilot_master_switch ? 'Engaged' : 'Disengaged'"
+          :active="FlightSimModule.flightModel.autopilot_master_switch"
+          class="panel-autopilot"
+          data-layout="instructor pilot classroom"
+        >
+          <template #Autopilot>
+            <div class="w-full h-full">
+              <div class="col-span-1 grid grid-cols-4 gap-1">
+                <button-switch
+                  v-if="sim_module_loaded"
+                  v-for="(input, i) in autopilotControls"
+                  :key="i"
+                  class="w-full"
+                  :buttonClick="(_e: MouseEvent) => input.stateCommand.setterFunc?.()"
+                  :buttonState="input.stateCommand?.inputValue as boolean"
+                  :buttonLabel="input.label.replace('Hold', '').replace('Angle', '').trim()"
+                  :textInput="input.targetCommand?.inputValue"
+                  :inputChange="input.targetCommand?.setterFunc"
+                  :inputMin="input.targetCommand?.min"
+                  :inputMax="input.targetCommand?.max"
+                  :inputStep="input.targetCommand?.step"
+                ></button-switch>
+              </div>
+            </div>
+          </template>
+        </Panel>
+      </template>
+      <template #flightmodel>
+        <!-- Panel 6 -->
+        <Panel
+          panel-id="flight-model"
+          @header-dblclick="togglePanelMaximize"
+          :status="FlightSimModule.flightModel.name"
+          v-if="sim_module_loaded"
+          class="panel-flightmodel"
+          data-layout="instructor pilot"
+        >
+          <template #Flight-Model>
+            <div class="w-full min-w-[24rem] self-start">
+              <div
+                class="sticky top-0 z-20 flex h-6 items-center border-b border-simElementBorder bg-panelHeaderBackground"
+              >
+                <span aria-hidden="true" class="px-1 text-secondary">/</span>
+                <input
+                  v-model="flightModelFilter"
+                  type="search"
+                  placeholder="Filter controls"
+                  aria-label="Filter flight model controls"
+                  class="min-w-0 flex-1 bg-transparent px-1 text-secondary outline-none placeholder:text-secondary/60"
+                />
+                <button
+                  v-if="flightModelFilter"
+                  type="button"
+                  class="h-full border-l border-simElementBorder px-2 text-secondary hover:bg-simInputBackground"
+                  title="Clear filter"
+                  aria-label="Clear filter"
+                  @click="flightModelFilter = ''"
+                >
+                  ×
+                </button>
+                <button
+                  type="button"
+                  class="h-full border-l border-simElementBorder px-2 text-secondary hover:bg-simInputBackground"
+                  title="Collapse all categories"
+                  aria-label="Collapse all categories"
+                  @click="collapseAllFlightModelGroups"
+                >
+                  −
+                </button>
+                <button
+                  type="button"
+                  class="h-full border-l border-simElementBorder px-2 text-secondary hover:bg-simInputBackground"
+                  title="Expand all categories"
+                  aria-label="Expand all categories"
+                  @click="expandAllFlightModelGroups"
+                >
+                  +
+                </button>
+              </div>
+
+              <template
+                v-if="sim_module_loaded"
+                v-for="[groupName, simGroup] in filteredGroupedSimProps"
+                :key="groupName"
+              >
+                <button
+                  type="button"
+                  class="sticky top-6 z-10 grid h-5 w-full grid-cols-[1rem_minmax(0,1fr)_3rem] items-center border-b border-simElementBorder bg-panelHeaderBackground px-1 text-left font-bold text-secondary"
+                  :aria-expanded="
+                    flightModelFilter !== '' || !collapsedFlightModelGroups.has(groupName)
+                  "
+                  @click="toggleFlightModelGroup(groupName)"
+                >
+                  <span aria-hidden="true">{{
+                    flightModelFilter || !collapsedFlightModelGroups.has(groupName) ? '▼' : '▶'
+                  }}</span>
+                  <span class="truncate">{{ groupName.toUpperCase() }}</span>
+                  <span class="text-right font-normal">{{ simGroup.length }}</span>
+                </button>
+
+                <div
+                  v-for="sim_prop in flightModelFilter || !collapsedFlightModelGroups.has(groupName)
+                    ? simGroup
+                    : []"
+                  :key="sim_prop.id"
+                  class="grid min-h-6 grid-cols-[minmax(10rem,1fr)_minmax(9rem,12rem)] items-stretch py-px hover:bg-simInputBackground/40"
+                >
+                  <span
+                    class="flex min-w-0 items-center gap-1 self-center overflow-hidden px-1"
+                    :title="sim_prop.label"
+                  >
+                    <span class="shrink truncate">
+                      {{ sim_prop.label }}
+                      <span v-if="sim_prop.unit" class="text-secondary">
+                        ({{ sim_prop.unit.toLowerCase() === 'x' ? '×' : sim_prop.unit }})
+                      </span>
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      class="min-w-3 flex-1 border-b border-dotted border-simElementBorder opacity-40"
+                    ></span>
+                  </span>
+                  <label
+                    v-if="sim_prop.type === 'number'"
+                    class="flightmodel-value flex min-w-0 items-stretch border border-simElementBorder bg-simInputBackground"
+                  >
+                    <wInput
+                      type="number"
+                      class="min-w-0 w-full !border-0 !bg-transparent"
+                      :textInput="sim_prop.inputValue as number"
+                      :inputChange="sim_prop.setterFunc"
+                      :inputMin="sim_prop.min"
+                      :inputMax="sim_prop.max"
+                      :inputStep="sim_prop.step"
+                    />
+                  </label>
+                  <div v-else-if="sim_prop.type === 'boolean'" class="min-h-0">
+                    <wButton
+                      class="h-full w-full"
+                      :buttonLabel="sim_prop.inputValue ? 'On' : 'Off'"
+                      :buttonClick="() => sim_prop.setterFunc?.()"
+                      :buttonState="sim_prop.inputValue as boolean"
+                    />
+                  </div>
+                  <div v-else-if="sim_prop.type === 'void'" class="min-h-0">
+                    <wButton
+                      class="h-full w-full"
+                      buttonLabel="▶"
+                      :buttonClick="() => sim_prop.setterFunc?.()"
+                    />
+                  </div>
+                  <!-- Enum Input -->
+                  <label
+                    v-else-if="sim_prop.type === 'enum' && sim_prop.enumValues"
+                    class="flightmodel-value flex min-w-0 items-stretch border border-simElementBorder bg-simInputBackground"
+                  >
+                    <select
+                      class="h-full min-w-0 flex-1 bg-transparent px-1 text-secondary"
+                      :value="sim_prop.inputValue"
+                      @change="
+                        (e) => {
+                          const value = (e.target as HTMLSelectElement).value
+                          const selected = sim_prop.enumValues?.find(
+                            (v) => String(v.enumValue) === value,
+                          )
+                          sim_prop.setterFunc?.(selected?.enumValue)
+                        }
+                      "
+                    >
+                      <option
+                        v-for="value in sim_prop.enumValues"
+                        :key="value.enumName"
+                        :value="String(value.enumValue)"
+                      >
+                        {{ value.enumName }}
+                      </option>
+                    </select>
+                  </label>
+                </div>
+              </template>
+
+              <div
+                v-if="flightModelFilter && filteredGroupedSimProps.length === 0"
+                class="border-b border-simElementBorder p-3 text-center text-secondary"
+              >
+                No matching controls
+              </div>
             </div>
           </template>
 
-          <div
-            v-if="flightModelFilter && filteredGroupedSimProps.length === 0"
-            class="border-b border-simElementBorder p-3 text-center text-secondary"
-          >
-            No matching controls
-          </div>
-        </div>
+          <template #Joystick>
+            <Joystick
+              v-if="FlightSimModule"
+              :external-inputs="computedJoystickInputs"
+              :flap-options="computedJoystickOptions.flaps"
+              :gear-options="computedJoystickOptions.gear"
+              @input="
+                (val) => {
+                  FlightSimModule.flightModel.set_aileron_position(val.aileron)
+                  FlightSimModule.flightModel.set_elevator_position(val.elevator)
+                  FlightSimModule.flightModel.set_rudder_position(val.rudder)
+                  FlightSimModule.flightModel.set_engine_throttle_position(val.throttle)
+                  if (val.mixture !== undefined) {
+                    ;(FlightSimModule.flightModel as c172).set_engine_mixture_position(val.mixture)
+                  }
+                  if (val.flaps !== FlightSimModule.flightModel.flaps_selector_position) {
+                    ;(FlightSimModule.flightModel as any).set_flaps_selector_position(val.flaps)
+                  }
+                  if (val.gear !== FlightSimModule.flightModel.landing_gear_selector_position) {
+                    ;(FlightSimModule.flightModel as any).set_landing_gear_selector_position(
+                      val.gear,
+                    )
+                  }
+                  FlightSimModule.flightModel.set_aileron_trim_position(val.aileronTrim)
+                  FlightSimModule.flightModel.set_elevator_trim_position(val.elevatorTrim)
+                  FlightSimModule.flightModel.set_rudder_trim_position(val.rudderTrim)
+                }
+              "
+              class="w-full h-full p-1"
+            />
+          </template>
+        </Panel>
       </template>
-
-      <template #Joystick>
-        <Joystick
-          v-if="FlightSimModule"
-          :external-inputs="computedJoystickInputs"
-          :flap-options="computedJoystickOptions.flaps"
-          :gear-options="computedJoystickOptions.gear"
-          @input="
-            (val) => {
-              FlightSimModule.flightModel.set_aileron_position(val.aileron)
-              FlightSimModule.flightModel.set_elevator_position(val.elevator)
-              FlightSimModule.flightModel.set_rudder_position(val.rudder)
-              FlightSimModule.flightModel.set_engine_throttle_position(val.throttle)
-              if (val.mixture !== undefined) {
-                ;(FlightSimModule.flightModel as c172).set_engine_mixture_position(val.mixture)
-              }
-              if (val.flaps !== FlightSimModule.flightModel.flaps_selector_position) {
-                ;(FlightSimModule.flightModel as any).set_flaps_selector_position(val.flaps)
-              }
-              if (val.gear !== FlightSimModule.flightModel.landing_gear_selector_position) {
-                ;(FlightSimModule.flightModel as any).set_landing_gear_selector_position(val.gear)
-              }
-              FlightSimModule.flightModel.set_aileron_trim_position(val.aileronTrim)
-              FlightSimModule.flightModel.set_elevator_trim_position(val.elevatorTrim)
-              FlightSimModule.flightModel.set_rudder_trim_position(val.rudderTrim)
-            }
-          "
-          class="w-full h-full p-1"
-        />
+      <template #classroom>
+        <!-- Panel 7 -->
+        <Panel
+          panel-id="classroom"
+          @header-dblclick="togglePanelMaximize"
+          :status="classRoomComponentState ? 'Online' : 'Offline'"
+          class="panel-classroom"
+          data-layout="instructor pilot classroom"
+          :active="classRoomComponentState"
+        >
+          <template #Classroom>
+            <div class="flex flex-col h-full w-full">
+              <Accounts
+                v-if="sim_module_loaded"
+                @onLogin="
+                  (url: string, authToken: string, name: string) => {
+                    accountName = name
+                    FlightSimModule.check_licence(url, authToken)
+                  }
+                "
+                @onLogout="
+                  () => {
+                    accountName = ''
+                    FlightSimModule.check_licence('', '')
+                  }
+                "
+                ref="accountsComponentRef"
+              />
+              <ClassRoom
+                v-if="dataDisplayRef"
+                class="min-h-0 flex-1"
+                :account-name="accountName"
+                @apiDataEvent="
+                  (receivedApiCall: PeerApiData) =>
+                    manager.handleIncomingMessage(receivedApiCall?.api)
+                "
+                @apiScriptEvent="
+                  (receviedScript: PeerScriptData) =>
+                    editorComponentRef?.executeExternalCode(
+                      receviedScript.tite,
+                      receviedScript.script,
+                    )
+                "
+                @wb-event="
+                  (receivedData: PeerWhiteBoardata) => {
+                    whiteBoardComponentRef?.UpdateState(receivedData.wb)
+                  }
+                "
+                @instructor-command="handleInstructorCommand"
+                @announcement="handleClassroomAnnouncement"
+                @exercise-start="
+                  (exercise: ClassroomExerciseAssignment) =>
+                    editorComponentRef?.executeExternalCode(exercise.name, exercise.source)
+                "
+                @exercise-stop="editorComponentRef?.reset()"
+                ref="classroomComponentRef"
+                @classroomConnection="
+                  (isOnline) => {
+                    classRoomComponentState = isOnline
+                  }
+                "
+              />
+            </div>
+          </template>
+        </Panel>
       </template>
-    </Panel>
-    <!-- Panel 7 -->
-    <Panel
-      panel-id="classroom"
-      :status="classRoomComponentState ? 'Online' : 'Offline'"
-      class="panel-classroom"
-      data-layout="instructor pilot classroom"
-      :active="classRoomComponentState"
-    >
-      <template #Classroom>
-        <div class="flex flex-col h-full w-full">
-          <Accounts
-            v-if="sim_module_loaded"
-            @onLogin="
-              (url: string, authToken: string, name: string) => {
-                accountName = name
-                FlightSimModule.check_licence(url, authToken)
-              }
-            "
-            @onLogout="
-              () => {
-                accountName = ''
-                FlightSimModule.check_licence('', '')
-              }
-            "
-            ref="accountsComponentRef"
-          />
-          <ClassRoom
-            v-if="dataDisplayRef"
-            class="min-h-0 flex-1"
-            :account-name="accountName"
-            @apiDataEvent="
-              (receivedApiCall: PeerApiData) => manager.handleIncomingMessage(receivedApiCall?.api)
-            "
-            @apiScriptEvent="
-              (receviedScript: PeerScriptData) =>
-                editorComponentRef?.executeExternalCode(receviedScript.tite, receviedScript.script)
-            "
-            @wb-event="
-              (receivedData: PeerWhiteBoardata) => {
-                whiteBoardComponentRef?.UpdateState(receivedData.wb)
-              }
-            "
-            @instructor-command="handleInstructorCommand"
-            @announcement="handleClassroomAnnouncement"
-            @exercise-start="
-              (exercise: ClassroomExerciseAssignment) =>
-                editorComponentRef?.executeExternalCode(exercise.name, exercise.source)
-            "
-            @exercise-stop="editorComponentRef?.reset()"
-            ref="classroomComponentRef"
-            @classroomConnection="
-              (isOnline) => {
-                classRoomComponentState = isOnline
-              }
-            "
-          />
-        </div>
+      <template #prompt>
+        <!-- Panel 8 -->
+        <Panel
+          panel-id="prompt"
+          @header-dblclick="togglePanelMaximize"
+          class="panel-userprompt"
+          data-layout="focus instructor pilot classroom"
+        >
+          <template #Prompt>
+            <MarkDown ref="markdownRef" class="w-full h-full p-1" />
+          </template>
+          <template #whiteboard>
+            <Whiteboard
+              ref="whiteBoardComponentRef"
+              v-if="sim_module_loaded"
+              class="w-full h-full p-1"
+              @history-updated="handleWhiteboardHistory"
+            />
+          </template>
+        </Panel>
       </template>
-    </Panel>
-    <!-- Panel 8 -->
-    <Panel
-      panel-id="prompt"
-      class="panel-userprompt"
-      data-layout="focus instructor pilot classroom"
-    >
-      <template #Prompt>
-        <MarkDown ref="markdownRef" class="w-full h-full p-1" />
-      </template>
-      <template #whiteboard>
-        <Whiteboard
-          ref="whiteBoardComponentRef"
-          v-if="sim_module_loaded"
-          class="w-full h-full p-1"
-          @history-updated="handleWhiteboardHistory"
-        />
-      </template>
-    </Panel>
-
-    <button
-      v-for="divider in verticalDividers"
-      :key="divider"
-      data-layout="focus instructor pilot classroom"
-      type="button"
-      class="layout-divider layout-divider-vertical border-simElementBorder bg-panelHeaderBackground"
-      :class="`layout-divider-${divider}`"
-      :aria-label="`Resize layout column ${divider}`"
-      title="Drag to resize columns · Double-click to reset layout"
-      @pointerdown="startLayoutResize('column', divider, $event)"
-      @dblclick="resetLayoutSizing"
-    >
-      <span class="bg-panelBorder"></span>
-    </button>
-    <button
-      type="button"
-      data-layout="focus instructor pilot classroom"
-      class="layout-divider layout-divider-horizontal border-simElementBorder bg-panelHeaderBackground"
-      aria-label="Resize layout rows"
-      title="Drag to resize rows · Double-click to reset layout"
-      @pointerdown="startLayoutResize('row', 0, $event)"
-      @dblclick="resetLayoutSizing"
-    >
-      <span class="bg-panelBorder"></span>
-    </button>
+    </ResizableSimLayout>
   </div>
 </template>
 
@@ -576,6 +590,7 @@ import { c172, MainModule } from '../../src/wasm/generated/flightsimulator_exec'
 import OpenLayersMap from './OpenLayersMap.vue'
 import Airflow from './Airflow.vue'
 import CockpitControls from './CockpitControls.vue'
+import ResizableSimLayout from './ResizableSimLayout.vue'
 
 const renderSignal = ref(0)
 
@@ -674,6 +689,7 @@ const simFunctions = {
     dataDisplayRef.value?.setPlotView(item, state)
   },
   setLayout: function (mode: typeof layout.value) {
+    maximizedPanelId.value = null
     layout.value = mode
 
     // delay a resize event to allow components to adjust
@@ -695,9 +711,7 @@ const simFunctions = {
     openLayersMapRef.value?.setMap(state)
   },
   setTab: function (panelId: string, tabName: string) {
-    window.dispatchEvent(
-      new CustomEvent('sim:set-panel-tab', { detail: { panelId, tabName } }),
-    )
+    window.dispatchEvent(new CustomEvent('sim:set-panel-tab', { detail: { panelId, tabName } }))
   },
 }
 
@@ -723,119 +737,14 @@ let scriptComponentStatus = ref<ScriptStatus>('IDLE')
 const update_interval_ms = 200
 const isFullscreen = ref(false)
 const fullscreenContainer = ref<HTMLElement | null>(null)
+const resizableLayoutRef = ref<InstanceType<typeof ResizableSimLayout> | null>(null)
 const isDarkMode = ref(true)
 const isVisuals = ref(false)
 const layout = ref<LayoutTypes>(LayoutTypes.INSTRUCTOR)
-
-type LayoutSizing = { columns: [number, number, number]; row: number }
-const defaultLayoutSizing: Record<LayoutTypes, LayoutSizing> = {
-  [LayoutTypes.INSTRUCTOR]: { columns: [50, 25, 25], row: 62.5 },
-  [LayoutTypes.PILOT]: { columns: [50, 25, 25], row: 87.5 },
-  [LayoutTypes.FOCUS]: { columns: [25, 50, 25], row: 87.5 },
-  [LayoutTypes.CLASSROOM]: { columns: [50, 25, 25], row: 62.5 },
+const maximizedPanelId = ref<string | null>(null)
+const togglePanelMaximize = (panelId: string) => {
+  maximizedPanelId.value = maximizedPanelId.value === panelId ? null : panelId
 }
-const layoutSizing = ref<LayoutSizing>({ ...defaultLayoutSizing[layout.value] })
-const verticalDividers = [0, 1] as const
-
-const layoutGridStyle = computed(() => ({
-  '--layout-column-1': `${layoutSizing.value.columns[0]}fr`,
-  '--layout-column-2': `${layoutSizing.value.columns[1]}fr`,
-  '--layout-column-3': `${layoutSizing.value.columns[2]}fr`,
-  '--layout-divider-1': `${layoutSizing.value.columns[0]}%`,
-  '--layout-divider-2': `${layoutSizing.value.columns[0] + layoutSizing.value.columns[1]}%`,
-  '--layout-row-top': `${layoutSizing.value.row}%`,
-  '--layout-row-top-track': `${layoutSizing.value.row / 5}fr`,
-  '--layout-row-top-track-seven': `${layoutSizing.value.row / 7}fr`,
-  '--layout-row-bottom-track': `${(100 - layoutSizing.value.row) / 3}fr`,
-  '--layout-row-bottom': `${100 - layoutSizing.value.row}fr`,
-}))
-
-const layoutSizingStorageKey = (mode: LayoutTypes) => `sim-layout-sizing-${mode}`
-
-const loadLayoutSizing = (mode: LayoutTypes) => {
-  const fallback = defaultLayoutSizing[mode]
-  try {
-    const saved = JSON.parse(localStorage.getItem(layoutSizingStorageKey(mode)) || '')
-    if (
-      Array.isArray(saved?.columns) &&
-      saved.columns.length === 3 &&
-      saved.columns.every((value: unknown) => typeof value === 'number') &&
-      typeof saved.row === 'number'
-    ) {
-      layoutSizing.value = saved
-      return
-    }
-  } catch {
-    // Ignore missing or stale layout preferences.
-  }
-  layoutSizing.value = { columns: [...fallback.columns], row: fallback.row }
-}
-
-const saveLayoutSizing = () => {
-  localStorage.setItem(layoutSizingStorageKey(layout.value), JSON.stringify(layoutSizing.value))
-}
-
-const resetLayoutSizing = () => {
-  const fallback = defaultLayoutSizing[layout.value]
-  layoutSizing.value = { columns: [...fallback.columns], row: fallback.row }
-  saveLayoutSizing()
-  window.dispatchEvent(new Event('resize'))
-}
-
-const startLayoutResize = (
-  axis: 'column' | 'row',
-  divider: (typeof verticalDividers)[number] | 0,
-  event: PointerEvent,
-) => {
-  const container = fullscreenContainer.value
-  if (!container) return
-  event.preventDefault()
-  const target = event.currentTarget as HTMLElement
-  target.setPointerCapture(event.pointerId)
-  const startX = event.clientX
-  const startY = event.clientY
-  const start = {
-    columns: [...layoutSizing.value.columns] as [number, number, number],
-    row: layoutSizing.value.row,
-  }
-  const minimumColumnPercent = Math.min(20, (180 / container.clientWidth) * 100)
-  const minimumRowPercent = Math.min(25, (140 / container.clientHeight) * 100)
-
-  const onPointerMove = (moveEvent: PointerEvent) => {
-    if (axis === 'column') {
-      const delta = ((moveEvent.clientX - startX) / container.clientWidth) * 100
-      const leftIndex = divider
-      const rightIndex = divider + 1
-      const combined = start.columns[leftIndex] + start.columns[rightIndex]
-      const left = Math.max(
-        minimumColumnPercent,
-        Math.min(combined - minimumColumnPercent, start.columns[leftIndex] + delta),
-      )
-      const columns = [...start.columns] as [number, number, number]
-      columns[leftIndex] = left
-      columns[rightIndex] = combined - left
-      layoutSizing.value = { ...layoutSizing.value, columns }
-    } else {
-      const delta = ((moveEvent.clientY - startY) / container.clientHeight) * 100
-      layoutSizing.value = {
-        ...layoutSizing.value,
-        row: Math.max(minimumRowPercent, Math.min(100 - minimumRowPercent, start.row + delta)),
-      }
-    }
-    window.dispatchEvent(new Event('resize'))
-  }
-  const onPointerUp = () => {
-    target.removeEventListener('pointermove', onPointerMove)
-    target.removeEventListener('pointerup', onPointerUp)
-    target.removeEventListener('pointercancel', onPointerUp)
-    saveLayoutSizing()
-  }
-  target.addEventListener('pointermove', onPointerMove)
-  target.addEventListener('pointerup', onPointerUp)
-  target.addEventListener('pointercancel', onPointerUp)
-}
-
-watch(layout, (mode) => loadLayoutSizing(mode))
 
 // Initialize theme from localStorage
 const initializeTheme = () => {
@@ -1118,7 +1027,6 @@ const handlePanelTabRequest = (event: Event) => {
 // Lifecycle hooks
 onBeforeMount(() => {
   initializeTheme()
-  loadLayoutSizing(layout.value)
   try {
     const savedGroups = JSON.parse(localStorage.getItem(flightModelGroupsStorageKey) || '[]')
     if (Array.isArray(savedGroups)) {
@@ -1356,7 +1264,6 @@ function initFlightModelParams() {
           gear: [{ label: 'FIXED', value: 0 }],
         }
   })
-
 }
 
 function createRemoteManager(FlightSimModule: ExtendedMainModule) {
@@ -1593,6 +1500,21 @@ function createRemoteManager(FlightSimModule: ExtendedMainModule) {
   width: 2rem;
   height: 1px;
   margin: 0.2rem auto 0;
+}
+
+/* Splitpanes owns layout geometry; these overrides retire the legacy grid rules. */
+.container.layout-focus,
+.container.layout-instructor,
+.container.layout-pilot,
+.container.layout-classroom {
+  display: block;
+}
+
+.container.layout-focus > .sim-split-layout,
+.container.layout-instructor > .sim-split-layout,
+.container.layout-pilot > .sim-split-layout,
+.container.layout-classroom > .sim-split-layout {
+  display: flex;
 }
 
 /* Canvas fit */

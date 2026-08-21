@@ -20,6 +20,10 @@ const props = defineProps({
   },
 })
 
+const emit = defineEmits<{
+  (event: 'header-dblclick', panelId: string): void
+}>()
+
 // Dynamic tab detection via named slots
 const tabSlots = useSlots()
 const tabMap = ref<{ name: string; display: string }[]>([])
@@ -80,6 +84,8 @@ watchEffect(() => {
         'max-h-1/6 text-xs font-medium h-5 box-border justify-between border-b pb-0 flex items-center bg-panelHeaderBackground',
         props.active ? 'border-panelActive' : 'border-panelBorder',
       ]"
+      :title="props.panelId ? 'Double-click to maximize or restore panel' : undefined"
+      @dblclick="props.panelId && emit('header-dblclick', props.panelId)"
     >
       <!-- TABS -->
       <div class="flex h-full gap-1 text-secondary">
