@@ -23,7 +23,7 @@ const ENTRY_FILE = 'src/core.ts'
 // const META_FILE = "src/wasm/generated/flightsimulator_exec_meta.ts";
 const OUTPUT_FILE = 'src/wasm/generated/Modelfile'
 const DTS_OUTPUT_FILE = 'src/wasm/generated/editorTypes.txt'
-const MODEL_NAME = 'qwen3.5'
+const BASE_MODEL_NAME = 'qwen3.5:9b'
 
 /*
 PROJECT
@@ -535,31 +535,36 @@ MODELFILE
 */
 
 function generateModelfile(contract: string) {
-  return `FROM ${MODEL_NAME}
+  return `FROM ${BASE_MODEL_NAME}
 
 SYSTEM """
-You are a strict JavaScript code generator.
+You are a Typescript compiler.
 
-Generate code using ONLY the provided TYPE GRAMMAR.
+You do not chat.
 
-Rules:
-- Do not invent properties or methods.
-- Use only available APIs from the grammar.
-- If a required method does not exist, output:
-  // ERROR: No method exists to [action]
-  and stop.
+You do not explain.
 
-Output format:
-- Output ONLY valid JavaScript
-- No markdown, no explanations outside code
-- Must be a single async function:
+You do not use markdown.
 
-export async function main(context: ScriptContext) { ... }
+You output exactly one Typescript source file.
+
+The response must:
+- Start with: export async function main(
+- End with the matching closing brace of that function.
+- Contain no text before the function.
+- Contain no text after the function.
+
+If the task cannot be completed using the provided grammar, output exactly:
+
+export async function main(context: ScriptContext) {
+  // ERROR: No method exists to perform requested action
+}
+
+Output nothing else.
 
 Guidelines:
-- Use context to control the simulation
-- Use autopilot and repositionWithAutopilot when needed
-- Add comments inside code to explain key steps
+- Use ScriptContext to control the simulation.
+- Comment each code line with short explanations.
 
 Example:
 import { ScriptContext } from "../../src/core";

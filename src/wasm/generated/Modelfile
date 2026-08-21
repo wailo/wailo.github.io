@@ -1,0 +1,600 @@
+FROM qwen3.5:9b
+
+SYSTEM """
+You are a Typescript compiler.
+
+You do not chat.
+
+You do not explain.
+
+You do not use markdown.
+
+You output exactly one Typescript source file.
+
+The response must:
+- Start with: export async function main(
+- End with the matching closing brace of that function.
+- Contain no text before the function.
+- Contain no text after the function.
+
+If the task cannot be completed using the provided grammar, output exactly:
+
+export async function main(context: ScriptContext) {
+  // ERROR: No method exists to perform requested action
+}
+
+Output nothing else.
+
+Guidelines:
+- Use ScriptContext to control the simulation.
+- Comment each code line with short explanations.
+
+Example:
+import { ScriptContext } from "../../src/core";
+
+export async function main(context: ScriptContext) {
+  const simControls = context.controls;
+  const plotView = context.plotView;
+  const simProps = context.props;
+  const repositionWithAutopilot = context.repositionWithAutopilot;
+  const waitFor = context.waitFor;
+  const notifyUser = context.notifyUser;
+  const dataView = context.dataView;
+  const dataDisplayReset = context.dataDisplayReset;
+
+  // Reset the simulation to ensure a clean state before starting.
+  simControls.simulation.reset_simulation();
+}
+
+"""
+
+TEMPLATE """
+### TYPE GRAMMAR
+
+b747 {
+name: string
+wing_area: number
+cl: number
+aoa_deg: number
+aoa: number
+max_aoa_deg: number
+cdo: number
+cdi: number
+drag: number
+lift: number
+thrust: number
+weight: number
+empty_mass: number
+altitude_ft: number
+altitude_radio: number
+altitude_radio_ft: number
+speed_mach: number
+speed_true_knots: number
+speed_true_dot_ms: number
+pitch_deg: number
+pitch: number
+pitch_dot_deg: number
+pitch_dot: number
+yaw_deg: number
+yaw: number
+yaw_dot_deg: number
+yaw_dot: number
+bank_deg: number
+bank: number
+bank_dot_deg: number
+bank_dot: number
+sideslip: number
+sideslip_deg: number
+max_speed: number
+stall_speed: number
+vertical_speed: number
+vertical_speed_ftmin: number
+speed_indicated_knots: number
+damaged: boolean
+autopilot_master_switch: boolean
+autopilot_heading_target: number
+autopilot_pitch_target: number
+autopilot_heading_hold: boolean
+autopilot_pitch_hold: boolean
+autopilot_altitude_hold: boolean
+autopilot_speed_indicated_hold: boolean
+autopilot_speed_true_hold: boolean
+autopilot_speed_mach_hold: boolean
+autopilot_vertical_speed_hold: boolean
+autopilot_bank_hold: boolean
+autopilot_yaw_damper: boolean
+autopilot_turn_coordinator: boolean
+autopilot_auto_trim: boolean
+autopilot_altitude_target: number
+autopilot_speed_indicated_target: number
+autopilot_speed_true_target: number
+autopilot_speed_mach_target: number
+autopilot_vertical_speed_target: number
+autopilot_bank_target: number
+aileron_position: number
+elevator_position: number
+rudder_position: number
+aileron_trim_position: number
+elevator_trim_position: number
+rudder_trim_position: number
+elevator_position_deg: number
+aileron_position_deg: number
+rudder_position_deg: number
+elevator_trim_position_deg: number
+aileron_trim_position_deg: number
+rudder_trim_position_deg: number
+tiller_position: number
+engine_throttle_position: number
+engine_1_fuel_switch_state: boolean
+engine_2_fuel_switch_state: boolean
+engine_3_fuel_switch_state: boolean
+engine_4_fuel_switch_state: boolean
+stalling: boolean
+atmosphere_temperature: number
+atmosphere_density: number
+atmosphere_pressure: number
+atmosphere_sea_level_temperature: number
+atmosphere_sea_level_density: number
+atmosphere_wind_speed: number
+atmosphere_wind_direction: number
+atmosphere_turbulence_level: number
+atmosphere_turbulence_intervals: number
+engine_1_epr: number
+engine_2_epr: number
+engine_3_epr: number
+engine_4_epr: number
+engine_1_n1: number
+engine_2_n1: number
+engine_3_n1: number
+engine_4_n1: number
+engine_1_egt: number
+engine_2_egt: number
+engine_3_egt: number
+engine_4_egt: number
+latitude: number
+longitude: number
+g_force: number
+weight_on_wheel: boolean
+parking_brake: boolean
+side_force: number
+flaps_position: number
+gear_position: number
+xforce: number
+yforce: number
+zforce: number
+freeze_position: boolean
+freeze_altitude: boolean
+freeze_fuel: boolean
+center_of_gravity: number
+weather_qnh: number
+altimeter_altitude_metric: boolean
+altimeter_baro_std: boolean
+altimeter_baro_hg: boolean
+altimeter_baro_pressure_hpa: number
+altimeter_baro_pressure_inhg: number
+landing_gear_selector_position: B747GearSelector
+flaps_selector_position: B747FlapSelector
+set_empty_mass(_0: number) -> boolean
+set_wing_area(_0: number) -> boolean
+set_engine_throttle_position(_0: number) -> boolean
+set_engine_1_fuel_switch_state(_0: boolean) -> boolean
+set_engine_2_fuel_switch_state(_0: boolean) -> boolean
+set_engine_3_fuel_switch_state(_0: boolean) -> boolean
+set_engine_4_fuel_switch_state(_0: boolean) -> boolean
+set_aileron_position(_0: number) -> void
+set_elevator_position(_0: number) -> void
+set_rudder_position(_0: number) -> void
+set_aileron_trim_position(_0: number) -> void
+set_elevator_trim_position(_0: number) -> void
+set_rudder_trim_position(_0: number) -> void
+set_tiller_position(_0: number) -> void
+set_autopilot_master_switch(_0: boolean) -> void
+set_autopilot_heading_target(_0: number) -> void
+set_autopilot_heading_hold(_0: boolean) -> void
+set_autopilot_altitude_hold(_0: boolean) -> void
+set_autopilot_speed_indicated_hold(_0: boolean) -> void
+set_autopilot_speed_true_hold(_0: boolean) -> void
+set_autopilot_speed_mach_hold(_0: boolean) -> void
+set_autopilot_vertical_speed_hold(_0: boolean) -> void
+set_autopilot_bank_hold(_0: boolean) -> void
+set_autopilot_pitch_hold(_0: boolean) -> void
+set_autopilot_yaw_damper(_0: boolean) -> void
+set_autopilot_turn_coordinator(_0: boolean) -> void
+set_autopilot_auto_trim(_0: boolean) -> void
+set_autopilot_altitude_target(_0: number) -> void
+set_autopilot_speed_indicated_target(_0: number) -> void
+set_autopilot_speed_true_target(_0: number) -> void
+set_autopilot_speed_mach_target(_0: number) -> void
+set_autopilot_vertical_speed_target(_0: number) -> void
+set_autopilot_bank_target(_0: number) -> void
+set_autopilot_pitch_target(_0: number) -> void
+set_latitude(_0: number) -> boolean
+set_longitude(_0: number) -> boolean
+set_atmosphere_sea_level_temperature(_0: number) -> void
+set_atmosphere_sea_level_density(_0: number) -> void
+set_atmosphere_wind_speed(_0: number) -> void
+set_atmosphere_wind_direction(_0: number) -> void
+set_atmosphere_turbulence_level(_0: number) -> void
+set_atmosphere_turbulence_intervals(_0: number) -> void
+set_parking_brake(_0: boolean) -> void
+set_freeze_position(_0: boolean) -> void
+set_freeze_altitude(_0: boolean) -> void
+set_freeze_fuel(_0: boolean) -> void
+set_center_of_gravity(_0: number) -> void
+set_weather_qnh(_0: number) -> void
+set_altimeter_altitude_metric(_0: boolean) -> void
+set_altimeter_baro_std(_0: boolean) -> void
+set_altimeter_baro_hg(_0: boolean) -> void
+set_altimeter_baro_pressure_hpa(_0: number) -> void
+set_altimeter_baro_pressure_inhg(_0: number) -> void
+set_yaw_deg(_0: number) -> void
+set_pitch_deg(_0: number) -> void
+set_bank_deg(_0: number) -> void
+set_altitude_ft(_0: number) -> void
+set_landing_gear_selector_position(_0: B747GearSelector) -> boolean
+set_flaps_selector_position(_0: B747FlapSelector) -> boolean
+}
+
+c172 {
+name: string
+wing_area: number
+cl: number
+aoa_deg: number
+aoa: number
+max_aoa_deg: number
+cdo: number
+cdi: number
+drag: number
+lift: number
+thrust: number
+weight: number
+empty_mass: number
+altitude_ft: number
+altitude_radio: number
+altitude_radio_ft: number
+speed_mach: number
+speed_true_knots: number
+speed_true_dot_ms: number
+pitch_deg: number
+pitch: number
+pitch_dot_deg: number
+pitch_dot: number
+yaw_deg: number
+yaw: number
+yaw_dot_deg: number
+yaw_dot: number
+bank_deg: number
+bank: number
+bank_dot_deg: number
+bank_dot: number
+sideslip: number
+sideslip_deg: number
+max_speed: number
+stall_speed: number
+vertical_speed: number
+vertical_speed_ftmin: number
+speed_indicated_knots: number
+damaged: boolean
+autopilot_master_switch: boolean
+autopilot_heading_target: number
+autopilot_pitch_target: number
+autopilot_heading_hold: boolean
+autopilot_pitch_hold: boolean
+autopilot_altitude_hold: boolean
+autopilot_speed_indicated_hold: boolean
+autopilot_speed_true_hold: boolean
+autopilot_speed_mach_hold: boolean
+autopilot_vertical_speed_hold: boolean
+autopilot_bank_hold: boolean
+autopilot_yaw_damper: boolean
+autopilot_turn_coordinator: boolean
+autopilot_auto_trim: boolean
+autopilot_altitude_target: number
+autopilot_speed_indicated_target: number
+autopilot_speed_true_target: number
+autopilot_speed_mach_target: number
+autopilot_vertical_speed_target: number
+autopilot_bank_target: number
+aileron_position: number
+elevator_position: number
+rudder_position: number
+aileron_trim_position: number
+elevator_trim_position: number
+rudder_trim_position: number
+elevator_position_deg: number
+aileron_position_deg: number
+rudder_position_deg: number
+elevator_trim_position_deg: number
+aileron_trim_position_deg: number
+rudder_trim_position_deg: number
+tiller_position: number
+engine_throttle_position: number
+engine_throttle_position: number
+engine_fuel_switch_state: boolean
+engine_rpm: number
+engine_mixture_position: number
+stalling: boolean
+atmosphere_temperature: number
+atmosphere_density: number
+atmosphere_pressure: number
+atmosphere_sea_level_temperature: number
+atmosphere_sea_level_density: number
+atmosphere_wind_speed: number
+atmosphere_wind_direction: number
+atmosphere_turbulence_level: number
+atmosphere_turbulence_intervals: number
+latitude: number
+longitude: number
+g_force: number
+weight_on_wheel: boolean
+parking_brake: boolean
+side_force: number
+flaps_position: number
+gear_position: number
+xforce: number
+yforce: number
+zforce: number
+freeze_position: boolean
+freeze_altitude: boolean
+freeze_fuel: boolean
+center_of_gravity: number
+weather_qnh: number
+altimeter_altitude_metric: boolean
+altimeter_baro_std: boolean
+altimeter_baro_hg: boolean
+altimeter_baro_pressure_hpa: number
+altimeter_baro_pressure_inhg: number
+landing_gear_selector_position: 0
+flaps_selector_position: C172FlapSelector
+set_empty_mass(_0: number) -> boolean
+set_wing_area(_0: number) -> boolean
+set_cdo(_0: number) -> boolean
+set_engine_throttle_position(_0: number) -> boolean
+set_engine_fuel_switch_state(_0: boolean) -> boolean
+set_engine_mixture_position(_0: number) -> void
+set_aileron_position(_0: number) -> void
+set_elevator_position(_0: number) -> void
+set_rudder_position(_0: number) -> void
+set_aileron_trim_position(_0: number) -> void
+set_elevator_trim_position(_0: number) -> void
+set_rudder_trim_position(_0: number) -> void
+set_tiller_position(_0: number) -> void
+set_autopilot_master_switch(_0: boolean) -> void
+set_autopilot_heading_target(_0: number) -> void
+set_autopilot_heading_hold(_0: boolean) -> void
+set_autopilot_altitude_hold(_0: boolean) -> void
+set_autopilot_speed_indicated_hold(_0: boolean) -> void
+set_autopilot_speed_true_hold(_0: boolean) -> void
+set_autopilot_speed_mach_hold(_0: boolean) -> void
+set_autopilot_vertical_speed_hold(_0: boolean) -> void
+set_autopilot_bank_hold(_0: boolean) -> void
+set_autopilot_pitch_hold(_0: boolean) -> void
+set_autopilot_yaw_damper(_0: boolean) -> void
+set_autopilot_turn_coordinator(_0: boolean) -> void
+set_autopilot_auto_trim(_0: boolean) -> void
+set_autopilot_altitude_target(_0: number) -> void
+set_autopilot_speed_indicated_target(_0: number) -> void
+set_autopilot_speed_true_target(_0: number) -> void
+set_autopilot_speed_mach_target(_0: number) -> void
+set_autopilot_vertical_speed_target(_0: number) -> void
+set_autopilot_bank_target(_0: number) -> void
+set_autopilot_pitch_target(_0: number) -> void
+set_latitude(_0: number) -> boolean
+set_longitude(_0: number) -> boolean
+set_atmosphere_sea_level_temperature(_0: number) -> void
+set_atmosphere_sea_level_density(_0: number) -> void
+set_atmosphere_wind_speed(_0: number) -> void
+set_atmosphere_wind_direction(_0: number) -> void
+set_atmosphere_turbulence_level(_0: number) -> void
+set_atmosphere_turbulence_intervals(_0: number) -> void
+set_parking_brake(_0: boolean) -> void
+set_freeze_position(_0: boolean) -> void
+set_freeze_altitude(_0: boolean) -> void
+set_freeze_fuel(_0: boolean) -> void
+set_center_of_gravity(_0: number) -> void
+set_weather_qnh(_0: number) -> void
+set_altimeter_altitude_metric(_0: boolean) -> void
+set_altimeter_baro_std(_0: boolean) -> void
+set_altimeter_baro_hg(_0: boolean) -> void
+set_altimeter_baro_pressure_hpa(_0: number) -> void
+set_altimeter_baro_pressure_inhg(_0: number) -> void
+set_yaw_deg(_0: number) -> void
+set_pitch_deg(_0: number) -> void
+set_bank_deg(_0: number) -> void
+set_altitude_ft(_0: number) -> void
+set_landing_gear_selector_position(_0: 0) -> boolean
+set_flaps_selector_position(_0: C172FlapSelector) -> boolean
+}
+
+fn checkPoint(
+content: string
+) -> void
+
+fn dataDisplayReset(
+
+) -> void
+
+fn dataView(
+simPropitem: SimulationProperties,
+state: boolean
+) -> void
+
+EmbindModule {
+b747: {}
+B747GearSelector: { OFF: 2; UP: 1; DOWN: 0; }
+B747FlapSelector: { ZERO: 0; ONE: 1; FIVE: 5; TEN: 10; TWENTY: 20; TWENTFIVE: 25; THIRTY: 30; }
+c172: {}
+C172GearSelector: { DOWN: 0; }
+C172FlapSelector: { ZERO: 0; TEN: 10; TWENTY: 20; THIRTY: 30; }
+FLIGHTMODEL_VERSION: EmbindString
+FLIGHTMODEL_BUILD_TIMESTAMP: EmbindString
+graphics: { getContext(): graphics; }
+GRAPHICSEFlightModel: { C172: 0; B747: 1; }
+check_licence(_0: EmbindString, _1: EmbindString) -> boolean
+}
+
+ExtendedMainModule {
+flightModel: FlightModelInstance
+simulation: graphics
+b747: {}
+B747GearSelector: { OFF: 2; UP: 1; DOWN: 0; }
+B747FlapSelector: { ZERO: 0; ONE: 1; FIVE: 5; TEN: 10; TWENTY: 20; TWENTFIVE: 25; THIRTY: 30; }
+c172: {}
+C172GearSelector: { DOWN: 0; }
+C172FlapSelector: { ZERO: 0; TEN: 10; TWENTY: 20; THIRTY: 30; }
+FLIGHTMODEL_VERSION: EmbindString
+FLIGHTMODEL_BUILD_TIMESTAMP: EmbindString
+check_licence: (_0: EmbindString, _1: EmbindString) => boolean
+graphics: { getContext(): graphics; }
+GRAPHICSEFlightModel: { C172: 0; B747: 1; }
+}
+
+FlightModelInstance = b747 | c172
+
+graphics {
+simulation_time: number
+clock_time: number
+flight_model_id: number
+fps: number
+ups: number
+simulation_speed: number
+simulation_pause: boolean
+pfd_display: boolean
+six_instruments_display: boolean
+motion_cues: boolean
+audio: boolean
+analog_altimeter_visible: boolean
+analog_speed_indicator_visible: boolean
+analog_vertical_speed_indicator_visible: boolean
+analog_heading_indicator_visible: boolean
+analog_attitude_indicator_visible: boolean
+analog_turn_coordinator_visible: boolean
+pfd_altimeter_visible: boolean
+pfd_speed_indicator_visible: boolean
+pfd_vertical_speed_indicator_visible: boolean
+pfd_heading_indicator_visible: boolean
+pfd_attitude_indicator_visible: boolean
+pfd_turn_coordinator_visible: boolean
+pfd_horizon_visible: boolean
+pfd_flight_mode_annunciator_visible: boolean
+flight_model: GRAPHICSEFlightModel
+set_simulation_pause(_0: boolean) -> boolean
+set_pfd_display(_0: boolean) -> boolean
+set_six_instruments_display(_0: boolean) -> boolean
+set_motion_cues(_0: boolean) -> boolean
+set_audio(_0: boolean) -> boolean
+reset_simulation() -> void
+reset_flightmodel() -> void
+set_simulation_speed(_0: number) -> boolean
+set_flight_model_c172() -> c172
+set_flight_model_b747() -> b747
+set_analog_altimeter_visible(_0: boolean) -> boolean
+set_analog_speed_indicator_visible(_0: boolean) -> boolean
+set_analog_vertical_speed_indicator_visible(_0: boolean) -> boolean
+set_analog_heading_indicator_visible(_0: boolean) -> boolean
+set_analog_attitude_indicator_visible(_0: boolean) -> boolean
+set_analog_turn_coordinator_visible(_0: boolean) -> boolean
+set_pfd_altimeter_visible(_0: boolean) -> boolean
+set_pfd_speed_indicator_visible(_0: boolean) -> boolean
+set_pfd_vertical_speed_indicator_visible(_0: boolean) -> boolean
+set_pfd_heading_indicator_visible(_0: boolean) -> boolean
+set_pfd_attitude_indicator_visible(_0: boolean) -> boolean
+set_pfd_turn_coordinator_visible(_0: boolean) -> boolean
+set_pfd_horizon_visible(_0: boolean) -> boolean
+set_pfd_flight_mode_annunciator_visible(_0: boolean) -> boolean
+set_flight_model(_0: GRAPHICSEFlightModel) -> boolean
+}
+
+async fn notifyUser(
+title: string,
+message?: string | undefined,
+time?: number | undefined,
+options?: { append?: boolean | undefined; replace?: boolean | undefined; } | undefined
+) -> void
+
+fn plotView(
+simPropitem: SimulationProperties,
+state: boolean
+) -> void
+
+// Re‑positions the aircraft to a specified altitude, speed and heading using the autopilot.
+
+The function performs the following steps:
+1. Resets the simulation and selects the proper flight‑model instance.
+2. (Optional) Executes a user‑supplied `preConfiguration` function before any changes.
+3. Fast‑forwards the simulation to 500× speed, powers up the engines and activates the autopilot.
+4. Commands the autopilot to reach the target altitude, speed and heading, then holds those values.
+5. Waits until the aircraft has crossed a minimal altitude (300 ft or the target altitude) and the
+   indicated speed has reached the desired value.
+6. After reaching the target state (within tight tolerances) it restores the simulation speed,
+   disables the autopilot, and returns `true`. If the target state is not reached within the
+   configured `timeOut`, the function logs a notification, pauses the simulation and returns `false`.
+// @returns A promise that resolves to `true` if the aircraft reached the target
+ altitude, speed, heading and elevator trim within the timeout, otherwise
+ `false`. In the failure case the function also shows a user notification
+ and pauses the simulation.
+// @throws If the function fails to set up the simulation or the flight‑model and throws an
+error (these are re‑thrown to the caller).
+async fn repositionWithAutopilot(
+context: ScriptContext,
+target_altitude: number,
+target_speed: number,
+target_heading: number,
+timeOut?: number = 10000,
+preConfiguration?: Function | undefined
+) -> boolean
+
+export const resetTimeouts: () => void
+
+ScriptContext {
+controls: ExtendedMainModule
+props: any
+repositionWithAutopilot: typeof repositionWithAutopilot
+waitFor: (ms: number) => void
+waitForCondition: (condition: () => boolean, confirmationMs?: number | undefined, pollIntervalMs?: number | undefined, hardTimeoutMs?: number | null | undefined, throwOnTimeout?: boolean | undefined) => boolean
+notifyUser: typeof notifyUser
+dataView: (prop: SimulationProperties, state: boolean) => void
+plotView: (prop: SimulationProperties | SimulationProperties[], state: boolean) => void
+dataDisplayReset: () => void
+setLayout: (mode: LayoutTypes) => void
+layoutTypes: typeof LayoutTypes
+setVisuals: (state: boolean) => void
+setMap: (state: boolean) => void
+setTab: { (panelId: cockpit, tabName: Cockpit): void; (panelId: realtime, tabName: Real-Time-Data | Airflow): void; (panelId: simulation, tabName: Simulation): void; (panelId: learning-modules, tabName: Learning-Modules): void; (panelId: autopilot, tabName: Autopilot): void; (panelId: flight-model, tabName: Flight-Model | Joystick): void; (panelId: classroom, tabName: Classroom): void; (panelId: prompt, tabName: Prompt | whiteboard): void; }
+resetPanels: () => void
+checkPoint: (content: string) => void
+metrics: any[]
+}
+
+SimulationProperties {
+id: string
+type: string | number | boolean | enum | void
+label: string
+description: string | undefined
+inputValue: PropertyType | undefined
+setterFunc: Function | undefined
+unit: string | undefined
+min: number | undefined
+max: number | undefined
+step: number | undefined
+precision: number | undefined
+group: string
+enumValues: { enumName: string; enumValue: string | number; }[] | undefined
+}
+
+async fn waitFor(
+ms: number
+) -> void
+
+async fn waitForCondition(
+conditionFunction: () => boolean,
+confirmation_ms?: number = 0,
+pollInterval_ms?: number = 400,
+hardTimeout_ms?: number | null = null,
+throwOnTimeout?: boolean = false
+) -> boolean
+
+### TASK
+
+{{ .Prompt }}
+"""
