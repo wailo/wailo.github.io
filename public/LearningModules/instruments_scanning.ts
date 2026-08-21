@@ -96,7 +96,14 @@ ${turnAlert}
     const totalTime = delay * 1.15
 
     await Promise.all([
-      notifyUser(phase, renderScanUI(name, cycle, totalCycles, pace, phase, turnActive), totalTime),
+      notifyUser(
+        phase,
+        renderScanUI(name, cycle, totalCycles, pace, phase, turnActive),
+        totalTime,
+        {
+          replace: true,
+        },
+      ),
       (async () => {
         setter(false)
         await waitFor(delay * 0.15)
@@ -130,6 +137,7 @@ ${turnAlert}
         titles[i],
         `${renderScanUI(instrument, 0, totalCycles, 0.25, 'INTRODUCTION', false)}\n\n${texts[i]}`,
         3000,
+        { replace: true },
       )
     }
   }
@@ -147,7 +155,12 @@ ${turnAlert}
 
     // ATTITUDE
     await Promise.all([
-      notifyUser('Phase 1: Attitude', 'The scan originates at the Attitude Indicator.', 2100),
+      notifyUser(
+        'Phase 1: Attitude',
+        `${renderScanUI('att', 0, totalCycles, 0.25, 'ATTITUDE', false)}\n\nThe scan originates at the Attitude Indicator.`,
+        2100,
+        { replace: true },
+      ),
       (async () => {
         simulation.set_analog_attitude_indicator_visible(false)
         await waitFor(300)
@@ -160,9 +173,9 @@ ${turnAlert}
     await Promise.all([
       notifyUser(
         'Phase 2: Peripheral',
-        `A rapid visual check is directed to the ${peripheral.toUpperCase()}.`,
+        `${renderScanUI(peripheral, 0, totalCycles, 0.25, 'PERIPHERAL', false)}\n\nA rapid visual check is directed to the ${peripheral.toUpperCase()}.`,
         2100,
-        { append: true },
+        { replace: true },
       ),
       (async () => {
         peripheralSetter(false)
@@ -176,9 +189,9 @@ ${turnAlert}
     await Promise.all([
       notifyUser(
         'Phase 3: Return',
-        'Visual focus immediately returns to the Attitude Indicator.',
+        `${renderScanUI('att', 0, totalCycles, 0.25, 'RETURN', false)}\n\nVisual focus immediately returns to the Attitude Indicator.`,
         2100,
-        { append: true },
+        { replace: true },
       ),
       (async () => {
         simulation.set_analog_attitude_indicator_visible(false)
@@ -307,6 +320,7 @@ ${turnAlert}
         'Maneuver Notification',
         renderScanUI('att', cycleNum, totalCycles, pace, '🔄 TURN EXECUTION', true),
         3000,
+        { replace: true },
       )
     }
 

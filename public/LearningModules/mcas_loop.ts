@@ -264,7 +264,7 @@ export async function main(context: ScriptContext) {
       // Only call notifyUser if the visual content has actually changed (prevents flicker/spam)
       if (dashboardHtml !== lastDashboardHtml) {
         // Persistent notification: Use a dedicated channel to avoid blocking the loop
-        notifyUser('MCAS System Dashboard', dashboardHtml)
+        notifyUser('MCAS System Dashboard', dashboardHtml, 0, { replace: true })
         lastDashboardHtml = dashboardHtml
       }
 

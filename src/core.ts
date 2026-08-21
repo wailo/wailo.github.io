@@ -26,6 +26,7 @@ export declare function notifyUser(
   time?: number,
   options?: {
     append?: boolean
+    replace?: boolean
   },
 ): Promise<void>
 
