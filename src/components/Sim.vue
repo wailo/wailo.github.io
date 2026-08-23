@@ -283,7 +283,7 @@
           data-layout="instructor pilot"
         >
           <template #Flight-Model>
-            <div class="w-full min-w-[24rem] self-start">
+            <div class="w-full min-w-0 self-start">
               <div
                 class="sticky top-0 z-20 flex h-6 items-center border-b border-simElementBorder bg-panelHeaderBackground"
               >
@@ -350,7 +350,7 @@
                     ? simGroup
                     : []"
                   :key="sim_prop.id"
-                  class="grid min-h-6 grid-cols-[minmax(10rem,1fr)_minmax(9rem,12rem)] items-stretch py-px hover:bg-simInputBackground/40"
+                  class="grid min-h-6 min-w-0 grid-cols-[minmax(6rem,1fr)_minmax(4.5rem,40%)] items-stretch py-px hover:bg-simInputBackground/40"
                 >
                   <span
                     class="flex min-w-0 items-center gap-1 self-center overflow-hidden px-1"
@@ -381,17 +381,17 @@
                       :inputStep="sim_prop.step"
                     />
                   </label>
-                  <div v-else-if="sim_prop.type === 'boolean'" class="min-h-0">
+                  <div v-else-if="sim_prop.type === 'boolean'" class="min-h-0 min-w-0">
                     <wButton
-                      class="h-full w-full"
+                      class="h-full w-full min-w-0 overflow-hidden text-ellipsis"
                       :buttonLabel="sim_prop.inputValue ? 'On' : 'Off'"
                       :buttonClick="() => sim_prop.setterFunc?.()"
                       :buttonState="sim_prop.inputValue as boolean"
                     />
                   </div>
-                  <div v-else-if="sim_prop.type === 'void'" class="min-h-0">
+                  <div v-else-if="sim_prop.type === 'void'" class="min-h-0 min-w-0">
                     <wButton
-                      class="h-full w-full"
+                      class="h-full w-full min-w-0 overflow-hidden text-ellipsis"
                       buttonLabel="▶"
                       :buttonClick="() => sim_prop.setterFunc?.()"
                     />
