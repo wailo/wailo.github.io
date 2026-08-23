@@ -13,14 +13,14 @@
         <span v-if="isInstructor" class="shrink-0"
           >{{ Object.keys(incomingConns).length }} PEERS</span
         >
-        <button
+        <wButton
           v-if="isInstructor"
-          class="ml-auto shrink-0"
-          :class="followMode ? 'text-simActiveButton' : 'opacity-60'"
-          @click="followMode = !followMode"
-        >
-          BCAST {{ followMode ? 'ON' : 'OFF' }}
-        </button>
+          class="ml-auto h-5 shrink-0"
+          :button-label="`MIRROR ${followMode ? 'ON' : 'OFF'}`"
+          :button-state="followMode"
+          :button-click="() => (followMode = !followMode)"
+          title="Mirror instructor commands to connected peers"
+        />
         <button
           class="px-1 hover:text-panelActive focus-visible:outline focus-visible:outline-1 focus-visible:outline-panelActive"
           title="Connection settings"
@@ -223,6 +223,7 @@
             :ref="(element) => setRosterRowRef(element, index)"
             class="h-5 nowrap cursor-pointer transition-colors"
             :class="rowClass(peerId)"
+            :aria-current="focusedPeerId === peerId ? 'true' : undefined"
             @click="focusAndTogglePeer(peerId)"
           >
             <td class="w-10 min-w-10 max-w-10 px-1 text-center">
@@ -1145,7 +1146,15 @@ const handleClassroomKeydown = (event: KeyboardEvent) => {
   }
 }
 
-const rowClass = (_peerId: string) => 'text-secondary hover:bg-simInputBackground'
+const rowClass = (peerId: string) => {
+  const focused = focusedPeerId.value === peerId
+  const selected = isPeerSelected(peerId)
+  return [
+    'text-secondary hover:bg-simInputBackground/40',
+    focused ? 'bg-simInputBackground' : '',
+    selected ? 'font-medium !text-simActiveButton' : '',
+  ]
+}
 
 const compactStatus = (status?: string) =>
   status?.replace('Structural Damage', 'DAMAGE') || 'ONLINE'
