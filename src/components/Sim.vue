@@ -49,6 +49,7 @@
               >
                 <div
                   id="canvas-container"
+                  ref="canvasContainerRef"
                   :class="['h-full', openLayersMapRef?.showNavMap ? 'w-[65%]' : 'w-full']"
                 >
                   <canvas
@@ -602,6 +603,35 @@ import CockpitControls from './CockpitControls.vue'
 import ResizableSimLayout from './ResizableSimLayout.vue'
 
 const renderSignal = ref(0)
+const canvasContainerRef = ref<HTMLElement | null>(null)
+let canvasResizeObserver: ResizeObserver | null = null
+let canvasResizeFrame: number | null = null
+let observedCanvasWidth = 0
+let observedCanvasHeight = 0
+
+const observeCanvasContainer = () => {
+  canvasResizeObserver?.disconnect()
+  const container = canvasContainerRef.value
+  if (!container) return
+
+  canvasResizeObserver = new ResizeObserver(([entry]) => {
+    const width = Math.round(entry.contentRect.width)
+    const height = Math.round(entry.contentRect.height)
+    if (!width || !height || (width === observedCanvasWidth && height === observedCanvasHeight))
+      return
+
+    observedCanvasWidth = width
+    observedCanvasHeight = height
+    if (canvasResizeFrame !== null) cancelAnimationFrame(canvasResizeFrame)
+    canvasResizeFrame = requestAnimationFrame(() => {
+      canvasResizeFrame = null
+      // Emscripten owns the canvas drawing-buffer dimensions. Trigger its existing
+      // browser-resize path after the containing panel has reached its new size.
+      window.dispatchEvent(new Event('resize'))
+    })
+  })
+  canvasResizeObserver.observe(container)
+}
 
 // Define a decorator function
 function broadcast(call: RemoteCall | RemoteEvent) {
@@ -1127,6 +1157,7 @@ onMounted(async () => {
       GLFWModule.GLFW.requestFullscreen = toggleFullscreen // Replace with custom implementation
 
       initFlightModelParams()
+      observeCanvasContainer()
 
       // key presses are handled inside the canvas only
       window.removeEventListener('keydown', GLFWModule.GLFW.onKeydown, true)
@@ -1232,6 +1263,8 @@ onMounted(async () => {
 
 onUnmounted(() => {
   clearInterval(simUpdateInterval)
+  canvasResizeObserver?.disconnect()
+  if (canvasResizeFrame !== null) cancelAnimationFrame(canvasResizeFrame)
   document.removeEventListener('fullscreenchange', onFullscreenChange)
   window.removeEventListener('sim:request-panel-tab', handlePanelTabRequest)
 })
