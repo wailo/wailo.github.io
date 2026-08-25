@@ -1110,11 +1110,20 @@ const handleExercisePaletteKeydown = (event: KeyboardEvent) => {
   }
 }
 
+const isEditableKeyboardTarget = (target: EventTarget | null) => {
+  if (!(target instanceof Element)) return false
+  return Boolean(
+    target.closest(
+      'input, textarea, select, [contenteditable="true"], [role="textbox"], .monaco-editor',
+    ),
+  )
+}
+
 const handleClassroomKeydown = (event: KeyboardEvent) => {
   if (!isInstructor.value || !isOnline.value || exercisePaletteOpen.value) return
-  const target = event.target as HTMLElement | null
-  const editing = target?.matches('input, textarea, select, [contenteditable="true"]')
-  if (editing) return
+  if (isEditableKeyboardTarget(event.target) || isEditableKeyboardTarget(document.activeElement)) {
+    return
+  }
   if (event.key === 'ArrowDown' || (event.ctrlKey && event.key.toLowerCase() === 'n')) {
     event.preventDefault()
     moveRosterFocus(1)
