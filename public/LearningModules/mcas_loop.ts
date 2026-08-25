@@ -283,8 +283,6 @@ export async function main(context: ScriptContext) {
         lastTrim = flightModel.elevator_trim_position + mcas_cmd_rate
         flightModel.set_elevator_trim_position(lastTrim)
       }
-
-      console.log(flightModel.damaged)
       return flightModel.damaged
     },
     0,
