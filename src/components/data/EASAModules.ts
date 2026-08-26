@@ -2,8 +2,6 @@ export type ModuleEntry = {
   name: string
   path: string
   description?: string
-  durationMinutes?: number
-  difficulty?: 'introductory' | 'intermediate' | 'advanced'
 }
 
 export type ModuleTree = Record<string, ModuleEntry[]>
@@ -16,6 +14,12 @@ export const moduleTree: ModuleTree = {
     { name: 'Yaw Damper', path: '/LearningModules/yaw_damper.ts' },
     { name: 'Three doublets', path: '/LearningModules/three_doublets.ts' },
     { name: 'MCAS loop', path: '/LearningModules/mcas_loop.ts' },
+    {
+      name: 'Stall',
+      path: '/LearningModules/stall.ts',
+      description:
+        'Observe how Flaps 10 affects critical AoA, lift coefficient and flow separation.',
+    },
   ],
   'The Four Forces of Flight': [
     { name: 'Level Flight Forces', path: '/LearningModules/level_flight.ts' },
@@ -39,15 +43,6 @@ export const moduleTree: ModuleTree = {
     {
       name: 'Changes in Airspeed and Lift at Different Flap Settings',
       path: '/LearningModules/speed_lift_vs_flap.ts',
-    },
-  ],
-  'Angle of Attack (AoA) and Stall': [
-    {
-      name: 'Stall',
-      path: '/LearningModules/stall.ts',
-      description: 'Observe how Flaps 10 affects critical AoA, lift coefficient and flow separation.',
-      durationMinutes: 3,
-      difficulty: 'introductory',
     },
   ],
   // "Angle of Attack (AoA) and Its Influence on Lift and Drag": [
