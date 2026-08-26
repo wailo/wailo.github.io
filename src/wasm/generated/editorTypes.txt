@@ -502,6 +502,8 @@ interface ScriptContext {
   ) => Promise<boolean>
 
   notifyUser: typeof notifyUser
+  waitForUser: (options: WaitForUserOptions) => Promise<void>
+  askQuestion: (options: AskQuestionOptions) => Promise<QuestionResult>
   dataView: (prop: SimulationProperties, state: boolean) => void
   plotView: (prop: SimulationProperties | SimulationProperties[], state: boolean) => void
   dataDisplayReset: () => void

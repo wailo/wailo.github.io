@@ -553,6 +553,8 @@ repositionWithAutopilot: typeof repositionWithAutopilot
 waitFor: (ms: number) => void
 waitForCondition: (condition: () => boolean, confirmationMs?: number | undefined, pollIntervalMs?: number | undefined, hardTimeoutMs?: number | null | undefined, throwOnTimeout?: boolean | undefined) => boolean
 notifyUser: typeof notifyUser
+waitForUser: (options: WaitForUserOptions) => void
+askQuestion: (options: AskQuestionOptions) => QuestionResult
 dataView: (prop: SimulationProperties, state: boolean) => void
 plotView: (prop: SimulationProperties | SimulationProperties[], state: boolean) => void
 dataDisplayReset: () => void

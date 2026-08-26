@@ -209,6 +209,9 @@
                 dataView: simFunctions.setDataView,
                 dataDisplayReset: dataDisplayRef.reset,
                 notifyUser: simFunctions.notifyUser,
+                waitForUser: simFunctions.waitForUser,
+                askQuestion: simFunctions.askQuestion,
+                cancelPromptInteractions: simFunctions.cancelPromptInteractions,
                 setLayout: simFunctions.setLayout,
                 checkPoint: classroomComponentRef.sendCheckPoint,
                 setVisuals: simFunctions.setVisuals,
@@ -601,6 +604,11 @@ import OpenLayersMap from './OpenLayersMap.vue'
 import Airflow from './Airflow.vue'
 import CockpitControls from './CockpitControls.vue'
 import ResizableSimLayout from './ResizableSimLayout.vue'
+import type {
+  AskQuestionOptions,
+  QuestionResult,
+  WaitForUserOptions,
+} from '../ScriptContext.ts'
 
 const renderSignal = ref(0)
 const canvasContainerRef = ref<HTMLElement | null>(null)
@@ -710,6 +718,25 @@ const simFunctions = {
     options?: { append?: boolean; replace?: boolean },
   ) {
     await markdownRef.value?.write(title, message, time, options)
+  },
+  waitForUser: async function (options: WaitForUserOptions) {
+    await markdownRef.value?.waitForUser(options)
+  },
+  askQuestion: async function (options: AskQuestionOptions): Promise<QuestionResult> {
+    if (!markdownRef.value) {
+      return {
+        questionId: options.id,
+        type: options.type,
+        answer: '',
+        attempts: 0,
+        elapsedMs: 0,
+        cancelled: true,
+      }
+    }
+    return markdownRef.value.askQuestion(options)
+  },
+  cancelPromptInteractions: function () {
+    markdownRef.value?.cancelPromptInteractions()
   },
 
   // Logic to reset components, triggered with simulation module is reset

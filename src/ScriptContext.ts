@@ -11,6 +11,52 @@ import {
 
 import { LayoutTypes } from '../src/wasm/siminterface.ts'
 
+export interface WaitForUserOptions {
+  title: string
+  message?: string
+  buttonLabel?: string
+  replace?: boolean
+}
+
+export interface QuestionChoice {
+  id: string
+  label: string
+}
+
+interface BaseQuestionOptions {
+  id?: string
+  title: string
+  question: string
+  replace?: boolean
+}
+
+export interface MultipleChoiceQuestionOptions extends BaseQuestionOptions {
+  type: 'multiple-choice'
+  choices: QuestionChoice[]
+  correctAnswer?: string
+  correctFeedback?: string
+  incorrectFeedback?: string
+}
+
+export interface EssayQuestionOptions extends BaseQuestionOptions {
+  type: 'essay'
+  placeholder?: string
+  minLength?: number
+  submitLabel?: string
+}
+
+export type AskQuestionOptions = MultipleChoiceQuestionOptions | EssayQuestionOptions
+
+export interface QuestionResult {
+  questionId?: string
+  type: AskQuestionOptions['type']
+  answer: string
+  correct?: boolean
+  attempts: number
+  elapsedMs: number
+  cancelled?: boolean
+}
+
 export interface ScriptContext {
   controls: ExtendedMainModule
   props: any
@@ -25,6 +71,10 @@ export interface ScriptContext {
   ) => Promise<boolean>
 
   notifyUser: typeof notifyUser
+  /** Pause lesson progression until the user acknowledges the prompt. */
+  waitForUser: (options: WaitForUserOptions) => Promise<void>
+  /** Ask a multiple-choice or essay question and return the submitted result. */
+  askQuestion: (options: AskQuestionOptions) => Promise<QuestionResult>
   dataView: (prop: SimulationProperties, state: boolean) => void
   plotView: (prop: SimulationProperties | SimulationProperties[], state: boolean) => void
   dataDisplayReset: () => void
@@ -60,6 +110,8 @@ export function createScriptContext(deps: ScriptContext): ScriptContext {
     waitFor: deps.waitFor,
     waitForCondition: deps.waitForCondition,
     notifyUser: deps.notifyUser,
+    waitForUser: deps.waitForUser,
+    askQuestion: deps.askQuestion,
     dataView: deps.dataView,
     plotView: deps.plotView,
     dataDisplayReset: deps.dataDisplayReset,

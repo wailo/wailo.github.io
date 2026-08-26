@@ -11,6 +11,56 @@
           <span class="prompt-card__title">{{ card.title }}</span>
         </header>
         <div class="markdown prompt-card__message" v-html="card.html"></div>
+
+        <div v-if="card.interaction?.type === 'continue'" class="prompt-interaction">
+          <wButton
+            class="h-6"
+            :button-label="card.interaction.buttonLabel"
+            :button-click="() => completeContinue(card)"
+          />
+        </div>
+
+        <div v-else-if="card.interaction?.type === 'multiple-choice'" class="prompt-interaction">
+          <div class="grid gap-1">
+            <wButton
+              v-for="choice in card.interaction.choices"
+              :key="choice.id"
+              class="min-h-6 !justify-start !whitespace-normal text-left"
+              :button-label="choice.label"
+              :button-state="card.interaction.selectedAnswer === choice.id"
+              :button-click="() => answerMultipleChoice(card, choice.id)"
+            />
+          </div>
+          <p v-if="card.interaction.feedback" class="prompt-interaction__feedback">
+            {{ card.interaction.feedback }}
+          </p>
+        </div>
+
+        <form
+          v-else-if="card.interaction?.type === 'essay'"
+          class="prompt-interaction"
+          @submit.prevent="submitEssay(card)"
+        >
+          <textarea
+            v-model="card.interaction.answer"
+            class="prompt-interaction__essay"
+            :placeholder="card.interaction.placeholder"
+            rows="5"
+          ></textarea>
+          <div class="flex items-center justify-between gap-2">
+            <span class="opacity-60">
+              {{ card.interaction.answer.trim().length }} / {{ card.interaction.minLength }} minimum
+            </span>
+            <wButton
+              class="h-6"
+              :button-label="card.interaction.submitLabel"
+              :button-click="() => submitEssay(card)"
+            />
+          </div>
+          <p v-if="card.interaction.feedback" class="prompt-interaction__feedback">
+            {{ card.interaction.feedback }}
+          </p>
+        </form>
       </article>
     </div>
 
@@ -28,12 +78,53 @@
 <script lang="ts" setup>
 import { nextTick, ref } from 'vue'
 import { marked } from 'marked'
+import wButton from './wButton.vue'
+import type {
+  AskQuestionOptions,
+  EssayQuestionOptions,
+  MultipleChoiceQuestionOptions,
+  QuestionChoice,
+  QuestionResult,
+  WaitForUserOptions,
+} from '../ScriptContext'
+
+type ContinueInteraction = {
+  type: 'continue'
+  buttonLabel: string
+  resolve: () => void
+}
+
+type MultipleChoiceInteraction = {
+  type: 'multiple-choice'
+  options: MultipleChoiceQuestionOptions
+  choices: QuestionChoice[]
+  selectedAnswer: string
+  feedback: string
+  attempts: number
+  startedAt: number
+  resolve: (result: QuestionResult) => void
+}
+
+type EssayInteraction = {
+  type: 'essay'
+  options: EssayQuestionOptions
+  answer: string
+  feedback: string
+  placeholder: string
+  minLength: number
+  submitLabel: string
+  startedAt: number
+  resolve: (result: QuestionResult) => void
+}
+
+type PromptInteraction = ContinueInteraction | MultipleChoiceInteraction | EssayInteraction
 
 type PromptCard = {
   id: number
   title: string
   markdown: string
   html: string
+  interaction?: PromptInteraction
 }
 
 const cards = ref<PromptCard[]>([])
@@ -50,6 +141,20 @@ marked.setOptions({
 })
 
 const renderMarkdown = (content: string) => String(marked.parse(content))
+
+const addCard = async (card: PromptCard, replace = false) => {
+  if (replace) {
+    cancelPromptInteractions()
+    cards.value = [card]
+    pendingMessages.value = 0
+    followLatest = true
+  } else {
+    cards.value.push(card)
+  }
+
+  if (followLatest) await scrollToLatest()
+  else pendingMessages.value++
+}
 
 const isNearBottom = (element: HTMLElement) =>
   element.scrollHeight - element.scrollTop - element.clientHeight <= 24
@@ -88,25 +193,154 @@ async function write(
     html: renderMarkdown(text),
   }
 
-  if (options.replace) {
-    cards.value = [card]
-    pendingMessages.value = 0
-    followLatest = true
-  } else {
-    cards.value.push(card)
-  }
-
-  if (followLatest) {
-    await scrollToLatest()
-  } else {
-    pendingMessages.value++
-  }
+  await addCard(card, options.replace)
 
   if (time <= 0) return
   await new Promise<void>((resolve) => setTimeout(resolve, time))
 }
 
+const waitForUser = async (options: WaitForUserOptions): Promise<void> => {
+  await new Promise<void>((resolve) => {
+    const card: PromptCard = {
+      id: ++nextCardId,
+      title: options.title,
+      markdown: options.message || '',
+      html: renderMarkdown(options.message || ''),
+      interaction: {
+        type: 'continue',
+        buttonLabel: options.buttonLabel || 'Continue',
+        resolve,
+      },
+    }
+    void addCard(card, options.replace)
+  })
+}
+
+const askQuestion = async (options: AskQuestionOptions): Promise<QuestionResult> => {
+  if (options.type === 'multiple-choice' && !options.choices?.length) {
+    throw new Error('A multiple-choice question requires at least one choice.')
+  }
+  if (
+    options.type === 'multiple-choice' &&
+    options.correctAnswer &&
+    !options.choices.some(({ id }) => id === options.correctAnswer)
+  ) {
+    throw new Error('The correct answer must match one of the multiple-choice option IDs.')
+  }
+
+  return new Promise<QuestionResult>((resolve) => {
+    const interaction: PromptInteraction =
+      options.type === 'multiple-choice'
+        ? {
+            type: 'multiple-choice',
+            options,
+            feedback: '',
+            startedAt: Date.now(),
+            resolve,
+            choices: options.choices,
+            selectedAnswer: '',
+            attempts: 0,
+          }
+        : {
+            type: 'essay',
+            options,
+            feedback: '',
+            startedAt: Date.now(),
+            resolve,
+            answer: '',
+            placeholder: options.placeholder || 'Enter your answer…',
+            minLength: Math.max(0, options.minLength || 0),
+            submitLabel: options.submitLabel || 'Submit',
+          }
+    const card: PromptCard = {
+      id: ++nextCardId,
+      title: options.title,
+      markdown: options.question,
+      html: renderMarkdown(options.question),
+      interaction,
+    }
+    void addCard(card, options.replace)
+  })
+}
+
+const completeContinue = (card: PromptCard) => {
+  if (card.interaction?.type !== 'continue') return
+  const { resolve } = card.interaction
+  card.interaction = undefined
+  resolve()
+}
+
+const answerMultipleChoice = (card: PromptCard, answer: string) => {
+  const interaction = card.interaction
+  if (interaction?.type !== 'multiple-choice') return
+  interaction.attempts++
+  interaction.selectedAnswer = answer
+  const correct = interaction.options.correctAnswer
+    ? answer === interaction.options.correctAnswer
+    : undefined
+
+  if (correct === false) {
+    interaction.feedback = interaction.options.incorrectFeedback || 'Not quite. Try again.'
+    return
+  }
+
+  interaction.feedback =
+    interaction.options.correctFeedback || (correct ? 'Correct.' : 'Submitted.')
+  const result: QuestionResult = {
+    questionId: interaction.options.id,
+    type: interaction.type,
+    answer,
+    correct,
+    attempts: interaction.attempts,
+    elapsedMs: Date.now() - interaction.startedAt,
+  }
+  const { resolve } = interaction
+  card.interaction = undefined
+  resolve(result)
+}
+
+const submitEssay = (card: PromptCard) => {
+  const interaction = card.interaction
+  if (interaction?.type !== 'essay') return
+  const answer = interaction.answer.trim()
+  if (answer.length < interaction.minLength) {
+    interaction.feedback = `Please enter at least ${interaction.minLength} characters.`
+    return
+  }
+
+  const result: QuestionResult = {
+    questionId: interaction.options.id,
+    type: interaction.type,
+    answer,
+    attempts: 1,
+    elapsedMs: Date.now() - interaction.startedAt,
+  }
+  const { resolve } = interaction
+  card.interaction = undefined
+  resolve(result)
+}
+
+const cancelPromptInteractions = () => {
+  for (const card of cards.value) {
+    const interaction = card.interaction
+    if (!interaction) continue
+    if (interaction.type === 'continue') interaction.resolve()
+    else {
+      interaction.resolve({
+        questionId: interaction.options.id,
+        type: interaction.type,
+        answer: '',
+        attempts: interaction.type === 'multiple-choice' ? interaction.attempts : 0,
+        elapsedMs: Date.now() - interaction.startedAt,
+        cancelled: true,
+      })
+    }
+    card.interaction = undefined
+  }
+}
+
 const reset = () => {
+  cancelPromptInteractions()
   cards.value = []
   pendingMessages.value = 0
   followLatest = true
@@ -116,7 +350,7 @@ const reset = () => {
   })
 }
 
-defineExpose({ reset, write })
+defineExpose({ askQuestion, cancelPromptInteractions, reset, waitForUser, write })
 </script>
 
 <style>
@@ -198,6 +432,31 @@ defineExpose({ reset, write })
 
 .prompt-card__message {
   padding: 0.1rem 0.15rem 0;
+}
+
+.prompt-interaction {
+  margin: 0.35rem 0.15rem 0;
+  border-left: 2px solid rgb(var(--color-panelActive));
+  padding-left: 0.4rem;
+}
+
+.prompt-interaction__essay {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid rgb(var(--color-simElementBorder));
+  background: rgb(var(--color-simInputBackground));
+  padding: 0.35rem;
+  color: rgb(var(--color-secondary));
+  outline: none;
+}
+
+.prompt-interaction__essay:focus {
+  border-color: rgb(var(--color-panelActive));
+}
+
+.prompt-interaction__feedback {
+  margin-top: 0.25rem;
+  color: rgb(var(--color-simActiveButton));
 }
 
 .markdown {

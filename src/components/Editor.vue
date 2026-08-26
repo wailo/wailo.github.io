@@ -14,9 +14,7 @@
     </div>
 
     <div v-if="viewMode === 'lessons'" class="flex min-h-0 flex-1 flex-col p-1">
-      <div
-        class="flex h-7 shrink-0 items-center border border-simElementBorder bg-simInputBackground"
-      >
+      <div class="flex h-7 shrink-0 items-center border-b border-simElementBorder px-1">
         <span class="px-2 opacity-60">/</span>
         <input
           v-model="lessonFilter"
@@ -24,14 +22,20 @@
           placeholder="Search title or category"
           class="min-w-0 flex-1 bg-transparent outline-none placeholder:text-secondary/50"
         />
-        <button class="px-2" title="New playground" @click="openPlayground">+ NEW</button>
+        <button
+          class="px-2 opacity-70 hover:text-panelActive hover:opacity-100"
+          title="New playground"
+          @click="openPlayground"
+        >
+          + NEW
+        </button>
       </div>
 
-      <div class="mt-1 min-h-0 flex-1 overflow-y-auto border-y border-simElementBorder">
+      <div class="mt-1 min-h-0 flex-1 overflow-y-auto">
         <div v-if="filteredLessons.length === 0" class="p-2 opacity-60">NO MATCHING LESSONS</div>
-        <section v-for="group in filteredLessonGroups" :key="group.category">
+        <section v-for="group in filteredLessonGroups" :key="group.category" class="mb-1">
           <button
-            class="flex h-6 w-full items-center justify-between border-b border-simElementBorder bg-panelHeaderBackground px-1 text-left font-medium"
+            class="flex h-6 w-full items-center justify-between px-1 pt-1 text-left font-medium opacity-75 hover:bg-simInputBackground/40 hover:opacity-100"
             @click="toggleLessonGroup(group.category)"
           >
             <span>{{ isLessonGroupOpen(group.category) ? '▾' : '▸' }} {{ group.category }}</span>
@@ -41,12 +45,8 @@
             <div
               v-for="lesson in group.lessons"
               :key="lesson.path"
-              class="grid min-h-5 w-full cursor-pointer grid-cols-[1rem_minmax(0,1fr)_auto_auto] items-center gap-1 px-2 py-0 text-left leading-tight hover:bg-simInputBackground"
-              :class="
-                selectedFile === lesson.name
-                  ? 'border-l-2 border-l-panelActive bg-panelHeaderBackground'
-                  : ''
-              "
+              class="grid min-h-5 w-full cursor-pointer grid-cols-[1rem_minmax(0,1fr)_auto] items-center gap-1 px-2 py-0.5 text-left leading-tight hover:bg-simInputBackground/60"
+              :class="selectedFile === lesson.name ? 'bg-panelHeaderBackground' : ''"
               role="button"
               tabindex="0"
               @click="selectLesson(lesson)"
@@ -71,9 +71,6 @@
                 :class="selectedFile === lesson.name ? 'text-panelActive' : 'text-secondary'"
               >
                 {{ lesson.name }}
-              </span>
-              <span class="opacity-60">
-                <span v-if="lesson.durationMinutes">~{{ lesson.durationMinutes }}m</span>
               </span>
               <span class="flex items-center gap-1">
                 <button
@@ -103,7 +100,7 @@
 
       <div
         v-if="lessonQueue.length"
-        class="mt-1 flex h-6 shrink-0 items-center gap-1 border border-simElementBorder bg-panelHeaderBackground px-1"
+        class="mt-1 flex h-6 shrink-0 items-center gap-1 border-t border-simElementBorder px-1"
       >
         <span class="min-w-0 flex-1 truncate">{{ lessonQueue.length }} QUEUED</span>
         <button
@@ -327,6 +324,7 @@ import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker'
 import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker'
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
 import { UserScript, ScriptContext, createScriptContext, runUserScript } from '../ScriptContext.ts'
+import type { AskQuestionOptions, QuestionResult, WaitForUserOptions } from '../ScriptContext.ts'
 import scriptApiTypes from '../ScriptContext.ts?raw'
 import { LayoutTypes } from '../../src/wasm/siminterface.ts'
 
@@ -344,7 +342,7 @@ const runClock = ref(Date.now())
 const completedLessons = ref(new Set<string>())
 const lessonQueue = ref<LessonListEntry[]>([])
 const queuePlaying = ref(false)
-const runEvents = ref<Array<{ id: number; time: string; message: string }>>([])
+const runEvents = ref<Array<{ id: number; time: string; message: string; replaceKey?: string }>>([])
 const aiPanelOpen = ref(false)
 const aiPrompt = ref('')
 const aiAircraft = ref<'B747' | 'C172' | 'ANY'>('B747')
@@ -412,6 +410,9 @@ const props = defineProps({
         timeOut?: number,
         options?: { append?: boolean; replace?: boolean },
       ) => Promise<void>
+      waitForUser: (options: WaitForUserOptions) => Promise<void>
+      askQuestion: (options: AskQuestionOptions) => Promise<QuestionResult>
+      cancelPromptInteractions: () => void
       plotView: (item: SimulationProperties | SimulationProperties[], state: boolean) => void
       dataView: (item: SimulationProperties, state: boolean) => void
       dataDisplayReset: () => void
@@ -501,6 +502,7 @@ const code = ref(``)
 
 const reset = (markStopped = true) => {
   executionGeneration++
+  props.utilityFuncs.cancelPromptInteractions()
   executionResult.value = null
   resetTimeouts()
   isScriptRunning.value = false
@@ -555,9 +557,30 @@ const executeCode = async (): Promise<boolean> => {
         options?: { append?: boolean; replace?: boolean },
       ) => {
         if (runGeneration !== executionGeneration) return new Promise<void>(() => {})
-        addRunEvent(`Prompt: ${title}`)
+        addRunEvent(`Prompt: ${title}`, options?.replace ? `prompt:${title}` : undefined)
         await props.utilityFuncs.notifyUser(title, body, timeOut, options)
         if (runGeneration !== executionGeneration) return new Promise<void>(() => {})
+      },
+      waitForUser: async (options: WaitForUserOptions) => {
+        if (runGeneration !== executionGeneration) return new Promise<void>(() => {})
+        addRunEvent(`Waiting for user: ${options.title}`)
+        await props.utilityFuncs.waitForUser(options)
+        if (runGeneration !== executionGeneration) return new Promise<void>(() => {})
+        addRunEvent(`User continued: ${options.title}`)
+      },
+      askQuestion: async (options: AskQuestionOptions) => {
+        if (runGeneration !== executionGeneration) {
+          return new Promise<QuestionResult>(() => {})
+        }
+        addRunEvent(`Question: ${options.title}`)
+        const result = await props.utilityFuncs.askQuestion(options)
+        if (runGeneration !== executionGeneration) {
+          return new Promise<QuestionResult>(() => {})
+        }
+        addRunEvent(
+          `Answer submitted: ${options.title}${result.correct === undefined ? '' : result.correct ? ' · correct' : ' · incorrect'}`,
+        )
+        return result
       },
       dataView: props.utilityFuncs.dataView,
       plotView: props.utilityFuncs.plotView,
@@ -633,7 +656,7 @@ const filteredLessons = computed(() => {
   const query = lessonFilter.value.trim().toLocaleLowerCase()
   if (!query) return lessons.value
   return lessons.value.filter((lesson) =>
-    [lesson.name, lesson.category, lesson.description, lesson.difficulty]
+    [lesson.name, lesson.category, lesson.description]
       .filter(Boolean)
       .some((value) => String(value).toLocaleLowerCase().includes(query)),
   )
@@ -666,15 +689,26 @@ const elapsedDisplay = computed(() => {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 })
 
-const addRunEvent = (message: string) => {
+const addRunEvent = (message: string, replaceKey?: string) => {
   const elapsed = runStartedAt.value ? Date.now() - runStartedAt.value : 0
   const minutes = Math.floor(elapsed / 60000)
   const seconds = Math.floor((elapsed % 60000) / 1000)
-  runEvents.value.push({
+  const event = {
     id: ++runEventId,
     time: `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`,
     message,
-  })
+    replaceKey,
+  }
+
+  if (replaceKey) {
+    const existingIndex = runEvents.value.findIndex((item) => item.replaceKey === replaceKey)
+    if (existingIndex >= 0) {
+      runEvents.value[existingIndex] = { ...event, id: runEvents.value[existingIndex].id }
+      return
+    }
+  }
+
+  runEvents.value.push(event)
 }
 
 const queuePosition = (lesson: ModuleEntry) =>
@@ -965,16 +999,15 @@ onUnmounted(() => {
 .row-action {
   min-width: 1.25rem;
   height: 1.1rem;
-  border: 1px solid rgb(var(--color-simElementBorder));
-  background: rgb(var(--color-panelHeaderBackground));
   color: rgb(var(--color-secondary));
   line-height: 1;
+  opacity: 0.65;
 }
 
 .row-action:hover,
 .row-action:focus-visible {
-  border-color: rgb(var(--color-panelActive));
   color: rgb(var(--color-panelActive));
+  opacity: 1;
   outline: none;
 }
 
