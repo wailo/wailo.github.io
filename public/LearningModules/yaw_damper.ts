@@ -275,6 +275,8 @@ const measureDamping = async (label: string, measurementPeriod: number, context:
       context.notifyUser(
         'Oscillations',
         `${label}: ${(endTime - now).toFixed(0)}s remaining\n\n${generateRawTable(displayPeaks)}`,
+        0,
+        { replace: true },
       )
 
       return now >= endTime
