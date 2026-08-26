@@ -55,6 +55,13 @@
           class="h-5 w-full border border-simElementBorder"
           :buttonClick="() => (isOnline ? disconnect() : connectToPeerJsServer(selfPeerId))"
         />
+        <button
+          v-if="isInstructor && isOnline"
+          class="h-5 text-left opacity-70 hover:text-panelActive hover:opacity-100"
+          @click="exportSession"
+        >
+          Export session
+        </button>
       </div>
 
       <div v-if="isInstructor && isOnline" class="flex h-5 items-center gap-2 px-1 text-secondary">
@@ -89,7 +96,7 @@
       <div class="font-bold">Assigned: {{ currentAssignment.name }}</div>
       <div>Status: {{ currentAssignment.status }}</div>
       <div>Time remaining: {{ assignmentTimeRemaining }}</div>
-      <div class="grid grid-cols-2 gap-1">
+      <div class="grid grid-cols-3 gap-1">
         <button
           class="border border-simElementBorder"
           :disabled="currentAssignment.status === 'running'"
@@ -108,91 +115,82 @@
     </section>
 
     <section
-      v-if="isInstructor && isOnline && actionTargetIds.length"
-      class="order-3 grid gap-1 border-t border-simElementBorder p-1"
+      v-if="isInstructor && isOnline"
+      class="relative order-2 flex h-6 shrink-0 items-center gap-1 overflow-x-auto whitespace-nowrap bg-panelHeaderBackground px-1 text-secondary"
     >
-      <div class="grid grid-cols-2 gap-1">
-        <button
-          class="border border-simElementBorder"
-          :disabled="!actionTargetIds.length || !targetHaveAssignments"
-          @click="sendExerciseControl('start', actionTargetIds)"
-        >
-          ▶ Start [S]
-        </button>
-        <button
-          class="border border-simElementBorder"
-          :disabled="!actionTargetIds.length"
-          @click="sendExerciseControl('stop', actionTargetIds)"
-        >
-          ■ Stop
-        </button>
-      </div>
-      <div class="flex gap-1">
-        <input
-          v-model.trim="announcement"
-          class="min-w-0 flex-1 pl-1 text-secondary bg-primary border border-simElementBorder"
-          placeholder="Message selected students"
-          @keyup.enter="sendAnnouncement"
-        />
-        <button
-          class="px-2 border border-simElementBorder"
-          :disabled="!announcement"
-          @click="sendAnnouncement"
-        >
-          Send
-        </button>
-      </div>
-      <div class="grid grid-cols-[1fr_auto] gap-1">
-        <button
-          class="truncate border border-simElementBorder px-1 text-left"
-          :disabled="!actionTargetIds.length"
-          @click="openExercisePalette"
-        >
-          {{ selectedExercise()?.name || 'Exercise' }} [a]
-        </button>
-        <input
-          v-model.number="exerciseMinutes"
-          type="number"
-          min="1"
-          class="w-14 pl-1 text-secondary bg-primary border border-simElementBorder"
-          title="Minutes"
-        />
-      </div>
-      <div class="flex gap-1">
-        <input
-          ref="groupInputRef"
-          v-model.trim="groupName"
-          class="min-w-0 flex-1 pl-1 text-secondary bg-primary border border-simElementBorder"
-          placeholder="Group name"
-          @keyup.enter="assignGroup"
-        />
-        <button
-          class="px-2 border border-simElementBorder"
-          :disabled="!groupName || !actionTargetIds.length"
-          @click="assignGroup"
-        >
-          Set group
-        </button>
-        <button class="px-2 border border-simElementBorder" @click="exportSession">Export</button>
-      </div>
-      <small class="text-secondary"
-        >↑↓ move · space select · / find · a exercise · g group · A all · S start · esc clear</small
+      <span class="w-20 shrink-0 truncate font-medium text-panelActive">{{
+        actionTargetLabel
+      }}</span>
+      <button
+        class="command-button"
+        :disabled="!actionTargetIds.length"
+        @click="openExercisePalette"
       >
+        Assign [a]
+      </button>
+      <button
+        class="command-button"
+        :disabled="!actionTargetIds.length || !targetHaveAssignments"
+        @click="sendExerciseControl('start', actionTargetIds)"
+      >
+        Start [S]
+      </button>
+      <button
+        class="command-button"
+        :disabled="!actionTargetIds.length"
+        @click="sendExerciseControl('stop', actionTargetIds)"
+      >
+        Stop
+      </button>
+      <button
+        class="command-button"
+        :disabled="!actionTargetIds.length || !targetHaveAssignments"
+        @click="unassignExercise"
+      >
+        Unassign [u]
+      </button>
+      <button
+        class="command-button"
+        :disabled="!actionTargetIds.length"
+        @click="toggleMessageComposer"
+      >
+        Message
+      </button>
+
+      <div
+        v-if="messageComposerOpen"
+        class="fixed inset-0 z-50 flex items-start justify-center bg-panelContentBackground/80 pt-[12vh]"
+        @click.self="messageComposerOpen = false"
+      >
+        <div
+          class="flex w-80 max-w-[calc(100%-1rem)] items-center gap-1 border border-panelBorder bg-panelContentBackground p-1 shadow-lg"
+        >
+          <input
+            ref="announcementInputRef"
+            v-model.trim="announcement"
+            class="h-5 min-w-0 flex-1 border-b border-simElementBorder bg-transparent px-1 text-secondary outline-none focus:border-panelActive"
+            placeholder="Message target…"
+            @keyup.enter="sendAnnouncement"
+            @keydown.esc.prevent="messageComposerOpen = false"
+          />
+          <button class="command-button" :disabled="!announcement" @click="sendAnnouncement">
+            Send
+          </button>
+        </div>
+      </div>
     </section>
 
     <div
       v-if="isInstructor && isOnline"
-      class="order-2 min-h-24 flex-1 overflow-auto font-panelFont"
+      class="classroom-roster order-3 min-h-24 flex-1 overflow-auto font-panelFont"
     >
-      <div
-        class="sticky top-0 z-20 flex items-center border border-simElementBorder bg-panelHeaderBackground px-1"
-      >
+      <div class="sticky top-0 z-20 flex h-6 items-center bg-panelHeaderBackground px-1">
         <span class="pr-1">/</span>
         <input
           ref="rosterSearchRef"
           v-model="rosterSearch"
           class="min-w-0 flex-1 bg-transparent text-secondary outline-none"
-          placeholder="filter user / group / exercise / status"
+          placeholder="filter user / exercise / status"
           @keydown.esc.prevent="clearRosterSearch"
           @keydown.down.prevent="moveRosterFocus(1)"
           @keydown.up.prevent="moveRosterFocus(-1)"
@@ -203,50 +201,98 @@
         />
         <span>{{ filteredParticipants.length }}/{{ Object.keys(incomingConns).length }}</span>
       </div>
-      <table class="h-fit min-w-[48rem] table-fixed text-left whitespace-nowrap">
-        <thead class="sticky top-5 z-10 bg-panelHeaderBackground">
+      <table class="h-fit w-full table-fixed text-left whitespace-nowrap">
+        <thead class="sticky top-6 z-10 bg-panelHeaderBackground text-secondary">
           <tr>
-            <th class="w-10 min-w-10 max-w-10 px-1 text-center">S!</th>
-            <th class="w-[14%] px-1">NAME</th>
-            <th class="w-[14%] px-1">CALLSIGN</th>
-            <th class="w-[12%] px-1">SIM</th>
-            <th class="w-[30%] px-1">EXERCISE</th>
-            <th class="w-[12%] px-1">GROUP</th>
-            <th class="w-[10%] px-1">NET</th>
+            <th class="w-10 min-w-10 max-w-10 px-1 text-center">
+              <label class="inline-flex cursor-pointer items-center" title="Select all peers">
+                <input
+                  class="sr-only"
+                  type="checkbox"
+                  :checked="allSelected"
+                  @change="toggleSelectAll"
+                />
+                <span
+                  class="flex size-3 items-center justify-center border border-simElementBorder text-[0.65rem] leading-none"
+                  :class="selectedPeerIds.length ? 'border-panelActive text-panelActive' : ''"
+                >
+                  {{ allSelected ? '✓' : selectedPeerIds.length ? '−' : '' }}
+                </span>
+              </label>
+            </th>
+            <th class="px-1">STUDENT</th>
+            <th class="w-14 px-1">SIM</th>
+            <th class="w-16 px-1">TASK</th>
+            <th class="roster-net w-16 px-1">NET</th>
             <th class="w-6">×</th>
           </tr>
         </thead>
         <tbody>
-          <tr
-            v-for="({ peer, peerId }, index) in filteredParticipants"
-            :key="peerId"
-            :ref="(element) => setRosterRowRef(element, index)"
-            class="h-5 nowrap cursor-pointer transition-colors"
-            :class="rowClass(peerId)"
-            :aria-current="focusedPeerId === peerId ? 'true' : undefined"
-            @click="focusAndTogglePeer(peerId)"
-          >
-            <td class="w-10 min-w-10 max-w-10 px-1 text-center">
-              <span class="grid w-8 grid-cols-2">
-                <span class="block w-4 text-center">{{ selectionMarker(peerId) || '\u00a0' }}</span>
-                <span
-                  class="block w-4 text-center"
-                  :class="peer.handState === 'raised' ? 'animate-pulse font-bold' : ''"
-                  >{{ peer.handState === 'raised' ? '!' : '\u00a0' }}</span
-                >
-              </span>
-            </td>
-            <td class="overflow-hidden text-ellipsis px-1">
-              <b>{{ peer.metadata.name || '—' }}</b>
-            </td>
-            <td class="overflow-hidden text-ellipsis px-1">
-              {{ peer.metadata.callsign || peer.metadata.displayName || '—' }}
-            </td>
-            <!-- Status -->
-            <td class="overflow-hidden text-ellipsis px-1">
-              <button class="">
-                {{ compactStatus(peer.metadata.status) }}
-                <!-- <svg
+          <template v-for="group in participantExerciseGroups" :key="group.key">
+            <tr class="h-5 bg-panelHeaderBackground text-secondary">
+              <td colspan="6" class="px-1 pt-1 font-medium">
+                <span class="text-simActiveButton">+</span>
+                {{ group.label }}
+                <span class="ml-1 opacity-60">[{{ group.participants.length }}]</span>
+              </td>
+            </tr>
+            <tr
+              v-for="participant in group.participants"
+              :key="participant.peerId"
+              :ref="(element) => setRosterRowRef(element, participant.rosterIndex)"
+              class="h-5 nowrap cursor-pointer transition-colors"
+              :class="rowClass(participant.peerId)"
+              :aria-current="focusedPeerId === participant.peerId ? 'true' : undefined"
+              :title="participantSummary(participant.peer)"
+              @click="focusPeer(participant.peerId)"
+            >
+              <td class="w-10 min-w-10 max-w-10 px-1 text-center">
+                <span class="flex w-8 items-center justify-center gap-1">
+                  <label class="inline-flex cursor-pointer items-center" @click.stop>
+                    <input
+                      class="sr-only"
+                      type="checkbox"
+                      :checked="isPeerSelected(participant.peerId)"
+                      :aria-label="`Select ${participant.peer.metadata.name || participant.peerId}`"
+                      @change="togglePeerSelection(participant.peerId)"
+                    />
+                    <span
+                      class="flex size-3 items-center justify-center border border-simElementBorder text-[0.65rem] leading-none"
+                      :class="
+                        isPeerSelected(participant.peerId)
+                          ? 'border-panelActive text-panelActive'
+                          : ''
+                      "
+                    >
+                      {{ isPeerSelected(participant.peerId) ? '✓' : '' }}
+                    </span>
+                  </label>
+                  <span
+                    class="block w-3 text-center"
+                    :class="
+                      participant.peer.handState === 'raised' ? 'animate-pulse font-bold' : ''
+                    "
+                    >{{ participant.peer.handState === 'raised' ? '!' : '\u00a0' }}</span
+                  >
+                </span>
+              </td>
+              <td class="overflow-hidden text-ellipsis px-1">
+                <span class="font-medium">
+                  {{
+                    participant.peer.metadata.callsign ||
+                    participant.peer.metadata.displayName ||
+                    '—'
+                  }}
+                </span>
+                <span class="ml-1 opacity-60">
+                  {{ participant.peer.metadata.name || '' }}
+                </span>
+              </td>
+              <!-- Status -->
+              <td class="overflow-hidden text-ellipsis px-1">
+                <button class="">
+                  {{ compactStatus(participant.peer.metadata.status) }}
+                  <!-- <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 16 16"
                   fill="currentColor"
@@ -258,44 +304,49 @@
                     clip-rule="evenodd"
                   />
                 </svg> -->
-              </button>
-            </td>
-            <td class="overflow-hidden text-ellipsis px-1" :title="peer.exercise?.name || ''">
-              <span v-if="peer.exercise">
-                {{ exerciseStatusSymbol(peer.exercise.status) }} {{ peer.exercise.name }} ·
-                <span :class="exerciseStatusClass(peer.exercise.status)">{{
-                  peer.exercise.status
-                }}</span>
-              </span>
-              <span v-else>—</span>
-            </td>
-            <td class="overflow-hidden text-ellipsis px-1">
-              {{ peer.metadata.group || '—' }}
-            </td>
-            <td class="overflow-hidden text-ellipsis px-1">
-              {{ connectionAge(peer) > 15 ? 'STALE' : `${peer.latency ?? '—'}ms` }}
-              <span v-if="peer.handState === 'raised'" class="font-bold">
-                ! HAND {{ handWaitTime(peer) }}</span
+                </button>
+              </td>
+              <td
+                class="overflow-hidden text-ellipsis px-1"
+                :title="exerciseDetail(participant.peer)"
               >
-            </td>
-            <!-- Disconnect -->
-            <td class="pl-1">
-              <button @click.stop="confirmDisconnect(peerId, peer)">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 16 16"
-                  fill="currentColor"
-                  class="size-4"
+                <span v-if="participant.peer.exercise">
+                  {{ exerciseStatusSymbol(participant.peer.exercise.status) }}
+                  <span :class="exerciseStatusClass(participant.peer.exercise.status)">{{
+                    compactExerciseStatus(participant.peer.exercise.status)
+                  }}</span>
+                </span>
+                <span v-else>—</span>
+              </td>
+              <td class="roster-net overflow-hidden text-ellipsis px-1 opacity-70">
+                {{
+                  connectionAge(participant.peer) > 15
+                    ? 'STALE'
+                    : `${participant.peer.latency ?? '—'}ms`
+                }}
+                <span v-if="participant.peer.handState === 'raised'" class="font-bold">
+                  ! {{ handWaitTime(participant.peer) }}</span
                 >
-                  <path
-                    fill-rule="evenodd"
-                    d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm2.78-4.22a.75.75 0 0 1-1.06 0L8 9.06l-1.72 1.72a.75.75 0 1 1-1.06-1.06L6.94 8 5.22 6.28a.75.75 0 0 1 1.06-1.06L8 6.94l1.72-1.72a.75.75 0 1 1 1.06 1.06L9.06 8l1.72 1.72a.75.75 0 0 1 0 1.06Z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
-              </button>
-            </td>
-          </tr>
+              </td>
+              <!-- Disconnect -->
+              <td class="pl-1">
+                <button @click.stop="confirmDisconnect(participant.peerId, participant.peer)">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 16 16"
+                    fill="currentColor"
+                    class="size-4"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm2.78-4.22a.75.75 0 0 1-1.06 0L8 9.06l-1.72 1.72a.75.75 0 1 1-1.06-1.06L6.94 8 5.22 6.28a.75.75 0 0 1 1.06-1.06L8 6.94l1.72-1.72a.75.75 0 1 1 1.06 1.06L9.06 8l1.72 1.72a.75.75 0 0 1 0 1.06Z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                </button>
+              </td>
+            </tr>
+          </template>
         </tbody>
       </table>
     </div>
@@ -322,7 +373,14 @@
           @input="exerciseResultIndex = 0"
           @keydown="handleExercisePaletteKeydown"
         />
-        <span>{{ exerciseMinutes }}m</span>
+        <input
+          v-model.number="exerciseMinutes"
+          type="number"
+          min="1"
+          class="h-5 w-10 border-b border-simElementBorder bg-transparent px-1 text-right text-secondary outline-none focus:border-panelActive"
+          title="Assignment deadline in minutes"
+        />
+        <span class="pl-1 opacity-60">min</span>
       </div>
       <div class="max-h-[50vh] overflow-auto py-1 font-panelFont">
         <button
@@ -465,16 +523,16 @@ const selectedPeerIds = ref<string[]>([])
 const focusedPeerId = ref('')
 const rosterSearch = ref('')
 const rosterSearchRef = ref<HTMLInputElement | null>(null)
-const groupInputRef = ref<HTMLInputElement | null>(null)
 const exercisePaletteOpen = ref(false)
 const exerciseQuery = ref('')
 const exerciseSearchRef = ref<HTMLInputElement | null>(null)
 const exerciseResultIndex = ref(0)
 const rosterRowRefs = ref<HTMLElement[]>([])
 const announcement = ref('')
+const announcementInputRef = ref<HTMLInputElement | null>(null)
+const messageComposerOpen = ref(false)
 const exercisePath = ref('')
 const exerciseMinutes = ref(30)
-const groupName = ref('')
 const studentHandState = ref<ClassroomHandState>('idle')
 const currentAssignment = ref<
   (ClassroomExerciseAssignment & { status: ClassroomExerciseStatus }) | null
@@ -528,7 +586,6 @@ const filteredParticipants = computed(() => {
       'peer.metadata.name',
       'peer.metadata.status',
       'peer.metadata.checkPoint',
-      'peer.metadata.group',
       'peer.exercise.name',
       'peer.exercise.status',
     ],
@@ -536,6 +593,42 @@ const filteredParticipants = computed(() => {
     .search(rosterSearch.value)
     .map((result) => result.item)
 })
+const participantExerciseGroups = computed(() => {
+  const groups = new Map<
+    string,
+    {
+      key: string
+      label: string
+      participants: Array<(typeof filteredParticipants.value)[number] & { rosterIndex: number }>
+    }
+  >()
+
+  for (const participant of filteredParticipants.value) {
+    const exerciseName = participant.peer.exercise?.name?.trim()
+    const key = exerciseName ? `exercise:${exerciseName}` : 'unassigned'
+    const group = groups.get(key) || {
+      key,
+      label: exerciseName || 'Unassigned',
+      participants: [],
+    }
+    group.participants.push({ ...participant, rosterIndex: 0 })
+    groups.set(key, group)
+  }
+
+  const sortedGroups = [...groups.values()].sort((a, b) => {
+    if (a.key === 'unassigned') return -1
+    if (b.key === 'unassigned') return 1
+    return a.label.localeCompare(b.label)
+  })
+  let rosterIndex = 0
+  for (const group of sortedGroups) {
+    for (const participant of group.participants) participant.rosterIndex = rosterIndex++
+  }
+  return sortedGroups
+})
+const visibleParticipantRows = computed(() =>
+  participantExerciseGroups.value.flatMap((group) => group.participants),
+)
 const exerciseResults = computed(() => {
   if (!exerciseQuery.value.trim()) return exerciseModules
   return new Fuse(exerciseModules, { threshold: 0.35, keys: ['name', 'category'] })
@@ -548,6 +641,13 @@ const actionTargetIds = computed(() =>
     : focusedPeerId.value && incomingConns.value[focusedPeerId.value]
       ? [focusedPeerId.value]
       : [],
+)
+const actionTargetLabel = computed(() =>
+  selectedPeerIds.value.length
+    ? `${selectedPeerIds.value.length} checked`
+    : actionTargetIds.value.length
+      ? 'Focus'
+      : 'No target',
 )
 const targetHaveAssignments = computed(() =>
   actionTargetIds.value.some((id) => Boolean(incomingConns.value[id]?.exercise)),
@@ -572,7 +672,7 @@ watch(isOnline, (newValue: boolean) => {
 })
 
 watch(rosterSearch, () => {
-  const visible = filteredParticipants.value
+  const visible = visibleParticipantRows.value
   if (!visible.some((row) => row.peerId === focusedPeerId.value)) {
     focusedPeerId.value = visible[0]?.peerId || ''
   }
@@ -713,6 +813,7 @@ const onData = (data: PeerData, conn: PeerJS.DataConnection) => {
       'command',
       'announcement',
       'exercise',
+      'exercise-unassign',
       'exercise-control',
       'hand-control',
     ]
@@ -796,6 +897,21 @@ const handleEnvelope = (message: ClassroomEnvelope, conn: PeerJS.DataConnection)
         }
         sendExerciseStatus('assigned')
         emit('announcement', `New exercise assigned: ${currentAssignment.value.name}`)
+      }
+      break
+    case 'exercise-unassign':
+      if (!isInstructor.value) {
+        const assignmentName = currentAssignment.value?.name
+        if (currentAssignment.value?.status === 'running') emit('exerciseStop')
+        currentAssignment.value = null
+        sendEnvelopeToConnection(conn, 'ack', {
+          messageId: message.id,
+          action: 'exercise-unassign',
+        })
+        emit(
+          'announcement',
+          assignmentName ? `Exercise unassigned: ${assignmentName}` : 'Exercise unassigned',
+        )
       }
       break
     case 'exercise-status':
@@ -1014,8 +1130,6 @@ const logSessionEvent = (type: string, target: string, detail: string) => {
   sessionEvents.value.push({ timestamp: Date.now(), type, target, detail })
 }
 
-const targetLabel = () =>
-  selectedPeerIds.value.length ? selectedPeerIds.value.join(', ') : 'entire class'
 const idsLabel = (ids: string[]) => ids.join(', ')
 
 const toggleSelectAll = () => {
@@ -1026,12 +1140,6 @@ const selectAllPeers = () => {
 }
 
 const isPeerSelected = (peerId: string) => selectedPeerIds.value.includes(peerId)
-const selectionMarker = (peerId: string) => {
-  if (isPeerSelected(peerId) && focusedPeerId.value === peerId) return '◆'
-  if (isPeerSelected(peerId)) return '●'
-  if (focusedPeerId.value === peerId) return '›'
-  return ''
-}
 
 const togglePeerSelection = (peerId: string) => {
   acknowledgeHandRequest(peerId)
@@ -1040,13 +1148,13 @@ const togglePeerSelection = (peerId: string) => {
     : [...selectedPeerIds.value, peerId]
 }
 
-const focusAndTogglePeer = (peerId: string) => {
+const focusPeer = (peerId: string) => {
   focusedPeerId.value = peerId
-  togglePeerSelection(peerId)
+  acknowledgeHandRequest(peerId)
 }
 
 const moveRosterFocus = (amount: number) => {
-  const rows = filteredParticipants.value
+  const rows = visibleParticipantRows.value
   if (!rows.length) return
   const current = rows.findIndex((row) => row.peerId === focusedPeerId.value)
   const next =
@@ -1061,6 +1169,19 @@ const moveRosterFocus = (amount: number) => {
 
 const setRosterRowRef = (element: Element | ComponentPublicInstance | null, index: number) => {
   if (element instanceof HTMLElement) rosterRowRefs.value[index] = element
+}
+
+const consumeActionSelection = (targetIds: string[]) => {
+  const consumed = new Set(targetIds)
+  selectedPeerIds.value = []
+  nextTick(() => {
+    const rows = visibleParticipantRows.value
+    const nextIndex = rows.findIndex(({ peerId, peer }) => !consumed.has(peerId) && !peer.exercise)
+    const fallbackIndex = rows.findIndex(({ peerId }) => !consumed.has(peerId))
+    const focusIndex = nextIndex >= 0 ? nextIndex : fallbackIndex
+    focusedPeerId.value = focusIndex >= 0 ? rows[focusIndex].peerId : ''
+    if (focusIndex >= 0) rosterRowRefs.value[focusIndex]?.scrollIntoView({ block: 'nearest' })
+  })
 }
 
 const clearRosterSearch = () => {
@@ -1142,9 +1263,9 @@ const handleClassroomKeydown = (event: KeyboardEvent) => {
   } else if (event.key === 'a') {
     event.preventDefault()
     openExercisePalette()
-  } else if (event.key === 'g' && actionTargetIds.value.length) {
+  } else if (event.key === 'u' && targetHaveAssignments.value) {
     event.preventDefault()
-    groupInputRef.value?.focus()
+    unassignExercise()
   } else if (event.key.toLowerCase() === 's') {
     event.preventDefault()
     sendExerciseControl('start', actionTargetIds.value)
@@ -1157,23 +1278,38 @@ const handleClassroomKeydown = (event: KeyboardEvent) => {
 
 const rowClass = (peerId: string) => {
   const focused = focusedPeerId.value === peerId
-  const selected = isPeerSelected(peerId)
-  return [
-    'text-secondary hover:bg-simInputBackground/40',
-    focused ? 'bg-simInputBackground' : '',
-    selected ? 'font-medium !text-simActiveButton' : '',
-  ]
+  return ['text-secondary hover:bg-simInputBackground/40', focused ? 'bg-simInputBackground' : '']
 }
 
-const compactStatus = (status?: string) =>
-  status?.replace('Structural Damage', 'DAMAGE') || 'ONLINE'
+const compactStatus = (status?: string) => {
+  const normalized = status?.trim().toLowerCase()
+  if (!normalized) return 'ON'
+  return (
+    {
+      online: 'ON',
+      running: 'RUN',
+      paused: 'PAUSE',
+      trial: 'TRIAL',
+      'structural damage': 'DMG',
+    }[normalized] || status?.slice(0, 5).toUpperCase()
+  )
+}
+const exerciseDetail = (peer: ConnectionsList[string]) => {
+  if (!peer.exercise) return ''
+  const checkpoint = peer.metadata.checkPoint ? ` · ${peer.metadata.checkPoint}` : ''
+  return `${peer.exercise.name} · ${peer.exercise.status}${checkpoint}`
+}
+const compactExerciseStatus = (status: ClassroomExerciseStatus) =>
+  ({
+    assigned: 'ASN',
+    running: 'RUN',
+    completed: 'DONE',
+    stopped: 'STOP',
+    error: 'ERR',
+    overdue: 'LATE',
+  })[status]
 const exerciseStatusSymbol = (status: ClassroomExerciseStatus) =>
   ({ assigned: '○', running: '▶', completed: '✓', stopped: '■', error: '!', overdue: '!' })[status]
-
-const connectionAge = (peer: ConnectionsList[string]) => {
-  clock.value
-  return Math.floor((Date.now() - peer.lastSeen) / 1000)
-}
 
 const updateOverdueAssignments = () => {
   const now = Date.now()
@@ -1193,10 +1329,18 @@ const updateOverdueAssignments = () => {
 }
 
 const sendAnnouncement = () => {
-  if (!announcement.value) return
-  sendEnvelope('announcement', { message: announcement.value })
-  logSessionEvent('announcement', targetLabel(), announcement.value)
+  const targets = [...actionTargetIds.value]
+  if (!announcement.value || !targets.length) return
+  sendEnvelopeToIds(targets, 'announcement', { message: announcement.value })
+  logSessionEvent('announcement', idsLabel(targets), announcement.value)
   announcement.value = ''
+  messageComposerOpen.value = false
+}
+
+const toggleMessageComposer = () => {
+  if (!actionTargetIds.value.length) return
+  messageComposerOpen.value = !messageComposerOpen.value
+  if (messageComposerOpen.value) nextTick(() => announcementInputRef.value?.focus())
 }
 
 const selectedExercise = (): ModuleEntry | undefined =>
@@ -1237,6 +1381,22 @@ const assignExercise = async () => {
     }
   })
   logSessionEvent('exercise', idsLabel(targets), `${exercise.name} (${exerciseMinutes.value} min)`)
+  consumeActionSelection(targets)
+}
+
+const unassignExercise = () => {
+  const targets = actionTargetIds.value.filter((id) => Boolean(incomingConns.value[id]?.exercise))
+  if (!targets.length) return
+
+  sendEnvelopeToIds(targets, 'exercise-unassign', {})
+  targets.forEach((id) => {
+    const peer = incomingConns.value[id]
+    if (!peer) return
+    peer.exercise = undefined
+    peer.metadata.checkPoint = ''
+  })
+  logSessionEvent('exercise-unassign', idsLabel(targets), 'Assignment removed')
+  consumeActionSelection(targets)
 }
 
 const sendExerciseStatus = (status: ClassroomExerciseStatus, detail?: string) => {
@@ -1283,15 +1443,18 @@ const exerciseStatusClass = (status: ClassroomExerciseStatus) => ({
   'opacity-60': ['assigned', 'stopped'].includes(status),
 })
 
-const assignGroup = () => {
-  const targets = [...actionTargetIds.value]
-  if (!targets.length || !groupName.value) return
-  const selected = new Set(targets)
-  Object.entries(incomingConns.value).forEach(([id, peer]) => {
-    if (selected.has(id)) peer.metadata.group = groupName.value
-  })
-  logSessionEvent('group', idsLabel(targets), groupName.value)
-  groupName.value = ''
+const connectionAge = (peer: ConnectionsList[string]) => {
+  clock.value
+  return Math.floor((Date.now() - peer.lastSeen) / 1000)
+}
+
+const participantSummary = (peer: ConnectionsList[string]) => {
+  const identity = [peer.metadata.callsign || peer.metadata.displayName, peer.metadata.name].filter(
+    Boolean,
+  )
+  const exercise = peer.exercise ? `${peer.exercise.name}: ${peer.exercise.status}` : 'Unassigned'
+  const network = connectionAge(peer) > 15 ? 'Network stale' : `${peer.latency ?? '—'}ms`
+  return `${identity.join(' · ')} · ${compactStatus(peer.metadata.status)} · ${exercise} · ${network}`
 }
 
 const confirmDisconnect = (peerId: string, peer: ConnectionsList[string]) => {
@@ -1326,7 +1489,6 @@ const exportSession = () => {
   const participants = Object.entries(incomingConns.value).map(([id, peer]) => ({
     id,
     displayName: peer.metadata.displayName,
-    group: peer.metadata.group,
     status: peer.metadata.status,
     checkpoint: peer.metadata.checkPoint,
     latency: peer.latency,
@@ -1462,4 +1624,18 @@ const trace = (text: string) => {
 //  'webrtc'
 </script>
 
-<style scoped></style>
+<style scoped>
+.classroom-roster {
+  container-type: inline-size;
+}
+
+.command-button {
+  @apply shrink-0 px-1 hover:bg-simInputBackground hover:text-panelActive disabled:cursor-default disabled:opacity-40;
+}
+
+@container (max-width: 26rem) {
+  .roster-net {
+    display: none;
+  }
+}
+</style>

@@ -50,6 +50,7 @@ type ClassroomEnvelope = {
     | 'command'
     | 'announcement'
     | 'exercise'
+    | 'exercise-unassign'
     | 'exercise-status'
     | 'exercise-control'
     | 'hand'
