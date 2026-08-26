@@ -1,7 +1,7 @@
 <template>
   <div class="flex h-full w-full min-h-0 flex-col text-secondary">
     <div
-      class="grid shrink-0 grid-cols-4 border-b border-simElementBorder bg-panelHeaderBackground"
+      class="grid shrink-0 grid-cols-5 border-b border-simElementBorder bg-panelHeaderBackground"
     >
       <div class="px-2 py-1">
         <span class="opacity-60">AOA</span>
@@ -16,216 +16,219 @@
         <span class="ml-2 text-simActiveButton">{{ pitchAngle.toFixed(1) }}°</span>
       </div>
       <div class="border-l border-simElementBorder px-2 py-1">
+        <span class="opacity-60">GAMMA</span>
+        <span class="ml-2 text-simActiveButton">{{ gammaAngle.toFixed(1) }}°</span>
+      </div>
+      <div class="border-l border-simElementBorder px-2 py-1">
         <span class="opacity-60">FLAPS</span>
         <span class="ml-2 text-simActiveButton">{{ flapDisplay }}</span>
       </div>
     </div>
 
     <div class="flex min-h-0 flex-1 flex-col">
-    <svg
-      class="min-h-0 flex-1 bg-panelContentBackground"
-      viewBox="0 0 800 500"
-      role="img"
-      :aria-label="`Airfoil at ${angleOfAttack.toFixed(1)} degrees angle of attack and ${airspeed.toFixed(0)} knots`"
-      preserveAspectRatio="xMidYMid meet"
-    >
-      <defs>
-        <marker
-          id="airflow-arrowhead"
-          markerWidth="7"
-          markerHeight="7"
-          refX="6"
-          refY="3.5"
-          orient="auto"
-        >
-          <path d="M 0 0 L 7 3.5 L 0 7 Z" class="fill-secondary" />
-        </marker>
-        <marker
-          id="pitch-arrowhead"
-          markerWidth="7"
-          markerHeight="7"
-          refX="6"
-          refY="3.5"
-          orient="auto"
-        >
-          <path d="M 0 0 L 7 3.5 L 0 7 Z" class="fill-panelActive" />
-        </marker>
-      </defs>
+      <svg
+        class="h-full min-h-0 w-full flex-1 bg-panelContentBackground"
+        viewBox="0 40 800 420"
+        role="img"
+        :aria-label="`Airfoil at ${angleOfAttack.toFixed(1)} degrees angle of attack and ${airspeed.toFixed(0)} knots`"
+        preserveAspectRatio="xMidYMid meet"
+      >
+        <defs>
+          <marker
+            id="airflow-arrowhead"
+            markerWidth="7"
+            markerHeight="7"
+            refX="6"
+            refY="3.5"
+            orient="auto"
+          >
+            <path d="M 0 0 L 7 3.5 L 0 7 Z" class="fill-secondary" />
+          </marker>
+          <mask id="airflow-reference-clearance">
+            <rect x="0" y="0" width="800" height="500" fill="white" />
+            <rect x="12" y="180" width="232" height="66" rx="3" fill="black" />
+          </mask>
+        </defs>
 
-      <g class="airflow-field" :style="{ opacity: airflowOpacity }">
-        <g v-for="(stream, streamIndex) in streamlines" :key="streamIndex">
-          <path
-            :id="`airflow-stream-${streamIndex}`"
-            :d="stream"
-            class="airflow-line"
-            :class="{
-              'separated-flow':
-                stalling && (angleOfAttack >= 0 ? streamIndex < 4 : streamIndex >= 4),
-            }"
-            marker-end="url(#airflow-arrowhead)"
-          />
-          <template v-if="airspeed > 0.5">
+        <g
+          class="airflow-field"
+          mask="url(#airflow-reference-clearance)"
+          :style="{ opacity: airflowOpacity }"
+        >
+          <g v-for="(stream, streamIndex) in streamlines" :key="streamIndex">
             <path
-              v-for="offset in arrowOffsets"
-              :key="offset"
-              d="M -7 -4 L 5 0 L -7 4 Z"
-              class="fill-secondary"
-            >
+              :id="`airflow-stream-${streamIndex}`"
+              :d="stream"
+              class="airflow-line"
+              :class="{
+                'separated-flow':
+                  stalling && (angleOfAttack >= 0 ? streamIndex < 4 : streamIndex >= 4),
+              }"
+            />
+            <path v-if="airspeed > 0.5" d="M -7 -4 L 5 0 L -7 4 Z" class="fill-secondary">
               <animateMotion
                 :dur="`${airflowDuration}s`"
-                :begin="`${-offset * airflowDuration}s`"
+                :begin="`${airflowAnimationDelay(streamIndex)}s`"
                 repeatCount="indefinite"
                 rotate="auto"
               >
                 <mpath :href="`#airflow-stream-${streamIndex}`" />
               </animateMotion>
             </path>
-          </template>
+          </g>
         </g>
-      </g>
 
-      <line x1="70" y1="250" x2="730" y2="250" class="reference-line" />
-      <text x="76" y="242" class="diagram-label">RELATIVE AIRFLOW</text>
-      <text
-        x="724"
-        y="30"
-        text-anchor="end"
-        class="flow-status"
-        :class="stalling ? 'stall-warning' : 'attached-status'"
-      >
-        {{ stalling ? 'STALL · FLOW SEPARATED' : 'FLOW ATTACHED' }}
-      </text>
-
-      <g v-if="stalling" aria-label="Turbulent separated wake">
-        <g
-          v-for="(vortex, index) in stallVortices"
-          :key="`vortex-${index}`"
-          :transform="`translate(${vortex.x} ${vortex.y}) scale(${vortex.scale})`"
+        <line x1="70" y1="250" x2="730" y2="250" class="reference-line" />
+        <text x="76" y="242" class="diagram-label">RELATIVE AIRFLOW</text>
+        <text
+          x="724"
+          y="58"
+          text-anchor="end"
+          class="flow-status"
+          :class="stalling ? 'stall-warning' : 'attached-status'"
         >
-          <path d="M 16 0 A 16 16 0 1 1 -5 -15" class="vortex-line">
-            <animateTransform
-              attributeName="transform"
-              type="rotate"
-              :from="`0 0 0`"
-              :to="`${vortex.clockwise ? 360 : -360} 0 0`"
-              :dur="`${1.8 + index * 0.4}s`"
-              repeatCount="indefinite"
-            />
-          </path>
+          {{ stalling ? 'STALL · FLOW SEPARATED' : 'FLOW ATTACHED' }}
+        </text>
+
+        <g v-if="stalling" aria-label="Turbulent separated wake">
+          <g
+            v-for="(vortex, index) in stallVortices"
+            :key="`vortex-${index}`"
+            :transform="`translate(${vortex.x} ${vortex.y}) scale(${vortex.scale})`"
+          >
+            <path d="M 16 0 A 16 16 0 1 1 -5 -15" class="vortex-line">
+              <animateTransform
+                attributeName="transform"
+                type="rotate"
+                :from="`0 0 0`"
+                :to="`${vortex.clockwise ? 360 : -360} 0 0`"
+                :dur="`${1.8 + index * 0.4}s`"
+                repeatCount="indefinite"
+              />
+            </path>
+          </g>
         </g>
-      </g>
 
-      <g :transform="`translate(400 250) rotate(${airfoilRotation})`">
-        <line x1="-175" y1="0" x2="175" y2="0" class="chord-line" />
+        <g :transform="`translate(400 250) rotate(${airfoilRotation})`">
+          <!-- NACA 2412 main section -->
+          <path
+            :d="mainAirfoilPath"
+            class="airfoil-surface"
+            :class="{ 'stall-surface': stalling }"
+          />
 
-        <!-- NACA 2412 main section -->
-        <path :d="mainAirfoilPath" class="airfoil-surface" :class="{ 'stall-surface': stalling }" />
+          <!-- Plain flap: continuous with the main profile at zero deflection -->
+          <path
+            :d="flapPath"
+            class="airfoil-control"
+            :class="{ 'stall-surface': stalling }"
+            :transform="`rotate(${flapDeflection} ${flapHinge.x} ${flapHinge.y})`"
+          />
 
-        <!-- Plain flap: continuous with the main profile at zero deflection -->
-        <path
-          :d="flapPath"
-          class="airfoil-control"
-          :class="{ 'stall-surface': stalling }"
-          :transform="`rotate(${flapDeflection} ${flapHinge.x} ${flapHinge.y})`"
-        />
+          <circle :cx="flapHinge.x" :cy="flapHinge.y" r="3" class="fill-panelActive" />
 
-        <circle :cx="flapHinge.x" :cy="flapHinge.y" r="3" class="fill-panelActive" />
-      </g>
+          <!-- Drawn after the filled geometry so the chord remains continuous through the airfoil. -->
+          <line x1="150" y1="0" x2="-190" y2="0" class="chord-line" />
+        </g>
 
-      <g transform="translate(400 250)">
-        <path :d="angleArc" class="angle-arc" />
-        <text x="34" :y="angleLabelY" class="diagram-label">α {{ angleOfAttack.toFixed(1) }}°</text>
-      </g>
+        <!-- Angular references share the trailing edge and render above the airfoil. -->
+        <g transform="translate(550 250)">
+          <line x1="0" y1="0" x2="-480" y2="0" class="flight-path-reference" />
+          <g :transform="`rotate(${-gammaReferenceAngle})`">
+            <line x1="0" y1="0" x2="-480" y2="0" class="horizon-reference" />
+          </g>
+        </g>
 
-      <g transform="translate(20 465)">
-        <rect width="220" height="20" class="legend-frame" />
-        <path d="M 8 10 H 42" class="airflow-line" marker-end="url(#airflow-arrowhead)" />
-        <text x="50" y="14" class="diagram-label">AIRFLOW SPEED {{ speedDescription }}</text>
-      </g>
+        <g transform="translate(400 250)">
+          <path :d="angleArc" class="angle-arc" />
+          <text x="34" :y="angleLabelY" class="diagram-label">
+            α {{ angleOfAttack.toFixed(1) }}°
+          </text>
+        </g>
 
-      <g transform="translate(620 455)">
-        <line x1="-65" y1="0" x2="75" y2="0" class="reference-line" />
-        <line
-          x1="0"
-          y1="0"
-          x2="70"
-          y2="0"
-          class="pitch-reference"
-          :transform="`rotate(${-pitchReferenceAngle})`"
-          marker-end="url(#pitch-arrowhead)"
-        />
-        <path :d="pitchArc" class="angle-arc" />
-        <text x="-65" y="16" class="diagram-label">HORIZON</text>
-        <text x="10" y="-10" class="diagram-label">θ {{ pitchAngle.toFixed(1) }}°</text>
-      </g>
-    </svg>
+        <g transform="translate(20 465)">
+          <rect width="220" height="20" class="legend-frame" />
+          <path d="M 8 10 H 42" class="airflow-line" marker-end="url(#airflow-arrowhead)" />
+          <text x="50" y="14" class="diagram-label">AIRFLOW SPEED {{ speedDescription }}</text>
+        </g>
 
-    <svg
-      class="min-h-0 flex-1 border-t border-simElementBorder bg-panelContentBackground"
-      viewBox="0 0 800 260"
-      role="img"
-      :aria-label="`Live angle of attack versus lift coefficient plot. Current CL ${liftCoefficient.toFixed(2)} at ${angleOfAttack.toFixed(1)} degrees.`"
-      preserveAspectRatio="none"
-    >
-      <text x="12" y="18" class="diagram-label">LIVE LIFT CURVE · AOA vs CL</text>
+        <g transform="translate(16 184)">
+          <rect width="235" height="58" rx="2" class="reference-key-background" />
+          <line x1="8" y1="12" x2="42" y2="12" class="chord-line" />
+          <text x="50" y="16" class="pitch-label">CHORD · θ {{ pitchAngle.toFixed(1) }}°</text>
+          <line x1="8" y1="30" x2="42" y2="30" class="flight-path-reference" />
+          <text x="50" y="34" class="gamma-label">
+            FLIGHT PATH · γ {{ gammaAngle.toFixed(1) }}°
+          </text>
+          <line x1="8" y1="48" x2="42" y2="48" class="horizon-reference" />
+          <text x="50" y="52" class="diagram-label">HORIZON</text>
+        </g>
+      </svg>
 
-      <line
-        :x1="liftChart.left"
-        :y1="liftChart.bottom"
-        :x2="liftChart.right"
-        :y2="liftChart.bottom"
-        class="chart-axis"
-      />
-      <line
-        :x1="liftChart.left"
-        :y1="liftChart.top"
-        :x2="liftChart.left"
-        :y2="liftChart.bottom"
-        class="chart-axis"
-      />
-
-      <line
-        v-if="maxAngleOfAttack > 0"
-        :x1="liftChart.stallX"
-        :y1="liftChart.top"
-        :x2="liftChart.stallX"
-        :y2="liftChart.bottom"
-        class="stall-reference"
-      />
-      <text
-        v-if="maxAngleOfAttack > 0"
-        :x="liftChart.stallX + 5"
-        :y="liftChart.top + 12"
-        class="stall-label"
+      <svg
+        class="min-h-0 flex-1 border-t border-simElementBorder bg-panelContentBackground"
+        viewBox="0 0 800 260"
+        role="img"
+        :aria-label="`Live angle of attack versus lift coefficient plot. Current CL ${liftCoefficient.toFixed(2)} at ${angleOfAttack.toFixed(1)} degrees.`"
+        preserveAspectRatio="none"
       >
-        MAX AOA {{ maxAngleOfAttack.toFixed(1) }}°
-      </text>
+        <text x="12" y="18" class="diagram-label">LIVE LIFT CURVE · AOA vs CL</text>
 
-      <polyline v-if="liftChart.points" :points="liftChart.points" class="lift-trace" />
-      <circle
-        :cx="liftChart.currentX"
-        :cy="liftChart.currentY"
-        r="4"
-        :class="stalling ? 'fill-panelActive stall-marker' : 'fill-simActiveButton'"
-      />
+        <line
+          :x1="liftChart.left"
+          :y1="liftChart.bottom"
+          :x2="liftChart.right"
+          :y2="liftChart.bottom"
+          class="chart-axis"
+        />
+        <line
+          :x1="liftChart.left"
+          :y1="liftChart.top"
+          :x2="liftChart.left"
+          :y2="liftChart.bottom"
+          class="chart-axis"
+        />
 
-      <text :x="liftChart.left" y="252" class="diagram-label">{{ liftChart.minAoa }}°</text>
-      <text :x="liftChart.right - 28" y="252" class="diagram-label">
-        {{ liftChart.maxAoa }}°
-      </text>
-      <text x="390" y="252" class="diagram-label">AOA (°)</text>
-      <text x="8" :y="liftChart.top + 5" class="diagram-label">
-        {{ liftChart.maxCl.toFixed(1) }}
-      </text>
-      <text x="8" :y="liftChart.bottom" class="diagram-label">
-        {{ liftChart.minCl.toFixed(1) }}
-      </text>
-      <text x="8" y="138" class="diagram-label">CL</text>
-      <text x="570" y="18" class="diagram-label">
-        α {{ angleOfAttack.toFixed(1) }}° · CL {{ liftCoefficient.toFixed(2) }}
-      </text>
-      <text v-if="stalling" x="770" y="18" text-anchor="end" class="stall-label">STALL</text>
-    </svg>
+        <line
+          v-if="maxAngleOfAttack > 0"
+          :x1="liftChart.stallX"
+          :y1="liftChart.top"
+          :x2="liftChart.stallX"
+          :y2="liftChart.bottom"
+          class="stall-reference"
+        />
+        <text
+          v-if="maxAngleOfAttack > 0"
+          :x="liftChart.stallX + 5"
+          :y="liftChart.top + 12"
+          class="stall-label"
+        >
+          MAX AOA {{ maxAngleOfAttack.toFixed(1) }}°
+        </text>
+
+        <polyline v-if="liftChart.points" :points="liftChart.points" class="lift-trace" />
+        <circle
+          :cx="liftChart.currentX"
+          :cy="liftChart.currentY"
+          r="4"
+          :class="stalling ? 'fill-panelActive stall-marker' : 'fill-simActiveButton'"
+        />
+
+        <text :x="liftChart.left" y="252" class="diagram-label">{{ liftChart.minAoa }}°</text>
+        <text :x="liftChart.right - 28" y="252" class="diagram-label">{{ liftChart.maxAoa }}°</text>
+        <text x="390" y="252" class="diagram-label">AOA (°)</text>
+        <text x="8" :y="liftChart.top + 5" class="diagram-label">
+          {{ liftChart.maxCl.toFixed(1) }}
+        </text>
+        <text x="8" :y="liftChart.bottom" class="diagram-label">
+          {{ liftChart.minCl.toFixed(1) }}
+        </text>
+        <text x="8" y="138" class="diagram-label">CL</text>
+        <text x="570" y="18" class="diagram-label">
+          α {{ angleOfAttack.toFixed(1) }}° · CL {{ liftCoefficient.toFixed(2) }}
+        </text>
+        <text v-if="stalling" x="770" y="18" text-anchor="end" class="stall-label">STALL</text>
+      </svg>
     </div>
   </div>
 </template>
@@ -264,6 +267,7 @@ const readNumber = (ids: string[], fallback = 0) => {
 
 const angleOfAttack = computed(() => readNumber(['aoa_deg']))
 const pitchAngle = computed(() => readNumber(['pitch_deg']))
+const gammaAngle = computed(() => pitchAngle.value - angleOfAttack.value)
 const airspeed = computed(() =>
   Math.max(0, readNumber(['speed_indicated_knots', 'speed_true_knots'])),
 )
@@ -273,7 +277,7 @@ const flapRatio = computed(() =>
 )
 
 const airfoilRotation = computed(() => Math.max(-20, Math.min(25, angleOfAttack.value)))
-const pitchReferenceAngle = computed(() => Math.max(-30, Math.min(30, pitchAngle.value)))
+const gammaReferenceAngle = computed(() => Math.max(-30, Math.min(30, gammaAngle.value)))
 const flapDeflection = computed(() => flapRatio.value * 32)
 const flapDisplay = computed(() => {
   const degrees = rawFlapPosition.value <= 1 ? rawFlapPosition.value * 30 : rawFlapPosition.value
@@ -282,7 +286,7 @@ const flapDisplay = computed(() => {
 
 const airflowDuration = computed(() => {
   const speedRatio = Math.min(1, airspeed.value / 250)
-  return 4.5 - speedRatio * 4
+  return 14 - speedRatio * 9.5
 })
 const airflowOpacity = computed(() => String(0.25 + Math.min(1, airspeed.value / 80) * 0.75))
 const speedDescription = computed(() => {
@@ -292,7 +296,8 @@ const speedDescription = computed(() => {
   return 'HIGH'
 })
 
-const arrowOffsets = [0, 0.33, 0.66]
+const airflowAnimationDelay = (streamIndex: number) =>
+  -((streamIndex % 4) / 4) * airflowDuration.value
 const streamlineOffsets = [-120, -90, -60, -30, 30, 60, 90, 120]
 
 const angleArc = computed(() => {
@@ -304,15 +309,6 @@ const angleArc = computed(() => {
   return `M ${radius} 0 A ${radius} ${radius} 0 0 ${sweep} ${x} ${y}`
 })
 const angleLabelY = computed(() => (airfoilRotation.value >= 0 ? 24 : -12))
-const pitchArc = computed(() => {
-  const radius = 28
-  const angle = (pitchReferenceAngle.value * Math.PI) / 180
-  const x = radius * Math.cos(angle)
-  const y = -radius * Math.sin(angle)
-  const sweep = pitchReferenceAngle.value >= 0 ? 0 : 1
-  return `M ${radius} 0 A ${radius} ${radius} 0 0 ${sweep} ${x} ${y}`
-})
-
 type LiftSample = { aoa: number; cl: number }
 const liftSamples = ref<LiftSample[]>([])
 
@@ -379,23 +375,17 @@ const nacaSurfacePoint = (chordPosition: number, upper: boolean): AirfoilPoint =
   const thickness =
     5 *
     nacaThickness *
-    (0.2969 * Math.sqrt(x) -
-      0.126 * x -
-      0.3516 * x ** 2 +
-      0.2843 * x ** 3 -
-      0.1036 * x ** 4)
+    (0.2969 * Math.sqrt(x) - 0.126 * x - 0.3516 * x ** 2 + 0.2843 * x ** 3 - 0.1036 * x ** 4)
 
   const camber =
     x < nacaCamberPosition
-      ? (nacaCamber / nacaCamberPosition ** 2) *
-        (2 * nacaCamberPosition * x - x ** 2)
+      ? (nacaCamber / nacaCamberPosition ** 2) * (2 * nacaCamberPosition * x - x ** 2)
       : (nacaCamber / (1 - nacaCamberPosition) ** 2) *
         (1 - 2 * nacaCamberPosition + 2 * nacaCamberPosition * x - x ** 2)
   const camberSlope =
     x < nacaCamberPosition
       ? ((2 * nacaCamber) / nacaCamberPosition ** 2) * (nacaCamberPosition - x)
-      : ((2 * nacaCamber) / (1 - nacaCamberPosition) ** 2) *
-        (nacaCamberPosition - x)
+      : ((2 * nacaCamber) / (1 - nacaCamberPosition) ** 2) * (nacaCamberPosition - x)
   const surfaceAngle = Math.atan(camberSlope)
   const surfaceX = upper
     ? x - thickness * Math.sin(surfaceAngle)
@@ -418,10 +408,7 @@ const sampleSurface = (start: number, end: number, count: number, upper: boolean
 const pathFromClosedSurfaces = (upper: AirfoilPoint[], lower: AirfoilPoint[]) => {
   const points = [...upper, ...lower.slice().reverse()]
   return `${points
-    .map(
-      (point, index) =>
-        `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`,
-    )
+    .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
     .join(' ')} Z`
 }
 
@@ -485,8 +472,7 @@ const streamlines = computed(() => {
     const after = configuredSurfaceY(Math.min(1, chordPosition + sampleDistance), upper)
     const localDistance = Math.max(
       chord * sampleDistance,
-      (Math.min(1, chordPosition + sampleDistance) -
-        Math.max(0, chordPosition - sampleDistance)) *
+      (Math.min(1, chordPosition + sampleDistance) - Math.max(0, chordPosition - sampleDistance)) *
         chord,
     )
     return Math.max(-0.45, Math.min(0.45, (after - before) / localDistance))
@@ -520,8 +506,7 @@ const streamlines = computed(() => {
     const farFieldY = 250 + offset
     const sideClearance = upper ? -clearance : clearance
     const leadingProfileY =
-      farFieldY +
-      (configuredSurfaceY(0, upper) + sideClearance - farFieldY) * layerInfluence
+      farFieldY + (configuredSurfaceY(0, upper) + sideClearance - farFieldY) * layerInfluence
     const leadingSlope = surfaceSlope(0.02, upper) * layerInfluence
     const separationStart = 0.56 - stallSeverity.value * 0.18
     const profileY = (chordPosition: number) => {
@@ -572,14 +557,7 @@ const streamlines = computed(() => {
         globalY =
           exitProgress >= 1
             ? downstreamY
-            : hermite(
-                trailingProfileY,
-                downstreamY,
-                trailingSlope,
-                0,
-                exitLength,
-                exitProgress,
-              )
+            : hermite(trailingProfileY, downstreamY, trailingSlope, 0, exitLength, exitProgress)
       }
       return { x: globalX, y: globalY }
     })
@@ -617,8 +595,7 @@ const streamlines = computed(() => {
   return linePoints.map((points) =>
     points
       .map(
-        (point, index) =>
-          `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`,
+        (point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`,
       )
       .join(' '),
   )
@@ -683,9 +660,28 @@ const streamlines = computed(() => {
 
 .chord-line {
   stroke: rgb(var(--color-panelActive));
-  stroke-width: 1;
+  stroke-width: 1.5;
   stroke-dasharray: 5 4;
   vector-effect: non-scaling-stroke;
+}
+
+.flight-path-reference {
+  stroke: rgb(var(--color-simActiveButton));
+  stroke-width: 1.5;
+  stroke-dasharray: 8 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.horizon-reference {
+  stroke: rgb(var(--color-simElementBorder));
+  stroke-width: 1.5;
+  stroke-dasharray: 3 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.reference-key-background {
+  fill: rgb(var(--color-panelContentBackground));
+  fill-opacity: 0.92;
 }
 
 .airfoil-surface,
@@ -708,10 +704,16 @@ const streamlines = computed(() => {
   vector-effect: non-scaling-stroke;
 }
 
-.pitch-reference {
-  stroke: rgb(var(--color-panelActive));
-  stroke-width: 1.5;
-  vector-effect: non-scaling-stroke;
+.pitch-label {
+  fill: rgb(var(--color-panelActive));
+  font-family: monospace;
+  font-size: 11px;
+}
+
+.gamma-label {
+  fill: rgb(var(--color-simActiveButton));
+  font-family: monospace;
+  font-size: 11px;
 }
 
 .chart-axis {
