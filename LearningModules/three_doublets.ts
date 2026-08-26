@@ -252,14 +252,14 @@ export async function main(context: ScriptContext) {
     repositionWithAutopilot,
     waitFor,
     notifyUser,
-    dataDisplayReset,
+    resetPanels,
     plotView,
     metrics,
   } = context
 
   const simulation = simControls.simulation
 
-  dataDisplayReset()
+  resetPanels()
   plotView(simProps.aileron_position, true)
   plotView(simProps.rudder_position, true)
   plotView(simProps.elevator_position, true)

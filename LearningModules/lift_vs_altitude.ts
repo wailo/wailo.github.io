@@ -8,11 +8,11 @@ export async function main(context: ScriptContext) {
   const waitForCondition = context.waitForCondition
   const dataView = context.dataView
   // const plotView = context.plotView;
-  const dataDisplayReset = context.dataDisplayReset
+  const resetPanels = context.resetPanels
   const notifyUser = context.notifyUser
   // const checkPoint = context.checkPoint;
 
-  dataDisplayReset()
+  resetPanels()
   simControls.simulation.set_simulation_pause(true)
   await waitFor(1000)
 

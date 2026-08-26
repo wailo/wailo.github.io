@@ -8,7 +8,7 @@ export async function main(context: ScriptContext) {
   // const waitForCondition = context.waitForCondition;
   // const dataView = context.dataView;
   // const plotView = context.plotView;
-  const dataDisplayReset = context.dataDisplayReset
+  const resetPanels = context.resetPanels
   const notifyUser = context.notifyUser
   // const checkPoint = context.checkPoint;
 
@@ -25,7 +25,7 @@ export async function main(context: ScriptContext) {
       "📢 Watch carefully, as you'll be asked questions at the end!",
   )
 
-  dataDisplayReset()
+  resetPanels()
 
   const flightModel = simControls.flightModel
 

@@ -7,11 +7,11 @@ export async function main(context: ScriptContext) {
   const waitFor = context.waitFor
   const waitForCondition = context.waitForCondition
   const plotView = context.plotView
-  const dataDisplayReset = context.dataDisplayReset
+  const resetPanels = context.resetPanels
   const notifyUser = context.notifyUser
 
   // Reset simulation and configure aircraft
-  dataDisplayReset()
+  resetPanels()
   simControls.simulation.reset_simulation()
   simControls.simulation.set_flight_model_c172()
 

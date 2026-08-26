@@ -8,7 +8,7 @@ export async function main(context: ScriptContext) {
   // const waitForCondition = context.waitForCondition;
   // const dataView = context.dataView;
   const plotView = context.plotView
-  const dataDisplayReset = context.dataDisplayReset
+  const resetPanels = context.resetPanels
   const notifyUser = context.notifyUser
 
   // Define target altitude, speed, and heading
@@ -35,7 +35,7 @@ export async function main(context: ScriptContext) {
     simControls.flightModel.set_flaps_selector_position(simControls.B747FlapSelector.TWENTY)
   }
 
-  dataDisplayReset()
+  resetPanels()
   simControls.simulation.reset_simulation()
   simControls.simulation.set_flight_model_b747()
   const flightModel = context.controls.flightModel

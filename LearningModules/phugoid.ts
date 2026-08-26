@@ -8,7 +8,7 @@ export async function main(context: ScriptContext) {
   // const waitForCondition = context.waitForCondition;
   // const dataView = context.dataView;
   const plotView = context.plotView
-  const dataDisplayReset = context.dataDisplayReset
+  const resetPanels = context.resetPanels
   const notifyUser = context.notifyUser
   const checkPoint = context.checkPoint
 
@@ -33,7 +33,7 @@ export async function main(context: ScriptContext) {
   }
 
   // simControls.simulation.reset_simulation();
-  dataDisplayReset()
+  resetPanels()
 
   await repositionWithAutopilot(context, 3000, 180, 0, 10000, preConfiguration)
   // await waitFor(1000)

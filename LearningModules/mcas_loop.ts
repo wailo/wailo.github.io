@@ -7,12 +7,12 @@ export async function main(context: ScriptContext) {
   const repositionWithAutopilot = context.repositionWithAutopilot
   const waitFor = context.waitFor
   const notifyUser = context.notifyUser
-  const dataDisplayReset = context.dataDisplayReset
+  const resetPanels = context.resetPanels
   const waitForCondition = context.waitForCondition
 
   // Reset simulation to ensure clean state for flight.
   simControls.simulation.reset_simulation()
-  dataDisplayReset()
+  resetPanels()
   simControls.simulation.set_six_instruments_display(false)
   simControls.simulation.set_pfd_horizon_visible(false)
   context.setVisuals(true)
@@ -264,7 +264,7 @@ export async function main(context: ScriptContext) {
       // Only call notifyUser if the visual content has actually changed (prevents flicker/spam)
       if (dashboardHtml !== lastDashboardHtml) {
         // Persistent notification: Use a dedicated channel to avoid blocking the loop
-        notifyUser('MCAS System Dashboard', dashboardHtml)
+        notifyUser('MCAS System Dashboard', dashboardHtml, 0, { replace: true })
         lastDashboardHtml = dashboardHtml
       }
 
@@ -283,8 +283,6 @@ export async function main(context: ScriptContext) {
         lastTrim = flightModel.elevator_trim_position + mcas_cmd_rate
         flightModel.set_elevator_trim_position(lastTrim)
       }
-
-      console.log(flightModel.damaged)
       return flightModel.damaged
     },
     0,
