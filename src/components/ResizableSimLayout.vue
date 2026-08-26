@@ -156,6 +156,20 @@ const maximizedPanel = computed<PanelId | null>(() => {
 const activeColumns = computed(() => {
   layoutRevision.value
   const preset = layouts[props.layout]
+  const maximizedColumnIndex = maximizedPanel.value
+    ? columns.findIndex((column) =>
+        column.panels.some(
+          (panel) => panel.id === maximizedPanel.value && preset.panels[panel.id] > 0,
+        ),
+      )
+    : -1
+  const maximizedColumnSiblingMinimum = columns.reduce(
+    (sum, column, columnIndex) =>
+      columnIndex !== maximizedColumnIndex && preset.columns[columnIndex] > 0
+        ? sum + (column.min ?? 10)
+        : sum,
+    0,
+  )
   let saved: { columns?: number[]; panels?: Partial<Record<PanelId, number>> } = {}
   try {
     saved = JSON.parse(localStorage.getItem(storageKey(props.layout)) || '{}')
@@ -192,13 +206,21 @@ const activeColumns = computed(() => {
       })
     }
 
+    const visible = preset.columns[columnIndex] > 0
+    const normalSize = visible ? (saved.columns?.[columnIndex] ?? preset.columns[columnIndex]) : 0
+    const maximizedSize =
+      maximizedColumnIndex < 0
+        ? normalSize
+        : columnIndex === maximizedColumnIndex
+          ? 100 - maximizedColumnSiblingMinimum
+          : visible
+            ? (column.min ?? 10)
+            : 0
+
     return {
       ...column,
-      visible: preset.columns[columnIndex] > 0,
-      size:
-        preset.columns[columnIndex] > 0
-          ? (saved.columns?.[columnIndex] ?? preset.columns[columnIndex])
-          : 0,
+      visible,
+      size: maximizedSize,
       min: column.min ?? 10,
       panels,
     }
@@ -214,6 +236,7 @@ const readSaved = () => {
 }
 
 const saveColumnSizes = ({ panes }: SplitpanesEvent) => {
+  if (maximizedPanel.value) return
   const saved = readSaved()
   saved.columns = panes.map((pane) => pane.size)
   localStorage.setItem(storageKey(props.layout), JSON.stringify(saved))
