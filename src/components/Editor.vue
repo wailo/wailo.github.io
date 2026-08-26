@@ -76,9 +76,17 @@
                 <button
                   class="row-action"
                   type="button"
-                  :title="`Run ${lesson.name}`"
-                  :aria-label="`Run ${lesson.name}`"
-                  :disabled="isScriptRunning || queuePlaying"
+                  :title="
+                    isScriptRunning
+                      ? `Stop current lesson and run ${lesson.name}`
+                      : `Run ${lesson.name}`
+                  "
+                  :aria-label="
+                    isScriptRunning
+                      ? `Stop current lesson and run ${lesson.name}`
+                      : `Run ${lesson.name}`
+                  "
+                  :disabled="queuePlaying"
                   @click.stop="runLesson(lesson)"
                 >
                   ▶
@@ -756,7 +764,8 @@ const selectLesson = async (lesson: ModuleEntry) => {
 }
 
 const runLesson = async (lesson: ModuleEntry) => {
-  if (isScriptRunning.value || queuePlaying.value) return
+  if (queuePlaying.value) return
+  if (isScriptRunning.value) reset()
   await loadFileContent(lesson)
   viewMode.value = 'run'
   await executeCode()
