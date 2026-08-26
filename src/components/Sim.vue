@@ -805,7 +805,7 @@ const togglePanelMaximize = (panelId: string) => {
 
 // Initialize theme from localStorage
 const initializeTheme = () => {
-  const savedTheme = localStorage.getItem('theme') || 'light'
+  const savedTheme = localStorage.getItem('theme') || 'dark'
   isDarkMode.value = savedTheme === 'dark'
   applyTheme(isDarkMode.value)
 }
