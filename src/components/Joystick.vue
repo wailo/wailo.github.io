@@ -134,7 +134,7 @@
         </h3>
         <div class="flex min-h-0 flex-1 flex-col items-center gap-3 pt-1">
           <div
-            class="grid min-h-0 w-full flex-1 grid-cols-[auto_minmax(60px,150px)_auto] grid-rows-[auto_minmax(60px,1fr)_auto] items-center justify-center gap-x-1 text-[8px]"
+            class="grid min-h-0 w-full flex-1 grid-cols-[auto_minmax(36px,150px)_auto] grid-rows-[auto_minmax(36px,1fr)_auto] items-center justify-center gap-x-1 text-[8px]"
           >
             <span class="col-start-2 text-center opacity-60">
               ELEV {{ signedPercent(input.elevator) }} ↑
@@ -142,7 +142,7 @@
             <span class="row-start-2 text-right opacity-60">LEFT</span>
             <div
               ref="rightBaseRef"
-              class="relative col-start-2 row-start-2 aspect-square h-full max-h-[150px] min-h-[60px] touch-none cursor-crosshair overflow-hidden border border-simElementBorder bg-simInputBackground"
+              class="relative col-start-2 row-start-2 aspect-square w-full max-w-[150px] justify-self-center touch-none cursor-crosshair overflow-hidden border border-simElementBorder bg-simInputBackground"
               @pointerdown="startRightDrag"
             >
               <div class="absolute inset-x-0 top-1/2 h-px bg-panelBorder/50"></div>
