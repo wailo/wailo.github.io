@@ -6,6 +6,38 @@
     class="container relative max-w-full h-screen gap-1 p-1 bg-simBackground"
     :class="`layout-${layout}`"
   >
+    <div
+      v-if="!sim_module_loaded"
+      data-layout="focus instructor pilot classroom"
+      class="sim-loading-overlay absolute inset-0 z-50 flex items-center justify-center bg-primary text-secondary"
+      role="status"
+      aria-live="polite"
+      :aria-label="loadingStatus"
+    >
+      <div class="flex min-w-52 flex-col items-center gap-4 px-6 text-center">
+        <div class="sim-loading-matrix" aria-hidden="true">
+          <span v-for="dot in 25" :key="dot" class="sim-loading-dot"></span>
+        </div>
+
+        <div class="space-y-1">
+          <div class="text-xs font-medium tracking-widest">Loading</div>
+          <div class="min-h-4 text-[10px] text-secondary/60">{{ loadingStatus }}</div>
+        </div>
+
+        <div class="h-px w-52 overflow-hidden bg-secondary/20">
+          <div
+            class="h-full bg-secondary transition-[width] duration-150"
+            :class="loadingProgress === null ? 'sim-loading-indeterminate' : ''"
+            :style="loadingProgress === null ? undefined : { width: `${loadingProgress}%` }"
+          ></div>
+        </div>
+
+        <div v-if="loadingProgress !== null" class="text-[10px] tabular-nums text-secondary/50">
+          {{ loadingProgress }}%
+        </div>
+      </div>
+    </div>
+
     <ResizableSimLayout
       ref="resizableLayoutRef"
       :layout="layout"
@@ -814,6 +846,45 @@ const activeAircraftType = computed(() => {
 })
 // let utilsFuncs: any;
 let sim_module_loaded = ref(false)
+const loadingStatus = ref('Preparing download')
+const loadingProgress = ref<number | null>(null)
+let maximumRunDependencies = 0
+
+const updateLoadingStatus = (status: string) => {
+  const progressMatch = status.match(/\((\d+)\/(\d+)\)/)
+  if (progressMatch) {
+    const loaded = Number(progressMatch[1])
+    const total = Number(progressMatch[2])
+    loadingProgress.value = total > 0 ? Math.round((loaded / total) * 100) : null
+    loadingStatus.value = 'Downloading assets'
+    return
+  }
+
+  if (status.startsWith('Downloading data')) {
+    loadingStatus.value = 'Downloading assets'
+  } else if (status === 'Running...') {
+    loadingStatus.value = 'Starting'
+    loadingProgress.value = null
+  } else if (status) {
+    loadingStatus.value = status
+  }
+}
+
+const monitorLoadingDependencies = (remaining: number) => {
+  maximumRunDependencies = Math.max(maximumRunDependencies, remaining)
+  if (remaining <= 0) {
+    loadingStatus.value = 'Starting simulator'
+    loadingProgress.value = null
+    return
+  }
+
+  // Dependency counts describe runtime preparation, not downloaded bytes.
+  if (loadingProgress.value === null && maximumRunDependencies > 0) {
+    const prepared = maximumRunDependencies - remaining
+    loadingStatus.value = `Preparing assets ${prepared}/${maximumRunDependencies}`
+  }
+}
+
 let isLicenceValid = ref(false)
 let classRoomComponentState = ref(false)
 let accountName = ref('')
@@ -1157,6 +1228,8 @@ onBeforeMount(() => {
 onMounted(async () => {
   window.addEventListener('sim:request-panel-tab', handlePanelTabRequest)
   initializeModule({
+    setStatus: updateLoadingStatus,
+    monitorRunDependencies: monitorLoadingDependencies,
     locateFile: (path: string, prefix: string) => {
       if (path.endsWith('.wasm') || path.endsWith('.data')) {
         // In Vite, files in /public are accessed via the root '/'
@@ -1234,6 +1307,8 @@ onMounted(async () => {
       )
 
       document.addEventListener('fullscreenchange', onFullscreenChange)
+      loadingProgress.value = 100
+      loadingStatus.value = 'Ready'
       sim_module_loaded.value = true
       simFunctions.notifyUser(
         'Flight Sim',
@@ -1285,7 +1360,11 @@ onMounted(async () => {
         )
       }, update_interval_ms)
     })
-    .catch(console.error)
+    .catch((error) => {
+      loadingStatus.value = 'Unable to load simulator'
+      loadingProgress.value = null
+      console.error(error)
+    })
 })
 
 onUnmounted(() => {
@@ -1442,6 +1521,84 @@ function createRemoteManager(FlightSimModule: ExtendedMainModule) {
 </script>
 
 <style scoped>
+.sim-loading-overlay {
+  font-family: 'Orbitron', sans-serif;
+}
+
+.sim-loading-matrix {
+  display: grid;
+  grid-template-columns: repeat(5, 0.375rem);
+  gap: 0.375rem;
+}
+
+.sim-loading-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background: rgb(var(--color-secondary));
+  opacity: 0.14;
+  animation: sim-loading-scan 1.25s ease-in-out infinite;
+}
+
+.sim-loading-dot:nth-child(5n + 1) {
+  animation-delay: 0ms;
+}
+
+.sim-loading-dot:nth-child(5n + 2) {
+  animation-delay: 80ms;
+}
+
+.sim-loading-dot:nth-child(5n + 3) {
+  animation-delay: 160ms;
+}
+
+.sim-loading-dot:nth-child(5n + 4) {
+  animation-delay: 240ms;
+}
+
+.sim-loading-dot:nth-child(5n + 5) {
+  animation-delay: 320ms;
+}
+
+.sim-loading-indeterminate {
+  width: 35%;
+  animation: sim-loading-progress 1.2s ease-in-out infinite;
+}
+
+@keyframes sim-loading-scan {
+  0%,
+  55%,
+  100% {
+    opacity: 0.14;
+    transform: scale(0.72);
+  }
+  25% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes sim-loading-progress {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(310%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sim-loading-dot,
+  .sim-loading-indeterminate {
+    animation: none;
+  }
+
+  .sim-loading-dot:nth-child(2n + 1) {
+    opacity: 0.65;
+    transform: none;
+  }
+}
+
 /* Hide panels not participating in the active layout */
 .container.layout-focus > *:not([data-layout~='focus']) {
   display: none;
