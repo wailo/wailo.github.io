@@ -42,7 +42,7 @@ export async function main(context: ScriptContext) {
   await waitFor(4000)
 
   // 📘 Step 3: Display and Plot Relevant Data
-  plotView(simProps.altitude, true)
+  plotView(simProps.altitude_ft, true)
   plotView(simProps.yaw, true)
   plotView(simProps.aileron_position, true)
   plotView(simProps.elevator_position, true)

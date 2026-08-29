@@ -6,7 +6,7 @@ export async function main(context: ScriptContext) {
   const repositionWithAutopilot = context.repositionWithAutopilot
   const waitFor = context.waitFor
   // const waitForCondition = context.waitForCondition;
-  const dataView = context.dataView
+  // const dataView = context.dataView
   const plotView = context.plotView
   const resetPanels = context.resetPanels
   const notifyUser = context.notifyUser
@@ -64,14 +64,8 @@ export async function main(context: ScriptContext) {
   flightModel.set_autopilot_master_switch(true)
 
   // 📘 Step 2: Enable Key Visuals
-  dataView(simProps.ias_speed_knots, true)
-  dataView(simProps.flaps_selector_position, true)
-  dataView(simProps.lift, true)
-  dataView(simProps.drag, true)
-  dataView(simProps.thrust, true)
-  dataView(simProps.aoa_deg, true)
 
-  plotView(simProps.ias_speed_knots, true)
+  plotView(simProps.speed_indicated_knots, true)
   plotView(simProps.flaps_selector_position, true)
   plotView(simProps.lift, true)
   plotView(simProps.drag, true)

@@ -40,7 +40,7 @@ export async function main(context: ScriptContext) {
   plotView(simProps.elevator_position, true)
   plotView(simProps.pitch, true)
   plotView(simProps.pitch_dot, true)
-  plotView(simProps.speed_IAS, true)
+  plotView(simProps.speed_true_knots, true)
   await waitFor(5000)
   checkPoint('Initiating Phugiod mode')
   notifyUser(

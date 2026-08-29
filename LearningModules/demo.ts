@@ -138,7 +138,7 @@ export async function main(context: ScriptContext) {
       false,
     )
     context.plotView(simProps.engine_throttle_position, false)
-    context.plotView([simProps.ias_speed_knots, simProps.altitude], true)
+    // context.plotView([simProps.speed_indicated_knots, simProps.altitude_ft], true)
     flightModel.set_autopilot_pitch_hold(true)
     flightModel.set_landing_gear_selector_position(simControls.B747GearSelector.UP)
     flightModel.set_engine_throttle_position(0.85)
@@ -189,9 +189,9 @@ export async function main(context: ScriptContext) {
     context.checkPoint('Take-off and flap-retraction sequence completed')
     await showTakeoffProgress(null)
     context.dataDisplayReset()
-    context.plotView(simProps.ias_speed_knots, true)
+    context.plotView(simProps.speed_indicated_knots, true)
     context.plotView(simProps.vertical_speed_ftmin, true)
-    context.plotView(simProps.altitude, true)
+    context.plotView(simProps.altitude_ft, true)
   }
 
   await frame(
@@ -231,8 +231,8 @@ export async function main(context: ScriptContext) {
         ),
       )
       await step(() => context.plotView(simProps.engine_throttle_position, true))
-      await step(() => context.plotView(simProps.ias_speed_knots, true))
-      await step(() => context.plotView(simProps.altitude, true))
+      await step(() => context.plotView(simProps.speed_indicated_knots, true))
+      await step(() => context.plotView(simProps.altitude_ft, true))
       await announce(
         'Engine stabilization',
         `Thrust will move to ${accent('40%')} until all four engines are stable.`,
@@ -433,7 +433,7 @@ export async function main(context: ScriptContext) {
     '8 · Classroom and Handoff',
     `The ${accent('Classroom')} view provides exercise assignment, checkpoints, status monitoring and assistance requests.`,
     async () => {
-      context.setLayout(context.layoutTypes.CLASSROOM)
+      context.setLayout(context.layoutTypes.PILOT)
       await waitUntil(90_000)
       await takeoffSequence
       await Promise.all(backgroundTasks)

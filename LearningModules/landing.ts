@@ -201,7 +201,7 @@ All actions will follow standard operating procedures.`,
   // 🟢 [ACTION] Enable Data Monitoring
   plotView(simProps.speed_indicated_knots, true)
   plotView(simProps.g_force, true)
-  plotView(simProps.throttle_position, true)
+  plotView(simProps.engine_throttle_position, true)
   plotView(simProps.pitch_deg, true)
   plotView(simProps.altitude_ft, true)
   plotView(simProps.vertical_speed_ftmin, true)
