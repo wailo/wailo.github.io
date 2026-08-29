@@ -33,19 +33,19 @@
 
       <div class="mt-1 min-h-0 flex-1 overflow-y-auto">
         <div v-if="filteredLessons.length === 0" class="p-2 opacity-60">NO MATCHING LESSONS</div>
-        <section v-for="group in filteredLessonGroups" :key="group.category" class="mb-1">
+        <section v-for="group in filteredLessonGroups" :key="group.category" class="mb-2">
           <button
-            class="flex h-6 w-full items-center justify-between px-1 pt-1 text-left font-medium opacity-75 hover:bg-simInputBackground/40 hover:opacity-100"
+            class="flex h-6 w-full items-center justify-between px-1 pt-1 text-left opacity-75 hover:bg-simInputBackground/40 hover:opacity-100"
             @click="toggleLessonGroup(group.category)"
           >
             <span>{{ isLessonGroupOpen(group.category) ? '▾' : '▸' }} {{ group.category }}</span>
             <span class="opacity-60">{{ group.lessons.length }}</span>
           </button>
-          <div v-show="isLessonGroupOpen(group.category)">
+          <div v-show="isLessonGroupOpen(group.category)" class="ml-3">
             <div
               v-for="lesson in group.lessons"
               :key="lesson.path"
-              class="grid min-h-5 w-full cursor-pointer grid-cols-[1rem_minmax(0,1fr)_auto] items-center gap-1 px-2 py-0.5 text-left leading-tight hover:bg-simInputBackground/60"
+              class="grid min-h-5 w-full cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-1 px-2 py-0.5 text-left leading-tight hover:bg-simInputBackground/60"
               :class="selectedFile === lesson.name ? 'bg-panelHeaderBackground' : ''"
               role="button"
               tabindex="0"
@@ -53,24 +53,19 @@
               @keydown.enter.prevent="selectLesson(lesson)"
               @keydown.space.prevent.stop="toggleLessonQueue(lesson)"
             >
-              <button
-                class="queue-marker"
-                type="button"
-                :title="queuePosition(lesson) ? 'Remove from queue' : 'Add to queue'"
-                :aria-label="
-                  queuePosition(lesson)
-                    ? `Remove ${lesson.name} from queue`
-                    : `Add ${lesson.name} to queue`
-                "
-                @click.stop="toggleLessonQueue(lesson)"
-              >
-                {{ lessonMarker(lesson) }}
-              </button>
               <span
-                class="truncate font-medium"
+                class="flex min-w-0 items-center gap-1"
                 :class="selectedFile === lesson.name ? 'text-panelActive' : 'text-secondary'"
               >
-                {{ lesson.name }}
+                <span class="truncate">{{ lesson.name }}</span>
+                <span
+                  v-if="completedLessons.has(lesson.name)"
+                  class="shrink-0 opacity-60"
+                  title="Completed"
+                  aria-label="Completed"
+                >
+                  ✓
+                </span>
               </span>
               <span class="flex items-center gap-1">
                 <button
@@ -90,6 +85,22 @@
                   @click.stop="runLesson(lesson)"
                 >
                   ▶
+                </button>
+                <button
+                  class="queue-action"
+                  type="button"
+                  :class="queuePosition(lesson) ? 'is-queued' : ''"
+                  :title="queuePosition(lesson) ? 'Remove from queue' : 'Add to queue'"
+                  :aria-label="
+                    queuePosition(lesson)
+                      ? `Remove ${lesson.name} from queue`
+                      : `Add ${lesson.name} to queue`
+                  "
+                  :aria-pressed="Boolean(queuePosition(lesson))"
+                  :disabled="queuePlaying"
+                  @click.stop="toggleLessonQueue(lesson)"
+                >
+                  {{ queuePosition(lesson) || '+' }}
                 </button>
                 <button
                   class="row-action"
@@ -731,14 +742,6 @@ const addRunEvent = (message: string, replaceKey?: string) => {
 const queuePosition = (lesson: ModuleEntry) =>
   lessonQueue.value.findIndex((queued) => queued.path === lesson.path) + 1
 
-const lessonMarker = (lesson: ModuleEntry) => {
-  if (isScriptRunning.value && selectedFile.value === lesson.name) return '▶'
-  const position = queuePosition(lesson)
-  if (position) return position
-  if (completedLessons.value.has(lesson.name)) return '✓'
-  return '+'
-}
-
 const toggleLessonQueue = (lesson: LessonListEntry) => {
   if (queuePlaying.value) return
   const position = queuePosition(lesson)
@@ -999,19 +1002,28 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.queue-marker {
-  width: 1rem;
-  overflow: hidden;
+.queue-action {
+  min-width: 1.25rem;
+  height: 1.1rem;
+  padding-inline: 0.2rem;
   color: rgb(var(--color-secondary));
   font-variant-numeric: tabular-nums;
   line-height: 1;
   text-align: center;
+  opacity: 0.65;
 }
 
-.queue-marker:hover,
-.queue-marker:focus-visible {
+.queue-action.is-queued,
+.queue-action:hover,
+.queue-action:focus-visible {
   color: rgb(var(--color-panelActive));
+  opacity: 1;
   outline: none;
+}
+
+.queue-action:disabled {
+  cursor: default;
+  opacity: 0.35;
 }
 
 .row-action {
