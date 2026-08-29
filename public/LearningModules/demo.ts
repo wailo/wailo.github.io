@@ -138,7 +138,7 @@ export async function main(context: ScriptContext) {
       false,
     )
     context.plotView(simProps.engine_throttle_position, false)
-    context.plotView([simProps.speed_indicated_knots, simProps.altitude_ft], true)
+    // context.plotView([simProps.speed_indicated_knots, simProps.altitude_ft], true)
     flightModel.set_autopilot_pitch_hold(true)
     flightModel.set_landing_gear_selector_position(simControls.B747GearSelector.UP)
     flightModel.set_engine_throttle_position(0.85)
@@ -433,7 +433,7 @@ export async function main(context: ScriptContext) {
     '8 · Classroom and Handoff',
     `The ${accent('Classroom')} view provides exercise assignment, checkpoints, status monitoring and assistance requests.`,
     async () => {
-      context.setLayout(context.layoutTypes.CLASSROOM)
+      context.setLayout(context.layoutTypes.PILOT)
       await waitUntil(90_000)
       await takeoffSequence
       await Promise.all(backgroundTasks)
