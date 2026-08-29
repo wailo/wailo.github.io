@@ -24,6 +24,7 @@ const ENTRY_FILE = 'src/core.ts'
 const OUTPUT_FILE = 'src/wasm/generated/Modelfile'
 const DTS_OUTPUT_FILE = 'src/wasm/generated/editorTypes.txt'
 const BASE_MODEL_NAME = 'qwen3.5:9b'
+const GENERATED_FILE_NOTICE = 'Auto generated file from generate-modelfile.ts, do not edit manually'
 
 /*
 PROJECT
@@ -526,7 +527,8 @@ function generateDts(contract: string) {
   // Remove all export and declare keywards
   const typeDeclarations = contract.replace(/(export|declare)\s+/g, '')
 
-  return `// Generated TypeScript definitions
+  return `// ${GENERATED_FILE_NOTICE}
+// Generated TypeScript definitions
   ${typeDeclarations}`
 }
 
@@ -535,7 +537,8 @@ MODELFILE
 */
 
 function generateModelfile(contract: string) {
-  return `FROM ${BASE_MODEL_NAME}
+  return `# ${GENERATED_FILE_NOTICE}
+FROM ${BASE_MODEL_NAME}
 
 SYSTEM """
 You are a Typescript compiler.
