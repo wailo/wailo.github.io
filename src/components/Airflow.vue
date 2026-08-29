@@ -44,17 +44,19 @@
           >
             <path d="M 0 0 L 7 3.5 L 0 7 Z" class="fill-secondary" />
           </marker>
-          <mask id="airflow-reference-clearance">
-            <rect x="0" y="0" width="800" height="500" fill="white" />
-            <rect x="12" y="180" width="232" height="66" rx="3" fill="black" />
-          </mask>
+          <marker
+            id="flight-path-arrowhead"
+            markerWidth="7"
+            markerHeight="7"
+            refX="6"
+            refY="3.5"
+            orient="auto"
+          >
+            <path d="M 0 0 L 7 3.5 L 0 7 Z" class="fill-simActiveButton" />
+          </marker>
         </defs>
 
-        <g
-          class="airflow-field"
-          mask="url(#airflow-reference-clearance)"
-          :style="{ opacity: airflowOpacity }"
-        >
+        <g class="airflow-field" :style="{ opacity: airflowOpacity }">
           <g v-for="(stream, streamIndex) in streamlines" :key="streamIndex">
             <path
               :id="`airflow-stream-${streamIndex}`"
@@ -78,8 +80,6 @@
           </g>
         </g>
 
-        <line x1="70" y1="250" x2="730" y2="250" class="reference-line" />
-        <text x="76" y="242" class="diagram-label">RELATIVE AIRFLOW</text>
         <text
           x="724"
           y="58"
@@ -129,20 +129,38 @@
 
           <!-- Drawn after the filled geometry so the chord remains continuous through the airfoil. -->
           <line x1="150" y1="0" x2="-190" y2="0" class="chord-line" />
+          <text x="72" y="-12" class="pitch-label annotation-label">
+            CHORD · θ {{ pitchAngle.toFixed(1) }}°
+          </text>
         </g>
 
-        <!-- Angular references share the trailing edge and render above the airfoil. -->
-        <g transform="translate(550 250)">
-          <line x1="0" y1="0" x2="-480" y2="0" class="flight-path-reference" />
+        <!-- Secondary inertial and trajectory references are offset from the airfoil. -->
+        <g transform="translate(400 250)">
           <g :transform="`rotate(${-gammaReferenceAngle})`">
-            <line x1="0" y1="0" x2="-480" y2="0" class="horizon-reference" />
+            <line x1="-330" y1="0" x2="-190" y2="0" class="horizon-reference" />
+            <line x1="190" y1="0" x2="330" y2="0" class="horizon-reference" />
+            <text x="325" y="-8" text-anchor="end" class="annotation-label">HORIZON</text>
           </g>
+        </g>
+
+        <g transform="translate(400 302)">
+          <line
+            x1="180"
+            y1="0"
+            x2="-300"
+            y2="0"
+            class="flight-path-reference"
+            marker-end="url(#flight-path-arrowhead)"
+          />
+          <text x="-294" y="-10" class="gamma-label annotation-label">
+            FLIGHT PATH · γ {{ gammaAngle.toFixed(1) }}°
+          </text>
         </g>
 
         <g transform="translate(400 250)">
           <path :d="angleArc" class="angle-arc" />
-          <text x="34" :y="angleLabelY" class="diagram-label">
-            α {{ angleOfAttack.toFixed(1) }}°
+          <text x="56" :y="angleLabelY" class="angle-label annotation-label">
+            α = {{ angleOfAttack.toFixed(1) }}°
           </text>
         </g>
 
@@ -150,18 +168,6 @@
           <rect width="220" height="20" class="legend-frame" />
           <path d="M 8 10 H 42" class="airflow-line" marker-end="url(#airflow-arrowhead)" />
           <text x="50" y="14" class="diagram-label">AIRFLOW SPEED {{ speedDescription }}</text>
-        </g>
-
-        <g transform="translate(16 184)">
-          <rect width="235" height="58" rx="2" class="reference-key-background" />
-          <line x1="8" y1="12" x2="42" y2="12" class="chord-line" />
-          <text x="50" y="16" class="pitch-label">CHORD · θ {{ pitchAngle.toFixed(1) }}°</text>
-          <line x1="8" y1="30" x2="42" y2="30" class="flight-path-reference" />
-          <text x="50" y="34" class="gamma-label">
-            FLIGHT PATH · γ {{ gammaAngle.toFixed(1) }}°
-          </text>
-          <line x1="8" y1="48" x2="42" y2="48" class="horizon-reference" />
-          <text x="50" y="52" class="diagram-label">HORIZON</text>
         </g>
       </svg>
 
@@ -606,7 +612,7 @@ const streamlines = computed(() => {
 .airflow-line {
   fill: none;
   stroke: rgb(var(--color-secondary));
-  stroke-width: 1.25;
+  stroke-width: 1.35;
   vector-effect: non-scaling-stroke;
 }
 
@@ -651,44 +657,38 @@ const streamlines = computed(() => {
   }
 }
 
-.reference-line {
-  stroke: rgb(var(--color-simElementBorder));
-  stroke-width: 1;
-  stroke-dasharray: 7 5;
+.relative-airflow-line {
+  stroke: rgb(var(--color-secondary));
+  stroke-width: 1.5;
   vector-effect: non-scaling-stroke;
 }
 
 .chord-line {
   stroke: rgb(var(--color-panelActive));
-  stroke-width: 1.5;
-  stroke-dasharray: 5 4;
+  stroke-width: 1.35;
+  stroke-dasharray: 7 4;
   vector-effect: non-scaling-stroke;
 }
 
 .flight-path-reference {
   stroke: rgb(var(--color-simActiveButton));
-  stroke-width: 1.5;
-  stroke-dasharray: 8 4;
+  stroke-width: 1.25;
+  stroke-dasharray: 9 5;
   vector-effect: non-scaling-stroke;
 }
 
 .horizon-reference {
   stroke: rgb(var(--color-simElementBorder));
-  stroke-width: 1.5;
-  stroke-dasharray: 3 4;
+  stroke-width: 0.9;
+  stroke-dasharray: 2 7;
   vector-effect: non-scaling-stroke;
-}
-
-.reference-key-background {
-  fill: rgb(var(--color-panelContentBackground));
-  fill-opacity: 0.92;
 }
 
 .airfoil-surface,
 .airfoil-control {
   fill: rgb(var(--color-panelHeaderBackground));
   stroke: rgb(var(--color-secondary));
-  stroke-width: 2;
+  stroke-width: 2.5;
   vector-effect: non-scaling-stroke;
 }
 
@@ -700,8 +700,20 @@ const streamlines = computed(() => {
 .angle-arc {
   fill: none;
   stroke: rgb(var(--color-panelActive));
-  stroke-width: 1.5;
+  stroke-width: 2;
   vector-effect: non-scaling-stroke;
+}
+
+.angle-label {
+  fill: rgb(var(--color-panelActive));
+  font-weight: 600;
+}
+
+.annotation-label {
+  paint-order: stroke fill;
+  stroke: rgb(var(--color-panelContentBackground));
+  stroke-width: 5px;
+  stroke-linejoin: round;
 }
 
 .pitch-label {
