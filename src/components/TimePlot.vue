@@ -37,7 +37,7 @@
     <div
       :ref="
         (el) => {
-          if (el) plotRefs[plot.id] = el as HTMLElement
+          setPlotRef(plot.id, el as HTMLElement | null)
         }
       "
       class="w-full h-full"
@@ -133,6 +133,12 @@ let MAX_POINTS = 0
 
 let plotResizeObserver: ResizeObserver | null = null
 
+let recreateFrame: number | null = null
+
+let recreateQueue: Promise<void> = Promise.resolve()
+
+let disposed = false
+
 // -------------------------------------------------------------------------------------------------
 // COMPUTED
 // -------------------------------------------------------------------------------------------------
@@ -164,6 +170,11 @@ function getStrokeColor(index: number) {
 
 function createPlotId(sourceIds: string[]) {
   return sourceIds.join('|')
+}
+
+function setPlotRef(plotId: string, el: HTMLElement | null) {
+  if (el) plotRefs[plotId] = el
+  else delete plotRefs[plotId]
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -204,9 +215,7 @@ function addPlot(...sourceIds: string[]) {
     plotDefinitions.value.map((plot) => plot.id),
   )
 
-  setTimeout(() => {
-    recreateAllPlots()
-  }, 50)
+  scheduleRecreateAllPlots()
 }
 
 function removePlot(plotId: string) {
@@ -223,7 +232,7 @@ function removePlot(plotId: string) {
     plots.delete(plotId)
   }
 
-  recreateAllPlots()
+  scheduleRecreateAllPlots()
 }
 
 function replacePlot(plotId: string, sourceIds: string[]) {
@@ -254,7 +263,7 @@ function replacePlot(plotId: string, sourceIds: string[]) {
   const existingPlot = plots.get(plotId)
   existingPlot?.destroy()
   plots.delete(plotId)
-  setTimeout(recreateAllPlots, 0)
+  scheduleRecreateAllPlots()
 }
 
 function resetPlot(plotId: string) {
@@ -278,6 +287,17 @@ function resetPlot(plotId: string) {
 // PLOT CREATION
 // -------------------------------------------------------------------------------------------------
 
+function scheduleRecreateAllPlots() {
+  if (disposed || recreateFrame !== null) return
+
+  recreateFrame = requestAnimationFrame(() => {
+    recreateFrame = null
+    recreateQueue = recreateQueue.then(async () => {
+      if (!disposed) await recreateAllPlots()
+    })
+  })
+}
+
 async function recreateAllPlots() {
   plots.forEach((p) => p.destroy())
   plots.clear()
@@ -289,10 +309,20 @@ async function recreateAllPlots() {
 
   await nextTick()
 
+  if (disposed) return
+
   plotList.value.forEach((plotDef) => {
     const el = plotRefs[plotDef.id]
 
-    if (!el) return
+    if (!el?.isConnected) return
+
+    const width = el.offsetWidth
+    const height = el.offsetHeight
+    if (width <= 0 || height <= 0) return
+
+    // uPlot owns everything inside this host. Clear any untracked instance left
+    // behind by an interrupted or older reconstruction before creating another.
+    el.replaceChildren()
 
     const series: uPlot.Series[] = [
       {
@@ -336,8 +366,8 @@ async function recreateAllPlots() {
           show: true,
         },
 
-        width: el.offsetWidth,
-        height: el.offsetHeight,
+        width,
+        height,
 
         padding: [25, 1, 5, 1],
 
@@ -419,20 +449,31 @@ async function recreateAllPlots() {
     plots.forEach((plot, id) => {
       const el = plotRefs[id]
 
-      if (!el) return
+      if (!el?.isConnected) return
+
+      const width = el.offsetWidth
+      const height = el.offsetHeight
+      if (width <= 0 || height <= 0) return
 
       plot.setSize({
-        width: el.offsetWidth,
-        height: el.offsetHeight,
+        width,
+        height,
       })
     })
+
+    const hasVisibleUnbuiltPlot = plotList.value.some((plotDef) => {
+      const el = plotRefs[plotDef.id]
+      return Boolean(
+        !plots.has(plotDef.id) && el?.isConnected && el.offsetWidth > 0 && el.offsetHeight > 0,
+      )
+    })
+    if (hasVisibleUnbuiltPlot) scheduleRecreateAllPlots()
   })
 
-  const parentEl = Object.values(plotRefs)[0]?.parentElement
-
-  if (parentEl) {
-    plotResizeObserver.observe(parentEl)
-  }
+  plotList.value.forEach((plotDef) => {
+    const el = plotRefs[plotDef.id]
+    if (el?.isConnected) plotResizeObserver?.observe(el)
+  })
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -576,15 +617,18 @@ function reset_x_axis() {
 onMounted(() => {
   MAX_POINTS = Math.ceil(props.max_duration_ms / props.update_intervals)
 
-  window.addEventListener('theme-change', recreateAllPlots)
+  window.addEventListener('theme-change', scheduleRecreateAllPlots)
 })
 
 onBeforeUnmount(() => {
+  disposed = true
+  if (recreateFrame !== null) cancelAnimationFrame(recreateFrame)
+
   plots.forEach((p) => p.destroy())
 
   plotResizeObserver?.disconnect()
 
-  window.removeEventListener('theme-change', recreateAllPlots)
+  window.removeEventListener('theme-change', scheduleRecreateAllPlots)
 })
 </script>
 
