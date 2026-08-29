@@ -509,7 +509,7 @@
         <Panel
           panel-id="classroom"
           @header-dblclick="togglePanelMaximize"
-          :status="classRoomComponentState ? 'Online' : 'Offline'"
+          :status="classRoomComponentState ? classRoomId || 'Online' : 'Offline'"
           class="panel-classroom"
           data-layout="instructor pilot classroom"
           :active="classRoomComponentState"
@@ -565,6 +565,7 @@
                     classRoomComponentState = isOnline
                   }
                 "
+                @classroomRoom="(roomId) => (classRoomId = roomId)"
               />
             </div>
           </template>
@@ -888,6 +889,7 @@ const monitorLoadingDependencies = (remaining: number) => {
 
 let isLicenceValid = ref(false)
 let classRoomComponentState = ref(false)
+let classRoomId = ref('')
 let accountName = ref('')
 let scriptComponentStatus = ref<ScriptStatus>('IDLE')
 const update_interval_ms = 200
