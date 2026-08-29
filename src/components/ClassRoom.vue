@@ -175,6 +175,7 @@
     <div
       v-if="isInstructor && isOnline"
       class="classroom-roster order-2 flex min-h-24 flex-1 flex-col overflow-hidden font-panelFont"
+      @keydown="handleClassroomKeydown"
     >
       <div class="flex h-7 shrink-0 items-center gap-2 px-2">
         <span class="w-20 shrink-0 font-medium">
@@ -219,10 +220,11 @@
                 v-for="participant in group.participants"
                 :key="participant.peerId"
                 :ref="(element) => setRosterRowRef(element, participant.rosterIndex)"
-                class="h-6 cursor-default"
+                class="classroom-roster-row h-6 cursor-default outline-none"
                 :class="rowClass(participant.peerId)"
                 :aria-selected="isPeerSelected(participant.peerId)"
                 :title="participantSummary(participant.peer)"
+                tabindex="-1"
                 @click="selectPeerRow($event, participant.peerId, participant.rosterIndex)"
               >
                 <td class="w-5 px-1 text-center">
@@ -681,7 +683,6 @@ onMounted(() => {
   // There is no hook in Vuejs to detect when a tab is closed.
   // When the user closes the tab, disconnect
   window.addEventListener('beforeunload', disconnect)
-  window.addEventListener('keydown', handleClassroomKeydown)
   healthTimer = setInterval(() => {
     clock.value = Date.now()
     updateOverdueAssignments()
@@ -704,7 +705,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('beforeunload', disconnect)
-  window.removeEventListener('keydown', handleClassroomKeydown)
   if (healthTimer) clearInterval(healthTimer)
 })
 
@@ -1128,6 +1128,9 @@ const focusPeer = (peerId: string) => {
 }
 
 const selectPeerRow = (event: MouseEvent, peerId: string, rosterIndex: number) => {
+  if (event.currentTarget instanceof HTMLElement) {
+    event.currentTarget.focus({ preventScroll: true })
+  }
   focusPeer(peerId)
   const rows = visibleParticipantRows.value
   if (event.shiftKey && selectionAnchorIndex >= 0) {
@@ -1171,7 +1174,10 @@ const moveRosterFocus = (amount: number) => {
         : rows.length - 1
       : Math.max(0, Math.min(rows.length - 1, current + amount))
   focusedPeerId.value = rows[next].peerId
-  nextTick(() => rosterRowRefs.value[next]?.scrollIntoView({ block: 'nearest' }))
+  nextTick(() => {
+    rosterRowRefs.value[next]?.focus({ preventScroll: true })
+    rosterRowRefs.value[next]?.scrollIntoView({ block: 'nearest' })
+  })
 }
 
 const setRosterRowRef = (element: Element | ComponentPublicInstance | null, index: number) => {
@@ -1187,7 +1193,10 @@ const consumeActionSelection = (targetIds: string[]) => {
     const fallbackIndex = rows.findIndex(({ peerId }) => !consumed.has(peerId))
     const focusIndex = nextIndex >= 0 ? nextIndex : fallbackIndex
     focusedPeerId.value = focusIndex >= 0 ? rows[focusIndex].peerId : ''
-    if (focusIndex >= 0) rosterRowRefs.value[focusIndex]?.scrollIntoView({ block: 'nearest' })
+    if (focusIndex >= 0) {
+      rosterRowRefs.value[focusIndex]?.focus({ preventScroll: true })
+      rosterRowRefs.value[focusIndex]?.scrollIntoView({ block: 'nearest' })
+    }
   })
 }
 
@@ -1249,6 +1258,7 @@ const isEditableKeyboardTarget = (target: EventTarget | null) => {
 
 const handleClassroomKeydown = (event: KeyboardEvent) => {
   if (!isInstructor.value || !isOnline.value || exercisePaletteOpen.value) return
+  if (event.target instanceof Element && event.target.closest('button, a')) return
   if (isEditableKeyboardTarget(event.target) || isEditableKeyboardTarget(document.activeElement)) {
     return
   }
