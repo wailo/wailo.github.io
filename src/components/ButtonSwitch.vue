@@ -1,5 +1,5 @@
 <template>
-  <div class="flex">
+  <div class="flex min-w-0">
     <!-- Button or Label -->
     <wButton
       v-if="buttonClick != null"

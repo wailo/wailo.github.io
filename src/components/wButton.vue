@@ -1,8 +1,9 @@
 <template>
   <!-- Button or Label -->
   <button
+    :title="props.buttonLabel"
     :class="[
-      'efis-button inline-flex h-full items-center justify-center text-nowrap px-1',
+      'efis-button inline-flex h-full min-w-0 items-center justify-center overflow-hidden text-ellipsis text-nowrap px-1',
       'border border-panelBorder outline-none cursor-pointer font-medium',
       'active:translate-y-px focus-visible:outline focus-visible:outline-1 focus-visible:outline-panelActive',
       props.buttonState === true
@@ -11,7 +12,7 @@
     ]"
     @click="props.buttonClick"
   >
-    {{ props.buttonLabel }}
+    <span class="min-w-0 truncate">{{ props.buttonLabel }}</span>
   </button>
 </template>
 
