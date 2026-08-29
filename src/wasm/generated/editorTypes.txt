@@ -1,5 +1,5 @@
 // Generated TypeScript definitions
-
+  
 interface b747 extends ClassHandle {
   readonly name: string;
   readonly wing_area: number;
@@ -396,6 +396,7 @@ type FlightModelInstance = b747 | c172
 
 
 interface graphics extends ClassHandle {
+  readonly name: string;
   readonly simulation_time: number;
   readonly clock_time: number;
   readonly flight_model_id: number;
@@ -470,7 +471,10 @@ function notifyUser(
 
  {OFF: 2, UP: 1, DOWN: 0}
 
-function plotView(simPropitem: SimulationProperties, state: boolean): void
+function plotView(
+  simPropitem: SimulationProperties | SimulationProperties[],
+  state: boolean,
+): void
 
 async function repositionWithAutopilot(
   context: ScriptContext,
@@ -488,9 +492,9 @@ async function repositionWithAutopilot(
 
 
 
-interface ScriptContext {
+interface ScriptContext<TProps extends ScriptSimProps = FlightModelSimProps> {
   controls: ExtendedMainModule
-  props: any
+  props: TProps
   repositionWithAutopilot: typeof repositionWithAutopilot
   waitFor: (ms: number) => Promise<void>
   waitForCondition: (
@@ -502,7 +506,9 @@ interface ScriptContext {
   ) => Promise<boolean>
 
   notifyUser: typeof notifyUser
+  /** Pause lesson progression until the user acknowledges the prompt. */
   waitForUser: (options: WaitForUserOptions) => Promise<void>
+  /** Ask a multiple-choice or essay question and return the submitted result. */
   askQuestion: (options: AskQuestionOptions) => Promise<QuestionResult>
   dataView: (prop: SimulationProperties, state: boolean) => void
   plotView: (prop: SimulationProperties | SimulationProperties[], state: boolean) => void
@@ -518,7 +524,7 @@ interface ScriptContext {
     (panelId: 'simulation', tabName: 'Simulation'): void
     (panelId: 'learning-modules', tabName: 'Learning-Modules'): void
     (panelId: 'autopilot', tabName: 'Autopilot'): void
-    (panelId: 'flight-model', tabName: 'Flight-Model' | 'Joystick'): void
+    (panelId: 'flight-model', tabName: 'Flight-Model' | 'Joystick' | 'Reposition'): void
     (panelId: 'classroom', tabName: 'Classroom'): void
     (panelId: 'prompt', tabName: 'Prompt' | 'whiteboard'): void
   }
@@ -530,19 +536,19 @@ interface ScriptContext {
 
 
 interface SimulationProperties {
-  readonly id: string;
-  readonly type: 'number' | 'boolean' | 'string' | 'enum' | 'void';
-  readonly label: string;
-  readonly description?: string;
-  readonly inputValue?: PropertyType;
-  readonly setterFunc?: Function;
-  readonly unit?: string;
-  readonly min?: number;
-  readonly max?: number;
-  readonly step?: number;
-  readonly precision?: number;
-  readonly group: string;
-  readonly enumValues?: { enumName: string; enumValue: number | string }[];
+  readonly id: string
+  readonly type: 'number' | 'boolean' | 'string' | 'enum' | 'void'
+  readonly label: string
+  readonly description?: string
+  readonly inputValue?: PropertyType
+  readonly setterFunc?: Function
+  readonly unit?: string
+  readonly min?: number
+  readonly max?: number
+  readonly step?: number
+  readonly precision?: number
+  readonly group: string
+  readonly enumValues?: { enumName: string; enumValue: number | string }[]
 }
 
  { enumName: string; enumValue: number | string }

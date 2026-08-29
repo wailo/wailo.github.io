@@ -10,6 +10,11 @@ import {
 } from './core'
 
 import { LayoutTypes } from '../src/wasm/siminterface.ts'
+import type {
+  b747SimProps,
+  c172SimProps,
+  graphicsSimProps,
+} from './wasm/generated/flightsimulator_exec_meta'
 
 export interface WaitForUserOptions {
   title: string
@@ -57,9 +62,16 @@ export interface QuestionResult {
   cancelled?: boolean
 }
 
-export interface ScriptContext {
+export type B747SimProps = b747SimProps
+export type C172SimProps = c172SimProps
+export type GraphicsSimProps = graphicsSimProps
+export type ActiveFlightModelSimProps = B747SimProps | C172SimProps
+export type FlightModelSimProps = B747SimProps & C172SimProps
+export type ScriptSimProps = ActiveFlightModelSimProps | FlightModelSimProps | GraphicsSimProps
+
+export interface ScriptContext<TProps extends ScriptSimProps = FlightModelSimProps> {
   controls: ExtendedMainModule
-  props: any
+  props: TProps
   repositionWithAutopilot: typeof repositionWithAutopilot
   waitFor: (ms: number) => Promise<void>
   waitForCondition: (
@@ -89,7 +101,7 @@ export interface ScriptContext {
     (panelId: 'simulation', tabName: 'Simulation'): void
     (panelId: 'learning-modules', tabName: 'Learning-Modules'): void
     (panelId: 'autopilot', tabName: 'Autopilot'): void
-    (panelId: 'flight-model', tabName: 'Flight-Model' | 'Joystick'): void
+    (panelId: 'flight-model', tabName: 'Flight-Model' | 'Joystick' | 'Reposition'): void
     (panelId: 'classroom', tabName: 'Classroom'): void
     (panelId: 'prompt', tabName: 'Prompt' | 'whiteboard'): void
   }
@@ -102,7 +114,9 @@ export interface ScriptContext {
 // 2. CONTEXT FACTORY (ONLY PLACE YOU UPDATE)
 // ==============================
 
-export function createScriptContext(deps: ScriptContext): ScriptContext {
+export function createScriptContext<TProps extends ScriptSimProps>(
+  deps: ScriptContext<TProps>,
+): ScriptContext<TProps> {
   return {
     controls: deps.controls,
     props: deps.props,
@@ -131,9 +145,14 @@ export function createScriptContext(deps: ScriptContext): ScriptContext {
 // 3. SCRIPT RUNNER
 // ==============================
 
-export type UserScript = (ctx: ScriptContext) => Promise<void>
+export type UserScript<TProps extends ScriptSimProps = FlightModelSimProps> = (
+  ctx: ScriptContext<TProps>,
+) => Promise<void>
 
-export async function runUserScript(script: UserScript, ctx: ScriptContext) {
+export async function runUserScript<TProps extends ScriptSimProps>(
+  script: UserScript<TProps>,
+  ctx: ScriptContext<TProps>,
+) {
   try {
     await script(ctx)
   } catch (err) {

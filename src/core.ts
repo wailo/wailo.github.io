@@ -14,7 +14,10 @@ import type { b747, c172 } from './wasm/siminterface'
 export type { ScriptContext } from './ScriptContext'
 
 // Plot a graph of simulation property.
-export declare function plotView(simPropitem: SimulationProperties, state: boolean): void
+export declare function plotView(
+  simPropitem: SimulationProperties | SimulationProperties[],
+  state: boolean,
+): void
 // Display data of a simulation property
 export declare function dataView(simPropitem: SimulationProperties, state: boolean): void
 // Reset All simulation displays

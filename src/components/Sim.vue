@@ -637,6 +637,7 @@ import Airflow from './Airflow.vue'
 import CockpitControls from './CockpitControls.vue'
 import ResizableSimLayout from './ResizableSimLayout.vue'
 import type {
+  ActiveFlightModelSimProps,
   AskQuestionOptions,
   QuestionResult,
   WaitForUserOptions,
@@ -1161,7 +1162,7 @@ const layoutControls: ComputedRef<Record<string, SimulationProperties>> = comput
 }))
 
 let autopilotControls: ComputedRef<ReturnType<typeof getAutopilotProperties>>
-let flightModelProps: ComputedRef<ReturnType<typeof getFlightModelParameters>>
+let flightModelProps: ComputedRef<ActiveFlightModelSimProps>
 let simulationControlsProps: ComputedRef<ReturnType<typeof getSimulationControlsParameters>>
 let groupedSimProps: ComputedRef<Record<string, SimulationProperties[]>>
 let filteredGroupedSimProps: ComputedRef<Array<[string, SimulationProperties[]]>>
@@ -1378,7 +1379,7 @@ onUnmounted(() => {
 function initFlightModelParams() {
   flightModelProps = computed(() => {
     renderSignal.value
-    return getFlightModelParameters(FlightSimModule.flightModel)
+    return getFlightModelParameters(FlightSimModule.flightModel) as ActiveFlightModelSimProps
   })
   autopilotControls = computed(() => {
     renderSignal.value

@@ -316,6 +316,7 @@ import {
 } from '../core.ts'
 import * as ts_compiler from 'typescript'
 import types_definitions from './../../src/wasm/generated/editorTypes.txt?raw'
+import simMetaTypes from './../../src/wasm/generated/flightsimulator_exec_meta.ts?raw'
 import { resetTimeouts } from '../core.ts'
 // core.ts converted to js
 import coreSimJs from 'virtual:transpiled-core-js'
@@ -331,8 +332,16 @@ import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker'
 import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker'
 import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker'
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
-import { UserScript, ScriptContext, createScriptContext, runUserScript } from '../ScriptContext.ts'
-import type { AskQuestionOptions, QuestionResult, WaitForUserOptions } from '../ScriptContext.ts'
+import { createScriptContext, runUserScript } from '../ScriptContext.ts'
+import type {
+  AskQuestionOptions,
+  ActiveFlightModelSimProps,
+  QuestionResult,
+  ScriptContext,
+  ScriptSimProps,
+  UserScript,
+  WaitForUserOptions,
+} from '../ScriptContext.ts'
 import scriptApiTypes from '../ScriptContext.ts?raw'
 import { LayoutTypes } from '../../src/wasm/siminterface.ts'
 
@@ -399,7 +408,7 @@ const props = defineProps({
     required: true,
   },
   simProps: {
-    type: Object as PropType<Record<string, SimulationProperties>>,
+    type: Object as PropType<ActiveFlightModelSimProps>,
     required: true,
   },
   isDarkMode: {
@@ -472,7 +481,7 @@ const options = {
 // Set up Monaco Editor with TypeScript definitions from ScriptContext and the generated modelfile
 const SetupTypes = () => {
   monaco.typescript.typescriptDefaults.addExtraLib(
-    `${stripImportsExports(scriptApiTypes)}\n${types_definitions}`,
+    `${types_definitions}\n${stripImportsExports(simMetaTypes)}\n${stripImportsExports(scriptApiTypes)}`,
   )
 }
 
@@ -489,7 +498,7 @@ const setupMonaco = (_editor: monaco.editor.IStandaloneCodeEditor) => {
   })
 }
 
-function loadUserScript(code: string): UserScript {
+function loadUserScript<TProps extends ScriptSimProps>(code: string): UserScript<TProps> {
   const fn = new Function(`
     ${code}
     return main;
@@ -552,7 +561,7 @@ const executeCode = async (): Promise<boolean> => {
     addRunEvent(`Started ${ModuleTitle.value || 'lesson'}`)
     emit('start', code.value)
 
-    const deps: ScriptContext = {
+    const deps: ScriptContext<typeof props.simProps> = {
       controls: props.contextObject,
       props: props.simProps,
       repositionWithAutopilot: repositionWithAutopilot,
@@ -612,7 +621,7 @@ const executeCode = async (): Promise<boolean> => {
       module: ts_compiler.ModuleKind.None,
     })
 
-    const finalUserCode = await loadUserScript(finalUserCode_js)
+    const finalUserCode = await loadUserScript<typeof props.simProps>(finalUserCode_js)
     const ctx = createScriptContext(deps)
 
     const startStime = new Date()
