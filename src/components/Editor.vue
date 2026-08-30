@@ -349,12 +349,11 @@ import type {
   ActiveFlightModelSimProps,
   QuestionResult,
   ScriptContext,
-  ScriptSimProps,
-  UserScript,
   WaitForUserOptions,
 } from '../ScriptContext.ts'
 import scriptApiTypes from '../ScriptContext.ts?raw'
 import { LayoutTypes } from '../../src/wasm/siminterface.ts'
+import { compileUserScript, stripImportsExports } from '../EditorScriptRuntime.ts'
 
 const isScriptRunning = ref(false)
 const isLLMPending = ref(false)
@@ -461,14 +460,6 @@ const props = defineProps({
 // ------------------------
 // import * as ts from "typescript";
 
-// Remove import and declare statements and replace export with a empty string
-function stripImportsExports(input: string): string {
-  return input
-    .replace(/^\s*export\s+/gm, '')
-    .replace(/^\s*import[\s\S]*?['"].*?['"];?/gm, '')
-    .trim()
-}
-
 const options = {
   automaticLayout: true,
   colorDecorators: true,
@@ -507,22 +498,6 @@ const setupMonaco = (_editor: monaco.editor.IStandaloneCodeEditor) => {
     strict: true,
     //typeRoots: ['node_modules/@types'],
   })
-}
-
-function loadUserScript<TProps extends ScriptSimProps>(code: string): UserScript<TProps> {
-  const fn = new Function(`
-    ${code}
-    return main;
-  `)
-
-  const result = fn()
-
-  if (typeof result !== 'function') {
-    props.utilityFuncs.notifyUser('Error', "The script must define a function named 'main'", 3000)
-    throw new Error("Script must define a function named 'main'")
-  }
-
-  return result
 }
 
 const executionResult = ref<string | null>(null)
@@ -627,12 +602,9 @@ const executeCode = async (): Promise<boolean> => {
       metrics: metrics,
     }
 
-    const finalUserCode_js = ts_compiler.transpile(code.value, {
-      target: ts_compiler.ScriptTarget.ES2020,
-      module: ts_compiler.ModuleKind.None,
-    })
-
-    const finalUserCode = await loadUserScript<typeof props.simProps>(finalUserCode_js)
+    const finalUserCode = compileUserScript<typeof props.simProps>(code.value, (message) =>
+      props.utilityFuncs.notifyUser('Error', message, 3000),
+    )
     const ctx = createScriptContext(deps)
 
     const startStime = new Date()
