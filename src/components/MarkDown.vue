@@ -21,7 +21,11 @@
         </div>
 
         <div v-else-if="card.interaction?.type === 'multiple-choice'" class="prompt-interaction">
-          <div class="grid gap-1">
+          <div v-if="card.interaction.completed" class="prompt-interaction__answer">
+            <span class="font-semibold">Answer:</span>
+            {{ choiceLabel(card.interaction) }}
+          </div>
+          <div v-else class="grid gap-1">
             <wButton
               v-for="choice in card.interaction.choices"
               :key="choice.id"
@@ -41,22 +45,31 @@
           class="prompt-interaction"
           @submit.prevent="submitEssay(card)"
         >
-          <textarea
-            v-model="card.interaction.answer"
-            class="prompt-interaction__essay"
-            :placeholder="card.interaction.placeholder"
-            rows="5"
-          ></textarea>
-          <div class="flex items-center justify-between gap-2">
-            <span class="opacity-60">
-              {{ card.interaction.answer.trim().length }} / {{ card.interaction.minLength }} minimum
-            </span>
-            <wButton
-              class="h-6"
-              :button-label="card.interaction.submitLabel"
-              :button-click="() => submitEssay(card)"
-            />
+          <div
+            v-if="card.interaction.completed"
+            class="prompt-interaction__answer whitespace-pre-wrap"
+          >
+            <span class="font-semibold">Answer:</span>
+            {{ card.interaction.answer }}
           </div>
+          <template v-else>
+            <textarea
+              v-model="card.interaction.answer"
+              class="prompt-interaction__essay"
+              :placeholder="card.interaction.placeholder"
+              rows="5"
+            ></textarea>
+            <div class="flex items-center justify-between gap-2">
+              <span class="opacity-60">
+                {{ card.interaction.answer.trim().length }} characters
+              </span>
+              <wButton
+                class="h-6"
+                :button-label="card.interaction.submitLabel"
+                :button-click="() => submitEssay(card)"
+              />
+            </div>
+          </template>
           <p v-if="card.interaction.feedback" class="prompt-interaction__feedback">
             {{ card.interaction.feedback }}
           </p>
@@ -100,6 +113,7 @@ type MultipleChoiceInteraction = {
   choices: QuestionChoice[]
   selectedAnswer: string
   feedback: string
+  completed: boolean
   attempts: number
   startedAt: number
   resolve: (result: QuestionResult) => void
@@ -110,8 +124,8 @@ type EssayInteraction = {
   options: EssayQuestionOptions
   answer: string
   feedback: string
+  completed: boolean
   placeholder: string
-  minLength: number
   submitLabel: string
   startedAt: number
   resolve: (result: QuestionResult) => void
@@ -235,6 +249,7 @@ const askQuestion = async (options: AskQuestionOptions): Promise<QuestionResult>
             type: 'multiple-choice',
             options,
             feedback: '',
+            completed: false,
             startedAt: Date.now(),
             resolve,
             choices: options.choices,
@@ -245,11 +260,11 @@ const askQuestion = async (options: AskQuestionOptions): Promise<QuestionResult>
             type: 'essay',
             options,
             feedback: '',
+            completed: false,
             startedAt: Date.now(),
             resolve,
             answer: '',
             placeholder: options.placeholder || 'Enter your answer…',
-            minLength: Math.max(0, options.minLength || 0),
             submitLabel: options.submitLabel || 'Submit',
           }
     const card: PromptCard = {
@@ -272,7 +287,7 @@ const completeContinue = (card: PromptCard) => {
 
 const answerMultipleChoice = (card: PromptCard, answer: string) => {
   const interaction = card.interaction
-  if (interaction?.type !== 'multiple-choice') return
+  if (interaction?.type !== 'multiple-choice' || interaction.completed) return
   interaction.attempts++
   interaction.selectedAnswer = answer
   const correct = interaction.options.correctAnswer
@@ -295,18 +310,18 @@ const answerMultipleChoice = (card: PromptCard, answer: string) => {
     elapsedMs: Date.now() - interaction.startedAt,
   }
   const { resolve } = interaction
-  card.interaction = undefined
+  interaction.completed = true
   resolve(result)
 }
 
+const choiceLabel = (interaction: MultipleChoiceInteraction) =>
+  interaction.choices.find(({ id }) => id === interaction.selectedAnswer)?.label ||
+  interaction.selectedAnswer
+
 const submitEssay = (card: PromptCard) => {
   const interaction = card.interaction
-  if (interaction?.type !== 'essay') return
+  if (interaction?.type !== 'essay' || interaction.completed) return
   const answer = interaction.answer.trim()
-  if (answer.length < interaction.minLength) {
-    interaction.feedback = `Please enter at least ${interaction.minLength} characters.`
-    return
-  }
 
   const result: QuestionResult = {
     questionId: interaction.options.id,
@@ -316,14 +331,15 @@ const submitEssay = (card: PromptCard) => {
     elapsedMs: Date.now() - interaction.startedAt,
   }
   const { resolve } = interaction
-  card.interaction = undefined
+  interaction.completed = true
+  interaction.feedback = 'Submitted.'
   resolve(result)
 }
 
 const cancelPromptInteractions = () => {
   for (const card of cards.value) {
     const interaction = card.interaction
-    if (!interaction) continue
+    if (!interaction || ('completed' in interaction && interaction.completed)) continue
     if (interaction.type === 'continue') interaction.resolve()
     else {
       interaction.resolve({

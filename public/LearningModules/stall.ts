@@ -147,7 +147,6 @@ Flaps 10 allowed more lift at lower speed, but the aircraft still stalled when i
     question:
       'In one or two sentences, explain why an aircraft can stall while the autopilot is trying to maintain altitude.',
     placeholder: 'Relate airspeed, lift demand, and angle of attack…',
-    minLength: 30,
     submitLabel: 'Submit Reflection',
   })
   context.checkPoint(`Stall reflection submitted · ${reflection.answer.length} characters`)

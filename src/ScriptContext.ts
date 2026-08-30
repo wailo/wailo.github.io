@@ -46,7 +46,6 @@ export interface MultipleChoiceQuestionOptions extends BaseQuestionOptions {
 export interface EssayQuestionOptions extends BaseQuestionOptions {
   type: 'essay'
   placeholder?: string
-  minLength?: number
   submitLabel?: string
 }
 
