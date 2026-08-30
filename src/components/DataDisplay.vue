@@ -74,7 +74,7 @@
                   :button-click="() => toggleDataView(item)"
                 />
                 <wButton
-                  v-if="item.type === 'number'"
+                  v-if="isPlottableSimulationProperty(item)"
                   class="h-4 w-full"
                   button-label="Plot"
                   :button-state="activePlotIds.has(item.id.toLowerCase())"
@@ -127,7 +127,7 @@
             <td class="w-1/4 truncate text-right">{{ item.inputValue }}</td>
             <td class="flex w-24 justify-end gap-1 pl-1">
               <wButton
-                v-if="item.type === 'number'"
+                v-if="isPlottableSimulationProperty(item)"
                 class="h-5 w-12"
                 button-label="Plot"
                 :button-state="activePlotIds.has(item.id.toLowerCase())"
@@ -160,6 +160,7 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount, PropType } from 'vue'
 import Fuse from 'fuse.js'
 import { type SimulationProperties } from '../wasm/siminterface'
+import { isPlottableSimulationProperty } from '../PlotProperty'
 import TimePlot from './TimePlot.vue'
 import wButton from './wButton.vue'
 
@@ -224,7 +225,7 @@ const searchResults = computed(() => {
 
 const paletteSearchResults = computed(() =>
   plotComposer.value
-    ? searchResults.value.filter((item) => item.type === 'number')
+    ? searchResults.value.filter(isPlottableSimulationProperty)
     : searchResults.value,
 )
 
@@ -302,7 +303,11 @@ function togglePlotSelection(id: string) {
 
 function applyPlotSelection() {
   if (!plotComposer.value || plotSelection.value.size === 0) return
-  emit('replacePlot', plotComposer.value.plotId, [...plotSelection.value])
+  const sourceIds = [...plotSelection.value].filter((id) =>
+    isPlottableSimulationProperty(props.simProps[id]),
+  )
+  if (!sourceIds.length) return
+  emit('replacePlot', plotComposer.value.plotId, sourceIds)
   closePalette()
 }
 
@@ -347,7 +352,9 @@ function setPlotView(item: SimulationProperties | SimulationProperties[], state:
   const items = Array.isArray(item) ? item : [item]
 
   // collect valid ids
-  const ids = items.filter((v) => v?.id).map((v) => v.id.toLowerCase())
+  const ids = items
+    .filter((value) => value?.id && (!state || isPlottableSimulationProperty(value)))
+    .map((value) => value.id.toLowerCase())
 
   if (ids.length === 0) {
     return
