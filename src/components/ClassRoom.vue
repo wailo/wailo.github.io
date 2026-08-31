@@ -503,6 +503,7 @@ type ConnectionsList = {
   }
 }
 const incomingConns = ref<ConnectionsList>({})
+const peerRosterOrder = ref<string[]>([])
 const routeHash = window.location.href
 const isQrPopupOpen = ref(false)
 const followMode = ref(false)
@@ -549,17 +550,12 @@ const raisedHandCount = computed(
   () => Object.values(incomingConns.value).filter((peer) => peer.handState === 'raised').length,
 )
 const participantRecords = computed(() => {
-  const handPriority: Record<ClassroomHandState, number> = {
-    raised: 0,
-    acknowledged: 1,
-    idle: 2,
-    resolved: 3,
-  }
-  return Object.entries(incomingConns.value)
-    .map(([peerId, peer]) => ({ peerId, peer }))
-    .sort(
-      (a, b) => handPriority[a.peer.handState || 'idle'] - handPriority[b.peer.handState || 'idle'],
-    )
+  const connectedIds = Object.keys(incomingConns.value)
+  const orderedIds = [
+    ...peerRosterOrder.value.filter((peerId) => peerId in incomingConns.value),
+    ...connectedIds.filter((peerId) => !peerRosterOrder.value.includes(peerId)),
+  ]
+  return orderedIds.map((peerId) => ({ peerId, peer: incomingConns.value[peerId] }))
 })
 const filteredParticipants = computed(() => {
   const statusFiltered = participantRecords.value.filter(({ peer }) => {
@@ -739,6 +735,9 @@ const setupConnection = (incomingConnection: DataConnection) => {
       conn: incomingConnection,
       lastSeen: Date.now(),
     }
+    if (!peerRosterOrder.value.includes(incomingConnection.peer)) {
+      peerRosterOrder.value.push(incomingConnection.peer)
+    }
   })
 
   // Lost connection with remote peer
@@ -760,6 +759,7 @@ const setupConnection = (incomingConnection: DataConnection) => {
 const onDisconnected = (peer: PeerJS.Peer) => {
   trace(`Peer disconnected ${peer.id}`)
   delete incomingConns.value[peer.id]
+  peerRosterOrder.value = peerRosterOrder.value.filter((peerId) => peerId !== peer.id)
 }
 
 const onPeerClose = (peerId: string) => {
@@ -785,6 +785,7 @@ const onConnectionClose = (peerId: string) => {
   else {
     // delete from the list
     delete incomingConns.value[peerId]
+    peerRosterOrder.value = peerRosterOrder.value.filter((id) => id !== peerId)
     selectedPeerIds.value = selectedPeerIds.value.filter((id) => id !== peerId)
   }
 }
@@ -1687,6 +1688,7 @@ const reset = () => {
     selfPeer = undefined as any
   }
   incomingConns.value = {}
+  peerRosterOrder.value = []
   instructorConnection = undefined as any
 }
 
