@@ -57,7 +57,7 @@ import { computed, nextTick, ref } from 'vue'
 import { Pane, Splitpanes } from 'splitpanes'
 import 'splitpanes/dist/splitpanes.css'
 
-type LayoutName = 'instructor' | 'pilot' | 'focus' | 'classroom'
+type LayoutName = 'instructor' | 'pilot' | 'focus'
 type PanelId =
   | 'cockpit'
   | 'realtime'
@@ -124,19 +124,6 @@ const layouts: Record<LayoutName, LayoutPreset> = {
       classroom: 0,
       simulation: 15,
       realtime: 100,
-      flightmodel: 0,
-    },
-  },
-  classroom: {
-    columns: [50, 50, 0],
-    panels: {
-      cockpit: 50,
-      autopilot: 12.5,
-      learningmodules: 37.5,
-      prompt: 62.5,
-      classroom: 37.5,
-      simulation: 0,
-      realtime: 0,
       flightmodel: 0,
     },
   },

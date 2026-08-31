@@ -8,7 +8,7 @@
   >
     <div
       v-if="!sim_module_loaded"
-      data-layout="focus instructor pilot classroom"
+      data-layout="focus instructor pilot"
       class="sim-loading-overlay absolute inset-0 z-50 flex items-center justify-center bg-primary text-secondary"
       role="status"
       aria-live="polite"
@@ -56,7 +56,7 @@
             FlightSimModule?.simulation.simulation_pause || FlightSimModule?.flightModel.damaged
           "
           class="panel-cockpit"
-          data-layout="focus instructor pilot classroom"
+          data-layout="focus instructor pilot"
         >
           <template #Cockpit>
             <div class="relative w-full h-full overflow-hidden">
@@ -225,7 +225,7 @@
           panel-id="learning-modules"
           @header-dblclick="togglePanelMaximize"
           class="panel-learningmodules"
-          data-layout="instructor classroom"
+          data-layout="instructor"
           :status="scriptComponentStatus"
           :active="scriptComponentStatus != 'IDLE'"
         >
@@ -284,7 +284,7 @@
           :status="FlightSimModule.flightModel.autopilot_master_switch ? 'Engaged' : 'Disengaged'"
           :active="FlightSimModule.flightModel.autopilot_master_switch"
           class="panel-autopilot"
-          data-layout="instructor pilot classroom"
+          data-layout="instructor pilot"
         >
           <template #Autopilot>
             <div class="w-full h-full">
@@ -511,7 +511,7 @@
           @header-dblclick="togglePanelMaximize"
           :status="classRoomComponentState ? classRoomId || 'Online' : 'Offline'"
           class="panel-classroom"
-          data-layout="instructor pilot classroom"
+          data-layout="instructor pilot"
           :active="classRoomComponentState"
         >
           <template #Classroom>
@@ -804,7 +804,7 @@ const simFunctions = {
   },
   setLayout: function (mode: typeof layout.value) {
     maximizedPanelId.value = null
-    layout.value = mode
+    layout.value = Object.values(LayoutTypes).includes(mode) ? mode : LayoutTypes.INSTRUCTOR
 
     // delay a resize event to allow components to adjust
     // This is needed resize event is not dispatched when component size change but the window size stay the same
@@ -1102,7 +1102,6 @@ const cockpitFullscreenControl = computed(() => ({
 const cockpitLayoutControls = computed(() =>
   [
     { id: LayoutTypes.INSTRUCTOR, label: 'INSTR' },
-    { id: LayoutTypes.CLASSROOM, label: 'CLASS' },
     { id: LayoutTypes.PILOT, label: 'PILOT' },
     { id: LayoutTypes.FOCUS, label: 'FOCUS' },
   ].map(({ id, label }) => ({
@@ -1131,7 +1130,6 @@ const layoutControls: ComputedRef<Record<string, SimulationProperties>> = comput
     group: 'simulation',
     enumValues: [
       { enumName: 'Instructor', enumValue: LayoutTypes.INSTRUCTOR },
-      { enumName: 'Classroom', enumValue: LayoutTypes.CLASSROOM },
       { enumName: 'Pilot', enumValue: LayoutTypes.PILOT },
       { enumName: 'Focus', enumValue: LayoutTypes.FOCUS },
     ],
@@ -1332,8 +1330,7 @@ onMounted(async () => {
           const nextLayout = {
             [LayoutTypes.INSTRUCTOR]: LayoutTypes.PILOT,
             [LayoutTypes.PILOT]: LayoutTypes.FOCUS,
-            [LayoutTypes.FOCUS]: LayoutTypes.CLASSROOM,
-            [LayoutTypes.CLASSROOM]: LayoutTypes.INSTRUCTOR,
+            [LayoutTypes.FOCUS]: LayoutTypes.INSTRUCTOR,
           }
           simFunctions.setLayout(nextLayout[layout.value])
         }
@@ -1615,10 +1612,6 @@ function createRemoteManager(FlightSimModule: ExtendedMainModule) {
   display: none;
 }
 
-.container.layout-classroom > *:not([data-layout~='classroom']) {
-  display: none;
-}
-
 /* ===== Instructor LAYOUT ===== */
 .container.layout-instructor {
   display: grid;
@@ -1674,25 +1667,6 @@ function createRemoteManager(FlightSimModule: ExtendedMainModule) {
     'realtimedata cockpit userprompt'
     'realtimedata cockpit userprompt'
     'realtimedata simulationcontrols userprompt';
-}
-
-/* ===== Classroom LAYOUT ===== */
-.container.layout-classroom {
-  display: grid;
-  grid-template-columns: var(--layout-column-1) var(--layout-column-2) var(--layout-column-3);
-  grid-template-rows: repeat(5, minmax(0, var(--layout-row-top-track))) repeat(
-      3,
-      minmax(0, var(--layout-row-bottom-track))
-    );
-  grid-template-areas:
-    'cockpit userprompt classroom'
-    'cockpit userprompt classroom'
-    'cockpit userprompt classroom'
-    'cockpit userprompt classroom'
-    'autopilot userprompt classroom'
-    'learningmodules userprompt classroom'
-    'learningmodules userprompt classroom'
-    'learningmodules userprompt classroom';
 }
 
 /* Panel bindings */
@@ -1788,15 +1762,13 @@ function createRemoteManager(FlightSimModule: ExtendedMainModule) {
 /* Splitpanes owns layout geometry; these overrides retire the legacy grid rules. */
 .container.layout-focus,
 .container.layout-instructor,
-.container.layout-pilot,
-.container.layout-classroom {
+.container.layout-pilot {
   display: block;
 }
 
 .container.layout-focus > .sim-split-layout,
 .container.layout-instructor > .sim-split-layout,
-.container.layout-pilot > .sim-split-layout,
-.container.layout-classroom > .sim-split-layout {
+.container.layout-pilot > .sim-split-layout {
   display: flex;
 }
 
