@@ -218,34 +218,6 @@
             @keydown.ctrl.enter.prevent="generateLesson"
           />
 
-          <div class="mt-1 grid grid-cols-3 gap-1">
-            <label class="ai-field">
-              <span>AIRCRAFT</span>
-              <select v-model="aiAircraft">
-                <option>B747</option>
-                <option>C172</option>
-                <option>ANY</option>
-              </select>
-            </label>
-            <label class="ai-field">
-              <span>DIFFICULTY</span>
-              <select v-model="aiDifficulty">
-                <option>INTRODUCTORY</option>
-                <option>INTERMEDIATE</option>
-                <option>ADVANCED</option>
-              </select>
-            </label>
-            <label class="ai-field">
-              <span>DURATION</span>
-              <select v-model="aiDurationMinutes">
-                <option :value="3">3 MIN</option>
-                <option :value="5">5 MIN</option>
-                <option :value="10">10 MIN</option>
-                <option :value="15">15 MIN</option>
-              </select>
-            </label>
-          </div>
-
           <div class="mt-1 flex flex-wrap gap-1">
             <button
               class="action-button"
@@ -372,9 +344,6 @@ const queuePlaying = ref(false)
 const runEvents = ref<Array<{ id: number; time: string; message: string; replaceKey?: string }>>([])
 const aiPanelOpen = ref(false)
 const aiPrompt = ref('')
-const aiAircraft = ref<'B747' | 'C172' | 'ANY'>('B747')
-const aiDifficulty = ref<'INTRODUCTORY' | 'INTERMEDIATE' | 'ADVANCED'>('INTRODUCTORY')
-const aiDurationMinutes = ref(5)
 const aiIncludeCurrentCode = ref(false)
 const aiGeneratedCode = ref('')
 const aiError = ref('')
@@ -804,11 +773,6 @@ const generatedLessonRequest = () => {
 User request:
 ${aiPrompt.value.trim()}
 
-Configuration:
-- Aircraft: ${aiAircraft.value}
-- Difficulty: ${aiDifficulty.value.toLocaleLowerCase()}
-- Approximate duration: ${aiDurationMinutes.value} minutes
-
 Authoring requirements:
 - Export exactly one async function named main with a ScriptContext parameter.
 - Use context.controls and the documented ScriptContext utilities.
@@ -1035,29 +999,5 @@ onUnmounted(() => {
 .action-button:disabled {
   cursor: not-allowed;
   opacity: 0.35;
-}
-
-.ai-field {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 0.125rem;
-}
-
-.ai-field > span {
-  opacity: 0.6;
-}
-
-.ai-field select {
-  min-width: 0;
-  border: 1px solid rgb(var(--color-simElementBorder));
-  background: rgb(var(--color-simInputBackground));
-  padding: 0.125rem;
-  color: rgb(var(--color-secondary));
-  outline: none;
-}
-
-.ai-field select:focus {
-  border-color: rgb(var(--color-panelActive));
 }
 </style>
