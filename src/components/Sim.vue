@@ -577,10 +577,17 @@
           panel-id="prompt"
           @header-dblclick="togglePanelMaximize"
           class="panel-userprompt"
-          data-layout="focus instructor pilot classroom"
+          data-layout="focus instructor pilot"
+          :status="userActionPending ? 'ACTION' : 'READY'"
+          :active="userActionPending"
+          :flash="userActionPending"
         >
           <template #Prompt>
-            <MarkDown ref="markdownRef" class="w-full h-full p-1" />
+            <MarkDown
+              ref="markdownRef"
+              class="w-full h-full p-1"
+              @action-pending="userActionPending = $event"
+            />
           </template>
           <template #whiteboard>
             <Whiteboard
@@ -933,6 +940,7 @@ const classroomComponentRef = ref<InstanceType<typeof ClassRoom> | null>(null) /
 const editorComponentRef = ref<InstanceType<typeof Editor> | null>(null) // Use the Editor component type
 const dataDisplayRef = ref<InstanceType<typeof SimDataDisplay> | null>(null) // Use the SimDataDisplay component type
 const markdownRef = ref<InstanceType<typeof MarkDown> | null>(null) // Use the MarkDown component type
+const userActionPending = ref(false)
 // const accountsComponentRef = ref<InstanceType<typeof Accounts> | null>(null); // Use the Accounts component type
 const openLayersMapRef = ref<InstanceType<typeof OpenLayersMap> | null>(null) // Use the OpenLayersMap component type
 const whiteBoardComponentRef = ref<InstanceType<typeof Whiteboard> | null>(null)

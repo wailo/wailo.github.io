@@ -85,7 +85,7 @@ watchEffect(() => {
     :class="[
       'flex flex-col border w-full h-full box-border min-w-0 min-h-0 rounded overflow-hidden',
       props.active ? 'border-panelActive' : 'border-panelBorder',
-      { 'animate-pulse': props.flash },
+      { 'panel-attention-flash': props.flash },
     ]"
   >
     <!-- panel-header -->
@@ -139,4 +139,26 @@ watchEffect(() => {
   </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+.panel-attention-flash {
+  animation: panel-attention-flash 850ms ease-in-out infinite;
+}
+
+@keyframes panel-attention-flash {
+  0%,
+  100% {
+    border-color: rgb(var(--color-panelBorder));
+  }
+
+  50% {
+    border-color: rgb(var(--color-panelActive));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-attention-flash {
+    animation: none;
+    border-color: rgb(var(--color-panelActive));
+  }
+}
+</style>

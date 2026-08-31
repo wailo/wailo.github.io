@@ -101,6 +101,10 @@ import type {
   WaitForUserOptions,
 } from '../ScriptContext'
 
+const emit = defineEmits<{
+  (event: 'action-pending', pending: boolean): void
+}>()
+
 type ContinueInteraction = {
   type: 'continue'
   buttonLabel: string
@@ -146,6 +150,7 @@ const transcriptRef = ref<HTMLElement | null>(null)
 const pendingMessages = ref(0)
 let followLatest = true
 let nextCardId = 0
+let actionPending = false
 
 marked.setOptions({
   async: false,
@@ -155,6 +160,17 @@ marked.setOptions({
 })
 
 const renderMarkdown = (content: string) => String(marked.parse(content))
+
+const updateActionPending = () => {
+  const pending = cards.value.some(({ interaction }) => {
+    if (!interaction) return false
+    if (interaction.type === 'continue') return true
+    return !interaction.completed
+  })
+  if (pending === actionPending) return
+  actionPending = pending
+  emit('action-pending', pending)
+}
 
 const addCard = async (card: PromptCard, replace = false) => {
   if (replace) {
@@ -227,6 +243,7 @@ const waitForUser = async (options: WaitForUserOptions): Promise<void> => {
       },
     }
     void addCard(card, options.replace)
+    updateActionPending()
   })
 }
 
@@ -275,6 +292,7 @@ const askQuestion = async (options: AskQuestionOptions): Promise<QuestionResult>
       interaction,
     }
     void addCard(card, options.replace)
+    updateActionPending()
   })
 }
 
@@ -282,6 +300,7 @@ const completeContinue = (card: PromptCard) => {
   if (card.interaction?.type !== 'continue') return
   const { resolve } = card.interaction
   card.interaction = undefined
+  updateActionPending()
   resolve()
 }
 
@@ -311,6 +330,7 @@ const answerMultipleChoice = (card: PromptCard, answer: string) => {
   }
   const { resolve } = interaction
   interaction.completed = true
+  updateActionPending()
   resolve(result)
 }
 
@@ -333,6 +353,7 @@ const submitEssay = (card: PromptCard) => {
   const { resolve } = interaction
   interaction.completed = true
   interaction.feedback = 'Submitted.'
+  updateActionPending()
   resolve(result)
 }
 
@@ -353,6 +374,7 @@ const cancelPromptInteractions = () => {
     }
     card.interaction = undefined
   }
+  updateActionPending()
 }
 
 const reset = () => {
@@ -361,6 +383,7 @@ const reset = () => {
   pendingMessages.value = 0
   followLatest = true
   nextCardId = 0
+  updateActionPending()
   void nextTick(() => {
     if (transcriptRef.value) transcriptRef.value.scrollTop = 0
   })
