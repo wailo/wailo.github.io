@@ -1,623 +1,423 @@
-import {
-  Project,
-  Node,
-  SourceFile,
-  InterfaceDeclaration,
-  EnumDeclaration,
-  TypeAliasDeclaration,
-  FunctionDeclaration,
-  VariableDeclaration,
-  Type,
-  SyntaxKind,
-  JSDocTag,
-} from 'ts-morph'
+import fs from 'node:fs'
+import path from 'node:path'
 
-import fs from 'fs'
-import path from 'path'
+import ts from 'typescript'
+import { Node, ObjectLiteralExpression, Project, SourceFile } from 'ts-morph'
 
-/*
-CONFIG
-*/
-
-const ENTRY_FILE = 'src/core.ts'
-// const META_FILE = "src/wasm/generated/flightsimulator_exec_meta.ts";
+const SIMULATOR_TYPES_FILE = 'src/wasm/generated/flightsimulator_exec.d.ts'
+const SIMULATOR_META_FILE = 'src/wasm/generated/flightsimulator_exec_meta.ts'
+const SCRIPT_CONTEXT_FILE = 'src/ScriptContext.ts'
+const SIM_INTERFACE_FILE = 'src/wasm/siminterface.ts'
 const OUTPUT_FILE = 'src/wasm/generated/Modelfile'
 const DTS_OUTPUT_FILE = 'src/wasm/generated/editorTypes.txt'
 const BASE_MODEL_NAME = 'qwen3.5:9b'
 const GENERATED_FILE_NOTICE = 'Auto generated file from generate-modelfile.ts, do not edit manually'
 
-/*
-PROJECT
-*/
+const project = new Project({ tsConfigFilePath: 'tsconfig.app.json' })
 
-const project = new Project({
-  tsConfigFilePath: 'tsconfig.app.json',
-})
+type AircraftCatalogName = 'B747SimProps' | 'C172SimProps' | 'GraphicsSimProps'
 
-/*
-STATE
-*/
-
-const visited = new Set<string>()
-const collected: Node[] = []
-
-/*
-UTILS
-*/
-
-function isPromiseType(type: Type) {
-  const text = type.getText()
-  return text.startsWith('Promise<')
+interface PropertyMetadata {
+  name: string
+  label?: string
+  description?: string
+  group?: string
+  unit?: string
+  type?: string
+  min?: string
+  max?: string
+  step?: string
+  precision?: string
+  enumSource?: string
+  writable: boolean
 }
 
-function isLocalFile(source?: SourceFile) {
-  if (!source) return false
-  return !source.getFilePath().includes('node_modules')
+function sourceFile(fileName: string): SourceFile {
+  return project.getSourceFileOrThrow(path.resolve(fileName))
 }
 
-function getNodeName(node: Node) {
-  if (
-    Node.isInterfaceDeclaration(node) ||
-    Node.isEnumDeclaration(node) ||
-    Node.isTypeAliasDeclaration(node) ||
-    Node.isFunctionDeclaration(node) ||
-    Node.isVariableDeclaration(node)
+function withoutExport(text: string): string {
+  return text.replace(/^export\s+(?:default\s+)?/, '')
+}
+
+function interfaceText(source: SourceFile, name: string, removeClassHandle = false): string {
+  let text = withoutExport(source.getInterfaceOrThrow(name).getText())
+  if (removeClassHandle) {
+    text = text.replace(`interface ${name} extends ClassHandle`, `interface ${name}`)
+  }
+
+  const seenMembers = new Set<string>()
+  return text
+    .split('\n')
+    .filter((line) => {
+      if (!/^\s{2}\S.*;\s*$/.test(line)) return true
+      const member = line.trim()
+      if (seenMembers.has(member)) return false
+      seenMembers.add(member)
+      return true
+    })
+    .join('\n')
+}
+
+function typeAliasText(source: SourceFile, name: string): string {
+  return withoutExport(source.getTypeAliasOrThrow(name).getText())
+}
+
+function enumText(source: SourceFile, name: string): string {
+  return withoutExport(source.getEnumOrThrow(name).getText())
+}
+
+function literalValue(object: ObjectLiteralExpression, propertyName: string): string | undefined {
+  const property = object.getProperty(propertyName)
+  if (!property || !Node.isPropertyAssignment(property)) return undefined
+
+  const initializer = property.getInitializer()
+  if (!initializer) return undefined
+  if (Node.isStringLiteral(initializer) || Node.isNoSubstitutionTemplateLiteral(initializer)) {
+    return initializer.getLiteralValue()
+  }
+
+  return initializer.getText().replace(/\s+/g, ' ').trim()
+}
+
+function extractPropertyCatalog(functionName: string): PropertyMetadata[] {
+  const declaration = sourceFile(SIMULATOR_META_FILE).getFunctionOrThrow(functionName)
+  const body = declaration.getBodyOrThrow()
+  if (!Node.isBlock(body)) throw new Error(`${functionName} must have a block body`)
+  const returnStatement = body.getStatements().find(Node.isReturnStatement)
+  let returned = returnStatement?.getExpression()
+
+  while (
+    returned &&
+    (Node.isSatisfiesExpression(returned) ||
+      Node.isAsExpression(returned) ||
+      Node.isParenthesizedExpression(returned))
   ) {
-    return node.getName()
-  } else if (Node.isTypeLiteral(node)) {
-    const member = node.getMembers()[0]
-    const member_type = member.getType().getApparentType()
-    const symbol = member_type.getAliasSymbol() || member_type.getSymbol()
-    return symbol?.getName()
-  }
-  return undefined
-}
-
-/*
-TYPE NORMALIZATION
-*/
-
-function normalizeType(typeText: string) {
-  return typeText
-    .replace(/import\([^)]+\)\./g, '')
-    .replace(/Array<(.*?)>/g, '$1[]')
-    .replace(/Promise<(.*?)>/g, '$1')
-    .replace(/"/g, '')
-    .trim()
-}
-
-/*
-DEPENDENCY RESOLUTION
-*/
-
-function resolveDependencies(node: Node) {
-  const name = getNodeName(node)
-  if (!name) return
-  if (visited.has(name)) return
-
-  visited.add(name)
-  collected.push(node)
-
-  // ✅ NEW: handle variable type dependencies
-  // if (Node.isVariableDeclaration(node)) {
-  const type = node.getType()
-  resolveTypeDependencies(type)
-  // }
-}
-
-/*
-EXPAND TYPES FROM TYPE OBJECT
-*/
-
-function resolveTypeDependencies(type: Type) {
-  // unions
-  if (type.isUnion()) {
-    type.getUnionTypes().forEach(resolveTypeDependencies)
-    return
+    returned = returned.getExpression()
   }
 
-  // intersections
-  if (type.isIntersection()) {
-    type.getIntersectionTypes().forEach(resolveTypeDependencies)
-    return
+  if (!returned || !Node.isObjectLiteralExpression(returned)) {
+    throw new Error(`${functionName} must directly return a property metadata object`)
   }
 
-  // generics
-  type.getTypeArguments().forEach(resolveTypeDependencies)
+  return returned.getProperties().flatMap((property): PropertyMetadata[] => {
+    if (!Node.isPropertyAssignment(property)) return []
+    const value = property.getInitializer()
+    if (!value || !Node.isObjectLiteralExpression(value)) return []
 
-  const symbol = type.getAliasSymbol() ?? type.getSymbol()
-  if (!symbol) return
+    const enumValues = literalValue(value, 'enumValues')
+    const enumSource = enumValues?.match(/Object\.entries\((\w+)\)/)?.[1]
 
-  const decls = symbol.getDeclarations()
-  if (!decls?.length) return
-
-  for (const decl of decls) {
-    const source = decl.getSourceFile()
-    if (!isLocalFile(source)) continue
-
-    resolveDependencies(decl)
-  }
+    return [
+      {
+        name: property.getName(),
+        label: literalValue(value, 'label'),
+        description: literalValue(value, 'description'),
+        group: literalValue(value, 'group'),
+        unit: literalValue(value, 'unit'),
+        type: literalValue(value, 'type'),
+        min: literalValue(value, 'min'),
+        max: literalValue(value, 'max'),
+        step: literalValue(value, 'step'),
+        precision: literalValue(value, 'precision'),
+        enumSource,
+        writable: value.getProperty('setterFunc') !== undefined,
+      },
+    ]
+  })
 }
 
-/*
-GRAMMAR BUILDERS
-*/
+function cleanDocText(value: string): string {
+  return value.replace(/\*\//g, '* /').replace(/\s+/g, ' ').trim()
+}
 
-function interfaceToGrammar(
-  node: InterfaceDeclaration,
-  metadata: Record<string, Record<string, string>>,
+function propertyDocumentation(property: PropertyMetadata): string {
+  const details: string[] = []
+  if (property.label) details.push(cleanDocText(property.label))
+  if (property.description) details.push(cleanDocText(property.description))
+  if (property.group) details.push(`group: ${cleanDocText(property.group)}`)
+  if (property.unit) details.push(`unit: ${cleanDocText(property.unit)}`)
+  if (property.type) details.push(`value: ${cleanDocText(property.type)}`)
+  if (property.min !== undefined || property.max !== undefined) {
+    details.push(`range: ${property.min ?? '-infinity'}..${property.max ?? 'infinity'}`)
+  }
+  if (property.step) details.push(`step: ${property.step}`)
+  if (property.precision) details.push(`precision: ${property.precision}`)
+  if (property.enumSource) details.push(`values: ${property.enumSource}`)
+  details.push(property.writable ? 'read/write' : 'read-only')
+  return details.join(' | ')
+}
+
+function catalogInterface(
+  name: AircraftCatalogName | 'CommonFlightModelSimProps',
+  entries: PropertyMetadata[],
 ) {
-  const interfaceName = node.getName()
-  const properties = node.getProperties().map((p) => {
-    const field = p.getName()
-    const type = p.getType()
-    const metaitem = metadata[interfaceName]?.[field]
-    const metajson =
-      metaitem !== undefined ? JSON.stringify(new Function(`return ${metaitem}`)()) : null
-    resolveTypeDependencies(type)
-    const typeText = normalizeType(type.getText())
-    let output_text = metajson ? `// ${metajson}\n` : ''
-    output_text += `${field}: ${typeText}`
-    return output_text
-  })
-
-  const methods = node.getMethods().map((m) => {
-    const methodName = m.getName()
-    const metaitem = metadata[interfaceName]?.[methodName.replace('set_', '')]
-    const metajson =
-      metaitem !== undefined ? JSON.stringify(new Function(`return ${metaitem}`)()) : ''
-    const params = m.getParameters().map((p) => {
-      const pname = p.getName()
-      const type = p.getType()
-      resolveTypeDependencies(type)
-      const typeText = normalizeType(type.getText())
-      let output_text = `${pname}: ${typeText}`
-      return output_text
-    })
-
-    const returnTypeObj = m.getReturnType()
-    resolveTypeDependencies(returnTypeObj)
-    const asyncFlag = isPromiseType(returnTypeObj)
-    const returnType = normalizeType(returnTypeObj.getText())
-    const prefix = asyncFlag ? 'async ' : ''
-    let output_text = metajson ? `// ${metajson}\n` : ''
-    output_text += `${prefix}${methodName}(${params.join(', ')}) -> ${returnType}`
-    return output_text
-  })
-
-  const lines = [...properties, ...methods]
-  return `${interfaceName} {\n${lines.join('\n')}\n}`
+  const properties = entries
+    .map(
+      (property) =>
+        `  /** ${propertyDocumentation(property)} */\n  readonly ${property.name}: SimulationProperties`,
+    )
+    .join('\n')
+  return `interface ${name} {\n${properties}\n}`
 }
 
-function variableToGrammar(node: VariableDeclaration) {
-  const name = node.getName()
-
-  const type = node.getType()
-  resolveTypeDependencies(type)
-  const typeText = normalizeType(type.getText())
-
-  const stmt = node.getVariableStatement()
-
-  const isConst = stmt?.getDeclarationKind() === 'const'
-
-  const isDeclare = stmt?.hasModifier(SyntaxKind.DeclareKeyword)
-  const isExported = stmt?.hasModifier(SyntaxKind.ExportKeyword)
-
-  const kind = isConst ? 'const' : 'let'
-
-  const declarePrefix = isDeclare ? 'declare ' : ''
-  const exportPrefix = isExported ? 'export ' : ''
-
-  return `${exportPrefix}${declarePrefix}${kind} ${name}: ${typeText}`
+function simulatorContract(): string {
+  const source = sourceFile(SIMULATOR_TYPES_FILE)
+  const simInterface = sourceFile(SIM_INTERFACE_FILE)
+  return [
+    interfaceText(source, 'b747', true),
+    typeAliasText(source, 'B747GearSelector'),
+    typeAliasText(source, 'B747FlapSelector'),
+    interfaceText(source, 'c172', true),
+    typeAliasText(source, 'C172GearSelector'),
+    typeAliasText(source, 'C172FlapSelector'),
+    interfaceText(source, 'graphics', true),
+    typeAliasText(source, 'GRAPHICSEFlightModel'),
+    typeAliasText(source, 'EmbindString'),
+    interfaceText(source, 'EmbindModule'),
+    'type FlightModelInstance = b747 | c172',
+    'type ExtendedMainModule = EmbindModule & { flightModel: FlightModelInstance; simulation: graphics }',
+    enumText(simInterface, 'LayoutTypes'),
+  ].join('\n\n')
 }
 
-function enumToGrammar(node: EnumDeclaration) {
-  const name = node.getName()
-
-  const values = node.getMembers().map((m) => {
-    const init = m.getInitializer()?.getText()
-    if (init) return init
-    return `"${m.getName()}"`
-  })
-
-  return `${name} = ${values.join(' | ')}`
+function questionContract(): string {
+  const source = sourceFile(SCRIPT_CONTEXT_FILE)
+  return [
+    interfaceText(source, 'WaitForUserOptions'),
+    interfaceText(source, 'QuestionChoice'),
+    interfaceText(source, 'BaseQuestionOptions'),
+    interfaceText(source, 'MultipleChoiceQuestionOptions'),
+    interfaceText(source, 'EssayQuestionOptions'),
+    typeAliasText(source, 'AskQuestionOptions'),
+    interfaceText(source, 'QuestionResult'),
+  ].join('\n\n')
 }
 
-function aliasToGrammar(node: TypeAliasDeclaration) {
-  const name = node.getName()
-  const typeNode = node.getTypeNode()
-  if (!typeNode) return `${name} = unknown`
-  const type = node.getType()
+function metadataContract(): string {
+  const simulationProperties = interfaceText(
+    sourceFile(SIMULATOR_META_FILE),
+    'SimulationProperties',
+  )
+  const b747 = extractPropertyCatalog('get_Parameters_b747')
+  const c172 = extractPropertyCatalog('get_Parameters_c172')
+  const graphics = extractPropertyCatalog('get_Parameters_graphics')
+  const c172Names = new Set(c172.map((property) => property.name))
+  const common = b747.filter((property) => c172Names.has(property.name))
 
-  if (type.isIntersection()) {
-    return intersectionToGrammar(name, type)
+  if (!b747.length || !c172.length || !graphics.length || !common.length) {
+    throw new Error('One or more simulator property catalogs are empty')
   }
 
-  resolveTypeDependencies(type)
-  const typeText = normalizeType(typeNode.getText())
-  return `${name} = ${typeText}`
+  return [
+    'type PropertyType = number | boolean | string',
+    simulationProperties,
+    catalogInterface('B747SimProps', b747),
+    catalogInterface('C172SimProps', c172),
+    catalogInterface('CommonFlightModelSimProps', common),
+    catalogInterface('GraphicsSimProps', graphics),
+    'type ActiveFlightModelSimProps = B747SimProps | C172SimProps',
+    'type FlightModelSimProps = B747SimProps & C172SimProps',
+    'type ScriptSimProps = ActiveFlightModelSimProps | FlightModelSimProps | GraphicsSimProps',
+  ].join('\n\n')
 }
 
-function intersectionToGrammar(name: string, type: Type) {
-  const parts = type.getIntersectionTypes()
-
-  const fields: string[] = []
-  const spreads: string[] = []
-
-  for (const part of parts) {
-    resolveTypeDependencies(part)
-
-    // 🟢 Case 1: inline object type
-    const props = part.getProperties()
-
-    if (props.length > 0) {
-      props.forEach((prop) => {
-        const propType = prop.getTypeAtLocation(prop.getDeclarations()[0])
-        resolveTypeDependencies(propType)
-
-        const typeText = normalizeType(propType.getText())
-        fields.push(`${prop.getName()}: ${typeText}`)
-      })
-
-      continue
-    }
-
-    // 🔵 Case 2: named type (e.g., MainModule)
-    const symbol = part.getAliasSymbol() ?? part.getSymbol()
-    if (symbol) {
-      const name = symbol.getName()
-      spreads.push(`...${name}`)
-    }
-  }
-
-  const lines = [...spreads, ...fields]
-
-  return `${name} {\n${lines.join('\n')}\n}`
+function scriptApiContract(): string {
+  return [
+    questionContract(),
+    `declare function notifyUser(
+  title: string,
+  message?: string,
+  time?: number,
+  options?: { append?: boolean; replace?: boolean },
+): Promise<void>`,
+    `declare function repositionWithAutopilot(
+  context: ScriptContext<FlightModelSimProps>,
+  targetAltitude: number,
+  targetSpeed: number,
+  targetHeading: number,
+  timeoutMs?: number,
+  preConfiguration?: () => void,
+): Promise<boolean>`,
+    interfaceText(sourceFile(SCRIPT_CONTEXT_FILE), 'ScriptContext'),
+  ].join('\n\n')
 }
 
-function functionToGrammar(node: FunctionDeclaration) {
-  const name = node.getName()
-  if (!name) return ''
-
-  const jsdoc = getJsDoc(node)
-
-  const paramDocs: Record<string, any> = {}
-
-  if (jsdoc?.tags?.param) {
-    jsdoc.tags.param.forEach((p: string) => {
-      const parsed = parseParamTag(p)
-      if (parsed) paramDocs[parsed.name] = parsed
-    })
-  }
-
-  const params = node.getParameters().map((p) => {
-    const pname = p.getName()
-    const type = p.getType()
-    resolveTypeDependencies(type)
-
-    const typeText = normalizeType(type.getText())
-
-    const isOptional = p.isOptional()
-    const defaultValue = p.getInitializer()?.getText()
-
-    const meta = paramDocs[pname]
-
-    let line = `${pname}${isOptional ? '?' : ''}: ${typeText}`
-
-    if (defaultValue) {
-      line += ` = ${defaultValue}`
-    }
-
-    if (meta?.unit) {
-      line = `// unit: ${meta.unit}\n${line}`
-    }
-
-    if (meta?.description) {
-      line = `// ${meta.description}\n${line}`
-    }
-
-    return line
-  })
-
-  const returnTypeObj = node.getReturnType()
-  resolveTypeDependencies(returnTypeObj)
-
-  const asyncFlag = isPromiseType(returnTypeObj)
-  const returnType = normalizeType(returnTypeObj.getText())
-
-  const prefix = asyncFlag ? 'async fn' : 'fn'
-
-  let header = ''
-
-  if (jsdoc?.description) {
-    header += `// ${jsdoc.description}\n`
-  }
-
-  if (jsdoc?.tags?.returns?.[0]) {
-    header += `// @returns ${jsdoc.tags.returns[0]}\n`
-  }
-
-  if (jsdoc?.tags?.throws?.[0]) {
-    header += `// @throws ${jsdoc.tags.throws[0]}\n`
-  }
-
-  return `${header}${prefix} ${name}(\n${params.join(',\n')}\n) -> ${returnType}`
+function generateContract(): string {
+  return [
+    '// Simulator control values and methods',
+    simulatorContract(),
+    '// Metadata objects accepted by plotView() and dataView()',
+    metadataContract(),
+    '// Lesson authoring API',
+    scriptApiContract(),
+  ].join('\n\n')
 }
 
-/*
-GRAMMAR ROUTER
-*/
+const EXAMPLE_LESSON = `export async function main(context: ScriptContext<B747SimProps>) {
+  const flightModel = context.controls.flightModel
+  const simProps = context.props
 
-function toGrammar(node: Node, metadata: {}) {
-  if (Node.isInterfaceDeclaration(node)) return interfaceToGrammar(node, metadata)
-  if (Node.isEnumDeclaration(node)) return enumToGrammar(node)
-  if (Node.isTypeAliasDeclaration(node)) return aliasToGrammar(node)
-  if (Node.isFunctionDeclaration(node)) return functionToGrammar(node)
-  if (Node.isVariableDeclaration(node)) return variableToGrammar(node)
+  context.resetPanels()
+  context.setTab('realtime', 'Real-Time-Data')
+  context.plotView([simProps.speed_indicated_knots, simProps.aoa_deg, simProps.cl], true)
 
-  return ''
-}
-
-/*
-CONTRACT METADATA
-*/
-// ignore typescript unused error
-// @ts-ignore
-function extractMetadata(entryFile: string): {
-  c172: Record<string, string>
-  b747: Record<string, string>
-  graphics: Record<string, string>
-} {
-  const source = project.getSourceFileOrThrow(entryFile)
-  let c172_meta = {}
-  let b747_meta = {}
-  let graphics_meta = {}
-  source.getFunctions().forEach((func) => {
-    let functionName = func.getName()
-    let body = func.getBody()
-    const metaData: Record<string, string> = {}
-    body?.forEachDescendant((node) => {
-      if (node.getKind() === SyntaxKind.ReturnStatement) {
-        const returnStmt = node.asKindOrThrow(SyntaxKind.ReturnStatement)
-        const expr = returnStmt.getExpression()
-
-        if (!expr) return
-
-        if (expr.getKind() === SyntaxKind.ObjectLiteralExpression) {
-          const obj = expr.asKindOrThrow(SyntaxKind.ObjectLiteralExpression)
-
-          obj.getProperties().forEach((prop) => {
-            if (prop.getKind() === SyntaxKind.PropertyAssignment) {
-              const assignment = prop.asKindOrThrow(SyntaxKind.PropertyAssignment)
-
-              const key = assignment.getName()
-              const value = assignment.getInitializer()
-              // remove unwanted properties
-              if (Node.isObjectLiteralExpression(value)) {
-                value.getProperties().forEach((prop) => {
-                  if (prop.isKind(SyntaxKind.PropertyAssignment)) {
-                    const name = prop.getName().toLowerCase()
-
-                    // Remove these entries..
-                    if (['id', 'inputvalue', 'setterfunc', 'type'].includes(name)) {
-                      prop.remove()
-                    }
-                  }
-                })
-                const valueText = value?.getText()
-                if (!key || !value) {
-                  return
-                }
-
-                metaData[key] = valueText
-              }
-            }
-          })
-        }
-      }
-    })
-    const function_name = functionName?.toLowerCase()
-    if (function_name == 'get_parameters_b747') {
-      b747_meta = metaData
-    } else if (function_name == 'get_parameters_c172') {
-      c172_meta = metaData
-    } else if (function_name == 'get_parameters_graphics') {
-      graphics_meta = metaData
-    }
-  })
-
-  if (!c172_meta || !b747_meta || !graphics_meta) {
-    // Throw an error
-    throw 'Missing metadata for C172 or B747 or graphics'
-  }
-
-  return { c172: c172_meta, b747: b747_meta, graphics: graphics_meta }
-}
-
-/*
-CONTRACT EXTRACTION
-*/
-
-function extractContract(entryFile: string, metadata: {}) {
-  const source = project.getSourceFileOrThrow(entryFile)
-
-  source.getExportedDeclarations().forEach((decls) => {
-    decls.forEach((decl) => resolveDependencies(decl))
-  })
-
-  const sorted = collected.sort((a, b) =>
-    (getNodeName(a) ?? '').localeCompare(getNodeName(b) ?? ''),
+  await context.notifyUser(
+    'Stall demonstration',
+    'Observe airspeed, angle of attack and lift coefficient as the aircraft approaches a stall.',
   )
 
-  return sorted.map((node) => toGrammar(node, metadata)).join('\n\n')
+  const stalled = await context.waitForCondition(() => flightModel.stalling, 500, 100, 30_000)
+  context.checkPoint(stalled ? 'Stall detected' : 'Stall condition not reached')
+}`
+
+function generatedSystemPrompt(): string {
+  return `You generate complete TypeScript learning lessons for a flight simulator.
+
+Output code only. Do not chat, explain, add Markdown fences, or add imports.
+The first line must start with: export async function main(
+The response must end with the matching closing brace of main and contain no other text.
+
+Use only declarations in the supplied TypeScript API contract. Never invent methods or properties.
+
+Authoring rules:
+- Use context.controls.flightModel for live numeric or boolean simulator values and control methods.
+- Use context.props.<property> metadata with plotView() and dataView(); never pass a raw numeric value to them.
+- Use ScriptContext<B747SimProps> for B747 lessons and ScriptContext<C172SimProps> for C172 lessons.
+- For aircraft-independent lessons, use ScriptContext<CommonFlightModelSimProps> and only common properties.
+- Await waitFor(), waitForCondition(), notifyUser(), waitForUser(), askQuestion(), and repositionWithAutopilot().
+- Use concise instructional prompts and checkpoints at meaningful scenario stages.
+- Avoid infinite loops and conflicting autopilot modes.
+- Add comments only for important lesson phases, not for every line.
+
+If the request cannot be completed with the supplied API, output exactly:
+
+export async function main(context: ScriptContext<CommonFlightModelSimProps>) {
+  // ERROR: No documented API exists for the requested action.
+}`
 }
 
-function extractContractTypescript(entryFile: string) {
-  const source = project.getSourceFileOrThrow(entryFile)
-
-  source.getExportedDeclarations().forEach((decls) => {
-    decls.forEach((decl) => resolveDependencies(decl))
-  })
-
-  const sorted = collected.sort((a, b) =>
-    (getNodeName(a) ?? '').localeCompare(getNodeName(b) ?? ''),
-  )
-
-  return sorted
-    .map((node) => {
-      if (Node.isFunctionDeclaration(node)) {
-        node.removeBody()
-        return node.getText()
-      }
-      return node.getFullText()
-    })
-    .join('\n\n')
-}
-
-function getJsDoc(node: Node) {
-  if (!Node.isFunctionDeclaration(node)) return null
-  const docs = node.getJsDocs?.() ?? []
-  if (!docs.length) return null
-
-  const doc = docs[0]
-
-  const description = doc.getDescription().trim()
-
-  const tags: Record<string, any[]> = {}
-
-  doc.getTags().forEach((tag: JSDocTag) => {
-    const tagName = tag.getTagName()
-    const text = tag.getComment() ?? ''
-
-    if (!tags[tagName]) tags[tagName] = []
-    tags[tagName].push(text)
-  })
-
-  return { description, tags }
-}
-
-function parseParamTag(text: string) {
-  // Handles: "{type} name - description"
-  const match = text.match(/\{(.+?)\}\s+(\w+)\s*-?\s*(.*)/)
-
-  if (!match) return null
-
-  const [, type, name, description] = match
-
-  let unit: string | null = null
-
-  // naive unit extraction (you can improve later)
-  if (/feet|ft/i.test(description)) unit = 'feet'
-  if (/knots|kt/i.test(description)) unit = 'knots'
-  if (/degrees/i.test(description)) unit = 'degrees'
-
-  return {
-    name,
-    type,
-    description,
-    unit,
-  }
-}
-
-/*
-DTS GENERATION
-*/
-
-function generateDts(contract: string) {
-  // Remove all export and declare keywards
-  const typeDeclarations = contract.replace(/(export|declare)\s+/g, '')
-
-  return `// ${GENERATED_FILE_NOTICE}
-// Generated TypeScript definitions
-  ${typeDeclarations}`
-}
-
-/*
-MODELFILE
-*/
-
-function generateModelfile(contract: string) {
+function generateModelfile(contract: string): string {
   return `# ${GENERATED_FILE_NOTICE}
 FROM ${BASE_MODEL_NAME}
 
+PARAMETER temperature 0.1
+PARAMETER top_p 0.9
+PARAMETER num_ctx 32768
+
 SYSTEM """
-You are a Typescript compiler.
+${generatedSystemPrompt()}
 
-You do not chat.
+Example of a complete, valid lesson:
 
-You do not explain.
-
-You do not use markdown.
-
-You output exactly one Typescript source file.
-
-The response must:
-- Start with: export async function main(
-- End with the matching closing brace of that function.
-- Contain no text before the function.
-- Contain no text after the function.
-
-If the task cannot be completed using the provided grammar, output exactly:
-
-export async function main(context: ScriptContext) {
-  // ERROR: No method exists to perform requested action
-}
-
-Output nothing else.
-
-Guidelines:
-- Use ScriptContext to control the simulation.
-- Comment each code line with short explanations.
-
-Example:
-import { ScriptContext } from "../../src/core";
-
-export async function main(context: ScriptContext) {
-  const simControls = context.controls;
-  const plotView = context.plotView;
-  const simProps = context.props;
-  const repositionWithAutopilot = context.repositionWithAutopilot;
-  const waitFor = context.waitFor;
-  const notifyUser = context.notifyUser;
-  const dataView = context.dataView;
-  const dataDisplayReset = context.dataDisplayReset;
-
-  // Reset the simulation to ensure a clean state before starting.
-  simControls.simulation.reset_simulation();
-}
-
+${EXAMPLE_LESSON}
 """
 
 TEMPLATE """
-### TYPE GRAMMAR
+## TYPESCRIPT API CONTRACT
 
 ${contract}
 
-### TASK
+## LESSON REQUEST
 
 {{ .Prompt }}
 """`
 }
 
-/*
-MAIN
-*/
+function editorContract(): string {
+  return [
+    simulatorContract(),
+    `declare function notifyUser(
+  title: string,
+  message?: string,
+  time?: number,
+  options?: { append?: boolean; replace?: boolean },
+): Promise<void>`,
+    `declare function repositionWithAutopilot(
+  context: ScriptContext,
+  targetAltitude: number,
+  targetSpeed: number,
+  targetHeading: number,
+  timeoutMs?: number,
+  preConfiguration?: () => void,
+): Promise<boolean>`,
+  ].join('\n\n')
+}
+
+function validateTypeScript(sourceText: string, label: string) {
+  const validationProject = new Project({
+    compilerOptions: {
+      target: ts.ScriptTarget.ES2022,
+      module: ts.ModuleKind.ESNext,
+      strict: true,
+      noEmit: true,
+      skipLibCheck: true,
+    },
+  })
+  const file = validationProject.createSourceFile(`__generated_${label}.ts`, sourceText, {
+    overwrite: true,
+  })
+  const diagnostics = file.getPreEmitDiagnostics()
+  if (diagnostics.length) {
+    const messages = diagnostics
+      .map((diagnostic) => {
+        const message = diagnostic.getMessageText()
+        return typeof message === 'string' ? message : message.getMessageText()
+      })
+      .join('\n')
+    throw new Error(`Generated ${label} is not valid TypeScript:\n${messages}`)
+  }
+}
+
+function validateTypeScriptSyntax(sourceText: string, label: string) {
+  const output = ts.transpileModule(sourceText, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+    fileName: `__generated_${label}.ts`,
+    reportDiagnostics: true,
+  })
+  if (output.diagnostics?.length) {
+    throw new Error(
+      `Generated ${label} has invalid TypeScript syntax:\n${output.diagnostics
+        .map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'))
+        .join('\n')}`,
+    )
+  }
+}
+
+function validateContract(contract: string) {
+  const requiredFragments = [
+    'interface B747SimProps',
+    'interface C172SimProps',
+    'interface CommonFlightModelSimProps',
+    'interface GraphicsSimProps',
+    'readonly altitude_ft: SimulationProperties',
+    'readonly engine_4_n1: SimulationProperties',
+    'readonly engine_mixture_position: SimulationProperties',
+    'interface ScriptContext',
+    "(panelId: 'realtime', tabName: 'Real-Time-Data' | 'Airflow')",
+    'Promise<boolean>',
+  ]
+  const missing = requiredFragments.filter((fragment) => !contract.includes(fragment))
+  if (missing.length) {
+    throw new Error(`Generated lesson API contract is incomplete: ${missing.join(', ')}`)
+  }
+
+  validateTypeScript(`${contract}\n\n${EXAMPLE_LESSON}`, 'lesson_contract')
+}
 
 function main() {
-  const entry = path.resolve(ENTRY_FILE)
-  // const meta = path.resolve(META_FILE);
+  const contract = generateContract()
+  validateContract(contract)
 
-  // const metadata = extractMetadata(meta);
-  // const contract = extractContract(entry, metadata);
-  const contract = extractContract(entry, {})
   const modelfile = generateModelfile(contract)
+  const dtsContent = `// ${GENERATED_FILE_NOTICE}\n// Generated TypeScript definitions\n\n${editorContract()}\n`
+  // This declaration fragment is augmented with metadata and ScriptContext declarations in Editor.vue.
+  validateTypeScriptSyntax(dtsContent, 'editor_types')
 
-  const contractTs = extractContractTypescript(entry)
-  const dtsContent = generateDts(contractTs)
-
+  fs.mkdirSync(path.dirname(OUTPUT_FILE), { recursive: true })
   fs.writeFileSync(OUTPUT_FILE, modelfile)
   fs.writeFileSync(DTS_OUTPUT_FILE, dtsContent)
-  console.log('Modelfile and .d.ts generated successfully')
+  console.log('Modelfile and editor TypeScript definitions generated successfully')
 }
 
 main()

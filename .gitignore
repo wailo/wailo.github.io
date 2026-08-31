@@ -88,3 +88,7 @@ sw.*
 
 # Vim swap files
 *.swp
+
+# Generated simulator model/editor definitions
+src/wasm/generated/Modelfile
+src/wasm/generated/editorTypes.txt
