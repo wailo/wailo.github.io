@@ -1301,19 +1301,19 @@ onMounted(async () => {
         )
       }
 
-      window.addEventListener(
-        'blur',
-        (_event) => {
-          // When defocuses (blur), revert back to canvas to enable keyboard controls
-          setTimeout(() => {
-            if (document.activeElement == canvas || isTextInput()) {
-              return
-            }
-            canvas?.focus()
-          }, 1000)
-        },
-        true,
-      )
+      // window.addEventListener(
+      //   'blur',
+      //   (_event) => {
+      //     // When defocuses (blur), revert back to canvas to enable keyboard controls
+      //     setTimeout(() => {
+      //       if (document.activeElement == canvas || isTextInput()) {
+      //         return
+      //       }
+      //       canvas?.focus()
+      //     }, 1000)
+      //   },
+      //   true,
+      // )
 
       document.addEventListener('fullscreenchange', onFullscreenChange)
       loadingProgress.value = 100
@@ -1327,6 +1327,14 @@ onMounted(async () => {
       )
 
       document.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          if (document.activeElement !== canvas) {
+            e.preventDefault()
+            canvas?.focus({ preventScroll: true })
+          }
+          return
+        }
+
         // When editing a text input, we don't want the global keybindings to trigger.
         if (isTextInput()) {
           return

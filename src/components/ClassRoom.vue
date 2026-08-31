@@ -1,5 +1,11 @@
 <template>
-  <div class="classroom-shell relative flex h-full min-h-0 w-full flex-col overflow-hidden">
+  <div
+    class="classroom-shell relative flex h-full min-h-0 w-full flex-col overflow-hidden outline-none"
+    tabindex="0"
+    aria-label="Classroom controls"
+    @focus.self="focusClassroomPanel"
+    @keydown="handleClassroomKeydown"
+  >
     <div class="order-1 w-full">
       <div class="flex h-6 min-w-0 items-center gap-2 px-2">
         <span :class="isOnline ? 'text-simActiveButton' : 'opacity-60'">●</span>
@@ -152,7 +158,8 @@
       <div
         v-if="messageComposerOpen"
         class="fixed inset-0 z-50 flex items-start justify-center bg-panelContentBackground/80 pt-[12vh]"
-        @click.self="messageComposerOpen = false"
+        @click.self="closeMessageComposer"
+        @keydown.esc.stop.prevent="closeMessageComposer"
       >
         <div
           class="flex w-80 max-w-[calc(100%-1rem)] items-center gap-1 bg-panelContentBackground p-2 shadow-lg ring-1 ring-panelBorder"
@@ -163,7 +170,6 @@
             class="h-6 min-w-0 flex-1 border border-simElementBorder bg-simInputBackground px-2 text-secondary outline-none focus:border-panelActive"
             placeholder="Message selected peers..."
             @keyup.enter="sendAnnouncement"
-            @keydown.esc.prevent="messageComposerOpen = false"
           />
           <button class="command-button" :disabled="!announcement" @click="sendAnnouncement">
             Send
@@ -175,7 +181,6 @@
     <div
       v-if="isInstructor && isOnline"
       class="classroom-roster order-2 flex min-h-24 flex-1 flex-col overflow-hidden font-panelFont"
-      @keydown="handleClassroomKeydown"
     >
       <div class="flex h-7 shrink-0 items-center gap-2 px-2">
         <span class="w-20 shrink-0 font-medium">
@@ -186,7 +191,7 @@
           v-model="rosterSearch"
           class="h-5 min-w-20 flex-1 border border-simElementBorder bg-simInputBackground px-2 text-secondary outline-none focus:border-panelActive"
           placeholder="Search / filter..."
-          @keydown.esc.prevent="clearRosterSearch"
+          @keydown.esc.stop.prevent="clearRosterSearch"
           @keydown.down.prevent="moveRosterFocus(1)"
           @keydown.up.prevent="moveRosterFocus(-1)"
           @keydown.ctrl.n.prevent="moveRosterFocus(1)"
@@ -225,17 +230,24 @@
                 :aria-selected="isPeerSelected(participant.peerId)"
                 :title="participantSummary(participant.peer)"
                 tabindex="-1"
-                @click="selectPeerRow($event, participant.peerId, participant.rosterIndex)"
+                @click="focusPeerRow($event, participant.peerId)"
               >
                 <td class="w-5 px-1 text-center">
-                  <span
-                    :class="
-                      participant.peer.handState === 'raised' ? 'animate-pulse font-bold' : ''
-                    "
-                    >{{ participant.peer.handState === 'raised' ? '!' : '' }}</span
-                  >
+                  <input
+                    type="checkbox"
+                    tabindex="-1"
+                    class="size-3 cursor-pointer accent-simActiveButton"
+                    :checked="isPeerSelected(participant.peerId)"
+                    :aria-label="`Select ${participant.peer.metadata.callsign || participant.peerId}`"
+                    @click.stop="togglePeerCheckbox(participant.peerId, participant.rosterIndex)"
+                  />
                 </td>
                 <td class="overflow-hidden text-ellipsis px-1">
+                  <span
+                    v-if="participant.peer.handState === 'raised'"
+                    class="mr-1 animate-pulse font-bold"
+                    >!</span
+                  >
                   <span class="font-medium">
                     {{
                       participant.peer.metadata.callsign ||
@@ -306,6 +318,7 @@
     v-if="peerMenu"
     class="fixed z-[60] min-w-40 bg-panelContentBackground p-1 shadow-lg ring-1 ring-panelBorder"
     :style="{ left: `${peerMenu.x}px`, top: `${peerMenu.y}px` }"
+    @keydown.esc.stop.prevent="closePeerMenu"
   >
     <div class="truncate px-2 py-1 text-secondary/60">{{ compactPeerId(peerMenu.peerId) }}</div>
     <button class="menu-command" @click="viewPeerDetails(peerMenu.peerId)">View details</button>
@@ -324,7 +337,8 @@
   <div
     v-if="exercisePaletteOpen"
     class="fixed inset-0 z-50 flex items-start justify-center bg-panelContentBackground/80 pt-[12vh]"
-    @click.self="closeExercisePalette"
+    @click.self="cancelExercisePalette"
+    @keydown.esc.stop.prevent="cancelExercisePalette"
   >
     <div class="w-1/2 min-w-80 border border-panelActive bg-panelContentBackground shadow-lg">
       <div
@@ -499,7 +513,6 @@ const rosterSearch = ref('')
 const rosterFilter = ref<'all' | 'active' | 'hand' | 'overdue'>('all')
 const batchMenuOpen = ref(false)
 const peerMenu = ref<{ peerId: string; x: number; y: number } | null>(null)
-let selectionAnchorIndex = -1
 const rosterSearchRef = ref<HTMLInputElement | null>(null)
 const exercisePaletteOpen = ref(false)
 const exerciseQuery = ref('')
@@ -1127,25 +1140,19 @@ const focusPeer = (peerId: string) => {
   acknowledgeHandRequest(peerId)
 }
 
-const selectPeerRow = (event: MouseEvent, peerId: string, rosterIndex: number) => {
+const focusPeerRow = (event: MouseEvent, peerId: string) => {
   if (event.currentTarget instanceof HTMLElement) {
     event.currentTarget.focus({ preventScroll: true })
   }
   focusPeer(peerId)
-  const rows = visibleParticipantRows.value
-  if (event.shiftKey && selectionAnchorIndex >= 0) {
-    const start = Math.min(selectionAnchorIndex, rosterIndex)
-    const end = Math.max(selectionAnchorIndex, rosterIndex)
-    selectedPeerIds.value = rows.slice(start, end + 1).map((row) => row.peerId)
-  } else if (event.metaKey || event.ctrlKey) {
-    togglePeerSelection(peerId)
-    selectionAnchorIndex = rosterIndex
-  } else {
-    selectedPeerIds.value = [peerId]
-    selectionAnchorIndex = rosterIndex
-  }
   batchMenuOpen.value = false
   peerMenu.value = null
+}
+
+const togglePeerCheckbox = (peerId: string, rosterIndex: number) => {
+  focusPeer(peerId)
+  togglePeerSelection(peerId)
+  nextTick(() => rosterRowRefs.value[rosterIndex]?.focus({ preventScroll: true }))
 }
 
 const openPeerMenu = (event: MouseEvent, peerId: string) => {
@@ -1180,8 +1187,37 @@ const moveRosterFocus = (amount: number) => {
   })
 }
 
+const focusClassroomPanel = () => {
+  if (!isInstructor.value || !isOnline.value) return
+  const rows = visibleParticipantRows.value
+  if (!rows.length) return
+
+  const focusedIndex = rows.findIndex((row) => row.peerId === focusedPeerId.value)
+  const selectedIndex = rows.findIndex((row) => selectedPeerIds.value.includes(row.peerId))
+  const nextIndex = focusedIndex >= 0 ? focusedIndex : selectedIndex >= 0 ? selectedIndex : 0
+  focusedPeerId.value = rows[nextIndex].peerId
+  nextTick(() => rosterRowRefs.value[nextIndex]?.focus({ preventScroll: true }))
+}
+
 const setRosterRowRef = (element: Element | ComponentPublicInstance | null, index: number) => {
   if (element instanceof HTMLElement) rosterRowRefs.value[index] = element
+}
+
+const restoreRosterFocus = () => {
+  const rows = visibleParticipantRows.value
+  if (!rows.length) return
+  const currentIndex = rows.findIndex((row) => row.peerId === focusedPeerId.value)
+  const focusIndex = currentIndex >= 0 ? currentIndex : 0
+  focusedPeerId.value = rows[focusIndex].peerId
+  nextTick(() => {
+    rosterRowRefs.value[focusIndex]?.focus({ preventScroll: true })
+    rosterRowRefs.value[focusIndex]?.scrollIntoView({ block: 'nearest' })
+  })
+}
+
+const closePeerMenu = () => {
+  peerMenu.value = null
+  restoreRosterFocus()
 }
 
 const consumeActionSelection = (targetIds: string[]) => {
@@ -1202,7 +1238,7 @@ const consumeActionSelection = (targetIds: string[]) => {
 
 const clearRosterSearch = () => {
   rosterSearch.value = ''
-  rosterSearchRef.value?.blur()
+  restoreRosterFocus()
 }
 
 const openExercisePalette = () => {
@@ -1216,6 +1252,11 @@ const openExercisePalette = () => {
 const closeExercisePalette = () => {
   exercisePaletteOpen.value = false
   exerciseQuery.value = ''
+}
+
+const cancelExercisePalette = () => {
+  closeExercisePalette()
+  restoreRosterFocus()
 }
 
 const chooseExercise = (exercise: ModuleEntry) => {
@@ -1241,9 +1282,6 @@ const handleExercisePaletteKeydown = (event: KeyboardEvent) => {
     event.preventDefault()
     const exercise = exerciseResults.value[exerciseResultIndex.value]
     if (exercise) chooseExercise(exercise)
-  } else if (event.key === 'Escape') {
-    event.preventDefault()
-    closeExercisePalette()
   }
 }
 
@@ -1258,6 +1296,27 @@ const isEditableKeyboardTarget = (target: EventTarget | null) => {
 
 const handleClassroomKeydown = (event: KeyboardEvent) => {
   if (!isInstructor.value || !isOnline.value || exercisePaletteOpen.value) return
+  if (event.key === 'Escape') {
+    if (batchMenuOpen.value || connectionSettingsOpen.value) {
+      event.preventDefault()
+      event.stopPropagation()
+      batchMenuOpen.value = false
+      connectionSettingsOpen.value = false
+      restoreRosterFocus()
+    } else if (rosterSearch.value) {
+      event.preventDefault()
+      event.stopPropagation()
+      clearRosterSearch()
+    } else if (selectedPeerIds.value.length) {
+      event.preventDefault()
+      event.stopPropagation()
+      selectedPeerIds.value = []
+    }
+    return
+  }
+
+  // All Classroom shortcuts except the final Escape stay inside this panel.
+  event.stopPropagation()
   if (event.target instanceof Element && event.target.closest('button, a')) return
   if (isEditableKeyboardTarget(event.target) || isEditableKeyboardTarget(document.activeElement)) {
     return
@@ -1286,15 +1345,14 @@ const handleClassroomKeydown = (event: KeyboardEvent) => {
   } else if (event.key.toLowerCase() === 's') {
     event.preventDefault()
     sendExerciseControl('start', actionTargetIds.value)
-  } else if (event.key === 'Escape') {
-    event.preventDefault()
-    if (rosterSearch.value) clearRosterSearch()
-    else selectedPeerIds.value = []
   }
 }
 
 const rowClass = (peerId: string) => {
-  return isPeerSelected(peerId) ? 'bg-simActiveButton text-primary' : 'text-secondary'
+  return [
+    focusedPeerId.value === peerId ? 'bg-simInputBackground' : '',
+    isPeerSelected(peerId) ? 'text-simActiveButton' : 'text-secondary',
+  ]
 }
 
 const compactPeerId = (peerId: string) => peerId.slice(-5).toUpperCase()
@@ -1371,6 +1429,11 @@ const sendAnnouncement = () => {
   logSessionEvent('announcement', idsLabel(targets), announcement.value)
   announcement.value = ''
   messageComposerOpen.value = false
+}
+
+const closeMessageComposer = () => {
+  messageComposerOpen.value = false
+  restoreRosterFocus()
 }
 
 const toggleMessageComposer = () => {
