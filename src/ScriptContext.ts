@@ -37,6 +37,8 @@ interface BaseQuestionOptions {
 
 export interface MultipleChoiceQuestionOptions extends BaseQuestionOptions {
   type: 'multiple-choice'
+  /** Practice retries until correct; assessment accepts the first submitted choice. */
+  mode?: 'practice' | 'assessment'
   choices: QuestionChoice[]
   correctAnswer?: string
   correctFeedback?: string

@@ -127,3 +127,43 @@ test('autocomplete types reject misspelled properties and raw simulator values',
   assert.match(messages, /altitutde_ft/)
   assert.match(messages, /SimulationProperties/)
 })
+
+test('multiple-choice questions accept practice and assessment modes', () => {
+  const diagnostics = lessonDiagnostics(`
+    async function lesson(context: ScriptContext<C172SimProps>) {
+      await context.askQuestion({
+        type: 'multiple-choice',
+        mode: 'practice',
+        title: 'Practice',
+        question: 'Choose the correct answer.',
+        choices: [{ id: 'correct', label: 'Correct' }],
+        correctAnswer: 'correct',
+      })
+      await context.askQuestion({
+        type: 'multiple-choice',
+        mode: 'assessment',
+        title: 'Assessment',
+        question: 'Submit one answer.',
+        choices: [{ id: 'answer', label: 'Answer' }],
+      })
+    }
+  `)
+
+  assert.equal(diagnostics.length, 0, diagnosticText(diagnostics))
+})
+
+test('multiple-choice questions reject unknown modes', () => {
+  const diagnostics = lessonDiagnostics(`
+    async function lesson(context: ScriptContext<C172SimProps>) {
+      await context.askQuestion({
+        type: 'multiple-choice',
+        mode: 'exam',
+        title: 'Invalid mode',
+        question: 'Choose an answer.',
+        choices: [{ id: 'answer', label: 'Answer' }],
+      })
+    }
+  `)
+
+  assert.match(diagnosticText(diagnostics), /practice.*assessment|assessment.*practice/)
+})

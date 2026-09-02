@@ -118,7 +118,7 @@
       <button
         class="command-button"
         :disabled="!actionTargetIds.length"
-        @click="openExercisePalette"
+        @click="openExercisePalette()"
       >
         Assign exercise
       </button>
@@ -151,7 +151,7 @@
         <button class="menu-command" :disabled="!targetHaveAssignments" @click="unassignExercise">
           Unassign
         </button>
-        <button class="menu-command" @click="toggleMessageComposer">Message</button>
+        <button class="menu-command" @click="openMessageComposer()">Message</button>
         <button class="menu-command" @click="exportSession">Export session</button>
       </div>
 
@@ -210,29 +210,25 @@
           <option value="overdue">OVERDUE {{ overdueCount }}</option>
         </select>
       </div>
-      <div class="min-h-0 flex-1 overflow-auto">
-        <table class="h-fit w-full table-fixed text-left whitespace-nowrap">
-          <tbody>
-            <template v-for="group in participantExerciseGroups" :key="group.key">
-              <tr class="h-5 text-secondary/60">
-                <td colspan="6" class="px-1 pt-1 font-medium">
-                  <span class="text-simActiveButton">+</span>
-                  {{ group.label }}
-                  <span class="ml-1 opacity-60">[{{ group.participants.length }}]</span>
-                </td>
-              </tr>
-              <tr
-                v-for="participant in group.participants"
-                :key="participant.peerId"
+      <div class="roster-body flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div class="roster-list min-h-0 flex-1 overflow-auto">
+          <section v-for="group in participantExerciseGroups" :key="group.key">
+            <div class="h-5 truncate px-2 pt-1 font-medium text-secondary/60">
+              <span class="text-simActiveButton">+</span>
+              {{ group.label }}
+              <span class="ml-1 opacity-60">[{{ group.participants.length }}]</span>
+            </div>
+            <template v-for="participant in group.participants" :key="participant.peerId">
+              <div
                 :ref="(element) => setRosterRowRef(element, participant.rosterIndex)"
-                class="classroom-roster-row h-6 cursor-default outline-none"
+                class="classroom-roster-row grid min-h-10 cursor-default grid-cols-[1.25rem_minmax(0,1fr)_auto_auto] items-center gap-x-1 px-1 outline-none"
                 :class="rowClass(participant.peerId)"
                 :aria-selected="isPeerSelected(participant.peerId)"
                 :title="participantSummary(participant.peer)"
                 tabindex="-1"
                 @click="focusPeerRow($event, participant.peerId)"
               >
-                <td class="w-5 px-1 text-center">
+                <div class="text-center">
                   <input
                     type="checkbox"
                     tabindex="-1"
@@ -241,97 +237,186 @@
                     :aria-label="`Select ${participant.peer.metadata.callsign || participant.peerId}`"
                     @click.stop="togglePeerCheckbox(participant.peerId, participant.rosterIndex)"
                   />
-                </td>
-                <td class="overflow-hidden text-ellipsis px-1">
-                  <span
-                    v-if="participant.peer.handState === 'raised'"
-                    class="mr-1 animate-pulse font-bold"
-                    >!</span
-                  >
-                  <span class="font-medium">
+                </div>
+                <div class="min-w-0 py-0.5">
+                  <div class="flex min-w-0 items-center gap-1">
+                    <span
+                      v-if="participant.peer.handState === 'raised'"
+                      class="inline-flex shrink-0 animate-pulse items-center bg-panelActive px-1 font-bold text-primary"
+                      >HAND</span
+                    >
+                    <span class="min-w-0 truncate font-medium">
+                      {{
+                        participant.peer.metadata.callsign ||
+                        participant.peer.metadata.displayName ||
+                        '—'
+                      }}
+                    </span>
+                    <span class="shrink-0 opacity-50"
+                      >· {{ compactPeerId(participant.peerId) }}</span
+                    >
+                    <span class="shrink-0 opacity-60">
+                      · {{ compactStatus(participant.peer.metadata.status) }}
+                    </span>
+                    <span v-if="participant.peer.exercise" class="shrink-0">
+                      ·
+                      {{ exerciseStatusSymbol(participant.peer.exercise.status) }}
+                      <span :class="exerciseStatusClass(participant.peer.exercise.status)">{{
+                        compactExerciseStatus(participant.peer.exercise.status)
+                      }}</span>
+                    </span>
+                  </div>
+                  <div class="truncate leading-tight text-secondary/60">
                     {{
-                      participant.peer.metadata.callsign ||
-                      participant.peer.metadata.displayName ||
+                      participant.peer.metadata.checkPoint ||
+                      exerciseDetail(participant.peer) ||
                       '—'
                     }}
-                  </span>
-                  <span class="ml-1 opacity-60"> · {{ compactPeerId(participant.peerId) }} </span>
-                </td>
-                <!-- Status -->
-                <td class="overflow-hidden text-ellipsis px-1">
-                  <button class="">
-                    {{ readableStatus(participant.peer.metadata.status) }}
-                    <!-- <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 16 16"
-                  fill="currentColor"
-                  class="size-4"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M3.757 4.5c.18.217.376.42.586.608.153-.61.354-1.175.596-1.678A5.53 5.53 0 0 0 3.757 4.5ZM8 1a6.994 6.994 0 0 0-7 7 7 7 0 1 0 7-7Zm0 1.5c-.476 0-1.091.386-1.633 1.427-.293.564-.531 1.267-.683 2.063A5.48 5.48 0 0 0 8 6.5a5.48 5.48 0 0 0 2.316-.51c-.152-.796-.39-1.499-.683-2.063C9.09 2.886 8.476 2.5 8 2.5Zm3.657 2.608a8.823 8.823 0 0 0-.596-1.678c.444.298.842.659 1.182 1.07-.18.217-.376.42-.586.608Zm-1.166 2.436A6.983 6.983 0 0 1 8 8a6.983 6.983 0 0 1-2.49-.456 10.703 10.703 0 0 0 .202 2.6c.72.231 1.49.356 2.288.356.798 0 1.568-.125 2.29-.356a10.705 10.705 0 0 0 .2-2.6Zm1.433 1.85a12.652 12.652 0 0 0 .018-2.609c.405-.276.78-.594 1.117-.947a5.48 5.48 0 0 1 .44 2.262 7.536 7.536 0 0 1-1.575 1.293Zm-2.172 2.435a9.046 9.046 0 0 1-3.504 0c.039.084.078.166.12.244C6.907 13.114 7.523 13.5 8 13.5s1.091-.386 1.633-1.427c.04-.078.08-.16.12-.244Zm1.31.74a8.5 8.5 0 0 0 .492-1.298c.457-.197.893-.43 1.307-.696a5.526 5.526 0 0 1-1.8 1.995Zm-6.123 0a8.507 8.507 0 0 1-.493-1.298 8.985 8.985 0 0 1-1.307-.696 5.526 5.526 0 0 0 1.8 1.995ZM2.5 8.1c.463.5.993.935 1.575 1.293a12.652 12.652 0 0 1-.018-2.608 7.037 7.037 0 0 1-1.117-.947 5.48 5.48 0 0 0-.44 2.262Z"
-                    clip-rule="evenodd"
-                  />
-                </svg> -->
-                  </button>
-                </td>
-                <td
-                  class="hidden overflow-hidden text-ellipsis px-1"
-                  :title="exerciseDetail(participant.peer)"
-                >
-                  <span v-if="participant.peer.exercise">
-                    {{ exerciseStatusSymbol(participant.peer.exercise.status) }}
-                    <span :class="exerciseStatusClass(participant.peer.exercise.status)">{{
-                      compactExerciseStatus(participant.peer.exercise.status)
-                    }}</span>
-                  </span>
-                  <span v-else>—</span>
-                </td>
-                <td class="roster-net overflow-hidden text-ellipsis px-1 opacity-70">
+                  </div>
+                </div>
+                <div class="roster-net px-1 text-right opacity-60">
                   {{
                     connectionAge(participant.peer) > 15
                       ? 'STALE'
                       : `${participant.peer.latency ?? '—'}ms`
                   }}
-                  <span v-if="participant.peer.handState === 'raised'" class="font-bold">
-                    ! {{ handWaitTime(participant.peer) }}</span
+                  <div
+                    v-if="participant.peer.handState === 'raised'"
+                    class="font-bold text-panelActive"
                   >
-                </td>
-                <!-- Disconnect -->
-                <td class="w-6 text-center">
+                    {{ handWaitTime(participant.peer) }}
+                  </div>
+                </div>
+                <button
+                  class="peer-details-toggle whitespace-nowrap px-1 text-center opacity-70 hover:text-panelActive hover:opacity-100"
+                  :aria-expanded="detailsPeerId === participant.peerId"
+                  :title="
+                    detailsPeerId === participant.peerId
+                      ? 'Close peer details'
+                      : 'View peer details'
+                  "
+                  @click.stop="togglePeerDetails(participant.peerId)"
+                  @keydown.left.prevent.stop="closePeerDetails"
+                  @keydown.right.prevent.stop="openPeerDetails(participant.peerId)"
+                >
+                  Details {{ detailsPeerId === participant.peerId ? '‹' : '›' }}
+                </button>
+              </div>
+
+              <section
+                v-if="detailsPeerId === participant.peerId"
+                ref="rosterDetailRef"
+                class="roster-detail flex max-h-72 flex-col overflow-hidden border-y border-panelBorder bg-panelHeaderBackground text-secondary"
+              >
+                <div class="flex min-h-7 items-center gap-1 px-2">
+                  <span class="min-w-0 flex-1 truncate font-medium text-secondary">
+                    Peer details
+                  </span>
                   <button
-                    title="Peer actions"
-                    @click.stop="openPeerMenu($event, participant.peerId)"
+                    class="shrink-0 px-1 opacity-60 hover:text-panelActive hover:opacity-100"
+                    title="Close peer details"
+                    @click="closePeerDetails"
                   >
-                    ⋯
+                    ×
                   </button>
-                </td>
-              </tr>
+                </div>
+                <dl
+                  class="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-x-2 border-t border-simElementBorder px-2 py-1 leading-tight"
+                >
+                  <dt class="opacity-50">Name</dt>
+                  <dd class="truncate">
+                    {{
+                      participant.peer.metadata.name || participant.peer.metadata.displayName || '—'
+                    }}
+                  </dd>
+                  <dt class="opacity-50">Callsign</dt>
+                  <dd class="truncate">{{ participant.peer.metadata.callsign || '—' }}</dd>
+                  <dt class="opacity-50">Peer ID</dt>
+                  <dd class="truncate" :title="participant.peerId">{{ participant.peerId }}</dd>
+                  <dt class="opacity-50">Connection</dt>
+                  <dd class="truncate">
+                    {{ compactStatus(participant.peer.metadata.status) }} ·
+                    {{ connectionAge(participant.peer) > 15 ? 'stale' : 'connected' }} ·
+                    {{ participant.peer.latency ?? '—' }}ms
+                  </dd>
+                </dl>
+                <div class="border-t border-simElementBorder px-2 py-1 leading-tight">
+                  <div class="mb-0.5 opacity-50">Assignment</div>
+                  <div v-if="participant.peer.exercise" class="flex min-w-0 flex-wrap gap-x-1">
+                    <span class="min-w-0 truncate font-medium">{{
+                      participant.peer.exercise.name
+                    }}</span>
+                    <span>· {{ compactExerciseStatus(participant.peer.exercise.status) }}</span>
+                    <span v-if="participant.peer.exercise.deadline" class="opacity-60">
+                      · due {{ formatAssignmentDeadline(participant.peer.exercise.deadline) }}
+                    </span>
+                  </div>
+                  <div v-else class="opacity-60">Unassigned</div>
+                </div>
+                <div class="flex flex-wrap gap-1 border-t border-simElementBorder px-2 py-1">
+                  <button class="command-button" @click="openExercisePalette(participant.peerId)">
+                    {{ participant.peer.exercise ? 'Replace' : 'Assign' }}
+                  </button>
+                  <button
+                    class="command-button"
+                    :disabled="
+                      !participant.peer.exercise || participant.peer.exercise.status === 'running'
+                    "
+                    @click="sendExerciseControl('start', [participant.peerId])"
+                  >
+                    Start
+                  </button>
+                  <button
+                    class="command-button"
+                    :disabled="participant.peer.exercise?.status !== 'running'"
+                    @click="sendExerciseControl('stop', [participant.peerId])"
+                  >
+                    Stop
+                  </button>
+                  <button
+                    class="command-button"
+                    :disabled="!participant.peer.exercise"
+                    @click="unassignPeer(participant.peerId)"
+                  >
+                    Unassign
+                  </button>
+                  <button class="command-button" @click="openMessageComposer(participant.peerId)">
+                    Message
+                  </button>
+                  <button
+                    class="command-button ml-auto"
+                    @click="disconnectPeer(participant.peerId)"
+                  >
+                    Disconnect
+                  </button>
+                </div>
+                <div class="border-t border-simElementBorder px-2 pt-1 font-medium opacity-70">
+                  Progress history
+                </div>
+                <div class="roster-detail-history min-h-0 flex-1 overflow-auto px-2 pb-1">
+                  <div
+                    v-if="!participant.peer.exercise?.checkpoints.length"
+                    class="py-1 opacity-50"
+                  >
+                    No progress recorded.
+                  </div>
+                  <div
+                    v-for="(checkpoint, index) in participant.peer.exercise?.checkpoints || []"
+                    :key="`${checkpoint.timestamp}-${index}`"
+                    class="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-2 py-0.5 leading-tight"
+                  >
+                    <span class="opacity-50">{{ formatCheckpointTime(checkpoint.timestamp) }}</span>
+                    <span class="min-w-0 break-words">
+                      {{ checkpoint.message }}
+                    </span>
+                  </div>
+                </div>
+              </section>
             </template>
-          </tbody>
-        </table>
+          </section>
+        </div>
       </div>
     </div>
-  </div>
-
-  <div
-    v-if="peerMenu"
-    class="fixed z-[60] min-w-40 bg-panelContentBackground p-1 shadow-lg ring-1 ring-panelBorder"
-    :style="{ left: `${peerMenu.x}px`, top: `${peerMenu.y}px` }"
-    @keydown.esc.stop.prevent="closePeerMenu"
-  >
-    <div class="truncate px-2 py-1 text-secondary/60">{{ compactPeerId(peerMenu.peerId) }}</div>
-    <button class="menu-command" @click="viewPeerDetails(peerMenu.peerId)">View details</button>
-    <button
-      class="menu-command"
-      :disabled="!incomingConns[peerMenu.peerId]?.exercise"
-      @click="unassignPeer(peerMenu.peerId)"
-    >
-      Unassign
-    </button>
-    <button class="menu-command" @click="disconnectPeer(peerMenu.peerId)">
-      Disconnect from room
-    </button>
   </div>
 
   <div
@@ -344,7 +429,9 @@
       <div
         class="border-b border-panelBorder bg-panelHeaderBackground px-2 py-1 font-bold text-secondary"
       >
-        ASSIGN · {{ actionTargetIds.length }} TARGET{{ actionTargetIds.length === 1 ? '' : 'S' }}
+        ASSIGN · {{ exercisePaletteTargetIds.length }} TARGET{{
+          exercisePaletteTargetIds.length === 1 ? '' : 'S'
+        }}
       </div>
       <div class="flex border-b border-simElementBorder px-2 py-1">
         <span class="pr-2">&gt;</span>
@@ -449,6 +536,7 @@ import { moduleTree, type ModuleEntry } from './data/EASAModules'
 const emit = defineEmits<{
   (event: 'classroomConnection', newValue: boolean): void
   (event: 'classroomRoom', roomId: string): void
+  (event: 'handAttention', pending: boolean): void
   (event: 'apiDataEvent', receivedData: PeerApiData): void
   (event: 'apiScriptEvent', receivedData: PeerScriptData): void
   (event: 'wbEvent', receivedData: PeerWhiteBoardata): void
@@ -483,6 +571,11 @@ type ConnectionMeta = {
   [key: string]: any
 }
 
+type ExerciseCheckpoint = {
+  timestamp: number
+  message: string
+}
+
 type ConnectionsList = {
   [peerId: string]: {
     metadata: ConnectionMeta
@@ -499,6 +592,7 @@ type ConnectionsList = {
       updatedAt: number
       deadline?: number
       detail?: string
+      checkpoints: ExerciseCheckpoint[]
     }
   }
 }
@@ -510,19 +604,23 @@ const followMode = ref(false)
 const connectionSettingsOpen = ref(false)
 const selectedPeerIds = ref<string[]>([])
 const focusedPeerId = ref('')
+const detailsPeerId = ref('')
 const rosterSearch = ref('')
 const rosterFilter = ref<'all' | 'active' | 'hand' | 'overdue'>('all')
 const batchMenuOpen = ref(false)
-const peerMenu = ref<{ peerId: string; x: number; y: number } | null>(null)
 const rosterSearchRef = ref<HTMLInputElement | null>(null)
 const exercisePaletteOpen = ref(false)
+const exercisePaletteTargetIds = ref<string[]>([])
+const exercisePalettePeerId = ref('')
 const exerciseQuery = ref('')
 const exerciseSearchRef = ref<HTMLInputElement | null>(null)
 const exerciseResultIndex = ref(0)
 const rosterRowRefs = ref<HTMLElement[]>([])
+const rosterDetailRef = ref<HTMLElement | null>(null)
 const announcement = ref('')
 const announcementInputRef = ref<HTMLInputElement | null>(null)
 const messageComposerOpen = ref(false)
+const messageTargetIds = ref<string[]>([])
 const exercisePath = ref('')
 const exerciseMinutes = ref(30)
 const studentHandState = ref<ClassroomHandState>('idle')
@@ -538,6 +636,13 @@ const sessionEvents = ref<
 >([])
 const clock = ref(Date.now())
 let healthTimer: ReturnType<typeof setInterval> | undefined
+
+const dismissPeerDetailsOnOutsideClick = (event: PointerEvent) => {
+  if (!detailsPeerId.value || !(event.target instanceof Element)) return
+  if (rosterDetailRef.value?.contains(event.target)) return
+  if (event.target.closest('.peer-details-toggle')) return
+  detailsPeerId.value = ''
+}
 const overdueCount = computed(
   () =>
     Object.values(incomingConns.value).filter((peer) => peer.exercise?.status === 'overdue').length,
@@ -657,11 +762,20 @@ watch(classroomRoomId, (roomId) => {
   if (isOnline.value) emit('classroomRoom', roomId)
 })
 
+watch(
+  raisedHandCount,
+  (count) => {
+    emit('handAttention', count > 0)
+  },
+  { immediate: true },
+)
+
 watch(rosterSearch, () => {
   const visible = visibleParticipantRows.value
   if (!visible.some((row) => row.peerId === focusedPeerId.value)) {
     focusedPeerId.value = visible[0]?.peerId || ''
   }
+  if (!visible.some((row) => row.peerId === detailsPeerId.value)) detailsPeerId.value = ''
 })
 
 watch(
@@ -692,6 +806,7 @@ onMounted(() => {
   // There is no hook in Vuejs to detect when a tab is closed.
   // When the user closes the tab, disconnect
   window.addEventListener('beforeunload', disconnect)
+  document.addEventListener('pointerdown', dismissPeerDetailsOnOutsideClick)
   healthTimer = setInterval(() => {
     clock.value = Date.now()
     updateOverdueAssignments()
@@ -714,7 +829,9 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('beforeunload', disconnect)
+  document.removeEventListener('pointerdown', dismissPeerDetailsOnOutsideClick)
   if (healthTimer) clearInterval(healthTimer)
+  emit('handAttention', false)
 })
 
 const setupConnection = (incomingConnection: DataConnection) => {
@@ -790,6 +907,20 @@ const onConnectionClose = (peerId: string) => {
   }
 }
 
+const recordCheckpoint = (
+  participant: ConnectionsList[string],
+  checkpoint: string,
+  timestamp: number,
+) => {
+  participant.metadata.checkPoint = checkpoint
+  if (!checkpoint || !participant.exercise) return
+
+  const history = participant.exercise.checkpoints
+  if (history[history.length - 1]?.message === checkpoint) return
+  history.push({ timestamp, message: checkpoint })
+  if (history.length > 100) history.splice(0, history.length - 100)
+}
+
 const onData = (data: PeerData, conn: PeerJS.DataConnection) => {
   trace(`Received data from ${conn.peer} ${JSON.stringify(data)}`)
   const participant = incomingConns.value[conn.peer]
@@ -830,8 +961,7 @@ const onData = (data: PeerData, conn: PeerJS.DataConnection) => {
     // some logic to update the student status.
     if (participant) participant.metadata.status = data.status
   } else if ('checkpoint' in data) {
-    // some logic to update the student status.
-    if (participant) participant.metadata.checkPoint = data.checkpoint
+    if (participant) recordCheckpoint(participant, String(data.checkpoint || ''), Date.now())
   } else if ('script' in data) {
     emit('apiScriptEvent', data)
   } else if ('wb' in data) {
@@ -855,7 +985,9 @@ const handleEnvelope = (message: ClassroomEnvelope, conn: PeerJS.DataConnection)
       if (participant) participant.metadata.status = String(payload.status || '')
       break
     case 'checkpoint':
-      if (participant) participant.metadata.checkPoint = String(payload.checkpoint || '')
+      if (participant) {
+        recordCheckpoint(participant, String(payload.checkpoint || ''), message.timestamp)
+      }
       break
     case 'script':
       emit('apiScriptEvent', {
@@ -917,6 +1049,8 @@ const handleEnvelope = (message: ClassroomEnvelope, conn: PeerJS.DataConnection)
               ? existingExercise.deadline
               : undefined,
           detail: payload.detail ? String(payload.detail) : undefined,
+          checkpoints:
+            existingExercise?.id === String(payload.id || '') ? existingExercise.checkpoints : [],
         }
         logSessionEvent(
           'exercise-status',
@@ -1147,7 +1281,6 @@ const focusPeerRow = (event: MouseEvent, peerId: string) => {
   }
   focusPeer(peerId)
   batchMenuOpen.value = false
-  peerMenu.value = null
 }
 
 const togglePeerCheckbox = (peerId: string, rosterIndex: number) => {
@@ -1156,19 +1289,23 @@ const togglePeerCheckbox = (peerId: string, rosterIndex: number) => {
   nextTick(() => rosterRowRefs.value[rosterIndex]?.focus({ preventScroll: true }))
 }
 
-const openPeerMenu = (event: MouseEvent, peerId: string) => {
-  const menuWidth = 176
-  const menuHeight = 112
-  peerMenu.value = {
-    peerId,
-    x: Math.max(8, Math.min(event.clientX - menuWidth, window.innerWidth - menuWidth - 8)),
-    y: Math.max(8, Math.min(event.clientY + 6, window.innerHeight - menuHeight - 8)),
-  }
+const openPeerDetails = (peerId: string) => {
+  focusPeer(peerId)
+  detailsPeerId.value = peerId
+  nextTick(() => rosterDetailRef.value?.scrollIntoView({ block: 'nearest' }))
 }
 
-const viewPeerDetails = (peerId: string) => {
-  focusPeer(peerId)
-  peerMenu.value = null
+const closePeerDetails = () => {
+  detailsPeerId.value = ''
+  restoreRosterFocus()
+}
+
+const togglePeerDetails = (peerId: string) => {
+  if (detailsPeerId.value === peerId) {
+    closePeerDetails()
+    return
+  }
+  openPeerDetails(peerId)
 }
 
 const moveRosterFocus = (amount: number) => {
@@ -1181,6 +1318,7 @@ const moveRosterFocus = (amount: number) => {
         ? 0
         : rows.length - 1
       : Math.max(0, Math.min(rows.length - 1, current + amount))
+  detailsPeerId.value = ''
   focusedPeerId.value = rows[next].peerId
   nextTick(() => {
     rosterRowRefs.value[next]?.focus({ preventScroll: true })
@@ -1216,11 +1354,6 @@ const restoreRosterFocus = () => {
   })
 }
 
-const closePeerMenu = () => {
-  peerMenu.value = null
-  restoreRosterFocus()
-}
-
 const consumeActionSelection = (targetIds: string[]) => {
   const consumed = new Set(targetIds)
   selectedPeerIds.value = []
@@ -1242,8 +1375,11 @@ const clearRosterSearch = () => {
   restoreRosterFocus()
 }
 
-const openExercisePalette = () => {
-  if (!actionTargetIds.value.length) return
+const openExercisePalette = (peerId?: string) => {
+  const targets = peerId && incomingConns.value[peerId] ? [peerId] : [...actionTargetIds.value]
+  if (!targets.length) return
+  exercisePaletteTargetIds.value = targets
+  exercisePalettePeerId.value = peerId || ''
   exercisePaletteOpen.value = true
   exerciseQuery.value = ''
   exerciseResultIndex.value = 0
@@ -1257,13 +1393,19 @@ const closeExercisePalette = () => {
 
 const cancelExercisePalette = () => {
   closeExercisePalette()
+  exercisePaletteTargetIds.value = []
+  exercisePalettePeerId.value = ''
   restoreRosterFocus()
 }
 
 const chooseExercise = (exercise: ModuleEntry) => {
+  const targets = [...exercisePaletteTargetIds.value]
+  const peerId = exercisePalettePeerId.value
   exercisePath.value = exercise.path
   closeExercisePalette()
-  assignExercise()
+  exercisePaletteTargetIds.value = []
+  exercisePalettePeerId.value = ''
+  assignExercise(targets, peerId)
 }
 
 const moveExerciseResult = (amount: number) => {
@@ -1298,7 +1440,11 @@ const isEditableKeyboardTarget = (target: EventTarget | null) => {
 const handleClassroomKeydown = (event: KeyboardEvent) => {
   if (!isInstructor.value || !isOnline.value || exercisePaletteOpen.value) return
   if (event.key === 'Escape') {
-    if (batchMenuOpen.value || connectionSettingsOpen.value) {
+    if (detailsPeerId.value) {
+      event.preventDefault()
+      event.stopPropagation()
+      closePeerDetails()
+    } else if (batchMenuOpen.value || connectionSettingsOpen.value) {
       event.preventDefault()
       event.stopPropagation()
       batchMenuOpen.value = false
@@ -1328,6 +1474,12 @@ const handleClassroomKeydown = (event: KeyboardEvent) => {
   } else if (event.key === 'ArrowUp' || (event.ctrlKey && event.key.toLowerCase() === 'p')) {
     event.preventDefault()
     moveRosterFocus(-1)
+  } else if (event.key === 'ArrowRight' && focusedPeerId.value) {
+    event.preventDefault()
+    openPeerDetails(focusedPeerId.value)
+  } else if (event.key === 'ArrowLeft' && detailsPeerId.value) {
+    event.preventDefault()
+    closePeerDetails()
   } else if (event.key === ' ' && focusedPeerId.value) {
     event.preventDefault()
     togglePeerSelection(focusedPeerId.value)
@@ -1343,9 +1495,12 @@ const handleClassroomKeydown = (event: KeyboardEvent) => {
   } else if (event.key === 'u' && targetHaveAssignments.value) {
     event.preventDefault()
     unassignExercise()
+  } else if (event.key.toLowerCase() === 'm' && actionTargetIds.value.length) {
+    event.preventDefault()
+    openMessageComposer()
   } else if (event.key.toLowerCase() === 's') {
     event.preventDefault()
-    sendExerciseControl('start', actionTargetIds.value)
+    startExercisesFromKeyboard()
   }
 }
 
@@ -1357,24 +1512,17 @@ const rowClass = (peerId: string) => {
 }
 
 const compactPeerId = (peerId: string) => peerId.slice(-5).toUpperCase()
-
-const readableStatus = (status?: string) => {
-  const normalized = status?.trim().toLowerCase()
-  if (!normalized || normalized === 'online') return 'Online'
-  return (
-    {
-      running: 'Running',
-      paused: 'Paused',
-      trial: 'Trial',
-      idle: 'Idle',
-      stopped: 'Stopped',
-      waiting: 'Waiting',
-      'structural damage': 'Damage',
-    }[normalized] ||
-    status ||
-    'Online'
-  )
-}
+const formatCheckpointTime = (timestamp: number) =>
+  new Date(timestamp).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
+const formatAssignmentDeadline = (timestamp: number) =>
+  new Date(timestamp).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 
 const compactStatus = (status?: string) => {
   const normalized = status?.trim().toLowerCase()
@@ -1424,32 +1572,35 @@ const updateOverdueAssignments = () => {
 }
 
 const sendAnnouncement = () => {
-  const targets = [...actionTargetIds.value]
+  const targets = [...messageTargetIds.value]
   if (!announcement.value || !targets.length) return
   sendEnvelopeToIds(targets, 'announcement', { message: announcement.value })
   logSessionEvent('announcement', idsLabel(targets), announcement.value)
   announcement.value = ''
   messageComposerOpen.value = false
+  messageTargetIds.value = []
 }
 
 const closeMessageComposer = () => {
   messageComposerOpen.value = false
+  messageTargetIds.value = []
   restoreRosterFocus()
 }
 
-const toggleMessageComposer = () => {
-  if (!actionTargetIds.value.length) return
+const openMessageComposer = (peerId?: string) => {
+  const targets = peerId && incomingConns.value[peerId] ? [peerId] : [...actionTargetIds.value]
+  if (!targets.length) return
+  messageTargetIds.value = targets
   batchMenuOpen.value = false
-  messageComposerOpen.value = !messageComposerOpen.value
-  if (messageComposerOpen.value) nextTick(() => announcementInputRef.value?.focus())
+  messageComposerOpen.value = true
+  nextTick(() => announcementInputRef.value?.focus())
 }
 
 const selectedExercise = (): ModuleEntry | undefined =>
   exerciseModules.find((entry) => entry.path === exercisePath.value)
 
-const assignExercise = async () => {
+const assignExercise = async (targets: string[], detailsTargetPeerId = '') => {
   const exercise = selectedExercise()
-  const targets = [...actionTargetIds.value]
   if (!exercise || !targets.length) return
   let source: string
   try {
@@ -1477,12 +1628,17 @@ const assignExercise = async () => {
         status: 'assigned',
         updatedAt: Date.now(),
         deadline,
+        checkpoints: [],
       }
       peer.metadata.checkPoint = ''
     }
   })
   logSessionEvent('exercise', idsLabel(targets), `${exercise.name} (${exerciseMinutes.value} min)`)
-  consumeActionSelection(targets)
+  if (detailsTargetPeerId) {
+    openPeerDetails(detailsTargetPeerId)
+  } else {
+    consumeActionSelection(targets)
+  }
 }
 
 const unassignExercise = () => {
@@ -1508,14 +1664,12 @@ const unassignPeer = (peerId: string) => {
   peer.exercise = undefined
   peer.metadata.checkPoint = ''
   logSessionEvent('exercise-unassign', peerId, 'Assignment removed')
-  peerMenu.value = null
 }
 
 const disconnectPeer = (peerId: string) => {
   const peer = incomingConns.value[peerId]
   if (!peer) return
   confirmDisconnect(peerId, peer)
-  peerMenu.value = null
 }
 
 const sendExerciseStatus = (status: ClassroomExerciseStatus, detail?: string) => {
@@ -1547,6 +1701,28 @@ const sendExerciseControl = (action: 'start' | 'stop', targets = actionTargetIds
   logSessionEvent('exercise-control', idsLabel(targets), action)
 }
 
+const startExercisesFromKeyboard = () => {
+  const selectedTargets = selectedPeerIds.value.filter((id) => incomingConns.value[id]?.exercise)
+  if (selectedPeerIds.value.length) {
+    sendExerciseControl('start', selectedTargets)
+    return
+  }
+
+  const assignedTargets = Object.entries(incomingConns.value)
+    .filter(([, peer]) => Boolean(peer.exercise))
+    .map(([peerId]) => peerId)
+  if (!assignedTargets.length) return
+
+  const peerLabel = assignedTargets.length === 1 ? 'peer' : 'peers'
+  if (
+    window.confirm(
+      `No peers are selected. Start the assigned lessons for all ${assignedTargets.length} ${peerLabel}?`,
+    )
+  ) {
+    sendExerciseControl('start', assignedTargets)
+  }
+}
+
 const reportExerciseResult = (
   status: 'completed' | 'error',
   detail?: string,
@@ -1572,8 +1748,9 @@ const participantSummary = (peer: ConnectionsList[string]) => {
     Boolean,
   )
   const exercise = peer.exercise ? `${peer.exercise.name}: ${peer.exercise.status}` : 'Unassigned'
+  const checkpoint = peer.metadata.checkPoint ? ` · ${peer.metadata.checkPoint}` : ''
   const network = connectionAge(peer) > 15 ? 'Network stale' : `${peer.latency ?? '—'}ms`
-  return `${identity.join(' · ')} · ${compactStatus(peer.metadata.status)} · ${exercise} · ${network}`
+  return `${identity.join(' · ')} · ${compactStatus(peer.metadata.status)} · ${exercise}${checkpoint} · ${network}`
 }
 
 const confirmDisconnect = (peerId: string, peer: ConnectionsList[string]) => {
@@ -1669,8 +1846,7 @@ const sendCheckPoint = (checkpoint: string) => {
     return
   }
 
-  // Must be online and mirror mode activated
-  if (!isOnline.value || !followMode.value || !instructorConnectionOpen) {
+  if (!isOnline.value || !instructorConnectionOpen) {
     return
   }
 

@@ -312,14 +312,17 @@ const answerMultipleChoice = (card: PromptCard, answer: string) => {
   const correct = interaction.options.correctAnswer
     ? answer === interaction.options.correctAnswer
     : undefined
+  const mode = interaction.options.mode ?? 'practice'
 
-  if (correct === false) {
+  if (mode === 'practice' && correct === false) {
     interaction.feedback = interaction.options.incorrectFeedback || 'Not quite. Try again.'
     return
   }
 
   interaction.feedback =
-    interaction.options.correctFeedback || (correct ? 'Correct.' : 'Submitted.')
+    mode === 'assessment'
+      ? 'Answer submitted.'
+      : interaction.options.correctFeedback || (correct ? 'Correct.' : 'Submitted.')
   const result: QuestionResult = {
     questionId: interaction.options.id,
     type: interaction.type,

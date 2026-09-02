@@ -286,6 +286,7 @@ Authoring rules:
 - Use ScriptContext<B747SimProps> for B747 lessons and ScriptContext<C172SimProps> for C172 lessons.
 - For aircraft-independent lessons, use ScriptContext<CommonFlightModelSimProps> and only common properties.
 - Await waitFor(), waitForCondition(), notifyUser(), waitForUser(), askQuestion(), and repositionWithAutopilot().
+- Use multiple-choice mode "practice" for retry-until-correct learning and mode "assessment" for a single submitted answer.
 - Use concise instructional prompts and checkpoints at meaningful scenario stages.
 - Avoid infinite loops and conflicting autopilot modes.
 - Add comments only for important lesson phases, not for every line.
