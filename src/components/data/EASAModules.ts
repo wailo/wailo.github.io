@@ -7,23 +7,20 @@ export type ModuleEntry = {
 export type ModuleTree = Record<string, ModuleEntry[]>
 
 export const moduleTree: ModuleTree = {
-  Demo: [
-    { name: 'Intro', path: '/LearningModules/demo.ts' },
+  Exams: [
     {
       name: 'Basic Flight Knowledge Test',
       path: '/LearningModules/basic_flight_knowledge_test.ts',
       description: 'Assess knowledge of the four forces, primary controls and basic turn geometry.',
     },
+  ],
+  Demo: [
+    { name: 'Intro', path: '/LearningModules/demo.ts' },
     { name: 'Landing', path: '/LearningModules/landing.ts' },
     { name: 'Instruments scanning', path: '/LearningModules/instruments_scanning.ts' },
     { name: 'Yaw Damper', path: '/LearningModules/yaw_damper.ts' },
     { name: 'Three doublets', path: '/LearningModules/three_doublets.ts' },
     { name: 'MCAS loop', path: '/LearningModules/mcas_loop.ts' },
-    {
-      name: 'Multi-model switching',
-      path: '/LearningModules/multi_model_switching.ts',
-      description: 'Reposition a B747 and then a C172 within one lesson.',
-    },
     {
       name: 'Stall',
       path: '/LearningModules/stall.ts',

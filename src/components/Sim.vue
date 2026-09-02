@@ -513,6 +513,7 @@
           class="panel-classroom"
           data-layout="instructor pilot"
           :active="classRoomComponentState"
+          :flash="classroomHandAttention"
         >
           <template #Classroom>
             <div class="flex flex-col h-full w-full">
@@ -566,6 +567,7 @@
                   }
                 "
                 @classroomRoom="(roomId) => (classRoomId = roomId)"
+                @hand-attention="(pending) => (classroomHandAttention = pending)"
               />
             </div>
           </template>
@@ -897,6 +899,7 @@ const monitorLoadingDependencies = (remaining: number) => {
 let isLicenceValid = ref(false)
 let classRoomComponentState = ref(false)
 let classRoomId = ref('')
+const classroomHandAttention = ref(false)
 let accountName = ref('')
 let scriptComponentStatus = ref<ScriptStatus>('IDLE')
 const update_interval_ms = 200
