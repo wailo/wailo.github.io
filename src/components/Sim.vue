@@ -313,7 +313,7 @@
         <Panel
           panel-id="flight-model"
           @header-dblclick="togglePanelMaximize"
-          :status="FlightSimModule.flightModel.name"
+          :status="activeAircraftType"
           v-if="sim_module_loaded"
           class="panel-flightmodel"
           data-layout="instructor pilot"
