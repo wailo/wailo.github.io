@@ -746,7 +746,7 @@ const simulationStatus = computed(() => {
   if (FlightSimModule.simulation.simulation_pause) return 'Paused'
   if (FlightSimModule.flightModel.damaged) return 'Structural Damage'
   if (FlightSimModule.simulation.simulation_speed === 1) {
-    return isLicenceValid.value ? 'Running' : 'Trial'
+    return isLicenceValid.value ? 'Normal' : 'Trial'
   }
   return `${FlightSimModule.simulation.simulation_speed}x`
 })
