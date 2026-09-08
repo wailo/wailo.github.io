@@ -34,16 +34,30 @@
         </button>
       </div>
 
+      <form
+        v-if="!isOnline"
+        class="flex min-w-0 items-center gap-1 border-t border-simElementBorder p-2"
+        @submit.prevent="connectToPeerJsServer(requestedRoomId.trim())"
+      >
+        <label for="classroom-session-id" class="shrink-0 opacity-60">SESSION ID</label>
+        <input
+          id="classroom-session-id"
+          v-model="requestedRoomId"
+          type="text"
+          autocomplete="off"
+          placeholder="Enter or create a session"
+          class="h-6 min-w-0 flex-1 border border-simElementBorder bg-simInputBackground px-2 text-secondary outline-none focus:border-panelActive"
+        />
+        <button
+          type="submit"
+          class="command-button h-6 shrink-0"
+          :disabled="!requestedRoomId.trim()"
+        >
+          Connect
+        </button>
+      </form>
+
       <div v-if="connectionSettingsOpen" class="grid gap-1 bg-panelHeaderBackground p-2">
-        <label class="flex h-5 min-w-0 items-center gap-1">
-          <span class="w-14 shrink-0 opacity-60">ROOM</span>
-          <input
-            v-model="requestedRoomId"
-            :readonly="isOnline"
-            placeholder="room name"
-            class="min-w-0 flex-1 bg-primary pl-1 text-secondary border border-simElementBorder outline-none focus:border-panelActive"
-          />
-        </label>
         <label v-if="!isInstructor && isOnline" class="flex h-5 min-w-0 items-center gap-1">
           <span class="w-14 shrink-0 opacity-60">ID</span>
           <span class="min-w-0 flex-1 truncate opacity-60">{{ selfPeerId }}</span>
@@ -57,11 +71,12 @@
           />
         </label>
         <wButton
+          v-if="isOnline"
           id="connect"
-          :button-label="isOnline ? 'Disconnect' : 'Start'"
-          :button-state="isOnline"
+          button-label="Disconnect"
+          :button-state="true"
           class="h-5 w-full border border-simElementBorder"
-          :buttonClick="() => (isOnline ? disconnect() : connectToPeerJsServer(requestedRoomId))"
+          :buttonClick="disconnect"
         />
         <button
           v-if="isInstructor && isOnline"
@@ -554,7 +569,8 @@ const baseUrl = window.location.origin
 let selfPeer: PeerJS.Peer
 let instructorConnection: PeerJS.DataConnection
 let instructorConnectionOpen = false
-const selfPeerId = ref<string>(isDevelopment ? 'EK583838' : '')
+const defaultSessionId = `SIM-${Math.floor(100000 + Math.random() * 90000)}`
+const selfPeerId = ref<string>(defaultSessionId)
 const requestedRoomId = ref(selfPeerId.value)
 const isInstructor = ref(true)
 let displayname = ref<string>()

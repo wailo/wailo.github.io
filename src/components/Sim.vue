@@ -525,20 +525,23 @@
                 v-if="sim_module_loaded"
                 @onLogin="
                   (url: string, authToken: string, name: string) => {
+                    isAccountAuthenticated = true
                     accountName = name
                     FlightSimModule.check_licence(url, authToken)
                   }
                 "
                 @onLogout="
                   () => {
+                    isAccountAuthenticated = false
                     accountName = ''
+                    classRoomComponentState = false
                     FlightSimModule.check_licence('', '')
                   }
                 "
                 ref="accountsComponentRef"
               />
               <ClassRoom
-                v-if="dataDisplayRef"
+                v-if="dataDisplayRef && isAccountAuthenticated"
                 class="min-h-0 flex-1"
                 :account-name="accountName"
                 @apiDataEvent="
@@ -631,6 +634,7 @@ import MarkDown from './MarkDown.vue'
 import { RemoteCallManager, RemoteCall, RemoteEvent } from '../RemoteCallManager'
 import Joystick, { JoystickInput } from './Joystick.vue'
 import Whiteboard from './Whiteboard.vue'
+import { pb } from '../Pocketbase/pocketbase'
 
 import {
   initializeModule,
@@ -913,7 +917,8 @@ let isLicenceValid = ref(false)
 let classRoomComponentState = ref(false)
 let classRoomId = ref('')
 const classroomHandAttention = ref(false)
-let accountName = ref('')
+const isAccountAuthenticated = ref(pb.authStore.isValid)
+let accountName = ref(String(pb.authStore.record?.name || ''))
 let scriptComponentStatus = ref<ScriptStatus>('IDLE')
 const update_interval_ms = 200
 const isFullscreen = ref(false)

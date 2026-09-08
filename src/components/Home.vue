@@ -24,26 +24,14 @@
 
       <!-- Launch Section -->
       <div class="flex flex-col justify-center items-center border-gray-500 py-2 mt-4">
-        <div class="flex flex-col md:flex-row items-center gap-3 w-full justify-center">
-          <input
-            class="appearance-none bg-transparent border-2 border-custom-gray rounded w-full md:w-[300px] text-center py-1 px-2 leading-tight focus:outline-none transition-colors focus:border-red-500"
-            type="text"
-            placeholder="Session ID"
-            :value="isFocused ? roomId : `Session ID: ${roomId}`"
-            @focus="isFocused = true"
-            @blur="isFocused = false"
-            @input="roomId = ($event.target as HTMLInputElement).value"
-          />
-
-          <router-link :to="`/sim?roomId=${roomId}`" class="w-full md:w-auto">
-            <button
-              class="w-full md:w-auto bg-red-500 hover:bg-red-700 border-red-500 hover:border-red-700 text-sm border-2 text-white py-1 px-6 rounded transition-colors"
-              type="button"
-            >
-              Launch
-            </button>
-          </router-link>
-        </div>
+        <router-link to="/sim" class="w-full md:w-auto">
+          <button
+            class="w-full md:w-auto bg-red-500 hover:bg-red-700 border-red-500 hover:border-red-700 text-sm border-2 text-white py-1 px-6 rounded transition-colors"
+            type="button"
+          >
+            Launch
+          </button>
+        </router-link>
 
         <!-- Improved Disclaimer Layout -->
         <div
@@ -67,12 +55,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 
 const title = ref('Flight Simulator')
-const sentence = ref('Minimal Versatile Intelligent') // Fixed typo in "Intelligent"
-const roomId = ref('SIM-' + Math.floor(100000 + Math.random() * 90000).toString()) // Fixed random range
-const isFocused = ref(false)
+const sentence = ref('Minimal Versatile Intelligent')
 const words = computed(() => sentence.value.split(' '))
 </script>
 
