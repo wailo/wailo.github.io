@@ -95,10 +95,14 @@ watch(
               aircraft behavior, follow structured lessons, write simulation scripts, and work with
               an instructor in a shared classroom.
             </p>
-            <router-link to="/sim" class="launch-link">
+            <router-link to="/sim" class="launch-link" aria-describedby="educational-use-notice">
               Launch simulator <span aria-hidden="true">↗</span>
             </router-link>
             <p class="launch-note">No installation required. Explore without an account.</p>
+            <p id="educational-use-notice" class="educational-use-notice">
+              For educational simulation only. Not for aircraft operation, navigation, or
+              operational decision-making. Not a substitute for approved flight training.
+            </p>
           </div>
 
           <figure class="flight-plate">
@@ -242,14 +246,19 @@ watch(
           <summary>Educational use only <span aria-hidden="true">+</span></summary>
           <div class="disclaimer">
             <p>
-              This application is provided for educational purposes only. It does not represent
-              real-world flight conditions and must not be used for actual aviation training,
-              navigation, or operational decision-making.
+              This application, including its lessons and classroom features, is intended for
+              learning aviation concepts and conducting simulated experiments. Its models and
+              outputs may differ from real aircraft behavior and flight conditions. Do not use them
+              for aircraft operation, navigation, or operational decision-making.
             </p>
             <p>
-              By using this application, you acknowledge that the developers and contributors accept
-              no liability for any damages, losses, injuries, or consequences resulting from the use
-              or misuse of this software.
+              Lessons and assessments do not constitute approved flight training or establish
+              qualification to operate an aircraft. The application is not a substitute for approved
+              instruction or official aircraft documentation.
+            </p>
+            <p>
+              Nothing in this notice excludes or limits liability that cannot lawfully be excluded
+              or limited, or affects your statutory rights.
             </p>
           </div>
         </details>
@@ -469,6 +478,15 @@ summary:focus-visible {
   font-size: 9px;
   letter-spacing: 0.7px;
   margin-top: 14px;
+}
+.educational-use-notice {
+  max-width: 410px;
+  margin-top: 18px;
+  padding-left: 12px;
+  border-left: 2px solid var(--rule);
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.65;
 }
 .flight-plate {
   color: var(--blue);
