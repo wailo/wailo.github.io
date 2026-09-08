@@ -34,6 +34,10 @@
 
         <div v-if="loadingProgress !== null" class="text-[10px] tabular-nums text-secondary/50">
           {{ loadingProgress }}%
+          <template v-if="loadingDownloadedBytes !== null && loadingTotalBytes !== null">
+            · {{ formatMegabytes(loadingDownloadedBytes) }} /
+            {{ formatMegabytes(loadingTotalBytes) }} MB
+          </template>
         </div>
       </div>
     </div>
@@ -787,7 +791,7 @@ const simFunctions = {
     // Called when user invoke reset from a button, still can't tell if keyboard is pressed.
     editorComponentRef.value?.reset()
     classroomComponentRef.value?.reset()
-    this.resetPanels()
+    simFunctions.resetPanels()
   },
   resetPanels: function () {
     dataDisplayRef.value?.reset()
@@ -859,7 +863,14 @@ const activeAircraftType = computed(() => {
 let sim_module_loaded = ref(false)
 const loadingStatus = ref('Preparing download')
 const loadingProgress = ref<number | null>(null)
+const loadingDownloadedBytes = ref<number | null>(null)
+const loadingTotalBytes = ref<number | null>(null)
 let maximumRunDependencies = 0
+
+const formatMegabytes = (bytes: number) => {
+  const megabytes = bytes / (1024 * 1024)
+  return megabytes.toFixed(megabytes >= 10 ? 1 : 2)
+}
 
 const updateLoadingStatus = (status: string) => {
   const progressMatch = status.match(/\((\d+)\/(\d+)\)/)
@@ -867,6 +878,8 @@ const updateLoadingStatus = (status: string) => {
     const loaded = Number(progressMatch[1])
     const total = Number(progressMatch[2])
     loadingProgress.value = total > 0 ? Math.round((loaded / total) * 100) : null
+    loadingDownloadedBytes.value = loaded
+    loadingTotalBytes.value = total
     loadingStatus.value = 'Downloading assets'
     return
   }
