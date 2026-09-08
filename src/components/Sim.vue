@@ -51,6 +51,7 @@
         <!-- Panel 1 -->
         <Panel
           panel-id="cockpit"
+          @click="focusCockpitCanvas"
           @header-dblclick="togglePanelMaximize"
           :status="simulationStatus"
           :flash="
@@ -663,6 +664,17 @@ import type {
 
 const renderSignal = ref(0)
 const canvasContainerRef = ref<HTMLElement | null>(null)
+const focusCockpitCanvas = (event: MouseEvent) => {
+  if (!(event.target instanceof Element)) return
+  if (
+    event.target.closest(
+      'button, input, select, textarea, a, [contenteditable]:not([contenteditable="false"]), [role="button"], [role="slider"]',
+    )
+  ) {
+    return
+  }
+  canvasContainerRef.value?.querySelector('canvas')?.focus({ preventScroll: true })
+}
 let canvasResizeObserver: ResizeObserver | null = null
 let canvasResizeFrame: number | null = null
 let observedCanvasWidth = 0

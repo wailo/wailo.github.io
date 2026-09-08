@@ -1,5 +1,6 @@
 <template>
   <div
+    v-bind="$attrs"
     class="classroom-shell relative flex h-full min-h-0 w-full flex-col overflow-hidden outline-none"
     tabindex="0"
     aria-label="Classroom controls"
@@ -563,6 +564,7 @@ const emit = defineEmits<{
 }>()
 
 const props = defineProps<{ accountName?: string }>()
+defineOptions({ inheritAttrs: false })
 
 const isDevelopment = import.meta.env.DEV
 const baseUrl = window.location.origin
