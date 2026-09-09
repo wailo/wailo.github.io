@@ -4,8 +4,24 @@ export async function main(context: ScriptContext) {
   const simControls = context.controls
   const simProps = context.props
   const simulation = simControls.simulation
-  const waitFor = context.waitFor
-  const waitForCondition = context.waitForCondition
+  // Check mode state during the demo's existing waits; no persistent timer is left behind.
+  let syncAutopilotPlots = () => {}
+  const waitFor = async (milliseconds: number) => {
+    const end = Date.now() + milliseconds
+    do {
+      syncAutopilotPlots()
+      await context.waitFor(Math.min(100, Math.max(0, end - Date.now())))
+    } while (Date.now() < end)
+    syncAutopilotPlots()
+  }
+  const waitForCondition: ScriptContext['waitForCondition'] = (condition, ...options) =>
+    context.waitForCondition(
+      () => {
+        syncAutopilotPlots()
+        return condition()
+      },
+      ...options,
+    )
   const frameDuration = 10_000
   const stepDelay = 500
   const accent = (text: string) =>
@@ -21,6 +37,39 @@ export async function main(context: ScriptContext) {
   simControls.flightModel = flightModel
   await waitFor(300)
 
+  const autopilotPlots = [
+    {
+      engaged: () => flightModel.autopilot_vertical_speed_hold,
+      series: [simProps.autopilot_vertical_speed_target, simProps.vertical_speed_ftmin],
+      visible: false,
+    },
+    {
+      engaged: () => flightModel.autopilot_bank_hold,
+      series: [simProps.autopilot_bank_target, simProps.bank_deg],
+      visible: false,
+    },
+    {
+      engaged: () => flightModel.autopilot_speed_indicated_hold,
+      series: [simProps.autopilot_speed_indicated_target, simProps.speed_indicated_knots],
+      visible: false,
+    },
+    {
+      engaged: () => flightModel.autopilot_altitude_hold,
+      series: [simProps.autopilot_altitude_target, simProps.altitude_ft],
+      visible: false,
+    },
+  ]
+  syncAutopilotPlots = () => {
+    for (const plot of autopilotPlots) {
+      const engaged = flightModel.autopilot_master_switch && plot.engaged()
+      if (engaged === plot.visible) continue
+      // Replace any standalone actual-value plot with its target/actual pair.
+      if (engaged) context.plotView(plot.series[1], false)
+      context.plotView(plot.series, engaged)
+      plot.visible = engaged
+    }
+  }
+
   const demonstrationStartedAt = Date.now()
   const backgroundTasks: Promise<void>[] = []
   let takeoffSequence: Promise<void> = Promise.resolve()
@@ -35,42 +84,81 @@ export async function main(context: ScriptContext) {
   })
 
   const takeoffSteps = [
-    'Engines stable · N1 ≥ 35%',
-    'Take-off thrust · 90%',
-    'Airspeed cross-check · 80 kt',
-    'V1 · 130 kt',
-    'Rotate · 150 kt',
-    'Positive climb · 400 ft/min',
-    'Climb guidance · 1,000 ft',
-    'Flaps 10 · 210 kt',
-    'Flaps 5 · 1,500 ft / 220 kt',
-    'Flaps 1 · 2,000 ft / 235 kt',
-    'Flaps up · 2,500 ft / 245 kt',
+    { action: 'Engines stable', condition: 'All N1 ≥ 35%' },
+    { action: 'Thrust 90%', condition: 'Engines stable' },
+    { action: 'Cross-check', condition: 'IAS ≥ 80 kt' },
+    { action: 'V1 callout', condition: 'IAS ≥ 130 kt' },
+    { action: 'Rotate', condition: 'IAS ≥ 150 kt' },
+    { action: 'Gear up', condition: 'Airborne · VS > 400 ft/min' },
+    { action: 'Climb guidance', condition: 'ALT ≥ 1,000 ft' },
+    { action: 'Flaps 10', condition: 'ALT ≥ 1,000 ft · IAS ≥ 210 kt' },
+    { action: 'Flaps 5', condition: 'ALT ≥ 1,500 ft · IAS ≥ 220 kt' },
+    { action: 'Flaps 1', condition: 'ALT ≥ 2,000 ft · IAS ≥ 235 kt' },
+    { action: 'Flaps up', condition: 'ALT ≥ 2,500 ft · IAS ≥ 245 kt' },
   ]
   let takeoffActiveIndex: number | null = 0
+  type TourEntry = { label: string; parent: number; done: boolean }
+  const tourEntries: TourEntry[] = []
+  let activeTour: TourEntry | undefined
+  const tourParent = () => takeoffActiveIndex ?? takeoffSteps.length
+  const escapeHtml = (text: string) =>
+    text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const renderTour = (entry: TourEntry) =>
+    `<span class="demo-tour-symbol" aria-label="${entry.done ? 'Done' : 'Showing'}">${entry.done ? '✓' : '▸'}</span>${escapeHtml(entry.label)}`
+  const renderChildren = (parent: number) => {
+    const entries = tourEntries.filter((entry) => entry.parent === parent)
+    if (!entries.length) return ''
+    if (parent !== tourParent() && entries.every((entry) => entry.done)) {
+      return `<tr class="demo-tour-row"><td></td><td colspan="2"><details><summary>✓ ${entries.length} demonstrations</summary>${entries.map((entry) => `<div>${renderTour(entry)}</div>`).join('')}</details></td></tr>`
+    }
+    return entries
+      .map(
+        (entry) =>
+          `<tr class="demo-tour-row ${entry.done ? '' : 'demo-tour-active'}"><td></td><td colspan="2">${renderTour(entry)}</td></tr>`,
+      )
+      .join('')
+  }
   const takeoffProgress = () =>
     takeoffSteps
-      .map((label, index) => {
-        if (takeoffActiveIndex === null || index < takeoffActiveIndex) return `- ✓ ${label}`
-        if (index === takeoffActiveIndex) return `- ${accent(`**▶ ${label}**`)}`
-        return `- · ${label}`
+      .map(({ action, condition }, index) => {
+        const done = takeoffActiveIndex === null || index < takeoffActiveIndex
+        const waiting = index === takeoffActiveIndex
+        const next = takeoffActiveIndex !== null && index === takeoffActiveIndex + 1
+        const state = done ? '✓' : waiting ? '◷' : next ? '→' : '·'
+        const stateLabel = done ? 'Done' : waiting ? 'Waiting' : next ? 'Next' : 'Pending'
+        const background = waiting
+          ? 'panelActive'
+          : done
+            ? 'panelHeaderBackground'
+            : 'panelContentBackground'
+        return `<tr class="demo-takeoff-parent ${waiting ? 'demo-takeoff-waiting' : ''}" style="background:rgb(var(--color-${background}));color:${waiting ? '#fff' : 'rgb(var(--color-secondary))'}"><td title="${stateLabel}" aria-label="${stateLabel}">${state}</td><td>${action}</td><td>${condition}</td></tr>${renderChildren(index)}`
       })
-      .join('\n')
-  const withTakeoffSequence = (subtitle: string, message = '') =>
-    `**Take-off sequence**\n${takeoffProgress()}\n\n<br>\n\n---\n\n**${subtitle}**${message ? `\n\n${message}` : ''}`
-  let currentPromptTitle = 'Overview'
-  let currentPromptMessage = ''
-  const announce = (title: string, message = '') => {
-    currentPromptTitle = title
-    currentPromptMessage = message
-    return context.notifyUser('Demonstration', withTakeoffSequence(title, message), 0, {
+      .join('')
+  const withTakeoffSequence = () => {
+    const afterTakeoff = tourEntries.some((entry) => entry.parent === takeoffSteps.length)
+      ? `<tr class="demo-takeoff-parent"><td></td><td colspan="2">After take-off</td></tr>${renderChildren(takeoffSteps.length)}`
+      : ''
+    return `<table class="demo-takeoff-table"><caption>Take-off &amp; simulator tour · demo settings</caption><thead><tr><th scope="col" aria-label="State"></th><th scope="col">Action</th><th scope="col">Condition</th></tr></thead><tbody>${takeoffProgress()}${afterTakeoff}</tbody></table>`
+  }
+  const refreshChecklist = () =>
+    context.notifyUser('Demonstration', withTakeoffSequence(), 0, {
       replace: true,
     })
+  const announce = (title: string, _message = '') => {
+    if (activeTour) activeTour.done = true
+    activeTour = { label: title, parent: tourParent(), done: false }
+    tourEntries.push(activeTour)
+    return refreshChecklist()
   }
   const replacePrompt = announce
   const step = async (action: () => unknown, delay = stepDelay) => {
     action()
     await waitFor(delay)
+    if (activeTour) {
+      activeTour.done = true
+      activeTour = undefined
+      await refreshChecklist()
+    }
   }
   const waitUntil = async (elapsedMs: number) => {
     await waitFor(Math.max(0, elapsedMs - (Date.now() - demonstrationStartedAt)))
@@ -81,18 +169,20 @@ export async function main(context: ScriptContext) {
     message: string,
     action?: () => void | Promise<void>,
   ) => {
-    await waitUntil(index * frameDuration)
+    // Start these tours as soon as the ground roll allows, without fixed idle gaps.
+    if (index !== 2 && index !== 3) await waitUntil(index * frameDuration)
     await announce(title, message)
     await action?.()
   }
   const showTakeoffProgress = async (activeIndex: number | null) => {
     takeoffActiveIndex = activeIndex
-    await context.notifyUser(
-      'Demonstration',
-      withTakeoffSequence(currentPromptTitle, currentPromptMessage),
-      0,
-      { replace: true },
-    )
+    // An unfinished tour item follows the live milestone; completed items stay put.
+    tourEntries
+      .filter((entry) => !entry.done)
+      .forEach((entry) => {
+        entry.parent = tourParent()
+      })
+    await refreshChecklist()
   }
 
   const runTakeoff = async () => {
@@ -106,25 +196,25 @@ export async function main(context: ScriptContext) {
       600,
       100,
     )
-    resolveN1Stable()
-
     await showTakeoffProgress(1)
     flightModel.set_engine_throttle_position(0.9)
     context.checkPoint('Take-off thrust set after N1 stabilization')
+    await showTakeoffProgress(2)
+    resolveN1Stable()
 
     await waitForCondition(() => flightModel.speed_indicated_knots >= 80, 300, 100)
-    await showTakeoffProgress(2)
     context.checkPoint('80 kt — airspeed cross-check')
+    await showTakeoffProgress(3)
 
     await waitForCondition(() => flightModel.speed_indicated_knots >= 130, 300, 100)
-    await showTakeoffProgress(3)
     context.checkPoint('V1 reached')
+    await showTakeoffProgress(4)
 
     await waitForCondition(() => flightModel.speed_indicated_knots >= 150, 300, 100)
     rotationSpeed = flightModel.speed_indicated_knots
-    await showTakeoffProgress(4)
     flightModel.set_elevator_position(-0.25)
     context.checkPoint(`Rotation initiated at ${rotationSpeed.toFixed(0)} kt`)
+    await showTakeoffProgress(5)
 
     await waitForCondition(
       () => flightModel.vertical_speed_ftmin > 400 && !flightModel.weight_on_wheel,
@@ -132,7 +222,6 @@ export async function main(context: ScriptContext) {
       100,
     )
     resolveAirborne()
-    await showTakeoffProgress(5)
     context.plotView(
       [simProps.engine_1_n1, simProps.engine_2_n1, simProps.engine_3_n1, simProps.engine_4_n1],
       false,
@@ -143,69 +232,74 @@ export async function main(context: ScriptContext) {
     flightModel.set_landing_gear_selector_position(simControls.B747GearSelector.UP)
     flightModel.set_engine_throttle_position(0.85)
     context.checkPoint('Positive climb confirmed — gear retracted')
+    await showTakeoffProgress(6)
 
     await waitForCondition(() => flightModel.altitude_ft >= 1000, 500, 100)
-    await showTakeoffProgress(6)
     flightModel.set_autopilot_pitch_hold(false)
     flightModel.set_autopilot_vertical_speed_hold(true)
     flightModel.set_autopilot_heading_hold(true)
     flightModel.set_autopilot_speed_indicated_hold(true)
     flightModel.set_elevator_position(0)
     flightModel.set_engine_throttle_position(0.8)
+    await showTakeoffProgress(7)
 
     await waitForCondition(
       () => flightModel.altitude_ft >= 1000 && flightModel.speed_indicated_knots >= 210,
       400,
       100,
     )
-    await showTakeoffProgress(7)
     flightModel.set_flaps_selector_position(simControls.B747FlapSelector.TEN)
+    await showTakeoffProgress(8)
 
     await waitForCondition(
       () => flightModel.altitude_ft >= 1500 && flightModel.speed_indicated_knots >= 220,
       400,
       100,
     )
-    await showTakeoffProgress(8)
     flightModel.set_flaps_selector_position(simControls.B747FlapSelector.FIVE)
+    await showTakeoffProgress(9)
 
     await waitForCondition(
       () => flightModel.altitude_ft >= 2000 && flightModel.speed_indicated_knots >= 235,
       400,
       100,
     )
-    await showTakeoffProgress(9)
     flightModel.set_flaps_selector_position(simControls.B747FlapSelector.ONE)
+    await showTakeoffProgress(10)
 
     await waitForCondition(
       () => flightModel.altitude_ft >= 2500 && flightModel.speed_indicated_knots >= 245,
       400,
       100,
     )
-    await showTakeoffProgress(10)
     flightModel.set_flaps_selector_position(simControls.B747FlapSelector.ZERO)
     flightModel.set_autopilot_vertical_speed_hold(false)
     flightModel.set_autopilot_altitude_hold(true)
     context.checkPoint('Take-off and flap-retraction sequence completed')
     await showTakeoffProgress(null)
-    context.dataDisplayReset()
-    context.plotView(simProps.speed_indicated_knots, true)
-    context.plotView(simProps.vertical_speed_ftmin, true)
-    context.plotView(simProps.altitude_ft, true)
+    syncAutopilotPlots()
   }
 
   await frame(
     0,
     '1 · Flight Simulation and Training',
-    `A B747 take-off will demonstrate ${accent('scenario-based training')}, live analysis, configurable displays and classroom tools.`,
+    'B747 take-off · live data · displays · classroom. Automatic tour.',
     async () => {
+      await announce('Configuration · flaps 20')
       await step(() => flightModel.set_flaps_selector_position(simControls.B747FlapSelector.TWENTY))
+      await announce('Autopilot · master')
       await step(() => flightModel.set_autopilot_master_switch(true))
+      await announce('Autopilot · auto trim')
       await step(() => flightModel.set_autopilot_auto_trim(true))
+      await announce('Speed target · 250 kt')
       await step(() => flightModel.set_autopilot_speed_indicated_target(250))
+      await announce('Altitude target · 3,000 ft')
       await step(() => flightModel.set_autopilot_altitude_target(3000))
+      await announce('Heading target · 290°')
       await step(() => flightModel.set_autopilot_heading_target(290))
+      await announce('Vertical speed target · 1,500 ft/min')
       await step(() => flightModel.set_autopilot_vertical_speed_target(1500))
+      await announce('Pitch target · 10°')
       await step(() => flightModel.set_autopilot_pitch_target(10))
       context.checkPoint('Demonstration started — aircraft configured')
     },
@@ -216,83 +310,67 @@ export async function main(context: ScriptContext) {
     '2 · Direct Flight Controls',
     `The ${accent('Joystick')} view provides throttle, primary flight controls and trim.`,
     async () => {
-      context.setTab('flight-model', 'Joystick')
+      await announce('Joystick · controls and trim')
+      await step(() => context.setTab('flight-model', 'Joystick'), 1000)
       await announce(
         'Realtime monitoring',
         'Engine N1, throttle, airspeed and altitude will be plotted.',
       )
       await step(() => context.setTab('realtime', 'Real-Time-Data'))
+      await announce('Live data · flaps')
       await step(() => context.dataView(simProps.flaps_selector_position, true))
+      await announce('Live data · landing gear')
       await step(() => context.dataView(simProps.landing_gear_selector_position, true))
+      await announce('Plot · engine N1')
       await step(() =>
         context.plotView(
           [simProps.engine_1_n1, simProps.engine_2_n1, simProps.engine_3_n1, simProps.engine_4_n1],
           true,
         ),
       )
+      await announce('Plot · throttle')
       await step(() => context.plotView(simProps.engine_throttle_position, true))
+      await announce('Plot · indicated speed')
       await step(() => context.plotView(simProps.speed_indicated_knots, true))
+      await announce('Plot · altitude')
       await step(() => context.plotView(simProps.altitude_ft, true))
       await announce(
         'Engine stabilization',
         `Thrust will move to ${accent('40%')} until all four engines are stable.`,
       )
       flightModel.set_engine_throttle_position(0.4)
+      if (activeTour) activeTour.done = true
+      activeTour = undefined
       takeoffSequence = runTakeoff()
     },
   )
 
-  await frame(
-    2,
-    '3 · Visual Scene and Layouts',
-    `The Focus and Pilot layouts will be shown before returning to ${accent('Instructor')}.`,
-    async () => {
-      await n1Stable
-      const layoutSteps = [
-        { name: 'Focus', layout: context.layoutTypes.FOCUS },
-        { name: 'Pilot', layout: context.layoutTypes.PILOT },
-        { name: 'Instructor', layout: context.layoutTypes.INSTRUCTOR },
-      ]
-      for (const layoutStep of layoutSteps) {
-        const layoutList = layoutSteps
-          .map(({ name }) =>
-            name === layoutStep.name ? `- ${accent(`**${name}**`)}` : `- ${name}`,
-          )
-          .join('\n')
-        await replacePrompt('Layout demonstration', layoutList)
-        await step(() => context.setLayout(layoutStep.layout), 1000)
-      }
+  await n1Stable
+  await frame(2, '3 · Visual Scene and Layouts', 'Ground roll · layouts and themes.', async () => {
+    const layoutSteps = [
+      { name: 'Focus', layout: context.layoutTypes.FOCUS },
+      { name: 'Pilot', layout: context.layoutTypes.PILOT },
+      { name: 'Instructor', layout: context.layoutTypes.INSTRUCTOR },
+    ]
+    for (const layoutStep of layoutSteps) {
+      await replacePrompt(`Layout · ${layoutStep.name}`)
+      await step(() => context.setLayout(layoutStep.layout), 1000)
+    }
 
-      const themeSteps = [
-        { name: 'Light', dark: false },
-        { name: 'Dark', dark: true },
-      ]
-      for (const themeStep of themeSteps) {
-        const themeList = themeSteps
-          .map(({ name }) => (name === themeStep.name ? `- ${accent(`**${name}**`)}` : `- ${name}`))
-          .join('\n')
-        await replacePrompt('Theme demonstration', themeList)
-        await step(() => context.setTheme(themeStep.dark), 1000)
-      }
-
-      const outsideViewTask = (async () => {
-        await airborne
-        await announce('Outside view available', 'The 3D scene and map will now open.')
-        await announce('3D world')
-        await step(() => context.setVisuals(true), 1000)
-        await announce('2D navigation map')
-        await step(() => context.setMap(true), 1000)
-        await announce('Close navigation map')
-        await step(() => context.setMap(false), 1000)
-      })()
-      backgroundTasks.push(outsideViewTask)
-    },
-  )
+    const themeSteps = [
+      { name: 'Light', dark: false },
+      { name: 'Dark', dark: true },
+    ]
+    for (const themeStep of themeSteps) {
+      await replacePrompt(`Theme · ${themeStep.name}`)
+      await step(() => context.setTheme(themeStep.dark), 1000)
+    }
+  })
 
   await frame(
     3,
     '4 · Instrument Displays',
-    `Matching elements of the ${accent('PFD')} and six-instrument view will appear together.`,
+    'PFD + six instruments · matching displays.',
     async () => {
       simulation.set_pfd_display(false)
       simulation.set_six_instruments_display(false)
@@ -353,87 +431,104 @@ export async function main(context: ScriptContext) {
       simulation.set_pfd_display(true)
       simulation.set_six_instruments_display(true)
       for (const instrument of instrumentSteps) {
-        const instrumentList = instrumentSteps
-          .map(({ name }) =>
-            name === instrument.name ? `- ${accent(`**${name}**`)}` : `- ${name}`,
-          )
-          .join('\n')
-        await replacePrompt('PFD and six instruments', instrumentList)
-        await step(() => instrument.setters.forEach((setter) => setter(true)), 1000)
+        await replacePrompt(`Instruments · ${instrument.name}`)
+        await step(() => instrument.setters.forEach((setter) => setter(true)), 2000)
       }
     },
   )
 
+  // Keep one owner of tour prompts; the take-off task only updates schedule rows.
+  await airborne
+  await announce('Airflow', 'Live angle of attack · airspeed · pitch · flaps.')
+  context.setTab('realtime', 'Airflow')
+  try {
+    await waitFor(8000)
+    context.checkPoint('Airflow view demonstrated during climb')
+  } finally {
+    context.setTab('realtime', 'Real-Time-Data')
+  }
+
+  // Explain before switching: Whiteboard shares the Prompt panel.
+  await announce('Whiteboard', 'Shared sketches · brush sizes · colors · undo / redo.')
+  await waitFor(3000)
+  context.setTab('prompt', 'whiteboard')
+  try {
+    await waitFor(8000)
+    context.checkPoint('Whiteboard canvas and drawing tools shown')
+  } finally {
+    context.setTab('prompt', 'Prompt')
+  }
+
+  await announce('3D world')
+  await step(() => context.setVisuals(true), 2000)
+  await announce('Navigation map')
+  await step(() => context.setMap(true), 2000)
+  await announce('Navigation map · close')
+  await step(() => context.setMap(false), 1000)
+
   await frame(
     4,
     '5 · Flexible Scenario-based Lessons',
-    `The ${accent('Learning Modules')} workspace brings lesson planning, progress monitoring and the code editor together.`,
+    'Lessons · TypeScript scripts · progress.',
     () => {
       context.setTab('learning-modules', 'Learning-Modules')
     },
   )
 
-  await frame(
-    5,
-    '6 · Autopilot',
-    `Target and actual bank will be plotted while the autopilot commands ${accent('30°')} and returns to wings level.`,
-    () => {
-      const task = (async () => {
-        await airborne
-        context.setTab('realtime', 'Real-Time-Data')
-        context.plotView([simProps.autopilot_bank_target, simProps.bank_deg], true)
-        flightModel.set_autopilot_bank_hold(true)
-        flightModel.set_autopilot_bank_target(30)
-        await waitForCondition(() => Math.abs(flightModel.bank_deg - 30) < 1, 500, 100)
-        flightModel.set_autopilot_bank_target(0)
-        await waitForCondition(() => Math.abs(flightModel.bank_deg) < 1, 500, 100)
-        await waitFor(1000)
-        context.plotView([simProps.autopilot_bank_target, simProps.bank_deg], false)
-        context.checkPoint('Autopilot bank guidance demonstrated')
-      })()
-      backgroundTasks.push(task)
-    },
-  )
-
-  await frame(
-    6,
-    '7 · Simulation Time Control',
-    `The simulation will pause, resume and cycle through ${accent('three time rates')}.`,
-    async () => {
-      const timeControlSteps = [
-        { label: 'Pause', action: () => simulation.set_simulation_pause(true), delay: 2500 },
-        { label: 'Resume', action: () => simulation.set_simulation_pause(false), delay: 1500 },
-        { label: 'Speed · 0.5×', action: () => simulation.set_simulation_speed(0.5), delay: 2000 },
-        { label: 'Speed · 2×', action: () => simulation.set_simulation_speed(2), delay: 2000 },
-        { label: 'Speed · 10×', action: () => simulation.set_simulation_speed(10), delay: 2000 },
-        { label: 'Speed · 1×', action: () => simulation.set_simulation_speed(1), delay: 2000 },
-      ]
-      const showTimeControlProgress = async (activeIndex: number | null) => {
-        const progress = timeControlSteps
-          .map(({ label }, index) => {
-            if (activeIndex === null || index < activeIndex) return `- ✓ ${label}`
-            if (index === activeIndex) return `- ${accent(`**▶ ${label}**`)}`
-            return `- · ${label}`
-          })
-          .join('\n')
-        await replacePrompt('Simulation time control', progress)
+  await frame(5, '6 · Autopilot', 'Bank target vs actual · 30° → level.', () => {
+    const task = (async () => {
+      await airborne
+      const bankEntry: TourEntry = {
+        label: 'Autopilot · bank 30°',
+        parent: tourParent(),
+        done: false,
       }
-
-      for (const [index, timeControlStep] of timeControlSteps.entries()) {
-        await showTimeControlProgress(index)
-        await step(timeControlStep.action, timeControlStep.delay)
+      tourEntries.push(bankEntry)
+      await refreshChecklist()
+      context.setTab('realtime', 'Real-Time-Data')
+      flightModel.set_autopilot_bank_hold(true)
+      flightModel.set_autopilot_bank_target(30)
+      await waitForCondition(() => Math.abs(flightModel.bank_deg - 30) < 1, 500, 100)
+      bankEntry.done = true
+      const levelEntry: TourEntry = {
+        label: 'Autopilot · wings level',
+        parent: tourParent(),
+        done: false,
       }
-      await showTimeControlProgress(null)
-      context.checkPoint('Simulation time controls demonstrated')
-    },
-  )
+      tourEntries.push(levelEntry)
+      await refreshChecklist()
+      flightModel.set_autopilot_bank_target(0)
+      await waitForCondition(() => Math.abs(flightModel.bank_deg) < 1, 500, 100)
+      await waitFor(1000)
+      levelEntry.done = true
+      await refreshChecklist()
+      context.checkPoint('Autopilot bank guidance demonstrated')
+    })()
+    backgroundTasks.push(task)
+  })
+
+  await frame(6, '7 · Simulation Time Control', 'Pause · resume · 0.5× / 2× / 10×.', async () => {
+    const timeControlSteps = [
+      { label: 'Pause', action: () => simulation.set_simulation_pause(true), delay: 2500 },
+      { label: 'Resume', action: () => simulation.set_simulation_pause(false), delay: 1500 },
+      { label: 'Speed · 0.5×', action: () => simulation.set_simulation_speed(0.5), delay: 2000 },
+      { label: 'Speed · 2×', action: () => simulation.set_simulation_speed(2), delay: 2000 },
+      { label: 'Speed · 10×', action: () => simulation.set_simulation_speed(10), delay: 2000 },
+      { label: 'Speed · 1×', action: () => simulation.set_simulation_speed(1), delay: 2000 },
+    ]
+    for (const timeControlStep of timeControlSteps) {
+      await replacePrompt(`Simulation · ${timeControlStep.label}`)
+      await step(timeControlStep.action, timeControlStep.delay)
+    }
+    context.checkPoint('Simulation time controls demonstrated')
+  })
 
   await frame(
     7,
     '8 · Classroom and Handoff',
-    `The ${accent('Classroom')} view provides exercise assignment, checkpoints, status monitoring and assistance requests.`,
+    'Assignments · checkpoints · peer status · raised hands.',
     async () => {
-      context.setLayout(context.layoutTypes.PILOT)
+      context.setLayout(context.layoutTypes.INSTRUCTOR)
       await waitUntil(90_000)
       await takeoffSequence
       await Promise.all(backgroundTasks)
@@ -445,4 +540,7 @@ export async function main(context: ScriptContext) {
       )
     },
   )
+  if (activeTour) activeTour.done = true
+  activeTour = undefined
+  await refreshChecklist()
 }
