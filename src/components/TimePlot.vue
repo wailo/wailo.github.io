@@ -49,6 +49,7 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick, PropType } from 'vue'
 
 import uPlot from 'uplot'
+import { PlotBuffer } from '../PlotBuffer'
 import 'uplot/dist/uPlot.min.css'
 
 import type { SimulationProperties } from '../wasm/siminterface'
@@ -66,11 +67,6 @@ const emit = defineEmits<{
 interface PlotDefinition {
   id: string
   sourceIds: string[]
-}
-
-interface CircularBuffer {
-  y: Float64Array
-  index: number
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -123,13 +119,8 @@ const plots = new Map<string, uPlot>()
 
 const plotDefinitions = ref<PlotDefinition[]>([])
 
-const dataBuffers = new Map<string, CircularBuffer>()
-
-const renderBuffers = new Map<string, Float64Array>()
-
-const xBuffers = new Map<string, Int32Array>()
-
-let MAX_POINTS = 0
+const plotBuffers = new Map<string, PlotBuffer>()
+const MAX_POINTS = Math.max(1, Math.ceil(props.max_duration_ms / props.update_intervals))
 
 let plotResizeObserver: ResizeObserver | null = null
 
@@ -204,7 +195,7 @@ function addPlot(...sourceIds: string[]) {
   }
 
   // init all buffers
-  filtered.forEach(initBuffer)
+  plotBuffers.set(plotId, new PlotBuffer(filtered, MAX_POINTS))
 
   plotDefinitions.value.push({
     id: plotId,
@@ -219,6 +210,7 @@ function addPlot(...sourceIds: string[]) {
 }
 
 function removePlot(plotId: string) {
+  plotBuffers.delete(plotId)
   plotDefinitions.value = plotDefinitions.value.filter((p) => p.id !== plotId)
   emit(
     'plotsChange',
@@ -251,8 +243,10 @@ function replacePlot(plotId: string, sourceIds: string[]) {
   )
   if (duplicateIndex >= 0) {
     plotDefinitions.value.splice(index, 1)
+    plotBuffers.delete(plotId)
   } else {
-    filtered.forEach(initBuffer)
+    plotBuffers.delete(plotId)
+    plotBuffers.set(nextId, new PlotBuffer(filtered, MAX_POINTS))
     plotDefinitions.value.splice(index, 1, { id: nextId, sourceIds: filtered })
   }
   emit(
@@ -273,14 +267,8 @@ function resetPlot(plotId: string) {
     return
   }
 
-  plotDef.sourceIds.forEach((sourceId) => {
-    const buf = dataBuffers.get(sourceId)
-
-    if (!buf) return
-
-    buf.y.fill(0)
-    buf.index = 0
-  })
+  plotBuffers.get(plotId)?.reset()
+  updatePlot(plotDef)
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -376,7 +364,7 @@ async function recreateAllPlots() {
             time: false,
 
             range: () => {
-              const first = dataBuffers.get(plotDef.sourceIds[0])
+              const first = plotBuffers.get(plotDef.id)
 
               if (!first) {
                 return [0, MAX_POINTS]
@@ -443,6 +431,7 @@ async function recreateAllPlots() {
     )
 
     plots.set(plotDef.id, plot)
+    updatePlot(plotDef)
   })
 
   plotResizeObserver = new ResizeObserver(() => {
@@ -480,21 +469,6 @@ async function recreateAllPlots() {
 // BUFFERS
 // -------------------------------------------------------------------------------------------------
 
-function initBuffer(name: string) {
-  if (dataBuffers.has(name)) {
-    return
-  }
-
-  dataBuffers.set(name, {
-    y: new Float64Array(MAX_POINTS),
-    index: 0,
-  })
-
-  renderBuffers.set(name, new Float64Array(MAX_POINTS))
-
-  xBuffers.set(name, new Int32Array(MAX_POINTS))
-}
-
 // -------------------------------------------------------------------------------------------------
 // TICK
 // -------------------------------------------------------------------------------------------------
@@ -509,12 +483,8 @@ function tick() {
   }
 
   // update buffers
-  dataBuffers.forEach((buf, sourceId) => {
-    const writeIndex = buf.index % MAX_POINTS
-
-    buf.y[writeIndex] = Number(props.sources[sourceId]?.inputValue ?? 0)
-
-    buf.index++
+  plotList.value.forEach((plotDef) => {
+    plotBuffers.get(plotDef.id)?.sample((id) => Number(props.sources[id]?.inputValue ?? 0))
   })
 
   // render plots
@@ -532,56 +502,8 @@ function updatePlot(plotDef: PlotDefinition) {
     return
   }
 
-  const firstBuf = dataBuffers.get(plotDef.sourceIds[0])
-
-  if (!firstBuf) {
-    return
-  }
-
-  const len = Math.min(firstBuf.index, MAX_POINTS)
-
-  const start = firstBuf.index >= MAX_POINTS ? firstBuf.index % MAX_POINTS : 0
-
-  const xBuf = xBuffers.get(plotDef.sourceIds[0])
-
-  if (!xBuf) {
-    return
-  }
-
-  // build X
-  const base = firstBuf.index - len
-
-  for (let i = 0; i < len; i++) {
-    xBuf[i] = base + i
-  }
-
-  const aligned: uPlot.AlignedData = [xBuf.subarray(0, len)]
-
-  // build Y arrays
-  plotDef.sourceIds.forEach((sourceId) => {
-    const buf = dataBuffers.get(sourceId)
-    const render = renderBuffers.get(sourceId)
-
-    if (!buf || !render) {
-      // aligned.push([])
-      return
-    }
-
-    if (buf.index >= MAX_POINTS) {
-      const tailLen = MAX_POINTS - start
-
-      render.set(buf.y.subarray(start), 0)
-
-      render.set(buf.y.subarray(0, start), tailLen)
-    } else {
-      render.set(buf.y.subarray(0, len), 0)
-    }
-
-    aligned.push(render.subarray(0, len))
-  })
-
-  // ✅ supports any number of Y buffers
-  u.setData(aligned)
+  const buffer = plotBuffers.get(plotDef.id)
+  if (buffer) u.setData(buffer.data() as uPlot.AlignedData)
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -596,18 +518,12 @@ function reset() {
   plotDefinitions.value = []
   emit('plotsChange', [])
 
-  dataBuffers.clear()
-
-  renderBuffers.clear()
-
-  xBuffers.clear()
+  plotBuffers.clear()
 }
 
 function reset_x_axis() {
-  dataBuffers.forEach((buf) => {
-    buf.y.fill(0)
-    buf.index = 0
-  })
+  plotBuffers.forEach((buffer) => buffer.reset())
+  plotList.value.forEach(updatePlot)
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -615,8 +531,6 @@ function reset_x_axis() {
 // -------------------------------------------------------------------------------------------------
 
 onMounted(() => {
-  MAX_POINTS = Math.ceil(props.max_duration_ms / props.update_intervals)
-
   window.addEventListener('theme-change', scheduleRecreateAllPlots)
 })
 
