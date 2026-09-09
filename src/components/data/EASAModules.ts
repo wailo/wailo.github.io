@@ -7,13 +7,6 @@ export type ModuleEntry = {
 export type ModuleTree = Record<string, ModuleEntry[]>
 
 export const moduleTree: ModuleTree = {
-  Exams: [
-    {
-      name: 'Basic Flight Knowledge Test',
-      path: '/LearningModules/basic_flight_knowledge_test.ts',
-      description: 'Assess knowledge of the four forces, primary controls and basic turn geometry.',
-    },
-  ],
   Demo: [
     { name: 'Intro', path: '/LearningModules/demo.ts' },
     { name: 'Landing', path: '/LearningModules/landing.ts' },
@@ -26,6 +19,11 @@ export const moduleTree: ModuleTree = {
       path: '/LearningModules/stall.ts',
       description:
         'Observe how Flaps 10 affects critical AoA, lift coefficient and flow separation.',
+    },
+    {
+      name: 'Basic Flight Knowledge Test',
+      path: '/LearningModules/basic_flight_knowledge_test.ts',
+      description: 'Asssessment demo, based on MCQs',
     },
   ],
   'Ground Training Seriese': [
