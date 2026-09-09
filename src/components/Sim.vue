@@ -1,5 +1,4 @@
 <template>
-  <!-- <div  class="container max-w-full h-screen gap-2 p-5 bg-simBackground"> -->
 
   <div
     ref="fullscreenContainer"
@@ -8,7 +7,6 @@
   >
     <div
       v-if="!sim_module_loaded"
-      data-layout="focus instructor pilot"
       class="sim-loading-overlay absolute inset-0 z-50 flex items-center justify-center bg-primary text-secondary"
       role="status"
       aria-live="polite"
@@ -60,8 +58,6 @@
           :active="
             FlightSimModule?.simulation.simulation_pause || FlightSimModule?.flightModel.damaged
           "
-          class="panel-cockpit"
-          data-layout="focus instructor pilot"
         >
           <template #Cockpit>
             <div class="relative w-full h-full overflow-hidden">
@@ -117,8 +113,7 @@
           panel-id="realtime"
           @header-dblclick="togglePanelMaximize"
           :status="`${1000 / update_interval_ms} HZ`"
-          class="panel-realtimedata gap-1"
-          data-layout="focus instructor pilot"
+          class="gap-1"
         >
           <template #Real-Time-Data display="Real Time Data">
             <SimDataDisplay
@@ -163,8 +158,6 @@
             FlightSimModule.simulation.simulation_speed != 1
           "
           :flash="FlightSimModule.simulation.simulation_pause"
-          class="panel-simulationcontrols"
-          data-layout="focus"
         >
           <template #Simulation>
             <div v-if="sim_module_loaded" class="w-full h-full grid grid-cols-3 gap-1">
@@ -229,8 +222,6 @@
         <Panel
           panel-id="learning-modules"
           @header-dblclick="togglePanelMaximize"
-          class="panel-learningmodules"
-          data-layout="instructor"
           :status="scriptComponentStatus"
           :active="scriptComponentStatus != 'IDLE'"
         >
@@ -288,8 +279,6 @@
           v-if="sim_module_loaded"
           :status="FlightSimModule.flightModel.autopilot_master_switch ? 'Engaged' : 'Disengaged'"
           :active="FlightSimModule.flightModel.autopilot_master_switch"
-          class="panel-autopilot"
-          data-layout="instructor pilot"
         >
           <template #Autopilot>
             <div class="w-full h-full">
@@ -320,8 +309,6 @@
           @header-dblclick="togglePanelMaximize"
           :status="activeAircraftType"
           v-if="sim_module_loaded"
-          class="panel-flightmodel"
-          data-layout="instructor pilot"
         >
           <template #Flight-Model>
             <div class="w-full min-w-0 self-start">
@@ -515,8 +502,6 @@
           panel-id="classroom"
           @header-dblclick="togglePanelMaximize"
           :status="classRoomComponentState ? classRoomId || 'Online' : 'Offline'"
-          class="panel-classroom"
-          data-layout="instructor pilot"
           :active="classRoomComponentState"
           :flash="classroomHandAttention"
         >
@@ -586,8 +571,6 @@
         <Panel
           panel-id="prompt"
           @header-dblclick="togglePanelMaximize"
-          class="panel-userprompt"
-          data-layout="focus instructor pilot"
           :status="userActionPending ? 'ACTION' : 'READY'"
           :active="userActionPending"
           :flash="userActionPending"
@@ -875,7 +858,6 @@ const activeAircraftType = computed(() => {
 
   return modelName || `UNKNOWN (${activeModel})`
 })
-// let utilsFuncs: any;
 let sim_module_loaded = ref(false)
 const loadingStatus = ref('Preparing download')
 const loadingProgress = ref<number | null>(null)
@@ -974,7 +956,6 @@ const editorComponentRef = ref<InstanceType<typeof Editor> | null>(null) // Use 
 const dataDisplayRef = ref<InstanceType<typeof SimDataDisplay> | null>(null) // Use the SimDataDisplay component type
 const markdownRef = ref<InstanceType<typeof MarkDown> | null>(null) // Use the MarkDown component type
 const userActionPending = ref(false)
-// const accountsComponentRef = ref<InstanceType<typeof Accounts> | null>(null); // Use the Accounts component type
 const openLayersMapRef = ref<InstanceType<typeof OpenLayersMap> | null>(null) // Use the OpenLayersMap component type
 const whiteBoardComponentRef = ref<InstanceType<typeof Whiteboard> | null>(null)
 
@@ -1334,20 +1315,6 @@ onMounted(async () => {
         )
       }
 
-      // window.addEventListener(
-      //   'blur',
-      //   (_event) => {
-      //     // When defocuses (blur), revert back to canvas to enable keyboard controls
-      //     setTimeout(() => {
-      //       if (document.activeElement == canvas || isTextInput()) {
-      //         return
-      //       }
-      //       canvas?.focus()
-      //     }, 1000)
-      //   },
-      //   true,
-      // )
-
       document.addEventListener('fullscreenchange', onFullscreenChange)
       loadingProgress.value = 100
       loadingStatus.value = 'Ready'
@@ -1646,179 +1613,6 @@ function createRemoteManager(FlightSimModule: ExtendedMainModule) {
     opacity: 0.65;
     transform: none;
   }
-}
-
-/* Hide panels not participating in the active layout */
-.container.layout-focus > *:not([data-layout~='focus']) {
-  display: none;
-}
-
-.container.layout-instructor > *:not([data-layout~='instructor']) {
-  display: none;
-}
-
-.container.layout-pilot > *:not([data-layout~='pilot']) {
-  display: none;
-}
-
-/* ===== Instructor LAYOUT ===== */
-.container.layout-instructor {
-  display: grid;
-  grid-template-columns: var(--layout-column-1) var(--layout-column-2) var(--layout-column-3);
-  grid-template-rows: repeat(5, minmax(0, var(--layout-row-top-track))) repeat(
-      3,
-      minmax(0, var(--layout-row-bottom-track))
-    );
-  grid-template-areas:
-    'cockpit userprompt realtimedata'
-    'cockpit userprompt realtimedata'
-    'cockpit userprompt realtimedata'
-    'cockpit userprompt realtimedata'
-    'autopilot userprompt realtimedata'
-    'learningmodules classroom flightmodel'
-    'learningmodules classroom flightmodel'
-    'learningmodules classroom flightmodel';
-}
-
-/* ===== Pilot LAYOUT ===== */
-.container.layout-pilot {
-  display: grid;
-  grid-template-columns: var(--layout-column-1) var(--layout-column-2) var(--layout-column-3);
-  grid-template-rows: repeat(7, minmax(0, var(--layout-row-top-track-seven))) minmax(
-      0,
-      var(--layout-row-bottom)
-    );
-  grid-template-areas:
-    'cockpit userprompt realtimedata'
-    'cockpit userprompt realtimedata'
-    'cockpit userprompt realtimedata'
-    'cockpit userprompt realtimedata'
-    'cockpit userprompt flightmodel'
-    'cockpit userprompt flightmodel'
-    'cockpit userprompt flightmodel'
-    'autopilot classroom flightmodel';
-}
-
-/* ===== Focus LAYOUT ===== */
-.container.layout-focus {
-  display: grid;
-  grid-template-columns: var(--layout-column-1) var(--layout-column-2) var(--layout-column-3);
-  grid-template-rows: repeat(7, minmax(0, var(--layout-row-top-track-seven))) minmax(
-      0,
-      var(--layout-row-bottom)
-    );
-  grid-template-areas:
-    'realtimedata cockpit userprompt'
-    'realtimedata cockpit userprompt'
-    'realtimedata cockpit userprompt'
-    'realtimedata cockpit userprompt'
-    'realtimedata cockpit userprompt'
-    'realtimedata cockpit userprompt'
-    'realtimedata cockpit userprompt'
-    'realtimedata simulationcontrols userprompt';
-}
-
-/* Panel bindings */
-.panel-cockpit {
-  grid-area: cockpit;
-}
-
-.panel-realtimedata {
-  grid-area: realtimedata;
-}
-
-.panel-simulationcontrols {
-  grid-area: simulationcontrols;
-}
-
-.panel-learningmodules {
-  grid-area: learningmodules;
-}
-
-.panel-autopilot {
-  grid-area: autopilot;
-}
-
-.panel-flightmodel {
-  grid-area: flightmodel;
-}
-
-.panel-classroom {
-  grid-area: classroom;
-}
-
-.panel-userprompt {
-  grid-area: userprompt;
-}
-
-.layout-divider {
-  position: absolute;
-  z-index: 40;
-  margin: 0;
-  padding: 0;
-  touch-action: none;
-  opacity: 0.45;
-}
-
-.layout-divider:hover,
-.layout-divider:focus-visible {
-  opacity: 1;
-}
-
-.layout-divider-vertical {
-  top: 0.25rem;
-  bottom: 0.25rem;
-  width: 0.5rem;
-  transform: translateX(-50%);
-  cursor: col-resize;
-  border-left-width: 1px;
-  border-right-width: 1px;
-}
-
-.layout-divider-vertical span {
-  display: block;
-  width: 1px;
-  height: 2rem;
-  margin: calc(50vh - 1rem) auto 0;
-}
-
-.layout-divider-0 {
-  left: var(--layout-divider-1);
-}
-
-.layout-divider-1 {
-  left: var(--layout-divider-2);
-}
-
-.layout-divider-horizontal {
-  left: 0.25rem;
-  right: 0.25rem;
-  top: var(--layout-row-top);
-  height: 0.5rem;
-  transform: translateY(-50%);
-  cursor: row-resize;
-  border-top-width: 1px;
-  border-bottom-width: 1px;
-}
-
-.layout-divider-horizontal span {
-  display: block;
-  width: 2rem;
-  height: 1px;
-  margin: 0.2rem auto 0;
-}
-
-/* Splitpanes owns layout geometry; these overrides retire the legacy grid rules. */
-.container.layout-focus,
-.container.layout-instructor,
-.container.layout-pilot {
-  display: block;
-}
-
-.container.layout-focus > .sim-split-layout,
-.container.layout-instructor > .sim-split-layout,
-.container.layout-pilot > .sim-split-layout {
-  display: flex;
 }
 
 /* Canvas fit */
