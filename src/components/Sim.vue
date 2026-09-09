@@ -227,7 +227,7 @@
         >
           <template #Learning-Modules>
             <Editor
-              v-if="sim_module_loaded && dataDisplayRef && classroomComponentRef"
+              v-if="sim_module_loaded && dataDisplayRef"
               :context-object="FlightSimModule"
               :simProps="flightModelProps"
               :is-dark-mode="isDarkMode"
@@ -241,7 +241,7 @@
                 askQuestion: simFunctions.askQuestion,
                 cancelPromptInteractions: simFunctions.cancelPromptInteractions,
                 setLayout: simFunctions.setLayout,
-                checkPoint: classroomComponentRef.sendCheckPoint,
+                checkPoint: (content: string) => classroomComponentRef?.sendCheckPoint(content),
                 setVisuals: simFunctions.setVisuals,
                 setMap: simFunctions.setMap,
                 setTheme: simFunctions.setTheme,
