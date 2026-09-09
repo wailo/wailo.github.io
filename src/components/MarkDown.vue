@@ -396,6 +396,73 @@ defineExpose({ askQuestion, cancelPromptInteractions, reset, waitForUser, write 
 </script>
 
 <style>
+.markdown .demo-takeoff-waiting td {
+  animation: demo-takeoff-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes demo-takeoff-pulse {
+  50% {
+    box-shadow: inset 0 0 0 100vmax rgb(var(--color-panelHeaderBackground) / 0.35);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .markdown .demo-takeoff-waiting td {
+    animation: none;
+  }
+}
+
+.markdown .demo-takeoff-table {
+  border: 0;
+  width: 100%;
+  margin: 0 0 4px;
+  border-collapse: collapse;
+  font-size: 0.9em;
+  line-height: 1.2;
+}
+.markdown .demo-takeoff-table caption {
+  padding: 2px 4px;
+  text-align: left;
+  font-weight: 600;
+}
+.markdown .demo-takeoff-parent td:nth-child(2) {
+  font-weight: 600;
+}
+.markdown .demo-tour-row td:nth-child(2) {
+  padding-left: 12px;
+}
+.markdown .demo-tour-row {
+  color: rgb(var(--color-secondary) / 0.7);
+}
+.markdown .demo-tour-active {
+  background: rgb(var(--color-simInputBackground));
+  color: rgb(var(--color-secondary));
+}
+.markdown .demo-tour-symbol {
+  display: inline-block;
+  width: 1.5em;
+}
+.markdown .demo-tour-row summary {
+  cursor: pointer;
+}
+.markdown .demo-takeoff-table th,
+.markdown .demo-takeoff-table td {
+  padding: 2px 4px;
+  text-align: left;
+  vertical-align: top;
+  border: 0;
+}
+.markdown .demo-takeoff-table th {
+  border-bottom: 1px solid rgb(var(--color-simElementBorder));
+  background: rgb(var(--color-panelHeaderBackground));
+  color: rgb(var(--color-secondary));
+}
+.markdown .demo-takeoff-table th:first-child,
+.markdown .demo-takeoff-table td:first-child {
+  width: 1%;
+  white-space: nowrap;
+}
+
 .prompt-transcript {
   position: relative;
   height: 100%;
