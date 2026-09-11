@@ -129,10 +129,10 @@
 
     <section
       v-if="isInstructor && isOnline"
-      class="relative order-4 flex h-7 shrink-0 items-center gap-1 overflow-x-auto whitespace-nowrap px-2 text-secondary"
+      class="relative order-4 flex min-h-7 shrink-0 flex-wrap items-center gap-1 border-t border-panelBorder bg-panelHeaderBackground px-2 py-1 text-secondary"
     >
       <button
-        class="command-button"
+        class="command-button roster-primary-action"
         :disabled="!actionTargetIds.length"
         @click="openExercisePalette()"
       >
@@ -229,15 +229,27 @@
       <div class="roster-body flex min-h-0 flex-1 flex-col overflow-hidden">
         <div class="roster-list min-h-0 flex-1 overflow-auto">
           <section v-for="group in participantExerciseGroups" :key="group.key">
-            <div class="h-5 truncate px-2 pt-1 font-medium text-secondary/60">
-              <span class="text-simActiveButton">+</span>
-              {{ group.label }}
-              <span class="ml-1 opacity-60">[{{ group.participants.length }}]</span>
-            </div>
-            <template v-for="participant in group.participants" :key="participant.peerId">
+            <button
+              class="roster-group-heading"
+              :aria-expanded="!collapsedExerciseGroups.has(group.key)"
+              @click="toggleExerciseGroup(group.key)"
+            >
+              <span aria-hidden="true">{{
+                collapsedExerciseGroups.has(group.key) ? '▸' : '▾'
+              }}</span>
+              <span class="min-w-0 flex-1 truncate font-medium">{{ group.label }}</span>
+              <span class="shrink-0 opacity-60">{{ group.participants.length }} peers</span>
+              <span class="roster-group-summary">{{ group.summary }}</span>
+            </button>
+            <template
+              v-for="participant in collapsedExerciseGroups.has(group.key)
+                ? []
+                : group.participants"
+              :key="participant.peerId"
+            >
               <div
                 :ref="(element) => setRosterRowRef(element, participant.rosterIndex)"
-                class="classroom-roster-row grid min-h-10 cursor-default grid-cols-[1.25rem_minmax(0,1fr)_auto_auto] items-center gap-x-1 px-1 outline-none"
+                class="classroom-roster-row grid h-7 cursor-default grid-cols-[1.25rem_minmax(0,1fr)_auto_auto] items-center gap-x-1 px-1 outline-none"
                 :class="rowClass(participant.peerId)"
                 :aria-selected="isPeerSelected(participant.peerId)"
                 :title="participantSummary(participant.peer)"
@@ -254,8 +266,8 @@
                     @click.stop="togglePeerCheckbox(participant.peerId, participant.rosterIndex)"
                   />
                 </div>
-                <div class="min-w-0 py-0.5">
-                  <div class="flex min-w-0 items-center gap-1">
+                <div class="flex min-w-0 items-center gap-2 whitespace-nowrap">
+                  <div class="flex min-w-0 flex-1 items-center gap-1">
                     <span
                       v-if="participant.peer.handState === 'raised'"
                       class="inline-flex shrink-0 animate-pulse items-center bg-panelActive px-1 font-bold text-primary"
@@ -268,21 +280,21 @@
                         '—'
                       }}
                     </span>
-                    <span class="shrink-0 opacity-50"
-                      >· {{ compactPeerId(participant.peerId) }}</span
-                    >
-                    <span class="shrink-0 opacity-60">
+                    <span class="roster-secondary-id shrink-0">
                       · {{ compactStatus(participant.peer.metadata.status) }}
                     </span>
-                    <span v-if="participant.peer.exercise" class="shrink-0">
-                      ·
+                    <span
+                      v-if="participant.peer.exercise"
+                      class="roster-exercise-status shrink-0"
+                      :title="participant.peer.exercise.status"
+                    >
                       {{ exerciseStatusSymbol(participant.peer.exercise.status) }}
                       <span :class="exerciseStatusClass(participant.peer.exercise.status)">{{
                         compactExerciseStatus(participant.peer.exercise.status)
                       }}</span>
                     </span>
                   </div>
-                  <div class="truncate leading-tight text-secondary/60">
+                  <div class="roster-checkpoint min-w-0 flex-1 truncate text-secondary">
                     {{
                       participant.peer.metadata.checkPoint ||
                       exerciseDetail(participant.peer) ||
@@ -290,7 +302,9 @@
                     }}
                   </div>
                 </div>
-                <div class="roster-net px-1 text-right opacity-60">
+                <div
+                  class="roster-net flex items-center gap-1 whitespace-nowrap px-1 text-right text-secondary"
+                >
                   {{
                     connectionAge(participant.peer) > 15
                       ? 'STALE'
@@ -304,7 +318,7 @@
                   </div>
                 </div>
                 <button
-                  class="peer-details-toggle whitespace-nowrap px-1 text-center opacity-70 hover:text-panelActive hover:opacity-100"
+                  class="peer-details-toggle h-5 whitespace-nowrap px-1 text-center"
                   :aria-expanded="detailsPeerId === participant.peerId"
                   :title="
                     detailsPeerId === participant.peerId
@@ -704,12 +718,26 @@ const filteredParticipants = computed(() => {
     .search(rosterSearch.value)
     .map((result) => result.item)
 })
+const collapsedExerciseGroups = ref(new Set<string>())
+const toggleExerciseGroup = (key: string) => {
+  if (collapsedExerciseGroups.value.has(key)) collapsedExerciseGroups.value.delete(key)
+  else {
+    collapsedExerciseGroups.value.add(key)
+    if (
+      participantExerciseGroups.value
+        .find((group) => group.key === key)
+        ?.participants.some((participant) => participant.peerId === detailsPeerId.value)
+    )
+      closePeerDetails()
+  }
+}
 const participantExerciseGroups = computed(() => {
   const groups = new Map<
     string,
     {
       key: string
       label: string
+      summary: string
       participants: Array<(typeof filteredParticipants.value)[number] & { rosterIndex: number }>
     }
   >()
@@ -720,6 +748,7 @@ const participantExerciseGroups = computed(() => {
     const group = groups.get(key) || {
       key,
       label: exerciseName || 'Unassigned',
+      summary: '',
       participants: [],
     }
     group.participants.push({ ...participant, rosterIndex: 0 })
@@ -733,12 +762,20 @@ const participantExerciseGroups = computed(() => {
   })
   let rosterIndex = 0
   for (const group of sortedGroups) {
-    for (const participant of group.participants) participant.rosterIndex = rosterIndex++
+    const counts = new Map<string, number>()
+    for (const participant of group.participants) {
+      const status = participant.peer.exercise?.status
+      if (status) counts.set(status, (counts.get(status) || 0) + 1)
+      participant.rosterIndex = collapsedExerciseGroups.value.has(group.key) ? -1 : rosterIndex++
+    }
+    group.summary = [...counts].map(([status, count]) => `${count} ${status}`).join(' · ')
   }
   return sortedGroups
 })
 const visibleParticipantRows = computed(() =>
-  participantExerciseGroups.value.flatMap((group) => group.participants),
+  participantExerciseGroups.value.flatMap((group) =>
+    collapsedExerciseGroups.value.has(group.key) ? [] : group.participants,
+  ),
 )
 const exerciseResults = computed(() => {
   if (!exerciseQuery.value.trim()) return exerciseModules
@@ -1529,7 +1566,6 @@ const rowClass = (peerId: string) => {
   ]
 }
 
-const compactPeerId = (peerId: string) => peerId.slice(-5).toUpperCase()
 const formatCheckpointTime = (timestamp: number) =>
   new Date(timestamp).toLocaleTimeString([], {
     hour: '2-digit',
@@ -1944,7 +1980,42 @@ const trace = (text: string) => {
 }
 
 .command-button {
-  @apply shrink-0 px-1 hover:bg-simInputBackground hover:text-panelActive disabled:cursor-default disabled:opacity-40;
+  @apply h-5 shrink-0 bg-primary px-1 text-secondary hover:bg-secondary hover:text-primary disabled:cursor-default disabled:opacity-40;
+}
+
+.peer-details-toggle {
+  @apply bg-primary text-secondary hover:bg-secondary hover:text-primary;
+}
+
+.peer-details-toggle[aria-expanded='true'] {
+  @apply bg-secondary text-primary;
+}
+
+.roster-primary-action {
+  @apply bg-panelActive px-2 text-white hover:bg-panelActive hover:text-white;
+}
+
+.roster-group-heading {
+  @apply flex min-h-7 w-full flex-wrap items-center gap-x-2 gap-y-0.5 border-y border-panelBorder bg-panelHeaderBackground px-2 py-1 text-left text-secondary;
+}
+
+.roster-group-summary {
+  @apply text-secondary;
+}
+
+.classroom-roster-row {
+  @apply border-b border-panelBorder/50;
+}
+
+.roster-exercise-status {
+  @apply ml-auto inline-flex items-center gap-1 bg-primary px-1 text-secondary;
+}
+
+.roster-group-heading:focus-visible,
+.peer-details-toggle:focus-visible,
+.command-button:focus-visible {
+  outline: 1px solid rgb(var(--color-panelActive));
+  outline-offset: -1px;
 }
 
 .menu-command {
@@ -1954,6 +2025,16 @@ const trace = (text: string) => {
 @container (max-width: 26rem) {
   .roster-net {
     display: none;
+  }
+  .roster-secondary-id {
+    display: none;
+  }
+  .roster-checkpoint {
+    display: none;
+  }
+  .roster-group-summary {
+    flex-basis: 100%;
+    padding-left: 1rem;
   }
 }
 </style>
