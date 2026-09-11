@@ -578,7 +578,7 @@
           <template #Prompt>
             <MarkDown
               ref="markdownRef"
-              class="w-full h-full p-1"
+              class="w-full h-full"
               @action-pending="userActionPending = $event"
             />
           </template>
@@ -586,7 +586,7 @@
             <Whiteboard
               ref="whiteBoardComponentRef"
               v-if="sim_module_loaded"
-              class="w-full h-full p-1"
+              class="w-full h-full"
               @history-updated="handleWhiteboardHistory"
             />
           </template>

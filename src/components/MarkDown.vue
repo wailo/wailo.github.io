@@ -469,7 +469,6 @@ defineExpose({ askQuestion, cancelPromptInteractions, reset, waitForUser, write 
   min-height: 0;
   width: 100%;
   overflow: hidden;
-  border: 1px solid rgb(var(--color-panelBorder));
   background: rgb(var(--color-panelContentBackground));
   color: rgb(var(--color-secondary));
   font-family:
@@ -482,7 +481,7 @@ defineExpose({ askQuestion, cancelPromptInteractions, reset, waitForUser, write 
 .prompt-transcript__scroll {
   height: 100%;
   overflow-y: auto;
-  padding: 0.35rem;
+  padding: 0.25rem;
 }
 
 .prompt-transcript__empty {

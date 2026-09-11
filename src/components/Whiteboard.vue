@@ -56,10 +56,10 @@ watch(
 
 <template>
   <div
-    class="w-full h-full rounded-[10px] overflow-hidden border border-simElementBorder bg-panelContentBackground flex flex-col"
+    class="w-full h-full min-h-0 overflow-hidden bg-panelContentBackground flex flex-col"
   >
     <!-- Scrollable canvas -->
-    <div class="flex-1 overflow-auto">
+    <div class="min-h-0 flex-1 overflow-auto">
       <svg
         ref="svgRef"
         class="w-full h-[3000px] cursor-crosshair bg-panelContentBackground bg-[radial-gradient(circle,theme('colors.panelBorder')_1px,transparent_1px)] bg-[length:20px_20px] [&_*]:[stroke-linecap:round] [&_*]:[stroke-linejoin:round]"
