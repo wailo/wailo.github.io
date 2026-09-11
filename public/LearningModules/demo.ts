@@ -70,6 +70,32 @@ export async function main(context: ScriptContext) {
     }
   }
 
+  // Keep the introduction separate from checklist entries and tour scheduling.
+  simulation.set_simulation_pause(true)
+  try {
+    context.setTab('prompt', 'Prompt')
+    await context.notifyUser(
+      'Flight simulation & training',
+      'A C++ flight simulator for exploring aircraft handling, flight instruments, and autopilot behavior. Use interactive lessons, live telemetry, and TypeScript scripts for self-study, classroom instruction, and repeatable experiments.',
+      0,
+      { replace: true },
+    )
+    await waitFor(8_000)
+    await context.notifyUser(
+      'About this demo',
+      `Watch an automatic B747 take-off and climb. During the flight, the tour introduces layouts, instruments, airflow, the whiteboard, and autopilot target-versus-actual plots.
+
+No input is required. The checklist tracks flight actions and their conditions; indented entries show simulator features.
+
+*Demonstration settings—not operational flight guidance.*`,
+      0,
+      { replace: false },
+    )
+    await waitFor(8_000)
+  } finally {
+    simulation.set_simulation_pause(false)
+  }
+
   const demonstrationStartedAt = Date.now()
   const backgroundTasks: Promise<void>[] = []
   let takeoffSequence: Promise<void> = Promise.resolve()
