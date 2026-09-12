@@ -9,7 +9,7 @@ export async function main(context: ScriptContext) {
   const plotView = context.plotView
   const resetPanels = context.resetPanels
   const notifyUser = context.notifyUser
-  // const checkPoint = context.checkPoint;
+  const checkPoint = context.checkPoint
   const metrics = context.metrics
 
   resetPanels()
@@ -22,6 +22,32 @@ export async function main(context: ScriptContext) {
   const maxAltitudeDeviation_ft = 100 // Tighter deviation
   const requiredHeadingChange_deg = 180 // Full 180° turn
   const challengeTimeLimit_ms = 60 * 1000 // 1 minute
+
+  const teachingContext = {
+    lessonId: 'coordinated_turn_challenge',
+    version: 1,
+    mode: 'practice',
+    objectives: ['Perform a manual 180-degree turn', 'Maintain altitude within 100 ft'],
+    assessment: {
+      requiredHeadingChangeDeg: requiredHeadingChange_deg,
+      maxAltitudeDeviationFt: maxAltitudeDeviation_ft,
+      timeLimitMs: challengeTimeLimit_ms,
+      autopilot: 'Automatically disengaged if enabled; turn evaluation skips that sample',
+      coordination: 'Slip/skid is not measured by the current pass/fail logic',
+    },
+    commonMistakes: [
+      'Losing or gaining altitude',
+      'Re-enabling autopilot',
+      'Not completing the turn in time',
+    ],
+    allowedHints: [
+      'Monitor altitude and adjust pitch',
+      'Monitor heading change',
+      'Use manual controls',
+    ],
+    interventionPolicy: 'Hints only; do not change aircraft controls or scoring',
+  }
+  checkPoint('Preparing coordinated-turn challenge', { step: 'setup', teachingContext })
 
   notifyUser(
     '🎯 **Coordinated Turn (Cessna 172)**',
@@ -53,6 +79,13 @@ export async function main(context: ScriptContext) {
   const initialPitch_deg = 3 // Cessna 172 typical pitch for coordinated turn
   let altitudeWithinLimits = false
 
+  checkPoint('Aircraft ready for manual turn', {
+    step: 'ready',
+    altitudeFt: initialAltitude,
+    headingDeg: initialHeading,
+    indicatedSpeedKnots: flightModel.speed_indicated_knots,
+  })
+
   await waitFor(6000)
   flightModel.set_autopilot_master_switch(false)
   flightModel.set_autopilot_altitude_hold(false)
@@ -68,6 +101,24 @@ export async function main(context: ScriptContext) {
 
   let lastHeading = initialHeading
   let totalHeadingChange_deg = 0
+  const challengeStartedAt = Date.now()
+  let lastProgressAt = challengeStartedAt
+  let autopilotInterventions = 0
+  const observation = () => ({
+    elapsedMs: Date.now() - challengeStartedAt,
+    altitudeFt: flightModel.altitude_ft,
+    referenceAltitudeFt: initialAltitude,
+    altitudeDeviationFt: flightModel.altitude_ft - initialAltitude,
+    headingDeg: flightModel.yaw_deg,
+    headingChangeDeg: totalHeadingChange_deg,
+    indicatedSpeedKnots: flightModel.speed_indicated_knots,
+    targetSpeedKnots: initialSpeed_knots,
+    bankDeg: flightModel.bank_deg,
+    pitchDeg: flightModel.pitch_deg,
+    turnRateDegPerSecond: flightModel.yaw_dot_deg,
+    autopilotInterventions,
+  })
+  checkPoint('Manual turn started', { step: 'turn', ...observation() })
   // Define success condition
   const success = await waitForCondition(
     () => {
@@ -88,11 +139,17 @@ export async function main(context: ScriptContext) {
 
       // Engaging autopilot is not allowed, disengage if detected
       if (flightModel.autopilot_master_switch) {
+        autopilotInterventions++
         notifyUser(
           '❌ **Autopilot Engaged**',
           'You engaged the autopilot. Disengaging autopilot now.',
         )
         flightModel.set_autopilot_master_switch(false)
+        checkPoint('Autopilot disengaged during manual turn', {
+          step: 'turn',
+          event: 'autopilot-intervention',
+          ...observation(),
+        })
         return false // Fail condition if autopilot is engaged
       }
 
@@ -114,6 +171,11 @@ export async function main(context: ScriptContext) {
       totalHeadingChange_deg = totalHeadingChange_deg + diff
       const headingChangedEnough = Math.abs(totalHeadingChange_deg) >= requiredHeadingChange_deg
       lastHeading = currentHeading
+      // Report a compact observation every five seconds, not on every sample.
+      if (!headingChangedEnough && Date.now() - lastProgressAt >= 5000) {
+        checkPoint('Turn in progress', { step: 'turn', ...observation() })
+        lastProgressAt = Date.now()
+      }
       return altitudeWithinLimits && headingChangedEnough
     },
     0, // confirmation_ms: condition must stay true for 2 seconds
@@ -125,6 +187,12 @@ export async function main(context: ScriptContext) {
   // 📘 Step 5: Announce Result
   if (success) {
     if (!altitudeWithinLimits) {
+      checkPoint('Challenge failed: altitude limit exceeded', {
+        step: 'result',
+        outcome: 'failed',
+        reason: 'altitude-limit',
+        ...observation(),
+      })
       notifyUser(
         '❌ **Challenge Failed**',
         `**Altitude deviation exceeded ${maxAltitudeDeviation_ft} ft.**`,
@@ -147,6 +215,29 @@ export async function main(context: ScriptContext) {
         ...metrics.map((m) => Math.abs(m.pitch - initialPitch_deg)),
       )
 
+      checkPoint('Coordinated-turn challenge completed', {
+        step: 'result',
+        outcome: 'passed',
+        ...observation(),
+        measurements: {
+          timeTakenSec: timeTaken_sec,
+          averageTurnRateDegPerSecond: averageTurnRate,
+          maxAltitudeDeviationFt: maxAltitudeDeviation_ft,
+          maxSpeedDeviationKnots: maxSpeedDeviation_knots,
+          maxPitchDeviationDeg: maxPitchDeviation_deg,
+          maxBankDeg: maxBank_deg,
+        },
+        // Existing component scores, unchanged; this lesson has no aggregate score.
+        scores: {
+          time: 100 - Math.abs(timeTaken_sec - 60) / 10,
+          turnRate: 100 - Math.abs(averageTurnRate - 3) / 10,
+          verticalSpeed: 100 - maxVerticalSpeedDeviation_ft / 20,
+          altitude: 100 - maxAltitudeDeviation_ft / 50,
+          speed: 100 - maxSpeedDeviation_knots / 5,
+          pitch: 100 - maxPitchDeviation_deg / 2,
+        },
+      })
+
       notifyUser(
         '🏆 **Challenge Complete!**',
         `You performed a coordinated **${requiredHeadingChange_deg}° turn** without major altitude loss or gain. **Well done!**` +
@@ -160,6 +251,12 @@ export async function main(context: ScriptContext) {
       )
     }
   } else {
+    checkPoint('Challenge failed: time limit reached', {
+      step: 'result',
+      outcome: 'failed',
+      reason: 'timeout',
+      ...observation(),
+    })
     notifyUser('❌ **Challenge Failed**', `**Time ran out.** Try again!`)
   }
 
