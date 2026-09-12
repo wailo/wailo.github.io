@@ -68,6 +68,17 @@ test('runUserScript passes the same context to a successful lesson', async () =>
   assert.equal(receivedContext, context)
 })
 
+test('checkPoint forwards both legacy text and optional structured evidence', () => {
+  const dependencies = createDependencies({})
+  const calls = []
+  dependencies.checkPoint = (...args) => calls.push(args)
+  const context = createScriptContext(dependencies)
+  context.checkPoint('Started')
+  const evidence = { step: 'climb', altitudeFt: 1500 }
+  context.checkPoint('Climb established', evidence)
+  assert.deepEqual(calls, [['Started'], ['Climb established', evidence]])
+})
+
 test('runUserScript reports an error once and rethrows the original failure', async (t) => {
   t.mock.method(console, 'error', () => {})
   const notifications = []

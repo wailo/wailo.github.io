@@ -577,6 +577,8 @@ const emit = defineEmits<{
   (event: 'error', errorMessage: string): void
 }>()
 
+import type { CheckpointData } from '../ScriptContext'
+
 const props = defineProps<{ accountName?: string }>()
 defineOptions({ inheritAttrs: false })
 
@@ -600,12 +602,14 @@ type ConnectionMeta = {
   name?: string
   status?: string
   checkPoint?: string
+  checkPointData?: CheckpointData
   [key: string]: any
 }
 
 type ExerciseCheckpoint = {
   timestamp: number
   message: string
+  data?: CheckpointData
 }
 
 type ConnectionsList = {
@@ -966,13 +970,16 @@ const recordCheckpoint = (
   participant: ConnectionsList[string],
   checkpoint: string,
   timestamp: number,
+  data?: CheckpointData,
 ) => {
   participant.metadata.checkPoint = checkpoint
+  participant.metadata.checkPointData = data
   if (!checkpoint || !participant.exercise) return
 
   const history = participant.exercise.checkpoints
-  if (history[history.length - 1]?.message === checkpoint) return
-  history.push({ timestamp, message: checkpoint })
+  const previous = history[history.length - 1]
+  if (previous?.message === checkpoint && !data && !previous.data) return
+  history.push({ timestamp, message: checkpoint, ...(data ? { data } : {}) })
   if (history.length > 100) history.splice(0, history.length - 100)
 }
 
@@ -1041,7 +1048,11 @@ const handleEnvelope = (message: ClassroomEnvelope, conn: PeerJS.DataConnection)
       break
     case 'checkpoint':
       if (participant) {
-        recordCheckpoint(participant, String(payload.checkpoint || ''), message.timestamp)
+        const data =
+          payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)
+            ? (payload.data as CheckpointData)
+            : undefined
+        recordCheckpoint(participant, String(payload.checkpoint || ''), message.timestamp, data)
       }
       break
     case 'script':
@@ -1685,6 +1696,7 @@ const assignExercise = async (targets: string[], detailsTargetPeerId = '') => {
         checkpoints: [],
       }
       peer.metadata.checkPoint = ''
+      peer.metadata.checkPointData = undefined
     }
   })
   logSessionEvent('exercise', idsLabel(targets), `${exercise.name} (${exerciseMinutes.value} min)`)
@@ -1705,6 +1717,7 @@ const unassignExercise = () => {
     if (!peer) return
     peer.exercise = undefined
     peer.metadata.checkPoint = ''
+    peer.metadata.checkPointData = undefined
   })
   logSessionEvent('exercise-unassign', idsLabel(targets), 'Assignment removed')
   consumeActionSelection(targets)
@@ -1717,6 +1730,7 @@ const unassignPeer = (peerId: string) => {
   sendEnvelopeToIds([peerId], 'exercise-unassign', {})
   peer.exercise = undefined
   peer.metadata.checkPoint = ''
+  peer.metadata.checkPointData = undefined
   logSessionEvent('exercise-unassign', peerId, 'Assignment removed')
 }
 
@@ -1841,6 +1855,7 @@ const exportSession = () => {
     displayName: peer.metadata.displayName,
     status: peer.metadata.status,
     checkpoint: peer.metadata.checkPoint,
+    checkpointData: peer.metadata.checkPointData,
     latency: peer.latency,
     exercise: peer.exercise,
     handState: peer.handState,
@@ -1895,7 +1910,7 @@ const sendStatus = (status: string) => {
   sendEnvelopeToConnection(instructorConnection, 'status', { status })
 }
 
-const sendCheckPoint = (checkpoint: string) => {
+const sendCheckPoint = (checkpoint: string, data?: CheckpointData) => {
   if (!instructorConnection) {
     return
   }
@@ -1904,7 +1919,10 @@ const sendCheckPoint = (checkpoint: string) => {
     return
   }
 
-  sendEnvelopeToConnection(instructorConnection, 'checkpoint', { checkpoint })
+  sendEnvelopeToConnection(instructorConnection, 'checkpoint', {
+    checkpoint,
+    ...(data !== undefined ? { data } : {}),
+  })
 }
 const sendScript = (title: string, content: string) => {
   sendEnvelope('script', { title, script: content })

@@ -326,8 +326,14 @@ import type {
 import scriptApiTypes from '../ScriptContext.ts?raw'
 import { LayoutTypes } from '../../src/wasm/siminterface.ts'
 import { compileUserScript, stripImportsExports } from '../EditorScriptRuntime.ts'
+import { useLessonRun } from '../useLessonRun'
+import type { CheckpointData } from '../ScriptContext'
 
-const isScriptRunning = ref(false)
+const lessonRun = useLessonRun()
+const runStatus = lessonRun.status
+const runStartedAt = lessonRun.startedAt
+const runEvents = lessonRun.events
+const isScriptRunning = computed(() => runStatus.value === 'RUNNING')
 const isLLMPending = ref(false)
 const ModuleTitle = ref('')
 const selectedFile = ref<string>('')
@@ -335,19 +341,15 @@ const routeHash = window.location.href
 const viewModes = ['lessons', 'run', 'code'] as const
 const viewMode = ref<(typeof viewModes)[number]>('lessons')
 const lessonFilter = ref('')
-const runStatus = ref<'IDLE' | 'RUNNING' | 'COMPLETED' | 'STOPPED' | 'ERROR'>('IDLE')
-const runStartedAt = ref<number | null>(null)
 const runClock = ref(Date.now())
 const completedLessons = ref(new Set<string>())
 const lessonQueue = ref<LessonListEntry[]>([])
 const queuePlaying = ref(false)
-const runEvents = ref<Array<{ id: number; time: string; message: string; replaceKey?: string }>>([])
 const aiPanelOpen = ref(false)
 const aiPrompt = ref('')
 const aiIncludeCurrentCode = ref(false)
 const aiGeneratedCode = ref('')
 const aiError = ref('')
-let runEventId = 0
 let runClockTimer: ReturnType<typeof setInterval> | undefined
 let executionGeneration = 0
 
@@ -418,7 +420,7 @@ const props = defineProps({
       setTheme: (dark: boolean) => void
       setTab: (panelId: string, tabName: string) => void
       resetPanels: () => void
-      checkPoint: (content: string) => void
+      checkPoint: (content: string, data?: CheckpointData) => void
     }>,
     required: true,
   },
@@ -477,11 +479,9 @@ const reset = (markStopped = true) => {
   props.utilityFuncs.cancelPromptInteractions()
   executionResult.value = null
   resetTimeouts()
-  isScriptRunning.value = false
   if (markStopped && runStatus.value === 'RUNNING') {
     queuePlaying.value = false
-    runStatus.value = 'STOPPED'
-    addRunEvent('Lesson stopped')
+    lessonRun.finish(lessonRun.current.value!.runId, 'STOPPED', 'Lesson stopped')
   }
   emit('reset')
 }
@@ -504,16 +504,15 @@ const executeCode = async (): Promise<boolean> => {
   let coreCode = coreSimJs
   coreCode = stripImportsExports(coreCode)
   code.value = stripImportsExports(code.value)
-  const metrics: any[] = []
+  const lessonTitle = ModuleTitle.value
+  const run = lessonRun.begin(selectedModule.value?.path ?? lessonTitle, lessonTitle)
+  const metrics = run.metrics
+  const addRunEvent = (message: string, replaceKey?: string) =>
+    lessonRun.addEvent(run.runId, message, replaceKey)
 
   executionResult.value = null
   try {
-    isScriptRunning.value = true
-    runStatus.value = 'RUNNING'
-    runStartedAt.value = Date.now()
     runClock.value = Date.now()
-    runEvents.value = []
-    addRunEvent(`Started ${ModuleTitle.value || 'lesson'}`)
     emit('start', code.value)
 
     const deps: ScriptContext<typeof props.simProps> = {
@@ -549,6 +548,7 @@ const executeCode = async (): Promise<boolean> => {
         if (runGeneration !== executionGeneration) {
           return new Promise<QuestionResult>(() => {})
         }
+        lessonRun.recordAnswer(run.runId, options, result)
         addRunEvent(
           `Answer submitted: ${options.title}${result.correct === undefined ? '' : result.correct ? ' · correct' : ' · incorrect'}`,
         )
@@ -564,9 +564,10 @@ const executeCode = async (): Promise<boolean> => {
       setTab: props.utilityFuncs.setTab,
       resetPanels: props.utilityFuncs.resetPanels,
       layoutTypes: LayoutTypes,
-      checkPoint: (content: string) => {
-        addRunEvent(content)
-        props.utilityFuncs.checkPoint(content)
+      checkPoint: (content: string, data?: CheckpointData) => {
+        if (runGeneration !== executionGeneration) return
+        const checkpoint = lessonRun.recordCheckpoint(run.runId, content, data)
+        if (checkpoint) props.utilityFuncs.checkPoint(content, checkpoint.data)
       },
       metrics: metrics,
     }
@@ -578,31 +579,29 @@ const executeCode = async (): Promise<boolean> => {
 
     const startStime = new Date()
     await runUserScript(finalUserCode, ctx)
-    runStatus.value = 'COMPLETED'
-    completedLessons.value = new Set([...completedLessons.value, ModuleTitle.value])
-    addRunEvent('Lesson completed')
-    emit('completed', ModuleTitle.value)
+    if (runGeneration !== executionGeneration) return false
+    lessonRun.finish(run.runId, 'COMPLETED', 'Lesson completed')
+    completedLessons.value = new Set([...completedLessons.value, lessonTitle])
+    emit('completed', lessonTitle)
     emit('reset')
 
     const endTime = new Date()
-    isScriptRunning.value = false
     submitSession({
-      scenario: ModuleTitle.value,
+      scenario: lessonTitle,
       start_time: startStime,
       end_time: endTime,
       model_version: deps.controls.FLIGHTMODEL_VERSION.toString(),
       ui_version: import.meta.env.VITE_GIT_SHA,
       raw_metrics: metrics,
     }).catch((err) => {
-      emit('error', err, ModuleTitle.value)
+      emit('error', err, lessonTitle)
     })
     return true
   } catch (err) {
+    if (runGeneration !== executionGeneration) return false
     console.error(err)
-    runStatus.value = 'ERROR'
-    addRunEvent(`Error: ${String(err)}`)
-    emit('error', err, ModuleTitle.value)
-    isScriptRunning.value = false
+    lessonRun.finish(run.runId, 'ERROR', `Error: ${String(err)}`)
+    emit('error', err, lessonTitle)
     return false
   }
 }
@@ -652,33 +651,12 @@ const selectedModule = computed(() =>
 )
 const elapsedDisplay = computed(() => {
   if (!runStartedAt.value) return '00:00'
-  const elapsedSeconds = Math.max(0, Math.floor((runClock.value - runStartedAt.value) / 1000))
+  const endedAt = lessonRun.current.value?.endedAt ?? runClock.value
+  const elapsedSeconds = Math.max(0, Math.floor((endedAt - runStartedAt.value) / 1000))
   const minutes = Math.floor(elapsedSeconds / 60)
   const seconds = elapsedSeconds % 60
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 })
-
-const addRunEvent = (message: string, replaceKey?: string) => {
-  const elapsed = runStartedAt.value ? Date.now() - runStartedAt.value : 0
-  const minutes = Math.floor(elapsed / 60000)
-  const seconds = Math.floor((elapsed % 60000) / 1000)
-  const event = {
-    id: ++runEventId,
-    time: `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`,
-    message,
-    replaceKey,
-  }
-
-  if (replaceKey) {
-    const existingIndex = runEvents.value.findIndex((item) => item.replaceKey === replaceKey)
-    if (existingIndex >= 0) {
-      runEvents.value[existingIndex] = { ...event, id: runEvents.value[existingIndex].id }
-      return
-    }
-  }
-
-  runEvents.value.push(event)
-}
 
 const queuePosition = (lesson: ModuleEntry) =>
   lessonQueue.value.findIndex((queued) => queued.path === lesson.path) + 1
@@ -932,6 +910,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  reset()
   window.removeEventListener('keydown', handleEditorKeydown, true)
   if (runClockTimer) clearInterval(runClockTimer)
 })

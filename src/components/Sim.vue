@@ -1,5 +1,4 @@
 <template>
-
   <div
     ref="fullscreenContainer"
     class="container relative max-w-full h-screen gap-1 p-1 bg-simBackground"
@@ -241,7 +240,8 @@
                 askQuestion: simFunctions.askQuestion,
                 cancelPromptInteractions: simFunctions.cancelPromptInteractions,
                 setLayout: simFunctions.setLayout,
-                checkPoint: (content: string) => classroomComponentRef?.sendCheckPoint(content),
+                checkPoint: (content: string, data?: CheckpointData) =>
+                  classroomComponentRef?.sendCheckPoint(content, data),
                 setVisuals: simFunctions.setVisuals,
                 setMap: simFunctions.setMap,
                 setTheme: simFunctions.setTheme,
@@ -608,6 +608,7 @@ import {
   nextTick,
 } from 'vue'
 import Panel from './Panel.vue'
+import type { CheckpointData } from '../ScriptContext'
 import ButtonSwitch from './ButtonSwitch.vue'
 import wButton from './wButton.vue'
 import wInput from './wInput.vue'

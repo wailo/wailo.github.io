@@ -63,6 +63,11 @@ export interface QuestionResult {
   cancelled?: boolean
 }
 
+/** JSON-compatible evidence; use explicit units in measurement names. */
+export interface CheckpointData {
+  [key: string]: unknown
+}
+
 export type B747SimProps = b747SimProps
 export type C172SimProps = c172SimProps
 export type GraphicsSimProps = graphicsSimProps
@@ -107,7 +112,7 @@ export interface ScriptContext<TProps extends ScriptSimProps = FlightModelSimPro
     (panelId: 'prompt', tabName: 'Prompt' | 'whiteboard'): void
   }
   resetPanels: () => void
-  checkPoint: (content: string) => void
+  checkPoint: (content: string, data?: CheckpointData) => void
   metrics: any[]
 }
 

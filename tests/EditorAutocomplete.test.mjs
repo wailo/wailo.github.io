@@ -152,6 +152,28 @@ test('multiple-choice questions accept practice and assessment modes', () => {
   assert.equal(diagnostics.length, 0, diagnosticText(diagnostics))
 })
 
+test('checkpoints accept text and optional structured evidence in the lesson editor', () => {
+  const diagnostics = lessonDiagnostics(`
+    async function lesson(context: ScriptContext) {
+      context.checkPoint('Started');
+      context.checkPoint('Climb established', {
+        step: 'climb', altitudeFt: 1500, targetAltitudeFt: 3000,
+        samples: [1400, 1500], criteria: { stable: true }
+      });
+    }
+  `)
+  assert.equal(diagnostics.length, 0, diagnosticText(diagnostics))
+})
+
+test('checkpoints reject a non-object evidence argument', () => {
+  const diagnostics = lessonDiagnostics(`
+    async function lesson(context: ScriptContext) {
+      context.checkPoint('Climb', 1500);
+    }
+  `)
+  assert.ok(diagnostics.length > 0)
+})
+
 test('multiple-choice questions reject unknown modes', () => {
   const diagnostics = lessonDiagnostics(`
     async function lesson(context: ScriptContext<C172SimProps>) {
