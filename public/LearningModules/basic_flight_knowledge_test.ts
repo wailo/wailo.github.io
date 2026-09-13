@@ -5,7 +5,9 @@ import type {
 } from '../../src/ScriptContext'
 
 export async function main(context: ScriptContext) {
-  const questions: Array<Omit<MultipleChoiceQuestionOptions, 'type' | 'mode'>> = [
+  const questions: Array<
+    Omit<MultipleChoiceQuestionOptions, 'type' | 'mode'> & { explanation: string }
+  > = [
     {
       id: 'basic-flight-four-forces',
       title: 'The four forces',
@@ -17,6 +19,8 @@ export async function main(context: ScriptContext) {
         { id: 'aileron-rudder-elevator-flap', label: 'Aileron, rudder, elevator and flap' },
       ],
       correctAnswer: 'lift-weight-thrust-drag',
+      explanation:
+        'Lift, weight, thrust and drag are forces. Pitch, roll and yaw describe aircraft rotations, not forces.',
     },
     {
       id: 'basic-flight-opposes-weight',
@@ -29,6 +33,8 @@ export async function main(context: ScriptContext) {
         { id: 'torque', label: 'Torque' },
       ],
       correctAnswer: 'lift',
+      explanation:
+        'In simplified straight-and-level flight, lift acts upward against weight. Thrust acts forward against drag.',
     },
     {
       id: 'basic-flight-roll-control',
@@ -41,6 +47,8 @@ export async function main(context: ScriptContext) {
         { id: 'throttle', label: 'Throttle' },
       ],
       correctAnswer: 'ailerons',
+      explanation:
+        'Ailerons primarily control roll, the elevator controls pitch, and the rudder controls yaw. The throttle controls engine power.',
     },
     {
       id: 'basic-flight-heading-change',
@@ -53,6 +61,8 @@ export async function main(context: ScriptContext) {
         { id: 'left-270', label: '270° to the left' },
       ],
       correctAnswer: 'right-90',
+      explanation:
+        'Headings increase clockwise: from 090° to 180° is 90° to the right. The alternative left turn is 270°, so it is longer.',
     },
     {
       id: 'basic-flight-full-turn',
@@ -65,6 +75,8 @@ export async function main(context: ScriptContext) {
         { id: '360', label: '360°' },
       ],
       correctAnswer: '360',
+      explanation:
+        'A full circle is 360°. A 90° turn is a quarter circle, 180° is a half circle, and 270° is three quarters.',
     },
     {
       id: 'basic-flight-level-turn-lift',
@@ -80,6 +92,8 @@ export async function main(context: ScriptContext) {
         { id: 'thrust-stops', label: 'Thrust stops acting when the wings are banked' },
       ],
       correctAnswer: 'vertical-component',
+      explanation:
+        'Banking tilts the lift vector. Only its vertical component supports weight, so total lift must increase to maintain altitude; its horizontal component turns the aircraft.',
     },
   ]
 
@@ -95,11 +109,14 @@ export async function main(context: ScriptContext) {
   const responses: QuestionResult[] = []
 
   for (const question of questions) {
+    // Keep the teaching explanation out of the question UI until submission is final.
+    const { explanation, ...assessmentQuestion } = question
     const result = await context.askQuestion({
-      ...question,
+      ...assessmentQuestion,
       type: 'multiple-choice',
       mode: 'assessment',
     })
+    if (result.cancelled) return
     responses.push(result)
     if (result.correct) correctAnswers += 1
     context.metrics.push({
@@ -130,4 +147,49 @@ export async function main(context: ScriptContext) {
 
 Final score: **${score}%**`,
   )
+
+  const incorrectResponses = questions.flatMap((question, index) => {
+    const response = responses[index]
+    if (response.correct) return []
+    return [
+      {
+        questionNumber: index + 1,
+        question: question.question,
+        selectedAnswer:
+          question.choices.find((choice) => choice.id === response.answer)?.label ??
+          'No recognised answer',
+        correctAnswer: question.choices.find((choice) => choice.id === question.correctAnswer)!
+          .label,
+        explanation: question.explanation,
+      },
+    ]
+  })
+
+  const debrief = await context.ai.request({
+    purpose: 'debrief',
+    evidence: {
+      teachingContext: {
+        // Questions remain assessment-mode; only the completed-test review is learning mode.
+        mode: 'practice',
+        phase: 'post-assessment',
+        answersFinal: true,
+        objectives: incorrectResponses.length
+          ? [
+              'Explain the incorrect responses using the supplied correct answers and explanations; identify the question number and contrast the selected answer with the correct concept.',
+            ]
+          : ['Acknowledge the correct responses without inventing weaknesses.'],
+        assessmentLimitations: ['Six multiple-choice questions; does not assess piloting skill'],
+        allowedHints: incorrectResponses.map(
+          (item) => `Question ${item.questionNumber}: ${item.correctAnswer}. ${item.explanation}`,
+        ),
+      },
+      correctAnswers,
+      totalQuestions: questions.length,
+      scorePercent: score,
+      incorrectResponses,
+    },
+  })
+  if (debrief.status === 'completed') {
+    await context.notifyUser('AI debrief', debrief.message)
+  }
 }
