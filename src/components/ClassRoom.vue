@@ -1,6 +1,7 @@
 <template>
   <div
     v-bind="$attrs"
+    ref="classroomShellRef"
     class="classroom-shell relative flex h-full min-h-0 w-full flex-col overflow-hidden outline-none"
     tabindex="0"
     aria-label="Classroom controls"
@@ -248,7 +249,7 @@
               :key="participant.peerId"
             >
               <div
-                :ref="(element) => setRosterRowRef(element, participant.rosterIndex)"
+                :ref="(element) => setRosterRowRef(element, participant.peerId)"
                 class="classroom-roster-row grid h-7 cursor-default grid-cols-[1.25rem_minmax(0,1fr)_auto_auto] items-center gap-x-1 px-1 outline-none"
                 :class="rowClass(participant.peerId)"
                 :aria-selected="isPeerSelected(participant.peerId)"
@@ -263,7 +264,7 @@
                     class="size-3 cursor-pointer accent-simActiveButton"
                     :checked="isPeerSelected(participant.peerId)"
                     :aria-label="`Select ${participant.peer.metadata.callsign || participant.peerId}`"
-                    @click.stop="togglePeerCheckbox(participant.peerId, participant.rosterIndex)"
+                    @click.stop="togglePeerCheckbox(participant.peerId)"
                   />
                 </div>
                 <div class="flex min-w-0 items-center gap-2 whitespace-nowrap">
@@ -335,7 +336,7 @@
 
               <section
                 v-if="detailsPeerId === participant.peerId"
-                ref="rosterDetailRef"
+                :ref="setRosterDetailRef"
                 class="roster-detail flex max-h-72 flex-col overflow-hidden border-y border-panelBorder bg-panelHeaderBackground text-secondary"
               >
                 <div class="flex min-h-7 items-center gap-1 px-2">
@@ -674,6 +675,7 @@ const emit = defineEmits<{
 }>()
 
 import type { CheckpointData } from '../ScriptContext'
+import { nextClassroomFocus, isNativeControlKey } from '../ClassroomFocus'
 import { createFeedbackReview, type FeedbackSuggestionInput } from '../FeedbackReview'
 import { requestFeedback } from '../FeedbackProvider'
 import { feedbackProviderConfig } from '../feedbackProviderConfig'
@@ -756,7 +758,12 @@ const exercisePalettePeerId = ref('')
 const exerciseQuery = ref('')
 const exerciseSearchRef = ref<HTMLInputElement | null>(null)
 const exerciseResultIndex = ref(0)
-const rosterRowRefs = ref<HTMLElement[]>([])
+const classroomShellRef = ref<HTMLElement | null>(null)
+const rosterRowRefs = new Map<string, HTMLElement>()
+let focusInteractionVersion = 0
+const recordFocusInteraction = () => {
+  focusInteractionVersion++
+}
 const rosterDetailRef = ref<HTMLElement | null>(null)
 const announcement = ref('')
 const announcementInputRef = ref<HTMLInputElement | null>(null)
@@ -971,6 +978,8 @@ onMounted(() => {
   // When the user closes the tab, disconnect
   window.addEventListener('beforeunload', disconnect)
   document.addEventListener('pointerdown', dismissPeerDetailsOnOutsideClick)
+  document.addEventListener('pointerdown', recordFocusInteraction, true)
+  document.addEventListener('keydown', recordFocusInteraction, true)
   healthTimer = setInterval(() => {
     clock.value = Date.now()
     updateOverdueAssignments()
@@ -995,6 +1004,8 @@ onUnmounted(() => {
   cancelFeedbackRequest()
   window.removeEventListener('beforeunload', disconnect)
   document.removeEventListener('pointerdown', dismissPeerDetailsOnOutsideClick)
+  document.removeEventListener('pointerdown', recordFocusInteraction, true)
+  document.removeEventListener('keydown', recordFocusInteraction, true)
   if (healthTimer) clearInterval(healthTimer)
   emit('handAttention', false)
 })
@@ -1457,15 +1468,16 @@ const focusPeerRow = (event: MouseEvent, peerId: string) => {
   batchMenuOpen.value = false
 }
 
-const togglePeerCheckbox = (peerId: string, rosterIndex: number) => {
+const togglePeerCheckbox = (peerId: string) => {
   focusPeer(peerId)
   togglePeerSelection(peerId)
-  nextTick(() => rosterRowRefs.value[rosterIndex]?.focus({ preventScroll: true }))
+  restoreRosterFocus(peerId)
 }
 
 const openPeerDetails = (peerId: string) => {
   focusPeer(peerId)
   detailsPeerId.value = peerId
+  restoreRosterFocus(peerId)
   nextTick(() => rosterDetailRef.value?.scrollIntoView({ block: 'nearest' }))
 }
 
@@ -1495,8 +1507,8 @@ const moveRosterFocus = (amount: number) => {
   detailsPeerId.value = ''
   focusedPeerId.value = rows[next].peerId
   nextTick(() => {
-    rosterRowRefs.value[next]?.focus({ preventScroll: true })
-    rosterRowRefs.value[next]?.scrollIntoView({ block: 'nearest' })
+    rosterRowRefs.get(rows[next].peerId)?.focus({ preventScroll: true })
+    rosterRowRefs.get(rows[next].peerId)?.scrollIntoView({ block: 'nearest' })
   })
 }
 
@@ -1509,39 +1521,46 @@ const focusClassroomPanel = () => {
   const selectedIndex = rows.findIndex((row) => selectedPeerIds.value.includes(row.peerId))
   const nextIndex = focusedIndex >= 0 ? focusedIndex : selectedIndex >= 0 ? selectedIndex : 0
   focusedPeerId.value = rows[nextIndex].peerId
-  nextTick(() => rosterRowRefs.value[nextIndex]?.focus({ preventScroll: true }))
+  nextTick(() => rosterRowRefs.get(rows[nextIndex].peerId)?.focus({ preventScroll: true }))
 }
 
-const setRosterRowRef = (element: Element | ComponentPublicInstance | null, index: number) => {
-  if (element instanceof HTMLElement) rosterRowRefs.value[index] = element
+const setRosterRowRef = (element: Element | ComponentPublicInstance | null, peerId: string) => {
+  if (element instanceof HTMLElement) rosterRowRefs.set(peerId, element)
+  else rosterRowRefs.delete(peerId)
+}
+const setRosterDetailRef = (element: Element | ComponentPublicInstance | null) => {
+  rosterDetailRef.value = element instanceof HTMLElement ? element : null
 }
 
-const restoreRosterFocus = () => {
-  const rows = visibleParticipantRows.value
-  if (!rows.length) return
-  const currentIndex = rows.findIndex((row) => row.peerId === focusedPeerId.value)
-  const focusIndex = currentIndex >= 0 ? currentIndex : 0
-  focusedPeerId.value = rows[focusIndex].peerId
-  nextTick(() => {
-    rosterRowRefs.value[focusIndex]?.focus({ preventScroll: true })
-    rosterRowRefs.value[focusIndex]?.scrollIntoView({ block: 'nearest' })
-  })
+const restoreRosterFocus = async (
+  preferredPeerId = focusedPeerId.value,
+  consumedIds: string[] = [],
+) => {
+  const version = focusInteractionVersion
+  const previousElement = document.activeElement
+  await nextTick()
+  if (version !== focusInteractionVersion) return
+  // Do not steal focus if another control or panel gained it during the update.
+  if (document.activeElement !== previousElement && document.activeElement !== document.body) return
+  const peerId = nextClassroomFocus(
+    visibleParticipantRows.value.map(({ peerId, peer }) => ({
+      peerId,
+      assigned: Boolean(peer.exercise),
+    })),
+    preferredPeerId,
+    consumedIds,
+  )
+  focusedPeerId.value = peerId
+  const row = rosterRowRefs.get(peerId)
+  if (row?.isConnected) {
+    row.focus({ preventScroll: true })
+    row.scrollIntoView({ block: 'nearest' })
+  } else classroomShellRef.value?.focus({ preventScroll: true })
 }
 
 const consumeActionSelection = (targetIds: string[]) => {
-  const consumed = new Set(targetIds)
   selectedPeerIds.value = []
-  nextTick(() => {
-    const rows = visibleParticipantRows.value
-    const nextIndex = rows.findIndex(({ peerId, peer }) => !consumed.has(peerId) && !peer.exercise)
-    const fallbackIndex = rows.findIndex(({ peerId }) => !consumed.has(peerId))
-    const focusIndex = nextIndex >= 0 ? nextIndex : fallbackIndex
-    focusedPeerId.value = focusIndex >= 0 ? rows[focusIndex].peerId : ''
-    if (focusIndex >= 0) {
-      rosterRowRefs.value[focusIndex]?.focus({ preventScroll: true })
-      rosterRowRefs.value[focusIndex]?.scrollIntoView({ block: 'nearest' })
-    }
-  })
+  restoreRosterFocus(focusedPeerId.value, targetIds)
 }
 
 const clearRosterSearch = () => {
@@ -1572,13 +1591,14 @@ const cancelExercisePalette = () => {
   restoreRosterFocus()
 }
 
-const chooseExercise = (exercise: ModuleEntry) => {
+const chooseExercise = async (exercise: ModuleEntry) => {
   const targets = [...exercisePaletteTargetIds.value]
   const peerId = exercisePalettePeerId.value
   exercisePath.value = exercise.path
   closeExercisePalette()
   exercisePaletteTargetIds.value = []
   exercisePalettePeerId.value = ''
+  await restoreRosterFocus(peerId || focusedPeerId.value)
   assignExercise(targets, peerId)
 }
 
@@ -1638,7 +1658,12 @@ const handleClassroomKeydown = (event: KeyboardEvent) => {
 
   // All Classroom shortcuts except the final Escape stay inside this panel.
   event.stopPropagation()
-  if (event.target instanceof Element && event.target.closest('button, a, summary')) return
+  if (
+    event.target instanceof Element &&
+    event.target.closest('button, a, summary') &&
+    isNativeControlKey(event.key)
+  )
+    return
   if (isEditableKeyboardTarget(event.target) || isEditableKeyboardTarget(document.activeElement)) {
     return
   }
@@ -1758,6 +1783,7 @@ const sendAnnouncement = () => {
   announcement.value = ''
   messageComposerOpen.value = false
   messageTargetIds.value = []
+  restoreRosterFocus()
 }
 
 const closeMessageComposer = () => {
@@ -1954,12 +1980,19 @@ const assignExercise = async (targets: string[], detailsTargetPeerId = '') => {
   const exercise = selectedExercise()
   if (!exercise || !targets.length) return
   const minutes = Math.max(1, exerciseMinutes.value || 1)
+  const focusVersion = focusInteractionVersion
+  const previousElement = document.activeElement
   const results = await instructorActions.assign(
     instructorTargets(targets),
     exercise.path,
     minutes * 60_000,
   )
   const sent = reportActionResults('exercise', `${exercise.name} (${minutes} min)`, results)
+  if (
+    focusVersion !== focusInteractionVersion ||
+    (document.activeElement !== previousElement && document.activeElement !== document.body)
+  )
+    return
   if (detailsTargetPeerId && sent.includes(detailsTargetPeerId)) {
     openPeerDetails(detailsTargetPeerId)
   } else if (sent.length === results.length) {
@@ -1968,6 +2001,7 @@ const assignExercise = async (targets: string[], detailsTargetPeerId = '') => {
     selectedPeerIds.value = results
       .filter((result) => result.status !== 'sent')
       .map((result) => result.peerId)
+    restoreRosterFocus()
   }
 }
 
@@ -1996,6 +2030,7 @@ const unassignPeer = (peerId: string) => {
   peer.metadata.checkPoint = ''
   peer.metadata.checkPointData = undefined
   logSessionEvent('exercise-unassign', peerId, 'Assignment removed')
+  restoreRosterFocus(peerId)
 }
 
 const disconnectPeer = (peerId: string) => {
@@ -2031,6 +2066,7 @@ const sendExerciseControl = (action: 'start' | 'stop', targets = actionTargetIds
   if (!targets.length) return
   const results = instructorActions.control(action, instructorTargets(targets))
   reportActionResults('exercise-control', action, results)
+  restoreRosterFocus()
 }
 
 const startExercisesFromKeyboard = () => {
@@ -2088,6 +2124,7 @@ const participantSummary = (peer: ConnectionsList[string]) => {
 const confirmDisconnect = (peerId: string, peer: ConnectionsList[string]) => {
   const name = peer.metadata.displayName || peerId
   if (window.confirm(`Disconnect ${name}?`)) peer.conn.close()
+  restoreRosterFocus(peerId)
 }
 
 const toggleHand = () => {
