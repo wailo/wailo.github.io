@@ -152,6 +152,17 @@ test('multiple-choice questions accept practice and assessment modes', () => {
   assert.equal(diagnostics.length, 0, diagnosticText(diagnostics))
 })
 
+test('script debriefs expose typed request and outcome APIs in the lesson editor', () => {
+  const diagnostics = lessonDiagnostics(`
+    async function lesson(context: ScriptContext) {
+      const result = await context.ai.request({ purpose: 'debrief', evidence: { scorePercent: 80 } });
+      if (result.status === 'completed') await context.notifyUser('AI debrief', result.message);
+      else context.checkPoint(result.reason);
+    }
+  `)
+  assert.equal(diagnostics.length, 0, diagnosticText(diagnostics))
+})
+
 test('checkpoints accept text and optional structured evidence in the lesson editor', () => {
   const diagnostics = lessonDiagnostics(`
     async function lesson(context: ScriptContext) {

@@ -59,6 +59,27 @@
         </button>
       </form>
 
+      <div
+        v-if="isInstructor && isOnline"
+        class="flex min-h-6 flex-wrap items-center gap-2 px-2 text-secondary"
+      >
+        <label
+          class="flex items-center gap-1"
+          title="Script debriefs share lesson evidence with the configured AI provider. Policy changes apply to new requests."
+        >
+          Script AI
+          <select v-model="aiPolicy" class="h-5 bg-simInputBackground px-1 text-secondary">
+            <option value="off">Off</option>
+            <option value="review">Review before sending</option>
+            <option value="automatic">Auto-send</option>
+          </select>
+        </label>
+        <span class="text-xs"
+          >{{ feedbackProviderConfig.provider }} ·
+          {{ aiJobs.filter((job) => job.state !== 'finished').length }} pending</span
+        >
+      </div>
+
       <div v-if="connectionSettingsOpen" class="grid gap-1 bg-panelHeaderBackground p-2">
         <label v-if="!isInstructor && isOnline" class="flex h-5 min-w-0 items-center gap-1">
           <span class="w-14 shrink-0 opacity-60">ID</span>
@@ -284,6 +305,25 @@
                     <span class="roster-secondary-id shrink-0">
                       · {{ compactStatus(participant.peer.metadata.status) }}
                     </span>
+                    <button
+                      v-if="pendingAI(participant.peerId)"
+                      class="command-button shrink-0"
+                      :class="{
+                        'roster-primary-action': aiJobs.some(
+                          (job) => job.peerId === participant.peerId && job.state === 'review',
+                        ),
+                      }"
+                      @click.stop="openPeerDetails(participant.peerId)"
+                    >
+                      AI
+                      {{
+                        aiJobs.find(
+                          (job) => job.peerId === participant.peerId && job.state !== 'finished',
+                        )?.state === 'review'
+                          ? 'review'
+                          : 'pending'
+                      }}
+                    </button>
                     <span
                       v-if="participant.peer.exercise"
                       class="roster-exercise-status shrink-0"
@@ -440,96 +480,82 @@
                     <button
                       class="command-button"
                       :disabled="
-                        feedbackRequest.pending ||
+                        pendingAI(participant.peerId) ||
                         !participant.peer.conn.open ||
                         !participant.peer.exercise.checkpoints.length
                       "
-                      :title="`Request feedback from ${feedbackProviderConfig.provider}; shares lesson context and recent checkpoints`"
+                      :title="`Shares lesson evidence with ${feedbackProviderConfig.provider}`"
                       @click="suggestPeerFeedback(participant.peerId)"
                     >
-                      {{
-                        feedbackRequest.pending && feedbackRequest.peerId === participant.peerId
-                          ? 'Requesting…'
-                          : 'Suggest feedback'
-                      }}
+                      Suggest feedback
                     </button>
-                    <span>{{
-                      feedbackProviderConfig.provider === 'ollama' ? 'Ollama' : 'OpenAI'
-                    }}</span>
-                    <button
-                      v-if="
-                        feedbackRequest.pending && feedbackRequest.peerId === participant.peerId
-                      "
-                      class="command-button"
-                      @click="cancelFeedbackRequest"
-                    >
-                      Cancel
-                    </button>
+                    <span>{{ feedbackProviderConfig.provider }}</span>
                   </div>
-                  <p
-                    v-if="feedbackRequest.peerId === participant.peerId && feedbackRequest.notice"
-                    role="status"
-                    class="py-1 break-words text-secondary"
-                  >
-                    {{ feedbackRequest.notice }}
-                  </p>
                   <section
-                    v-if="visibleFeedback.length"
-                    aria-label="Suggested feedback"
+                    v-if="visibleAIJobs.length"
+                    aria-label="AI debriefs"
                     class="py-1 text-secondary"
                   >
-                    <div class="font-medium">Suggested feedback</div>
-                    <article
-                      v-for="suggestion in visibleFeedback"
-                      :key="suggestion.id"
-                      class="py-1"
-                    >
+                    <article v-for="job in visibleAIJobs" :key="job.id" class="py-1">
+                      <div role="status">
+                        AI ·
+                        {{
+                          job.state === 'finished'
+                            ? job.result?.status
+                            : job.state === 'review'
+                              ? 'Needs review'
+                              : job.state
+                        }}
+                      </div>
                       <p class="whitespace-pre-wrap break-words leading-tight">
-                        {{ suggestion.message }}
+                        {{ job.suggestion?.message }}
                       </p>
-                      <details class="mt-1">
+                      <p v-if="job.result && job.result.status !== 'completed'" class="break-words">
+                        {{ job.result.reason }}
+                      </p>
+                      <details v-if="job.suggestion" class="mt-1">
                         <summary class="detail-disclosure">
-                          Evidence · {{ suggestion.evidence.length }} checkpoints
+                          Evidence · {{ job.suggestion.evidence.length }} checkpoints
                         </summary>
-                        <div
-                          v-for="(checkpoint, index) in suggestion.evidence"
-                          :key="index"
-                          class="py-0.5"
-                        >
-                          <div>
-                            {{ formatCheckpointTime(checkpoint.timestamp) }} ·
-                            {{ checkpoint.message }}
-                          </div>
-                          <pre
-                            v-if="checkpoint.data"
-                            class="max-h-28 overflow-auto whitespace-pre-wrap break-words text-inherit"
-                            >{{ JSON.stringify(checkpoint.data, null, 2) }}</pre
-                          >
+                        <div v-for="(checkpoint, index) in job.suggestion.evidence" :key="index">
+                          {{ formatCheckpointTime(checkpoint.timestamp) }} ·
+                          {{ checkpoint.message }}
+                          <pre class="max-h-28 overflow-auto whitespace-pre-wrap break-words">{{
+                            JSON.stringify(
+                              job.evidence?.find(
+                                (item) =>
+                                  item.timestamp === checkpoint.timestamp &&
+                                  item.message === checkpoint.message,
+                              )?.data,
+                              null,
+                              2,
+                            )
+                          }}</pre>
                         </div>
+                        <pre class="max-h-28 overflow-auto whitespace-pre-wrap break-words">{{
+                          JSON.stringify(job.request.evidence, null, 2)
+                        }}</pre>
                       </details>
                       <div class="mt-1 flex items-center gap-1">
-                        <template v-if="suggestion.status === 'pending'">
+                        <template v-if="job.state === 'review'">
                           <button
                             class="command-button roster-primary-action"
-                            @click="approveFeedback(suggestion.id)"
+                            @click="approveFeedback(job.id)"
                           >
                             Send
                           </button>
-                          <button class="command-button" @click="dismissFeedback(suggestion.id)">
+                          <button class="command-button" @click="dismissFeedback(job.id)">
                             Dismiss
                           </button>
                         </template>
-                        <span v-else role="status">{{
-                          suggestion.status === 'sent' ? 'Sent' : 'Expired · assignment changed'
-                        }}</span>
+                        <button
+                          v-else-if="job.state !== 'finished'"
+                          class="command-button"
+                          @click="cancelAIJob(job.id)"
+                        >
+                          Cancel
+                        </button>
                       </div>
-                      <p
-                        v-if="suggestion.status === 'pending' && suggestion.error"
-                        role="alert"
-                        class="mt-1 break-words"
-                      >
-                        Not sent: {{ suggestion.error }}
-                      </p>
                     </article>
                   </section>
                   <div class="pt-1 font-medium">Progress history</div>
@@ -686,9 +712,9 @@ const emit = defineEmits<{
   (event: 'error', errorMessage: string): void
 }>()
 
-import type { CheckpointData } from '../ScriptContext'
+import type { CheckpointData, LessonAIRequest, LessonAIResponse } from '../ScriptContext'
 import { nextClassroomFocus, isNativeControlKey } from '../ClassroomFocus'
-import { createFeedbackReview, type FeedbackSuggestionInput } from '../FeedbackReview'
+import { createAICoordinator, createAIClient, validAIRequest, type AIPolicy } from '../LessonAI'
 import { requestFeedback } from '../FeedbackProvider'
 import { feedbackProviderConfig } from '../feedbackProviderConfig'
 import {
@@ -1013,7 +1039,9 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  cancelFeedbackRequest()
+  aiCoordinator.dispose()
+  aiClient.dispose()
+  manualAIRequests.clear()
   window.removeEventListener('beforeunload', disconnect)
   document.removeEventListener('pointerdown', dismissPeerDetailsOnOutsideClick)
   document.removeEventListener('pointerdown', recordFocusInteraction, true)
@@ -1124,6 +1152,7 @@ const onData = (data: PeerData, conn: PeerJS.DataConnection) => {
       'whiteboard',
       'command',
       'announcement',
+      'ai-response',
       'exercise',
       'exercise-unassign',
       'exercise-control',
@@ -1164,6 +1193,38 @@ const handleEnvelope = (message: ClassroomEnvelope, conn: PeerJS.DataConnection)
   const payload = message.payload as any
   const participant = incomingConns.value[conn.peer]
   switch (message.type) {
+    case 'ai-request':
+      if (
+        isInstructor.value &&
+        participant &&
+        validAIRequest(payload) &&
+        participant.exercise?.id === payload.assignmentId
+      ) {
+        if (!aiCoordinator.submit(conn.peer, payload, aiPolicy.value)) {
+          sendEnvelopeToConnection(conn, 'ai-response', {
+            requestId: payload.requestId,
+            assignmentId: payload.assignmentId,
+            runId: payload.runId,
+            result: { status: 'failed', reason: 'A debrief is already pending for this student.' },
+          })
+        }
+      }
+      break
+    case 'ai-cancel':
+      if (isInstructor.value && participant && validAIRequest(payload)) {
+        const job = aiJobs.value.find(
+          (j) =>
+            j.peerId === conn.peer &&
+            j.request.requestId === payload.requestId &&
+            j.request.assignmentId === payload.assignmentId &&
+            j.request.runId === payload.runId,
+        )
+        if (job) aiCoordinator.cancel(job.id)
+      }
+      break
+    case 'ai-response':
+      if (!isInstructor.value && conn === instructorConnection) aiClient.receive(payload)
+      break
     case 'api':
       emit('apiDataEvent', { api: String(payload.api || '') })
       break
@@ -1859,115 +1920,147 @@ const instructorTargets = (ids: string[]) =>
     assignmentId: incomingConns.value[peerId]?.exercise?.id ?? null,
   }))
 
-const feedbackReview = createFeedbackReview({
-  assignment: (peerId) => incomingConns.value[peerId]?.exercise,
-  send: (peerId, assignmentId, message) =>
-    instructorActions.message([peerId], message, { assignmentId })[0],
+const aiPolicy = ref<AIPolicy>('off')
+const manualAIRequests = new Set<string>()
+const aiClient = createAIClient((type, payload) => {
+  if (!isOnline.value || !instructorConnectionOpen || !instructorConnection)
+    throw new Error('Offline')
+  sendEnvelopeToConnection(instructorConnection, type, payload)
 })
-const feedbackRequest = ref({ peerId: '', assignmentId: '', pending: false, notice: '' })
-let feedbackAbort: AbortController | null = null
-const cancelFeedbackRequest = () => feedbackAbort?.abort()
-const suggestPeerFeedback = async (peerId: string) => {
-  const peer = incomingConns.value[peerId]
-  if (
-    feedbackRequest.value.pending ||
-    !isInstructor.value ||
-    !isOnline.value ||
-    !peer?.conn.open ||
-    !peer.exercise
-  )
-    return
-  const assignment = peer.exercise
-  const connection = peer.conn
-  const controller = new AbortController()
-  feedbackAbort = controller
-  feedbackRequest.value = { peerId, assignmentId: assignment.id, pending: true, notice: '' }
-  try {
-    const suggestion = await requestFeedback(
+const aiCoordinator = createAICoordinator({
+  current: (peerId, assignmentId) =>
+    Boolean(
+      isInstructor.value &&
+      isOnline.value &&
+      incomingConns.value[peerId]?.conn.open &&
+      incomingConns.value[peerId]?.exercise?.id === assignmentId,
+    ),
+  generate: (job, signal) => {
+    const assignment = incomingConns.value[job.peerId]!.exercise!
+    const checkpoints = [...assignment.checkpoints]
+    if (!manualAIRequests.has(job.request.requestId)) {
+      checkpoints.push({
+        timestamp: Date.now(),
+        message: 'AI debrief evidence',
+        data: job.request.evidence,
+      })
+    }
+    job.evidence = JSON.parse(JSON.stringify(checkpoints))
+    return requestFeedback(
       feedbackProviderConfig,
       {
-        peerId,
+        peerId: job.peerId,
         assignmentId: assignment.id,
         lessonName: assignment.name,
         status: assignment.status,
-        checkpoints: assignment.checkpoints,
+        checkpoints: job.evidence!,
       },
-      controller.signal,
+      signal,
     )
-    if (
-      controller.signal.aborted ||
-      !isInstructor.value ||
-      !isOnline.value ||
-      incomingConns.value[peerId]?.conn !== connection ||
-      incomingConns.value[peerId]?.exercise?.id !== assignment.id
-    ) {
-      throw new Error('Feedback discarded: classroom or assignment changed.')
+  },
+  deliver: (job, result) => {
+    const peer = incomingConns.value[job.peerId]
+    if (!peer) return
+    if (manualAIRequests.delete(job.request.requestId)) {
+      if (result.status === 'completed') {
+        const sent = instructorActions.message([job.peerId], result.message, {
+          assignmentId: job.request.assignmentId,
+        })[0]
+        if (sent.status !== 'sent') throw new Error(sent.reason)
+      }
+    } else {
+      sendEnvelopeToConnection(peer.conn, 'ai-response', {
+        requestId: job.request.requestId,
+        assignmentId: job.request.assignmentId,
+        runId: job.request.runId,
+        result,
+      })
     }
-    if (!suggestion) {
-      feedbackRequest.value.notice = 'Insufficient evidence for feedback.'
-      return
-    }
-    const result = queueFeedbackSuggestion(suggestion)
-    if (!result.accepted) throw new Error(result.reason)
-    feedbackRequest.value.notice = 'Feedback ready for review. Nothing sent to the student.'
-  } catch (error) {
-    feedbackRequest.value.notice = controller.signal.aborted
-      ? 'Feedback request cancelled.'
-      : String(error instanceof Error ? error.message : error)
-  } finally {
-    if (feedbackAbort === controller) {
-      feedbackRequest.value.pending = false
-      feedbackAbort = null
-    }
+    recordCheckpoint(peer, `AI debrief: ${result.status}`, Date.now(), { aiResponse: result })
+    logSessionEvent('ai-response', job.peerId, result.status)
+  },
+})
+const aiJobs = aiCoordinator.jobs
+const visibleAIJobs = computed(() =>
+  aiJobs.value.filter((job) => job.peerId === detailsPeerId.value),
+)
+const pendingAI = (peerId: string) =>
+  aiJobs.value.some((job) => job.peerId === peerId && job.state !== 'finished')
+const suggestPeerFeedback = (peerId: string) => {
+  const assignment = incomingConns.value[peerId]?.exercise
+  if (!assignment?.checkpoints.length) return
+  const requestId = crypto.randomUUID()
+  manualAIRequests.add(requestId)
+  if (
+    !aiCoordinator.submit(
+      peerId,
+      {
+        requestId,
+        assignmentId: assignment.id,
+        runId: 'manual',
+        purpose: 'debrief',
+        evidence: {},
+      },
+      'review',
+    )
+  )
+    manualAIRequests.delete(requestId)
+}
+const requestLessonAI = (
+  request: LessonAIRequest,
+  runId: string,
+  signal?: AbortSignal,
+): Promise<LessonAIResponse> => {
+  if (
+    isInstructor.value ||
+    !currentAssignment.value ||
+    !isOnline.value ||
+    !instructorConnectionOpen
+  ) {
+    return Promise.resolve({
+      status: 'unavailable',
+      reason: 'An active classroom assignment is required.',
+    })
   }
+  return aiClient.request(
+    {
+      ...request,
+      requestId: crypto.randomUUID(),
+      assignmentId: currentAssignment.value.id,
+      runId,
+    },
+    signal,
+  )
 }
 watch(
   () => [
     isInstructor.value,
     isOnline.value,
-    detailsPeerId.value,
-    incomingConns.value[feedbackRequest.value.peerId]?.exercise?.id,
-    incomingConns.value[feedbackRequest.value.peerId]?.conn.open,
+    ...Object.entries(incomingConns.value).map(
+      ([id, peer]) => `${id}:${peer.exercise?.id}:${peer.conn.open}`,
+    ),
   ],
   () => {
-    if (
-      feedbackRequest.value.pending &&
-      (!isInstructor.value ||
-        !isOnline.value ||
-        detailsPeerId.value !== feedbackRequest.value.peerId ||
-        incomingConns.value[feedbackRequest.value.peerId]?.exercise?.id !==
-          feedbackRequest.value.assignmentId ||
-        !incomingConns.value[feedbackRequest.value.peerId]?.conn.open)
-    )
-      cancelFeedbackRequest()
+    aiCoordinator.expire()
+    for (const job of aiJobs.value) {
+      if (job.state === 'finished') manualAIRequests.delete(job.request.requestId)
+    }
   },
-  { flush: 'sync' },
-)
-const visibleFeedback = computed(() =>
-  feedbackReview.suggestions.value.filter(
-    (suggestion) => suggestion.peerId === detailsPeerId.value && suggestion.status !== 'dismissed',
-  ),
 )
 watch(
-  () => Object.entries(incomingConns.value).map(([id, peer]) => [id, peer.exercise?.id]),
-  () => feedbackReview.expireStale(),
-  { flush: 'sync' },
+  () => [currentAssignment.value?.id, isOnline.value],
+  () => aiClient.dispose(),
 )
-const queueFeedbackSuggestion = (input: FeedbackSuggestionInput) => {
-  if (!isInstructor.value || !isOnline.value)
-    return { accepted: false, reason: 'Instructor must be online' }
-  return feedbackReview.enqueue(input)
-}
 const approveFeedback = (id: string) => {
-  const result = feedbackReview.approve(id)
-  if (result) reportActionResults('feedback', 'Suggested feedback', [result])
-  if (result?.status === 'sent') restoreRosterFocus()
+  aiCoordinator.approve(id)
+  restoreRosterFocus()
 }
 const dismissFeedback = (id: string) => {
-  const suggestion = feedbackReview.suggestions.value.find((item) => item.id === id)
-  if (suggestion?.status !== 'pending') return
-  feedbackReview.dismiss(id)
-  logSessionEvent('feedback-dismissed', suggestion.peerId, id)
+  aiCoordinator.cancel(id, true)
+  restoreRosterFocus()
+}
+const cancelAIJob = (id: string) => {
+  aiCoordinator.cancel(id)
   restoreRosterFocus()
 }
 
@@ -2180,7 +2273,7 @@ const exportSession = () => {
       startedAt: new Date(sessionStartedAt.value).toISOString(),
       exportedAt: new Date().toISOString(),
       participants,
-      feedbackSuggestions: feedbackReview.suggestions.value,
+      aiDebriefs: aiJobs.value,
       events: sessionEvents.value,
     },
     null,
@@ -2255,7 +2348,7 @@ const reset = () => {
 }
 
 defineExpose({
-  queueFeedbackSuggestion,
+  requestLessonAI,
   sendApiCall,
   sendStatus,
   sendScript,

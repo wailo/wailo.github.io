@@ -68,6 +68,17 @@ export interface CheckpointData {
   [key: string]: unknown
 }
 
+export interface LessonAIRequest {
+  purpose: 'debrief'
+  evidence: CheckpointData
+  /** Includes queueing and instructor review; defaults to five minutes. */
+  timeoutMs?: number
+}
+
+export type LessonAIResponse =
+  | { status: 'completed'; message: string }
+  | { status: 'unavailable' | 'timeout' | 'cancelled' | 'failed' | 'dismissed'; reason: string }
+
 export type B747SimProps = b747SimProps
 export type C172SimProps = c172SimProps
 export type GraphicsSimProps = graphicsSimProps
@@ -113,6 +124,7 @@ export interface ScriptContext<TProps extends ScriptSimProps = FlightModelSimPro
   }
   resetPanels: () => void
   checkPoint: (content: string, data?: CheckpointData) => void
+  ai: { request: (request: LessonAIRequest) => Promise<LessonAIResponse> }
   metrics: any[]
 }
 
@@ -136,6 +148,7 @@ export function createScriptContext<TProps extends ScriptSimProps>(
     plotView: deps.plotView,
     dataDisplayReset: deps.dataDisplayReset,
     checkPoint: deps.checkPoint,
+    ai: deps.ai,
     setLayout: deps.setLayout,
     layoutTypes: LayoutTypes,
     setVisuals: deps.setVisuals,

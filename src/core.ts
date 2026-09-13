@@ -10,6 +10,7 @@ import { SimulationProperties } from '../src/wasm/generated/flightsimulator_exec
 export type { SimulationProperties } from '../src/wasm/generated/flightsimulator_exec_meta'
 
 import type { ScriptContext } from './ScriptContext'
+import './ApplicationTimers'
 import type { b747, c172 } from './wasm/siminterface'
 export type { ScriptContext } from './ScriptContext'
 

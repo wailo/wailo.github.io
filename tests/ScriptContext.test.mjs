@@ -42,6 +42,7 @@ test('createScriptContext preserves live simulator properties and forwards utili
     },
   }
   const dependencies = createDependencies(props)
+  dependencies.ai = { request: async () => ({ status: 'completed', message: 'Debrief' }) }
   const context = createScriptContext(dependencies)
 
   assert.equal(context.props, props)
@@ -50,6 +51,7 @@ test('createScriptContext preserves live simulator properties and forwards utili
   assert.equal(context.dataView, dependencies.dataView)
   assert.equal(context.waitForCondition, dependencies.waitForCondition)
   assert.equal(context.askQuestion, dependencies.askQuestion)
+  assert.equal(context.ai, dependencies.ai)
   assert.equal(context.setTab, dependencies.setTab)
 
   altitude = 2400

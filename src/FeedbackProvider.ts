@@ -1,4 +1,5 @@
 import type { FeedbackSuggestionInput } from './FeedbackReview'
+import { applicationTimers } from './ApplicationTimers'
 import type { LessonCheckpoint } from './useLessonRun'
 
 export interface FeedbackProviderConfig {
@@ -78,7 +79,7 @@ export async function requestFeedback(
   signal?.addEventListener('abort', abort, { once: true })
   if (signal?.aborted) controller.abort()
   let timedOut = false
-  const timer = setTimeout(() => {
+  const timer = applicationTimers.setTimeout(() => {
     timedOut = true
     controller.abort()
   }, config.timeoutMs)
@@ -176,7 +177,7 @@ export async function requestFeedback(
     if (error instanceof SyntaxError) throw new Error('Feedback provider returned invalid JSON.')
     throw error
   } finally {
-    clearTimeout(timer)
+    applicationTimers.clearTimeout(timer)
     signal?.removeEventListener('abort', abort)
   }
 }

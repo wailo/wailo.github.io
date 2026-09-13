@@ -242,6 +242,7 @@
                 setLayout: simFunctions.setLayout,
                 checkPoint: (content: string, data?: CheckpointData) =>
                   classroomComponentRef?.sendCheckPoint(content, data),
+                requestAI: requestLessonAI,
                 setVisuals: simFunctions.setVisuals,
                 setMap: simFunctions.setMap,
                 setTheme: simFunctions.setTheme,
@@ -608,7 +609,7 @@ import {
   nextTick,
 } from 'vue'
 import Panel from './Panel.vue'
-import type { CheckpointData } from '../ScriptContext'
+import type { CheckpointData, LessonAIRequest, LessonAIResponse } from '../ScriptContext'
 import ButtonSwitch from './ButtonSwitch.vue'
 import wButton from './wButton.vue'
 import wInput from './wInput.vue'
@@ -953,6 +954,13 @@ const toggleTheme = () => {
 
 // Components refs
 const classroomComponentRef = ref<InstanceType<typeof ClassRoom> | null>(null) // Use the ClassRoom component type
+const requestLessonAI = (
+  request: LessonAIRequest,
+  runId: string,
+  signal: AbortSignal,
+): Promise<LessonAIResponse> =>
+  classroomComponentRef.value?.requestLessonAI(request, runId, signal) ??
+  Promise.resolve({ status: 'unavailable', reason: 'Classroom unavailable.' })
 const editorComponentRef = ref<InstanceType<typeof Editor> | null>(null) // Use the Editor component type
 const dataDisplayRef = ref<InstanceType<typeof SimDataDisplay> | null>(null) // Use the SimDataDisplay component type
 const markdownRef = ref<InstanceType<typeof MarkDown> | null>(null) // Use the MarkDown component type

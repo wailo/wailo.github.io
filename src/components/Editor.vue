@@ -327,7 +327,7 @@ import scriptApiTypes from '../ScriptContext.ts?raw'
 import { LayoutTypes } from '../../src/wasm/siminterface.ts'
 import { compileUserScript, stripImportsExports } from '../EditorScriptRuntime.ts'
 import { useLessonRun } from '../useLessonRun'
-import type { CheckpointData } from '../ScriptContext'
+import type { CheckpointData, LessonAIRequest, LessonAIResponse } from '../ScriptContext'
 
 const lessonRun = useLessonRun()
 const runStatus = lessonRun.status
@@ -352,6 +352,7 @@ const aiGeneratedCode = ref('')
 const aiError = ref('')
 let runClockTimer: ReturnType<typeof setInterval> | undefined
 let executionGeneration = 0
+let aiRunController = new AbortController()
 
 // let monacoEditor: monaco.editor.IStandaloneCodeEditor | null = null;
 
@@ -421,6 +422,11 @@ const props = defineProps({
       setTab: (panelId: string, tabName: string) => void
       resetPanels: () => void
       checkPoint: (content: string, data?: CheckpointData) => void
+      requestAI: (
+        request: LessonAIRequest,
+        runId: string,
+        signal: AbortSignal,
+      ) => Promise<LessonAIResponse>
     }>,
     required: true,
   },
@@ -476,6 +482,8 @@ const code = ref(``)
 
 const reset = (markStopped = true) => {
   executionGeneration++
+  aiRunController.abort()
+  aiRunController = new AbortController()
   props.utilityFuncs.cancelPromptInteractions()
   executionResult.value = null
   resetTimeouts()
@@ -501,6 +509,7 @@ defineExpose({ reset, executeExternalCode })
 const executeCode = async (): Promise<boolean> => {
   reset(false)
   const runGeneration = executionGeneration
+  const aiSignal = aiRunController.signal
   let coreCode = coreSimJs
   coreCode = stripImportsExports(coreCode)
   code.value = stripImportsExports(code.value)
@@ -570,6 +579,18 @@ const executeCode = async (): Promise<boolean> => {
         if (checkpoint) props.utilityFuncs.checkPoint(content, checkpoint.data)
       },
       metrics: metrics,
+      ai: {
+        request: async (request) => {
+          if (aiSignal.aborted) throw new Error('Lesson stopped.')
+          addRunEvent('AI debrief requested')
+          const result = await props.utilityFuncs.requestAI(request, run.runId, aiSignal)
+          if (aiSignal.aborted) throw new Error('Lesson stopped.')
+          addRunEvent(`AI debrief: ${result.status}`)
+          const data = { aiResponse: result }
+          lessonRun.recordCheckpoint(run.runId, `AI debrief: ${result.status}`, data)
+          return result
+        },
+      },
     }
 
     const finalUserCode = compileUserScript<typeof props.simProps>(code.value, (message) =>
@@ -579,6 +600,7 @@ const executeCode = async (): Promise<boolean> => {
 
     const startStime = new Date()
     await runUserScript(finalUserCode, ctx)
+    aiRunController.signal === aiSignal && aiRunController.abort()
     if (runGeneration !== executionGeneration) return false
     lessonRun.finish(run.runId, 'COMPLETED', 'Lesson completed')
     completedLessons.value = new Set([...completedLessons.value, lessonTitle])
@@ -598,6 +620,7 @@ const executeCode = async (): Promise<boolean> => {
     })
     return true
   } catch (err) {
+    if (aiRunController.signal === aiSignal) aiRunController.abort()
     if (runGeneration !== executionGeneration) return false
     console.error(err)
     lessonRun.finish(run.runId, 'ERROR', `Error: ${String(err)}`)
