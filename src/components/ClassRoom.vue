@@ -344,7 +344,8 @@
                     Peer details
                   </span>
                   <button
-                    class="shrink-0 px-1 opacity-60 hover:text-panelActive hover:opacity-100"
+                    class="command-button"
+                    aria-label="Close peer details"
                     title="Close peer details"
                     @click="closePeerDetails"
                   >
@@ -385,7 +386,11 @@
                   <div v-else class="opacity-60">Unassigned</div>
                 </div>
                 <div class="flex flex-wrap gap-1 border-t border-simElementBorder px-2 py-1">
-                  <button class="command-button" @click="openExercisePalette(participant.peerId)">
+                  <button
+                    class="command-button"
+                    :class="{ 'roster-primary-action': !participant.peer.exercise }"
+                    @click="openExercisePalette(participant.peerId)"
+                  >
                     {{ participant.peer.exercise ? 'Replace' : 'Assign' }}
                   </button>
                   <button
@@ -394,18 +399,22 @@
                       !participant.peer.exercise || participant.peer.exercise.status === 'running'
                     "
                     @click="sendExerciseControl('start', [participant.peerId])"
+                    :class="{
+                      'roster-primary-action':
+                        participant.peer.exercise && participant.peer.exercise.status !== 'running',
+                    }"
                   >
                     Start
                   </button>
                   <button
-                    class="command-button"
+                    class="command-button command-destructive"
                     :disabled="participant.peer.exercise?.status !== 'running'"
                     @click="sendExerciseControl('stop', [participant.peerId])"
                   >
                     Stop
                   </button>
                   <button
-                    class="command-button"
+                    class="command-button command-destructive"
                     :disabled="!participant.peer.exercise"
                     @click="unassignPeer(participant.peerId)"
                   >
@@ -415,7 +424,7 @@
                     Message
                   </button>
                   <button
-                    class="command-button ml-auto"
+                    class="command-button command-destructive ml-auto"
                     @click="disconnectPeer(participant.peerId)"
                   >
                     Disconnect
@@ -479,7 +488,7 @@
                         {{ suggestion.message }}
                       </p>
                       <details class="mt-1">
-                        <summary class="cursor-pointer">
+                        <summary class="detail-disclosure">
                           Evidence · {{ suggestion.evidence.length }} checkpoints
                         </summary>
                         <div
@@ -500,7 +509,10 @@
                       </details>
                       <div class="mt-1 flex items-center gap-1">
                         <template v-if="suggestion.status === 'pending'">
-                          <button class="command-button" @click="approveFeedback(suggestion.id)">
+                          <button
+                            class="command-button roster-primary-action"
+                            @click="approveFeedback(suggestion.id)"
+                          >
                             Send
                           </button>
                           <button class="command-button" @click="dismissFeedback(suggestion.id)">
@@ -2314,6 +2326,38 @@ const trace = (text: string) => {
 
 .roster-primary-action {
   @apply bg-panelActive px-2 text-white hover:bg-panelActive hover:text-white;
+}
+
+/* Filled controls distinguish actions from the adjacent read-only metadata. */
+.roster-detail .command-button {
+  @apply px-2;
+  background: rgb(var(--color-secondary) / 0.16);
+}
+
+.roster-detail .command-button:enabled:hover {
+  @apply bg-secondary text-primary;
+}
+
+.roster-detail .roster-primary-action {
+  @apply bg-panelActive text-white;
+}
+
+.roster-detail .command-destructive {
+  box-shadow: inset 0 -2px rgb(var(--color-panelActive));
+}
+
+.roster-detail .command-destructive:enabled:hover,
+.roster-detail .roster-primary-action:enabled:hover {
+  @apply bg-panelActive text-white;
+  filter: brightness(1.1);
+}
+
+.detail-disclosure {
+  @apply cursor-pointer text-secondary underline underline-offset-2;
+}
+
+.detail-disclosure:hover {
+  text-decoration-thickness: 2px;
 }
 
 .roster-group-heading {
