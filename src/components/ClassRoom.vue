@@ -420,10 +420,66 @@
                     Disconnect
                   </button>
                 </div>
-                <div class="border-t border-simElementBorder px-2 pt-1 font-medium opacity-70">
-                  Progress history
-                </div>
-                <div class="roster-detail-history min-h-0 flex-1 overflow-auto px-2 pb-1">
+                <div
+                  class="roster-detail-history min-h-0 flex-1 overflow-auto border-t border-simElementBorder px-2 pb-1"
+                >
+                  <section
+                    v-if="visibleFeedback.length"
+                    aria-label="Suggested feedback"
+                    class="py-1 text-secondary"
+                  >
+                    <div class="font-medium">Suggested feedback</div>
+                    <article
+                      v-for="suggestion in visibleFeedback"
+                      :key="suggestion.id"
+                      class="py-1"
+                    >
+                      <p class="whitespace-pre-wrap break-words leading-tight">
+                        {{ suggestion.message }}
+                      </p>
+                      <details class="mt-1">
+                        <summary class="cursor-pointer">
+                          Evidence · {{ suggestion.evidence.length }} checkpoints
+                        </summary>
+                        <div
+                          v-for="(checkpoint, index) in suggestion.evidence"
+                          :key="index"
+                          class="py-0.5"
+                        >
+                          <div>
+                            {{ formatCheckpointTime(checkpoint.timestamp) }} ·
+                            {{ checkpoint.message }}
+                          </div>
+                          <pre
+                            v-if="checkpoint.data"
+                            class="max-h-28 overflow-auto whitespace-pre-wrap break-words text-inherit"
+                            >{{ JSON.stringify(checkpoint.data, null, 2) }}</pre
+                          >
+                        </div>
+                      </details>
+                      <div class="mt-1 flex items-center gap-1">
+                        <template v-if="suggestion.status === 'pending'">
+                          <button class="command-button" @click="approveFeedback(suggestion.id)">
+                            Send
+                          </button>
+                          <button class="command-button" @click="dismissFeedback(suggestion.id)">
+                            Dismiss
+                          </button>
+                        </template>
+                        <span v-else role="status">{{
+                          suggestion.status === 'sent' ? 'Sent' : 'Expired · assignment changed'
+                        }}</span>
+                      </div>
+                      <p
+                        v-if="suggestion.status === 'pending' && suggestion.error"
+                        role="alert"
+                        class="mt-1 break-words"
+                      >
+                        Not sent: {{ suggestion.error }}
+                      </p>
+                    </article>
+                  </section>
+                  <div class="pt-1 font-medium">Progress history</div>
                   <div
                     v-if="!participant.peer.exercise?.checkpoints.length"
                     class="py-1 opacity-50"
@@ -578,9 +634,11 @@ const emit = defineEmits<{
 }>()
 
 import type { CheckpointData } from '../ScriptContext'
+import { createFeedbackReview, type FeedbackSuggestionInput } from '../FeedbackReview'
 import {
   createInstructorActions,
   acceptsExerciseControl,
+  acceptsAssignmentMessage,
   type InstructorActionResult,
 } from '../InstructorActions'
 
@@ -1071,7 +1129,9 @@ const handleEnvelope = (message: ClassroomEnvelope, conn: PeerJS.DataConnection)
       }
       break
     case 'announcement':
-      emit('announcement', String(payload.message || ''))
+      if (acceptsAssignmentMessage(currentAssignment.value?.id, payload.assignmentId)) {
+        emit('announcement', String(payload.message || ''))
+      }
       break
     case 'exercise':
       if (!isInstructor.value) {
@@ -1535,7 +1595,7 @@ const handleClassroomKeydown = (event: KeyboardEvent) => {
 
   // All Classroom shortcuts except the final Escape stay inside this panel.
   event.stopPropagation()
-  if (event.target instanceof Element && event.target.closest('button, a')) return
+  if (event.target instanceof Element && event.target.closest('button, a, summary')) return
   if (isEditableKeyboardTarget(event.target) || isEditableKeyboardTarget(document.activeElement)) {
     return
   }
@@ -1717,6 +1777,39 @@ const instructorTargets = (ids: string[]) =>
     peerId,
     assignmentId: incomingConns.value[peerId]?.exercise?.id ?? null,
   }))
+
+const feedbackReview = createFeedbackReview({
+  assignment: (peerId) => incomingConns.value[peerId]?.exercise,
+  send: (peerId, assignmentId, message) =>
+    instructorActions.message([peerId], message, { assignmentId })[0],
+})
+const visibleFeedback = computed(() =>
+  feedbackReview.suggestions.value.filter(
+    (suggestion) => suggestion.peerId === detailsPeerId.value && suggestion.status !== 'dismissed',
+  ),
+)
+watch(
+  () => Object.entries(incomingConns.value).map(([id, peer]) => [id, peer.exercise?.id]),
+  () => feedbackReview.expireStale(),
+  { flush: 'sync' },
+)
+const queueFeedbackSuggestion = (input: FeedbackSuggestionInput) => {
+  if (!isInstructor.value || !isOnline.value)
+    return { accepted: false, reason: 'Instructor must be online' }
+  return feedbackReview.enqueue(input)
+}
+const approveFeedback = (id: string) => {
+  const result = feedbackReview.approve(id)
+  if (result) reportActionResults('feedback', 'Suggested feedback', [result])
+  if (result?.status === 'sent') restoreRosterFocus()
+}
+const dismissFeedback = (id: string) => {
+  const suggestion = feedbackReview.suggestions.value.find((item) => item.id === id)
+  if (suggestion?.status !== 'pending') return
+  feedbackReview.dismiss(id)
+  logSessionEvent('feedback-dismissed', suggestion.peerId, id)
+  restoreRosterFocus()
+}
 
 const reportActionResults = (type: string, detail: string, results: InstructorActionResult[]) => {
   const sent = results.filter((result) => result.status === 'sent').map((result) => result.peerId)
@@ -1916,6 +2009,7 @@ const exportSession = () => {
       startedAt: new Date(sessionStartedAt.value).toISOString(),
       exportedAt: new Date().toISOString(),
       participants,
+      feedbackSuggestions: feedbackReview.suggestions.value,
       events: sessionEvents.value,
     },
     null,
@@ -1990,6 +2084,7 @@ const reset = () => {
 }
 
 defineExpose({
+  queueFeedbackSuggestion,
   sendApiCall,
   sendStatus,
   sendScript,
@@ -2079,6 +2174,7 @@ const trace = (text: string) => {
 }
 
 .roster-group-heading:focus-visible,
+.roster-detail summary:focus-visible,
 .peer-details-toggle:focus-visible,
 .command-button:focus-visible {
   outline: 1px solid rgb(var(--color-panelActive));

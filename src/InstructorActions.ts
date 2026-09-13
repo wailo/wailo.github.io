@@ -65,10 +65,20 @@ export function createInstructorActions(deps: Dependencies) {
   ]
 
   return {
-    message(peerIds: string[], text: string): InstructorActionResult[] {
+    message(
+      peerIds: string[],
+      text: string,
+      context?: { assignmentId: string },
+    ): InstructorActionResult[] {
       return [...new Set(peerIds)].map((id) => {
-        const reason = check(id) ?? (!text.trim() ? 'Message is empty' : undefined)
-        return reason ? skipped(id, reason) : send(id, 'announcement', { message: text.trim() })
+        const reason =
+          check(id, context?.assignmentId) ?? (!text.trim() ? 'Message is empty' : undefined)
+        return reason
+          ? skipped(id, reason)
+          : send(id, 'announcement', {
+              message: text.trim(),
+              ...(context ? { assignmentId: context.assignmentId } : {}),
+            })
       })
     },
     control(action: 'start' | 'stop', targets: InstructorTarget[]): InstructorActionResult[] {
@@ -139,6 +149,15 @@ export function createInstructorActions(deps: Dependencies) {
       })
     },
   }
+}
+
+export function acceptsAssignmentMessage(
+  currentId: string | undefined,
+  assignmentId: unknown,
+): boolean {
+  return (
+    assignmentId === undefined || (typeof assignmentId === 'string' && assignmentId === currentId)
+  )
 }
 
 /** A delayed control must never start or stop a replacement assignment. */
