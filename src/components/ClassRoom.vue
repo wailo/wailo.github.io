@@ -578,6 +578,11 @@ const emit = defineEmits<{
 }>()
 
 import type { CheckpointData } from '../ScriptContext'
+import {
+  createInstructorActions,
+  acceptsExerciseControl,
+  type InstructorActionResult,
+} from '../InstructorActions'
 
 const props = defineProps<{ accountName?: string }>()
 defineOptions({ inheritAttrs: false })
@@ -1000,17 +1005,12 @@ const onData = (data: PeerData, conn: PeerJS.DataConnection) => {
       'exercise-control',
       'hand-control',
     ]
-    // Students only accept privileged messages from their instructor connection.
-    if (data.senderRole === 'instructor' && conn !== instructorConnection && !isInstructor.value) {
-      onError(`Rejected instructor message from ${conn.peer}`)
-      return
-    }
+    // Authorize the actual connection, not a senderRole supplied by the message.
     if (
-      isInstructor.value &&
-      data.senderRole === 'student' &&
-      privilegedTypes.includes(data.type)
+      privilegedTypes.includes(data.type) &&
+      (isInstructor.value || conn !== instructorConnection)
     ) {
-      onError(`Rejected privileged student message from ${conn.peer}`)
+      onError(`Rejected privileged message from ${conn.peer}`)
       return
     }
     handleEnvelope(data, conn)
@@ -1105,6 +1105,7 @@ const handleEnvelope = (message: ClassroomEnvelope, conn: PeerJS.DataConnection)
     case 'exercise-status':
       if (participant) {
         const existingExercise = participant.exercise
+        if (!existingExercise || existingExercise.id !== payload.id) break
         participant.exercise = {
           id: String(payload.id || ''),
           name: String(payload.name || ''),
@@ -1126,7 +1127,11 @@ const handleEnvelope = (message: ClassroomEnvelope, conn: PeerJS.DataConnection)
       }
       break
     case 'exercise-control':
-      if (!isInstructor.value) {
+      if (
+        !isInstructor.value &&
+        conn === instructorConnection &&
+        acceptsExerciseControl(currentAssignment.value, payload)
+      ) {
         if (payload.action === 'start') startAssignedExercise()
         if (payload.action === 'stop') stopAssignedExercise()
       }
@@ -1639,8 +1644,14 @@ const updateOverdueAssignments = () => {
 const sendAnnouncement = () => {
   const targets = [...messageTargetIds.value]
   if (!announcement.value || !targets.length) return
-  sendEnvelopeToIds(targets, 'announcement', { message: announcement.value })
-  logSessionEvent('announcement', idsLabel(targets), announcement.value)
+  const results = instructorActions.message(targets, announcement.value)
+  const sent = reportActionResults('announcement', announcement.value, results)
+  if (sent.length !== targets.length) {
+    messageTargetIds.value = results
+      .filter((result) => result.status !== 'sent')
+      .map((result) => result.peerId)
+    return
+  }
   announcement.value = ''
   messageComposerOpen.value = false
   messageTargetIds.value = []
@@ -1664,46 +1675,84 @@ const openMessageComposer = (peerId?: string) => {
 const selectedExercise = (): ModuleEntry | undefined =>
   exerciseModules.find((entry) => entry.path === exercisePath.value)
 
+const instructorActions = createInstructorActions({
+  canAct: () => isInstructor.value && isOnline.value,
+  session: () => selfPeer,
+  peer: (id) => {
+    const peer = incomingConns.value[id]
+    return peer
+      ? { connection: peer.conn, open: peer.conn.open, assignment: peer.exercise }
+      : undefined
+  },
+  lesson: (id) => exerciseModules.find((lesson) => lesson.path === id),
+  loadSource: async (path) => {
+    const response = await fetch(path)
+    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`)
+    return response.text()
+  },
+  send: (id, type, payload) => {
+    const conn = incomingConns.value[id]?.conn
+    if (!conn?.open) return false
+    conn.send(createEnvelope(type, payload))
+    return true
+  },
+  assigned: (id, assignment) => {
+    const peer = incomingConns.value[id]
+    if (!peer) return
+    peer.exercise = {
+      id: assignment.id,
+      name: assignment.name,
+      deadline: assignment.deadline,
+      status: 'assigned',
+      updatedAt: Date.now(),
+      checkpoints: [],
+    }
+    peer.metadata.checkPoint = ''
+    peer.metadata.checkPointData = undefined
+  },
+})
+
+const instructorTargets = (ids: string[]) =>
+  ids.map((peerId) => ({
+    peerId,
+    assignmentId: incomingConns.value[peerId]?.exercise?.id ?? null,
+  }))
+
+const reportActionResults = (type: string, detail: string, results: InstructorActionResult[]) => {
+  const sent = results.filter((result) => result.status === 'sent').map((result) => result.peerId)
+  if (sent.length) logSessionEvent(type, idsLabel(sent), `Sent: ${detail}`)
+  const unsuccessful = results.filter((result) => result.status !== 'sent')
+  if (unsuccessful.length) {
+    const reasons = unsuccessful.map((result) => `${result.peerId}: ${result.reason}`).join('; ')
+    const message = `Sent to ${sent.length} peers. ${unsuccessful.length} not sent: ${reasons}`
+    logSessionEvent(
+      `${type}-not-sent`,
+      idsLabel(unsuccessful.map((result) => result.peerId)),
+      reasons,
+    )
+    emit('announcement', message)
+  }
+  return sent
+}
+
 const assignExercise = async (targets: string[], detailsTargetPeerId = '') => {
   const exercise = selectedExercise()
   if (!exercise || !targets.length) return
-  let source: string
-  try {
-    const response = await fetch(exercise.path)
-    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`)
-    source = await response.text()
-  } catch (error) {
-    onError(`Unable to load ${exercise.name}: ${String(error)}`)
-    return
-  }
-  const deadline = Date.now() + Math.max(1, exerciseMinutes.value || 1) * 60_000
-  const assignment: ClassroomExerciseAssignment = {
-    id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-    name: exercise.name,
-    source,
-    deadline,
-  }
-  sendEnvelopeToIds(targets, 'exercise', assignment)
-  targets.forEach((id) => {
-    const peer = incomingConns.value[id]
-    if (peer) {
-      peer.exercise = {
-        id: assignment.id,
-        name: assignment.name,
-        status: 'assigned',
-        updatedAt: Date.now(),
-        deadline,
-        checkpoints: [],
-      }
-      peer.metadata.checkPoint = ''
-      peer.metadata.checkPointData = undefined
-    }
-  })
-  logSessionEvent('exercise', idsLabel(targets), `${exercise.name} (${exerciseMinutes.value} min)`)
-  if (detailsTargetPeerId) {
+  const minutes = Math.max(1, exerciseMinutes.value || 1)
+  const results = await instructorActions.assign(
+    instructorTargets(targets),
+    exercise.path,
+    minutes * 60_000,
+  )
+  const sent = reportActionResults('exercise', `${exercise.name} (${minutes} min)`, results)
+  if (detailsTargetPeerId && sent.includes(detailsTargetPeerId)) {
     openPeerDetails(detailsTargetPeerId)
+  } else if (sent.length === results.length) {
+    consumeActionSelection(sent)
   } else {
-    consumeActionSelection(targets)
+    selectedPeerIds.value = results
+      .filter((result) => result.status !== 'sent')
+      .map((result) => result.peerId)
   }
 }
 
@@ -1765,8 +1814,8 @@ const stopAssignedExercise = () => {
 
 const sendExerciseControl = (action: 'start' | 'stop', targets = actionTargetIds.value) => {
   if (!targets.length) return
-  sendEnvelopeToIds(targets, 'exercise-control', { action })
-  logSessionEvent('exercise-control', idsLabel(targets), action)
+  const results = instructorActions.control(action, instructorTargets(targets))
+  reportActionResults('exercise-control', action, results)
 }
 
 const startExercisesFromKeyboard = () => {
