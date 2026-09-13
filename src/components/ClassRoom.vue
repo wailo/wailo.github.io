@@ -423,6 +423,46 @@
                 <div
                   class="roster-detail-history min-h-0 flex-1 overflow-auto border-t border-simElementBorder px-2 pb-1"
                 >
+                  <div
+                    v-if="participant.peer.exercise"
+                    class="flex flex-wrap items-center gap-1 py-1"
+                  >
+                    <button
+                      class="command-button"
+                      :disabled="
+                        feedbackRequest.pending ||
+                        !participant.peer.conn.open ||
+                        !participant.peer.exercise.checkpoints.length
+                      "
+                      :title="`Request feedback from ${feedbackProviderConfig.provider}; shares lesson context and recent checkpoints`"
+                      @click="suggestPeerFeedback(participant.peerId)"
+                    >
+                      {{
+                        feedbackRequest.pending && feedbackRequest.peerId === participant.peerId
+                          ? 'Requesting…'
+                          : 'Suggest feedback'
+                      }}
+                    </button>
+                    <span>{{
+                      feedbackProviderConfig.provider === 'ollama' ? 'Ollama' : 'OpenAI'
+                    }}</span>
+                    <button
+                      v-if="
+                        feedbackRequest.pending && feedbackRequest.peerId === participant.peerId
+                      "
+                      class="command-button"
+                      @click="cancelFeedbackRequest"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  <p
+                    v-if="feedbackRequest.peerId === participant.peerId && feedbackRequest.notice"
+                    role="status"
+                    class="py-1 break-words text-secondary"
+                  >
+                    {{ feedbackRequest.notice }}
+                  </p>
                   <section
                     v-if="visibleFeedback.length"
                     aria-label="Suggested feedback"
@@ -635,6 +675,8 @@ const emit = defineEmits<{
 
 import type { CheckpointData } from '../ScriptContext'
 import { createFeedbackReview, type FeedbackSuggestionInput } from '../FeedbackReview'
+import { requestFeedback } from '../FeedbackProvider'
+import { feedbackProviderConfig } from '../feedbackProviderConfig'
 import {
   createInstructorActions,
   acceptsExerciseControl,
@@ -950,6 +992,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  cancelFeedbackRequest()
   window.removeEventListener('beforeunload', disconnect)
   document.removeEventListener('pointerdown', dismissPeerDetailsOnOutsideClick)
   if (healthTimer) clearInterval(healthTimer)
@@ -1783,6 +1826,85 @@ const feedbackReview = createFeedbackReview({
   send: (peerId, assignmentId, message) =>
     instructorActions.message([peerId], message, { assignmentId })[0],
 })
+const feedbackRequest = ref({ peerId: '', assignmentId: '', pending: false, notice: '' })
+let feedbackAbort: AbortController | null = null
+const cancelFeedbackRequest = () => feedbackAbort?.abort()
+const suggestPeerFeedback = async (peerId: string) => {
+  const peer = incomingConns.value[peerId]
+  if (
+    feedbackRequest.value.pending ||
+    !isInstructor.value ||
+    !isOnline.value ||
+    !peer?.conn.open ||
+    !peer.exercise
+  )
+    return
+  const assignment = peer.exercise
+  const connection = peer.conn
+  const controller = new AbortController()
+  feedbackAbort = controller
+  feedbackRequest.value = { peerId, assignmentId: assignment.id, pending: true, notice: '' }
+  try {
+    const suggestion = await requestFeedback(
+      feedbackProviderConfig,
+      {
+        peerId,
+        assignmentId: assignment.id,
+        lessonName: assignment.name,
+        status: assignment.status,
+        checkpoints: assignment.checkpoints,
+      },
+      controller.signal,
+    )
+    if (
+      controller.signal.aborted ||
+      !isInstructor.value ||
+      !isOnline.value ||
+      incomingConns.value[peerId]?.conn !== connection ||
+      incomingConns.value[peerId]?.exercise?.id !== assignment.id
+    ) {
+      throw new Error('Feedback discarded: classroom or assignment changed.')
+    }
+    if (!suggestion) {
+      feedbackRequest.value.notice = 'Insufficient evidence for feedback.'
+      return
+    }
+    const result = queueFeedbackSuggestion(suggestion)
+    if (!result.accepted) throw new Error(result.reason)
+    feedbackRequest.value.notice = 'Feedback ready for review. Nothing sent to the student.'
+  } catch (error) {
+    feedbackRequest.value.notice = controller.signal.aborted
+      ? 'Feedback request cancelled.'
+      : String(error instanceof Error ? error.message : error)
+  } finally {
+    if (feedbackAbort === controller) {
+      feedbackRequest.value.pending = false
+      feedbackAbort = null
+    }
+  }
+}
+watch(
+  () => [
+    isInstructor.value,
+    isOnline.value,
+    detailsPeerId.value,
+    incomingConns.value[feedbackRequest.value.peerId]?.exercise?.id,
+    incomingConns.value[feedbackRequest.value.peerId]?.conn.open,
+  ],
+  () => {
+    if (
+      feedbackRequest.value.pending &&
+      (!isInstructor.value ||
+        !isOnline.value ||
+        detailsPeerId.value !== feedbackRequest.value.peerId ||
+        incomingConns.value[feedbackRequest.value.peerId]?.exercise?.id !==
+          feedbackRequest.value.assignmentId ||
+        !incomingConns.value[feedbackRequest.value.peerId]?.conn.open)
+    )
+      cancelFeedbackRequest()
+  },
+  { flush: 'sync' },
+)
 const visibleFeedback = computed(() =>
   feedbackReview.suggestions.value.filter(
     (suggestion) => suggestion.peerId === detailsPeerId.value && suggestion.status !== 'dismissed',
