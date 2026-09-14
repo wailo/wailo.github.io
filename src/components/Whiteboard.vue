@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { useWhiteboard } from 'vue-whiteboard-composable'
+import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { useWhiteboard, type SerializableRecord } from 'vue-whiteboard-composable'
+import {
+  parseWhiteboardState,
+  replaceWhiteboardState,
+  serializeWhiteboardState,
+} from '../WhiteboardState'
 
 const svgRef = ref<SVGSVGElement | null>(null)
 
 const color = ref('#ff5a66')
 const size = ref('2px')
-const boardState = ref<any[]>([])
 
 const colors = ['#ffffff', '#222222', '#ff5a66', '#f6c33b', '#3b82f6', '#4caf50', '#9c27b0']
 
@@ -15,49 +19,126 @@ const emit = defineEmits<{
   (e: 'history-updated', payload: { serialized: string }): void
 }>()
 
-const { undo, redo, canUndo, canRedo, clear, serialize, currentIndex } = useWhiteboard(svgRef, {
+const board = useWhiteboard(svgRef, {
   color,
   size,
   backgroundColor: 'transparent',
-  initialState: JSON.parse(localStorage.getItem('drawing') || '[]'),
 })
+const { undo, redo, canUndo, canRedo, currentIndex } = board
+let initialized = false
+let applyingState = false
+let disposed = false
+let pendingState: SerializableRecord[] | undefined
+let lastSnapshot = '[]'
 
-defineExpose({
-  clear,
-  UpdateState: (state: string) => {
-    boardState.value = JSON.parse(state)
-    if (boardState.value.length == 0) {
-      clear()
-      return
-    }
+function saveSnapshot(serialized: string) {
+  try {
+    localStorage.setItem('drawing', serialized)
+  } catch (error) {
+    // A full or unavailable store must not prevent drawing or classroom delivery.
+    console.warn('Could not save whiteboard drawing', error)
+  }
+}
 
-    useWhiteboard(svgRef, {
-      color,
-      size,
-      backgroundColor: 'transparent',
-      initialState: boardState.value,
-    })
+function restoreSavedState(): SerializableRecord[] {
+  try {
+    const records = parseWhiteboardState(localStorage.getItem('drawing') || '[]')
+    if (records) return records
+  } catch (error) {
+    console.warn('Could not read whiteboard drawing', error)
+  }
+  return []
+}
+
+function applyState(records: SerializableRecord[], persist = true) {
+  if (disposed || !svgRef.value) return
+  applyingState = true
+  try {
+    replaceWhiteboardState(board, svgRef.value, records)
+  } finally {
+    applyingState = false
+  }
+  lastSnapshot = serializeWhiteboardState(board)
+  if (persist) saveSnapshot(lastSnapshot)
+}
+
+function updateState(serialized: string) {
+  if (disposed) return false
+  const records = parseWhiteboardState(serialized)
+  if (!records) {
+    console.warn('Ignored invalid whiteboard snapshot')
+    return false
+  }
+  // The library appends a path at drag start, but commits it to history at drag end.
+  // Keep that path alive until the gesture ends; retain only the latest incoming snapshot.
+  if (!initialized || (svgRef.value?.children.length ?? 0) > currentIndex.value + 1) {
+    pendingState = records
+  } else {
+    pendingState = undefined
+    applyState(records)
+  }
+  return true
+}
+
+function clear() {
+  if (disposed) return
+  if (!initialized) pendingState = []
+  else {
+    pendingState = undefined
+    board.clear()
+  }
+}
+
+// The library's SVG-ref watcher initializes drawing first; restoration follows it.
+const stopRestore = watch(
+  svgRef,
+  (svg) => {
+    if (!svg || initialized || disposed) return
+    initialized = true
+    applyState(pendingState ?? restoreSavedState(), pendingState !== undefined)
+    pendingState = undefined
   },
-})
+  { flush: 'post' },
+)
 
-// Watch for currentIndex changes and emit serialized history
-watch(
+const stopPublish = watch(
   currentIndex,
   () => {
-    const serialized = JSON.stringify(serialize()) // Serialize current history state
-    emit('history-updated', {
-      serialized,
-    })
-    localStorage.setItem('drawing', JSON.stringify(serialize()))
+    if (disposed || !initialized || applyingState) return
+    if (pendingState) {
+      // Finish the library's history mutation before replacing it. The local stroke is
+      // superseded by the received snapshot, so it must not publish a stale drawing.
+      void nextTick(() => {
+        if (disposed || !pendingState) return
+        const records = pendingState
+        pendingState = undefined
+        applyState(records)
+      })
+      return
+    }
+    const serialized = serializeWhiteboardState(board)
+    if (serialized === lastSnapshot) return
+    lastSnapshot = serialized
+    saveSnapshot(serialized)
+    emit('history-updated', { serialized })
   },
-  { deep: false }, // shallow watch is sufficient for primitive number
+  // Run inside the mutation so remote replacement cannot queue an echo after the guard clears.
+  { flush: 'sync' },
 )
+
+onBeforeUnmount(() => {
+  disposed = true
+  stopPublish()
+  stopRestore()
+  pendingState = undefined
+  board.clear()
+})
+
+defineExpose({ clear, UpdateState: updateState })
 </script>
 
 <template>
-  <div
-    class="w-full h-full min-h-0 overflow-hidden bg-panelContentBackground flex flex-col"
-  >
+  <div class="w-full h-full min-h-0 overflow-hidden bg-panelContentBackground flex flex-col">
     <!-- Scrollable canvas -->
     <div class="min-h-0 flex-1 overflow-auto">
       <svg

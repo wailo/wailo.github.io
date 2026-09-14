@@ -697,7 +697,7 @@ const handleInstructorCommand = (command: ClassroomCommand) => {
       simFunctions.setLayout(LayoutTypes.FOCUS)
       break
     case 'clear-whiteboard':
-      whiteBoardComponentRef.value?.clear()
+      whiteBoardComponentRef.value?.UpdateState('[]')
       break
   }
 }
