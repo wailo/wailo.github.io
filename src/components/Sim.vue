@@ -117,7 +117,7 @@
           <template #Real-Time-Data display="Real Time Data">
             <SimDataDisplay
               ref="dataDisplayRef"
-              :simProps="{ ...simulationControlsProps, ...flightModelProps }"
+              :simProps="allSimProps"
               :plotPause="FlightSimModule.simulation.simulation_pause"
               :plotUpdateIntervals="update_interval_ms"
               v-if="sim_module_loaded"
@@ -131,7 +131,7 @@
             <Airflow
               v-if="sim_module_loaded"
               class="h-full w-full"
-              :sim-props="{ ...simulationControlsProps, ...flightModelProps }"
+              :sim-props="allSimProps"
               :lift-coefficient="FlightSimModule.flightModel.cl"
               :max-angle-of-attack="FlightSimModule.flightModel.max_aoa_deg"
               :stalling="FlightSimModule.flightModel.stalling"
@@ -160,15 +160,7 @@
         >
           <template #Simulation>
             <div v-if="sim_module_loaded" class="w-full h-full grid grid-cols-3 gap-1">
-              <template
-                v-for="input in Object.values(simulationControlsProps)
-                  .flatMap((arr) => arr)
-                  .filter((v: SimulationProperties) => v.group === 'simulation' && v.setterFunc)
-                  .sort((a: SimulationProperties) =>
-                    ['boolean', 'void'].includes(a.type) ? -1 : 1,
-                  )"
-                :key="input.id"
-              >
+              <template v-for="input in simulationPanelControls" :key="input.id">
                 <!-- Boolean & Void -->
                 <wButton
                   v-if="['boolean', 'void'].includes(input.type)"
@@ -470,28 +462,7 @@
               :external-inputs="computedJoystickInputs"
               :flap-options="computedJoystickOptions.flaps"
               :gear-options="computedJoystickOptions.gear"
-              @input="
-                (val) => {
-                  FlightSimModule.flightModel.set_aileron_position(val.aileron)
-                  FlightSimModule.flightModel.set_elevator_position(val.elevator)
-                  FlightSimModule.flightModel.set_rudder_position(val.rudder)
-                  FlightSimModule.flightModel.set_engine_throttle_position(val.throttle)
-                  if (val.mixture !== undefined) {
-                    ;(FlightSimModule.flightModel as c172).set_engine_mixture_position(val.mixture)
-                  }
-                  if (val.flaps !== FlightSimModule.flightModel.flaps_selector_position) {
-                    ;(FlightSimModule.flightModel as any).set_flaps_selector_position(val.flaps)
-                  }
-                  if (val.gear !== FlightSimModule.flightModel.landing_gear_selector_position) {
-                    ;(FlightSimModule.flightModel as any).set_landing_gear_selector_position(
-                      val.gear,
-                    )
-                  }
-                  FlightSimModule.flightModel.set_aileron_trim_position(val.aileronTrim)
-                  FlightSimModule.flightModel.set_elevator_trim_position(val.elevatorTrim)
-                  FlightSimModule.flightModel.set_rudder_trim_position(val.rudderTrim)
-                }
-              "
+              @input="(changes) => applyJoystickChanges(FlightSimModule.flightModel, changes)"
               class="w-full h-full p-1"
             />
           </template>
@@ -603,6 +574,7 @@ import {
   ComputedRef,
   computed,
   ref,
+  shallowRef,
   onMounted,
   onUnmounted,
   onBeforeMount,
@@ -619,6 +591,8 @@ import SimDataDisplay from './DataDisplay.vue'
 import MarkDown from './MarkDown.vue'
 import { RemoteCallManager, RemoteCall, RemoteEvent } from '../RemoteCallManager'
 import Joystick, { JoystickInput } from './Joystick.vue'
+import { applyJoystickChanges } from '../JoystickControls'
+import { trackSimulationValues } from '../SimulationValues'
 import Whiteboard from './Whiteboard.vue'
 import { pb } from '../Pocketbase/pocketbase'
 
@@ -824,7 +798,8 @@ const simFunctions = {
     // This is needed resize event is not dispatched when component size change but the window size stay the same
     // So the openGL context will not resize.
     // The delay is to ensure the DOM has updated before the resize event is dispatched
-    setTimeout(() => {
+    clearTimeout(layoutResizeTimer)
+    layoutResizeTimer = setTimeout(() => {
       window.dispatchEvent(new Event('resize'))
     }, 20)
   },
@@ -850,7 +825,7 @@ const simFunctions = {
 let GLFWModule: MainModule
 let FlightSimModule: ExtendedMainModule
 const activeAircraftType = computed(() => {
-  renderSignal.value
+  flightModelProps.value // Model metadata changes on switch/reset, not on each UI tick.
   if (!FlightSimModule) return 'UNKNOWN'
 
   const activeModel = FlightSimModule.simulation.flight_model
@@ -1157,7 +1132,9 @@ const layoutControls: ComputedRef<Record<string, SimulationProperties>> = comput
     id: 'layout',
     type: 'enum',
     label: 'Layout',
-    inputValue: layout.value,
+    get inputValue() {
+      return layout.value
+    },
     group: 'simulation',
     enumValues: [
       { enumName: 'Instructor', enumValue: LayoutTypes.INSTRUCTOR },
@@ -1171,7 +1148,9 @@ const layoutControls: ComputedRef<Record<string, SimulationProperties>> = comput
     type: 'boolean',
     label: 'Dark Theme',
     setterFunc: () => toggleTheme(),
-    inputValue: isDarkMode.value,
+    get inputValue() {
+      return isDarkMode.value
+    },
     group: 'simulation',
   },
   toggle_visuals: {
@@ -1179,7 +1158,9 @@ const layoutControls: ComputedRef<Record<string, SimulationProperties>> = comput
     type: 'boolean',
     label: 'Visuals',
     setterFunc: () => simFunctions.setVisuals(!isVisuals.value),
-    inputValue: isVisuals.value,
+    get inputValue() {
+      return isVisuals.value
+    },
     group: 'simulation',
   },
   toggle_map: {
@@ -1187,18 +1168,74 @@ const layoutControls: ComputedRef<Record<string, SimulationProperties>> = comput
     type: 'boolean',
     label: 'Map',
     setterFunc: () => simFunctions.setMap(!openLayersMapRef.value?.showNavMap),
-    inputValue: Boolean(openLayersMapRef.value?.showNavMap),
+    get inputValue() {
+      return Boolean(openLayersMapRef.value?.showNavMap)
+    },
     group: 'simulation',
   },
 }))
 
-let autopilotControls: ComputedRef<ReturnType<typeof getAutopilotProperties>>
-let flightModelProps: ComputedRef<ActiveFlightModelSimProps>
-let simulationControlsProps: ComputedRef<ReturnType<typeof getSimulationControlsParameters>>
-let groupedSimProps: ComputedRef<Record<string, SimulationProperties[]>>
-let filteredGroupedSimProps: ComputedRef<Array<[string, SimulationProperties[]]>>
+// Keep generated metadata out of deep reactivity. Its live getters subscribe to renderSignal.
+const flightModelProps = shallowRef<ActiveFlightModelSimProps>({} as ActiveFlightModelSimProps)
+const simulationProperties = shallowRef<Record<string, SimulationProperties>>({})
+const simulationControlsProps = computed(() => ({
+  ...simulationProperties.value,
+  ...layoutControls.value,
+}))
+const allSimProps = computed(() => ({
+  ...simulationControlsProps.value,
+  ...flightModelProps.value,
+}))
+const simulationPanelControls = computed(() =>
+  Object.values(simulationControlsProps.value)
+    .filter((control) => control.group === 'simulation' && control.setterFunc)
+    .sort(
+      (a, b) =>
+        Number(!['boolean', 'void'].includes(a.type)) -
+        Number(!['boolean', 'void'].includes(b.type)),
+    ),
+)
+const autopilotControls = computed<AutopilotProperties[]>(() => {
+  const properties: Record<string, SimulationProperties> = flightModelProps.value
+  if (!FlightSimModule) return []
+  return getAutopilotProperties(FlightSimModule.flightModel)
+    .map((control) => ({
+      ...control,
+      // Share the same live definitions as the flight-model panel and plots.
+      stateCommand: properties[control.stateCommand.id],
+      targetCommand: control.targetCommand ? properties[control.targetCommand.id] : undefined,
+    }))
+    .sort(
+      (a: AutopilotProperties, b: AutopilotProperties) =>
+        Number(a.targetCommand !== undefined) - Number(b.targetCommand !== undefined),
+    )
+})
+const groupedSimProps = computed(() =>
+  Object.values(allSimProps.value)
+    .filter((control) => control.setterFunc !== undefined)
+    .reduce((groups: Record<string, SimulationProperties[]>, control) => {
+      ;(groups[control.group] ??= []).push(control)
+      return groups
+    }, {}),
+)
 
 const flightModelFilter = ref('')
+const filteredGroupedSimProps = computed(() => {
+  const query = flightModelFilter.value.trim().toLocaleLowerCase()
+  return Object.entries(groupedSimProps.value)
+    .map(([groupName, controls]): [string, SimulationProperties[]] => {
+      if (!query) return [groupName, controls]
+      return [
+        groupName,
+        controls.filter((control) =>
+          [groupName, control.label, control.id, control.unit].some(
+            (value) => value != null && String(value).toLocaleLowerCase().includes(query),
+          ),
+        ),
+      ]
+    })
+    .filter(([, controls]) => controls.length > 0)
+})
 const collapsedFlightModelGroups = ref(new Set<string>())
 const flightModelGroupsStorageKey = 'sim-flight-model-collapsed-groups'
 
@@ -1228,13 +1265,46 @@ const expandAllFlightModelGroups = () => {
   saveCollapsedFlightModelGroups()
 }
 
-let computedJoystickInputs: ComputedRef<JoystickInput>
-let computedJoystickOptions: ComputedRef<{
-  flaps: Array<{ label: string; value: number }>
-  gear: Array<{ label: string; value: number }>
-}>
+const computedJoystickInputs = computed(() => {
+  renderSignal.value
+  flightModelProps.value
+  return {
+    aileron: FlightSimModule.flightModel.aileron_position,
+    elevator: FlightSimModule.flightModel.elevator_position,
+    rudder: FlightSimModule.flightModel.rudder_position,
+    throttle: FlightSimModule.flightModel.engine_throttle_position,
+    mixture: (FlightSimModule.flightModel as c172).engine_mixture_position,
+    flaps: FlightSimModule.flightModel.flaps_selector_position,
+    gear: FlightSimModule.flightModel.landing_gear_selector_position,
+    aileronTrim: FlightSimModule.flightModel.aileron_trim_position,
+    elevatorTrim: FlightSimModule.flightModel.elevator_trim_position,
+    rudderTrim: FlightSimModule.flightModel.rudder_trim_position,
+  } as JoystickInput
+})
+const computedJoystickOptions = computed(() =>
+  activeAircraftType.value === 'B747'
+    ? {
+        flaps: [0, 1, 5, 10, 20, 25, 30].map((value) => ({ label: String(value), value })),
+        gear: [
+          { label: 'DN', value: 0 },
+          { label: 'UP', value: 1 },
+          { label: 'OFF', value: 2 },
+        ],
+      }
+    : {
+        flaps: [0, 10, 20, 30].map((value) => ({ label: String(value), value })),
+        gear: [{ label: 'FIXED', value: 0 }],
+      },
+)
+
+let metadataModel: ExtendedMainModule['flightModel'] | undefined
+let metadataSimulation: ExtendedMainModule['simulation'] | undefined
+let metadataModelId: number | undefined
 
 let simUpdateInterval: ReturnType<typeof setInterval>
+let layoutResizeTimer: ReturnType<typeof setTimeout> | undefined
+let simDisposed = false
+let cleanupSimListeners = () => {}
 let manager: RemoteCallManager
 
 const handlePanelTabRequest = (event: Event) => {
@@ -1284,6 +1354,15 @@ onMounted(async () => {
     syncFlightModel: () => fetchSimData(FlightSimModule, initFlightModelParams), // Sync flightmodel
   })
     .then((modules) => {
+      if (simDisposed) {
+        // Loading may finish after navigation. Do not install frontend work then.
+        const glfw = modules[0].GLFW
+        window.removeEventListener('keydown', glfw.onKeydown, true)
+        window.removeEventListener('keypress', glfw.onKeyPress, true)
+        window.removeEventListener('keyup', glfw.onKeyup, true)
+        window.removeEventListener('blur', glfw.onBlur, true)
+        return
+      }
       GLFWModule = modules[0]
       FlightSimModule = modules[1]
       GLFWModule.GLFW.requestFullscreen = toggleFullscreen // Replace with custom implementation
@@ -1304,14 +1383,10 @@ onMounted(async () => {
 
       const canvas = document.getElementById('canvas')
       canvas?.focus()
-      canvas?.addEventListener(
-        'keydown',
-        (e) => {
-          GLFWModule.GLFW.onKeydown(e)
-        },
-        true,
-      )
-      canvas?.addEventListener('keyup', (e) => GLFWModule.GLFW.onKeyup(e), true)
+      const handleCanvasKeydown = (e: KeyboardEvent) => GLFWModule.GLFW.onKeydown(e)
+      const handleCanvasKeyup = (e: KeyboardEvent) => GLFWModule.GLFW.onKeyup(e)
+      canvas?.addEventListener('keydown', handleCanvasKeydown, true)
+      canvas?.addEventListener('keyup', handleCanvasKeyup, true)
 
       function isTextInput() {
         const activeElement = document.activeElement
@@ -1335,7 +1410,7 @@ onMounted(async () => {
         2000,
       )
 
-      document.addEventListener('keydown', (e: KeyboardEvent) => {
+      const handleGlobalKeydown = (e: KeyboardEvent) => {
         if (e.key === 'Escape') {
           if (document.activeElement !== canvas) {
             e.preventDefault()
@@ -1362,30 +1437,25 @@ onMounted(async () => {
         if (e.code === 'KeyF' && e.ctrlKey && e.shiftKey) {
           toggleFullscreen()
         }
-      })
+      }
+      document.addEventListener('keydown', handleGlobalKeydown)
 
-      watch(simulationStatus, (newStatus) => {
+      const stopStatusWatch = watch(simulationStatus, (newStatus) => {
         if (classroomComponentRef.value) {
           classroomComponentRef.value.sendStatus(newStatus)
         }
       })
+      cleanupSimListeners = () => {
+        document.removeEventListener('keydown', handleGlobalKeydown)
+        canvas?.removeEventListener('keydown', handleCanvasKeydown, true)
+        canvas?.removeEventListener('keyup', handleCanvasKeyup, true)
+        stopStatusWatch()
+      }
 
-      simUpdateInterval = setInterval(() => {
-        renderSignal.value++
-        fetchSimData(FlightSimModule, initFlightModelParams)
-        dataDisplayRef.value?.tickPlot()
-
-        openLayersMapRef.value?.updateMap(
-          FlightSimModule.flightModel.latitude,
-          FlightSimModule.flightModel.longitude,
-          FlightSimModule.flightModel.altitude_ft,
-          FlightSimModule.flightModel.pitch,
-          FlightSimModule.flightModel.bank,
-          FlightSimModule.flightModel.yaw,
-        )
-      }, update_interval_ms)
+      simUpdateInterval = setInterval(updateSim, update_interval_ms)
     })
     .catch((error) => {
+      if (simDisposed) return
       loadingStatus.value = 'Unable to load simulator'
       loadingProgress.value = null
       console.error(error)
@@ -1393,99 +1463,54 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  simDisposed = true
+  cleanupSimListeners()
   clearInterval(simUpdateInterval)
+  clearTimeout(layoutResizeTimer)
   canvasResizeObserver?.disconnect()
   if (canvasResizeFrame !== null) cancelAnimationFrame(canvasResizeFrame)
   document.removeEventListener('fullscreenchange', onFullscreenChange)
   window.removeEventListener('sim:request-panel-tab', handlePanelTabRequest)
 })
 
+async function updateSim() {
+  fetchSimData(FlightSimModule, initFlightModelParams)
+  renderSignal.value++
+  // Let children receive a replacement aircraft catalog before sampling plots.
+  await nextTick()
+  if (simDisposed) return
+  dataDisplayRef.value?.tickPlot()
+  openLayersMapRef.value?.updateMap(
+    FlightSimModule.flightModel.latitude,
+    FlightSimModule.flightModel.longitude,
+    FlightSimModule.flightModel.altitude_ft,
+    FlightSimModule.flightModel.pitch,
+    FlightSimModule.flightModel.bank,
+    FlightSimModule.flightModel.yaw,
+  )
+}
+
 function initFlightModelParams() {
-  flightModelProps = computed(() => {
-    renderSignal.value
-    return getFlightModelParameters(FlightSimModule.flightModel) as ActiveFlightModelSimProps
-  })
-  autopilotControls = computed(() => {
-    renderSignal.value
-    return getAutopilotProperties(FlightSimModule.flightModel).sort(
-      (a: AutopilotProperties, b: AutopilotProperties) =>
-        (a.targetCommand === undefined ? 0 : 1) - (b.targetCommand === undefined ? 0 : 1),
-    )
-  })
-  simulationControlsProps = computed(() => {
-    renderSignal.value
-    const base = getSimulationControlsParameters(FlightSimModule)
-    return { ...base, ...layoutControls.value }
-  })
+  const { flightModel, simulation } = FlightSimModule
+  const modelId = simulation.flight_model_id
+  if (
+    metadataModel === flightModel &&
+    metadataSimulation === simulation &&
+    metadataModelId === modelId
+  )
+    return
 
-  groupedSimProps = computed(() => {
-    const all = { ...simulationControlsProps.value, ...flightModelProps.value }
-    return Object.values(all)
-      .filter((v: SimulationProperties) => v.setterFunc !== undefined)
-      .reduce(
-        (acc: Record<string, SimulationProperties[]>, item: SimulationProperties) => {
-          // Group by group
-          const parentKey = item.group
-          if (!acc[parentKey]) {
-            acc[parentKey] = []
-          }
-          // Push the item to the corresponding group
-          acc[parentKey].push(item)
-          return acc
-        },
-        {} as Record<string, SimulationProperties[]>,
-      )
-  })
-
-  filteredGroupedSimProps = computed(() => {
-    const query = flightModelFilter.value.trim().toLocaleLowerCase()
-    return Object.entries(groupedSimProps.value)
-      .map(([groupName, controls]) => {
-        if (!query) return [groupName, controls] as [string, SimulationProperties[]]
-        const matchingControls = controls.filter((control) =>
-          [groupName, control.label, control.id, control.unit]
-            .filter((value) => value != null)
-            .some((value) => String(value).toLocaleLowerCase().includes(query)),
-        )
-        return [groupName, matchingControls] as [string, SimulationProperties[]]
-      })
-      .filter(([, controls]) => controls.length > 0)
-  })
-
-  computedJoystickInputs = computed(() => {
-    renderSignal.value
-    return {
-      aileron: FlightSimModule.flightModel.aileron_position,
-      elevator: FlightSimModule.flightModel.elevator_position,
-      rudder: FlightSimModule.flightModel.rudder_position,
-      throttle: FlightSimModule.flightModel.engine_throttle_position,
-      mixture: (FlightSimModule.flightModel as c172).engine_mixture_position, // if the property does not exist, it will be undefined, and the joystick component will ignore it
-      flaps: FlightSimModule.flightModel.flaps_selector_position,
-      gear: FlightSimModule.flightModel.landing_gear_selector_position,
-      aileronTrim: FlightSimModule.flightModel.aileron_trim_position,
-      elevatorTrim: FlightSimModule.flightModel.elevator_trim_position,
-      rudderTrim: FlightSimModule.flightModel.rudder_trim_position,
-    } as JoystickInput
-  })
-
-  computedJoystickOptions = computed(() => {
-    renderSignal.value
-    const isB747 =
-      FlightSimModule.simulation.flight_model === FlightSimModule.GRAPHICSEFlightModel.B747
-    return isB747
-      ? {
-          flaps: [0, 1, 5, 10, 20, 25, 30].map((value) => ({ label: String(value), value })),
-          gear: [
-            { label: 'DN', value: 0 },
-            { label: 'UP', value: 1 },
-            { label: 'OFF', value: 2 },
-          ],
-        }
-      : {
-          flaps: [0, 10, 20, 30].map((value) => ({ label: String(value), value })),
-          gear: [{ label: 'FIXED', value: 0 }],
-        }
-  })
+  flightModelProps.value = trackSimulationValues(
+    getFlightModelParameters(flightModel),
+    renderSignal,
+  ) as ActiveFlightModelSimProps
+  simulationProperties.value = trackSimulationValues(
+    getSimulationControlsParameters(FlightSimModule),
+    renderSignal,
+  )
+  metadataModel = flightModel
+  metadataSimulation = simulation
+  metadataModelId = modelId
 }
 
 function createRemoteManager(FlightSimModule: ExtendedMainModule) {

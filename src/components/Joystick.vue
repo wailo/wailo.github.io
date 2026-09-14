@@ -287,7 +287,7 @@ const props = defineProps<{
 
 // --- Output Channel (Emits) ---
 const emit = defineEmits<{
-  (e: 'input', value: JoystickInput): void
+  (e: 'input', value: Partial<JoystickInput>): void
 }>()
 
 // DOM Elements
@@ -495,13 +495,13 @@ watch(
 
 const setFlaps = (value: number) => {
   input.flaps = value
-  emit('input', { ...input })
+  emit('input', { flaps: value })
 }
 
 const setGear = (value: number) => {
   if (props.gearOptions.length === 1) return
   input.gear = value
-  emit('input', { ...input })
+  emit('input', { gear: value })
 }
 
 // --- Throttle Logic ---
@@ -514,7 +514,7 @@ const handleThrottleMove = (event: PointerEvent) => {
   y = Math.max(0, Math.min(maxTravel, y))
   throttlePos.y = y
   input.throttle = 1 - y / maxTravel
-  emit('input', { ...input })
+  emit('input', { throttle: input.throttle })
 }
 
 const startThrottleDrag = (e: PointerEvent) => {
@@ -551,7 +551,7 @@ const handleMixtureMove = (event: PointerEvent) => {
   y = Math.max(0, Math.min(maxTravel, y))
   mixturePos.y = y
   input.mixture = 1 - y / maxTravel
-  emit('input', { ...input })
+  emit('input', { mixture: input.mixture })
 }
 
 const startMixtureDrag = (e: PointerEvent) => {
@@ -589,7 +589,7 @@ const handleRudderMove = (event: PointerEvent) => {
   deltaX = Math.max(-maxTravel, Math.min(maxTravel, deltaX))
   rudderPos.x = deltaX
   input.rudder = deltaX / maxTravel
-  emit('input', { ...input })
+  emit('input', { rudder: input.rudder })
 }
 
 const startRudderDrag = (e: PointerEvent) => {
@@ -616,7 +616,7 @@ const onRudderUp = (e: PointerEvent) => {
   activeRudderId = null
   rudderPos.x = 0
   input.rudder = 0
-  emit('input', { ...input })
+  emit('input', { rudder: 0 })
 }
 
 // --- Right Stick Logic (Elevator/Aileron) ---
@@ -635,7 +635,7 @@ const handleRightMove = (event: PointerEvent) => {
   rightPos.y = deltaY
   input.aileron = deltaX / maxTravelX
   input.elevator = -deltaY / maxTravelY
-  emit('input', { ...input })
+  emit('input', { aileron: input.aileron, elevator: input.elevator })
 }
 
 const startRightDrag = (e: PointerEvent) => {
@@ -664,7 +664,7 @@ const onRightUp = (e: PointerEvent) => {
   rightPos.y = 0
   input.elevator = 0
   input.aileron = 0
-  emit('input', { ...input })
+  emit('input', { aileron: 0, elevator: 0 })
 }
 
 // --- Trim Control Logic (generic factory) ---
@@ -684,7 +684,7 @@ const createTrimHandlers = (
     deltaX = Math.max(-maxTravel, Math.min(maxTravel, deltaX))
     pos.x = deltaX
     input[key] = deltaX / maxTravel
-    emit('input', { ...input })
+    emit('input', { [key]: input[key] })
   }
 
   const startDrag = (e: PointerEvent) => {

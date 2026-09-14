@@ -448,6 +448,8 @@ async function recreateAllPlots() {
         width,
         height,
       })
+      const definition = plotList.value.find((item) => item.id === id)
+      if (definition) updatePlot(definition)
     })
 
     const hasVisibleUnbuiltPlot = plotList.value.some((plotDef) => {
@@ -497,8 +499,16 @@ function tick() {
 
 function updatePlot(plotDef: PlotDefinition) {
   const u = plots.get(plotDef.id)
+  const host = plotRefs[plotDef.id]
 
-  if (!u) {
+  // Sampling continues in tick(); avoid copying buffers/drawing invisible plots.
+  if (
+    !u ||
+    document.hidden ||
+    !host?.isConnected ||
+    host.offsetWidth <= 0 ||
+    host.offsetHeight <= 0
+  ) {
     return
   }
 
@@ -532,7 +542,12 @@ function reset_x_axis() {
 
 onMounted(() => {
   window.addEventListener('theme-change', scheduleRecreateAllPlots)
+  document.addEventListener('visibilitychange', redrawVisiblePlots)
 })
+
+const redrawVisiblePlots = () => {
+  if (!document.hidden) plotList.value.forEach(updatePlot)
+}
 
 onBeforeUnmount(() => {
   disposed = true
@@ -543,6 +558,7 @@ onBeforeUnmount(() => {
   plotResizeObserver?.disconnect()
 
   window.removeEventListener('theme-change', scheduleRecreateAllPlots)
+  document.removeEventListener('visibilitychange', redrawVisiblePlots)
 })
 </script>
 
