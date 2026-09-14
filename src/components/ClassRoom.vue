@@ -75,8 +75,7 @@
           </select>
         </label>
         <span class="text-xs"
-          >{{ feedbackProviderConfig.provider }} ·
-          {{ aiJobs.filter((job) => job.state !== 'finished').length }} pending</span
+          >{{ feedbackProviderConfig.provider }} · {{ aiJobIndex.pendingCount }} pending</span
         >
       </div>
 
@@ -269,110 +268,21 @@
                 : group.participants"
               :key="participant.peerId"
             >
-              <div
+              <ClassroomPeerRow
                 :ref="(element) => setRosterRowRef(element, participant.peerId)"
-                class="classroom-roster-row grid h-7 cursor-default grid-cols-[1.25rem_minmax(0,1fr)_auto_auto] items-center gap-x-1 px-1 outline-none"
-                :class="rowClass(participant.peerId)"
-                :aria-selected="isPeerSelected(participant.peerId)"
-                :title="participantSummary(participant.peer)"
-                tabindex="-1"
-                @click="focusPeerRow($event, participant.peerId)"
-              >
-                <div class="text-center">
-                  <input
-                    type="checkbox"
-                    tabindex="-1"
-                    class="size-3 cursor-pointer accent-simActiveButton"
-                    :checked="isPeerSelected(participant.peerId)"
-                    :aria-label="`Select ${participant.peer.metadata.callsign || participant.peerId}`"
-                    @click.stop="togglePeerCheckbox(participant.peerId)"
-                  />
-                </div>
-                <div class="flex min-w-0 items-center gap-2 whitespace-nowrap">
-                  <div class="flex min-w-0 flex-1 items-center gap-1">
-                    <span
-                      v-if="participant.peer.handState === 'raised'"
-                      class="inline-flex shrink-0 animate-pulse items-center bg-panelActive px-1 font-bold text-primary"
-                      >HAND</span
-                    >
-                    <span class="min-w-0 truncate font-medium">
-                      {{
-                        participant.peer.metadata.callsign ||
-                        participant.peer.metadata.displayName ||
-                        '—'
-                      }}
-                    </span>
-                    <span class="roster-secondary-id shrink-0">
-                      · {{ compactStatus(participant.peer.metadata.status) }}
-                    </span>
-                    <button
-                      v-if="pendingAI(participant.peerId)"
-                      class="command-button shrink-0"
-                      :class="{
-                        'roster-primary-action': aiJobs.some(
-                          (job) => job.peerId === participant.peerId && job.state === 'review',
-                        ),
-                      }"
-                      @click.stop="openPeerDetails(participant.peerId)"
-                    >
-                      AI
-                      {{
-                        aiJobs.find(
-                          (job) => job.peerId === participant.peerId && job.state !== 'finished',
-                        )?.state === 'review'
-                          ? 'review'
-                          : 'pending'
-                      }}
-                    </button>
-                    <span
-                      v-if="participant.peer.exercise"
-                      class="roster-exercise-status shrink-0"
-                      :title="participant.peer.exercise.status"
-                    >
-                      {{ exerciseStatusSymbol(participant.peer.exercise.status) }}
-                      <span :class="exerciseStatusClass(participant.peer.exercise.status)">{{
-                        compactExerciseStatus(participant.peer.exercise.status)
-                      }}</span>
-                    </span>
-                  </div>
-                  <div class="roster-checkpoint min-w-0 flex-1 truncate text-secondary">
-                    {{
-                      participant.peer.metadata.checkPoint ||
-                      exerciseDetail(participant.peer) ||
-                      '—'
-                    }}
-                  </div>
-                </div>
-                <div
-                  class="roster-net flex items-center gap-1 whitespace-nowrap px-1 text-right text-secondary"
-                >
-                  {{
-                    connectionAge(participant.peer) > 15
-                      ? 'STALE'
-                      : `${participant.peer.latency ?? '—'}ms`
-                  }}
-                  <div
-                    v-if="participant.peer.handState === 'raised'"
-                    class="font-bold text-panelActive"
-                  >
-                    {{ handWaitTime(participant.peer) }}
-                  </div>
-                </div>
-                <button
-                  class="peer-details-toggle h-5 whitespace-nowrap px-1 text-center"
-                  :aria-expanded="detailsPeerId === participant.peerId"
-                  :title="
-                    detailsPeerId === participant.peerId
-                      ? 'Close peer details'
-                      : 'View peer details'
-                  "
-                  @click.stop="togglePeerDetails(participant.peerId)"
-                  @keydown.left.prevent.stop="closePeerDetails"
-                  @keydown.right.prevent.stop="openPeerDetails(participant.peerId)"
-                >
-                  Details {{ detailsPeerId === participant.peerId ? '‹' : '›' }}
-                </button>
-              </div>
+                :peer-id="participant.peerId"
+                :peer="participant.peer"
+                :selected="isPeerSelected(participant.peerId)"
+                :focused="focusedPeerId === participant.peerId"
+                :details-open="detailsPeerId === participant.peerId"
+                :ai-state="aiJobIndex.pendingByPeer.get(participant.peerId)"
+                :clock="clock"
+                @focus-row="focusPeerRow"
+                @select-peer="togglePeerCheckbox"
+                @open-details="openPeerDetails"
+                @close-details="closePeerDetails"
+                @toggle-details="togglePeerDetails"
+              />
 
               <section
                 v-if="detailsPeerId === participant.peerId"
@@ -683,6 +593,7 @@
 <script setup lang="ts">
 import {
   computed,
+  markRaw,
   nextTick,
   onMounted,
   onUnmounted,
@@ -692,6 +603,8 @@ import {
 } from 'vue'
 import Fuse from 'fuse.js'
 import wButton from './wButton.vue'
+import ClassroomPeerRow from './ClassroomPeerRow.vue'
+import { compactStatus, compactExerciseStatus, type ClassroomPeer } from '../ClassroomPeer'
 import * as PeerJS from 'peerjs'
 import { DataConnection } from 'peerjs'
 import { moduleTree, type ModuleEntry } from './data/EASAModules'
@@ -714,9 +627,16 @@ const emit = defineEmits<{
 
 import type { CheckpointData, LessonAIRequest, LessonAIResponse } from '../ScriptContext'
 import { nextClassroomFocus, isNativeControlKey } from '../ClassroomFocus'
-import { createAICoordinator, createAIClient, validAIRequest, type AIPolicy } from '../LessonAI'
+import {
+  createAICoordinator,
+  createAIClient,
+  validAIRequest,
+  type AIPolicy,
+  type AIJob,
+} from '../LessonAI'
 import { requestFeedback } from '../FeedbackProvider'
 import { feedbackProviderConfig } from '../feedbackProviderConfig'
+import { applicationTimers } from '../ApplicationTimers'
 import {
   createInstructorActions,
   acceptsExerciseControl,
@@ -729,9 +649,15 @@ defineOptions({ inheritAttrs: false })
 
 const isDevelopment = import.meta.env.DEV
 const baseUrl = window.location.origin
-let selfPeer: PeerJS.Peer
-let instructorConnection: PeerJS.DataConnection
+let selfPeer: PeerJS.Peer | undefined
+let instructorConnection: PeerJS.DataConnection | undefined
 let instructorConnectionOpen = false
+let classroomDisposed = false
+let reconnectTimer: ReturnType<typeof setTimeout> | undefined
+const clearReconnectTimer = () => {
+  applicationTimers.clearTimeout(reconnectTimer)
+  reconnectTimer = undefined
+}
 const defaultSessionId = `SIM-${Math.floor(100000 + Math.random() * 90000)}`
 const selfPeerId = ref<string>(defaultSessionId)
 const requestedRoomId = ref(selfPeerId.value)
@@ -741,42 +667,7 @@ let isOnline = ref(false)
 const classroomRoomId = computed(() =>
   isInstructor.value ? selfPeerId.value : requestedRoomId.value,
 )
-type ConnectionMeta = {
-  displayName?: string
-  callsign?: string
-  name?: string
-  status?: string
-  checkPoint?: string
-  checkPointData?: CheckpointData
-  [key: string]: any
-}
-
-type ExerciseCheckpoint = {
-  timestamp: number
-  message: string
-  data?: CheckpointData
-}
-
-type ConnectionsList = {
-  [peerId: string]: {
-    metadata: ConnectionMeta
-    conn: PeerJS.DataConnection
-    lastSeen: number
-    latency?: number
-    handRaised?: boolean
-    handState?: ClassroomHandState
-    handRaisedAt?: number
-    exercise?: {
-      id: string
-      name: string
-      status: ClassroomExerciseStatus
-      updatedAt: number
-      deadline?: number
-      detail?: string
-      checkpoints: ExerciseCheckpoint[]
-    }
-  }
-}
+type ConnectionsList = Record<string, ClassroomPeer>
 const incomingConns = ref<ConnectionsList>({})
 const peerRosterOrder = ref<string[]>([])
 const routeHash = window.location.href
@@ -1039,9 +930,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  aiCoordinator.dispose()
-  aiClient.dispose()
-  manualAIRequests.clear()
+  classroomDisposed = true
+  disconnect()
   window.removeEventListener('beforeunload', disconnect)
   document.removeEventListener('pointerdown', dismissPeerDetailsOnOutsideClick)
   document.removeEventListener('pointerdown', recordFocusInteraction, true)
@@ -1051,21 +941,32 @@ onUnmounted(() => {
 })
 
 const setupConnection = (incomingConnection: DataConnection) => {
+  if (classroomDisposed) {
+    incomingConnection.close()
+    return
+  }
+  const peer = selfPeer
+  const isCurrent = () => !classroomDisposed && isOnline.value && selfPeer === peer
   // Connection request from remote peer
   trace(`Received a connection data from ${incomingConnection.peer}`)
 
   // Data from remote peer
   incomingConnection.on('data', (data: unknown) => {
+    if (!isCurrent()) return
     onData(data as PeerData, incomingConnection)
   })
   // Connected to remote peer.
   incomingConnection.on('open', () => {
+    if (!isCurrent()) {
+      incomingConnection.close()
+      return
+    }
     trace(`OPEN Peer ${incomingConnection.peer}`)
 
     // Add to incoming connection list (create new entry)
     incomingConns.value[incomingConnection.peer] = {
       metadata: incomingConnection.metadata || {},
-      conn: incomingConnection,
+      conn: markRaw(incomingConnection),
       lastSeen: Date.now(),
     }
     if (!peerRosterOrder.value.includes(incomingConnection.peer)) {
@@ -1074,10 +975,15 @@ const setupConnection = (incomingConnection: DataConnection) => {
   })
 
   // Lost connection with remote peer
-  incomingConnection.on('close', () => onConnectionClose(incomingConnection.peer))
+  incomingConnection.on('close', () => {
+    if (isCurrent() && incomingConns.value[incomingConnection.peer]?.conn === incomingConnection) {
+      onConnectionClose(incomingConnection.peer)
+    }
+  })
 
   // Error
   incomingConnection.on('error', (e: PeerJS.PeerError<string>) => {
+    if (!isCurrent()) return
     onError(`${e.type} - ${e.name} - ${e.message} - ${e.stack}`)
     incomingConnection.close()
 
@@ -1101,6 +1007,7 @@ const onPeerClose = (peerId: string) => {
 }
 
 const onConnectionClose = (peerId: string) => {
+  if (classroomDisposed || !isOnline.value) return
   // Lost connection to the sever
   if (peerId === selfPeerId.value) {
     trace(`Connection to server closed ${peerId}`)
@@ -1110,9 +1017,13 @@ const onConnectionClose = (peerId: string) => {
   else if (instructorConnection && peerId == instructorConnection.peer) {
     trace(`Connection to the instructor closed ${peerId}. Reconnecting`)
     instructorConnectionOpen = false
-    instructorConnection.close()
-    // Reconnect reconnect
-    setTimeout(() => connectToPeer(peerId), 3000)
+    instructorConnection.removeAllListeners()
+    instructorConnection = undefined
+    clearReconnectTimer()
+    reconnectTimer = applicationTimers.setTimeout(() => {
+      reconnectTimer = undefined
+      if (!classroomDisposed && isOnline.value) connectToPeer(peerId)
+    }, 3000)
   }
   // Lost connection with a peer
   else {
@@ -1141,7 +1052,7 @@ const recordCheckpoint = (
 }
 
 const onData = (data: PeerData, conn: PeerJS.DataConnection) => {
-  trace(`Received data from ${conn.peer} ${JSON.stringify(data)}`)
+  if (isDevelopment) trace(`Received data from ${conn.peer} ${JSON.stringify(data)}`)
   const participant = incomingConns.value[conn.peer]
   if (participant) participant.lastSeen = Date.now()
 
@@ -1361,11 +1272,13 @@ const onError = (err: string) => {
 }
 
 const connectToPeerJsServer = (targetPeerId: string) => {
+  if (classroomDisposed) return
   trace(`Creating a new peer ${targetPeerId}`)
   if (targetPeerId) requestedRoomId.value = targetPeerId
-  if (selfPeer?.id === targetPeerId) {
+  if (selfPeer?.id === targetPeerId && !selfPeer.destroyed && !selfPeer.disconnected) {
     return
   }
+  disconnect()
 
   // Auto genrate display name
   displayname.value = displayname.value || Math.random().toString(36).substring(2, 7).toUpperCase()
@@ -1383,33 +1296,46 @@ const connectToPeerJsServer = (targetPeerId: string) => {
 
   // Create a new peer
   const peerJsServer = new PeerJS.Peer(targetPeerId, hostConfig)
+  selfPeer = peerJsServer
+  const isCurrent = () => !classroomDisposed && selfPeer === peerJsServer
 
   // Peer receive a connection request from the server
   peerJsServer.on('connection', (incomingConnection: PeerJS.DataConnection) => {
-    // outConnection = newConn;
+    if (!isCurrent()) {
+      incomingConnection.close()
+      return
+    }
     setupConnection(incomingConnection)
   })
 
   // Peer is disconnected from the server, but can recover
-  peerJsServer.on('disconnected', () => onDisconnected(peerJsServer))
+  peerJsServer.on('disconnected', () => {
+    if (isCurrent()) onDisconnected(peerJsServer)
+  })
   // Peer (me) is destroyed and can't connect to the server
-  peerJsServer.on('close', () => onPeerClose(peerJsServer.id))
+  peerJsServer.on('close', () => {
+    if (isCurrent()) onPeerClose(peerJsServer.id)
+  })
   // Wrapped in promise to allow async call waiting until connection is esablish
   // return new Promise((resolve, reject) => {
   // Connected to the peerServer
   peerJsServer.on('open', (id: string) => {
+    if (!isCurrent()) {
+      peerJsServer.destroy()
+      return
+    }
     trace('OPEN: My peer ID is: ' + id)
-    selfPeer = peerJsServer
     isOnline.value = true
-    isInstructor.value = selfPeerId.value == id
+    isInstructor.value = targetPeerId === id
     // If the user entered a peer id, that is not same as this id, connecto that was unavilalbe, connect to it
-    if (selfPeerId.value.length && id != selfPeerId.value) {
-      connectToPeer(selfPeerId.value)
+    if (!isInstructor.value && requestedRoomId.value && id !== requestedRoomId.value) {
+      connectToPeer(requestedRoomId.value)
     }
     selfPeerId.value = id
   })
   // Error
   peerJsServer.on('error', (e: PeerJS.PeerError<string>) => {
+    if (!isCurrent()) return
     onError(`${e.type} - ${e.name} - ${e.message} - ${e.stack}`)
     if (e.type === 'unavailable-id') {
       // if id is taken, it means someone gave us the class-id and we want to join the class.
@@ -1421,53 +1347,73 @@ const connectToPeerJsServer = (targetPeerId: string) => {
 
 const disconnect = () => {
   trace('Disconnect')
-  if (instructorConnection) {
-    instructorConnection.close()
-  }
-  if (incomingConns) {
-    Object.keys(incomingConns.value).forEach((id) => {
-      const conn = incomingConns.value[id].conn
-      conn.close()
-    })
-  }
-
-  if (selfPeer) {
-    selfPeer.disconnect()
-  }
-
+  // Invalidate callbacks before closing connections, which can emit synchronously.
   isOnline.value = false
+  clearReconnectTimer()
+  aiCoordinator.dispose()
+  aiClient.dispose()
+  manualAIRequests.clear()
+
+  const peer = selfPeer
+  selfPeer = undefined
+  const upstream = instructorConnection
+  instructorConnection = undefined
+  instructorConnectionOpen = false
+  upstream?.removeAllListeners()
+  upstream?.close()
+
+  for (const { conn } of Object.values(incomingConns.value)) {
+    conn.removeAllListeners()
+    conn.close()
+  }
+  incomingConns.value = {}
+  peerRosterOrder.value = []
+  selectedPeerIds.value = []
+  focusedPeerId.value = ''
+  detailsPeerId.value = ''
+
+  // Also closes pending connections that have not emitted 'open' yet.
+  peer?.removeAllListeners()
+  peer?.destroy()
 }
 
-const connectToPeer = async (remotePeerId: string) => {
+const connectToPeer = (remotePeerId: string) => {
+  const peer = selfPeer
+  if (classroomDisposed || !isOnline.value || !peer || peer.destroyed) return
+  clearReconnectTimer()
   trace(`Connecting to a peer ${remotePeerId}`)
-  instructorConnection = selfPeer.connect(remotePeerId, {
+  const connection = peer.connect(remotePeerId, {
     metadata: {
       displayName: displayname.value,
       callsign: displayname.value,
       name: props.accountName || '',
     },
   })
+  instructorConnection = connection
+  const isCurrent = () =>
+    !classroomDisposed && isOnline.value && selfPeer === peer && instructorConnection === connection
 
-  // conn.on('disconnected', this.onDisconnected)
-  instructorConnection.on('error', (e) =>
-    onError(`${e.type} - ${e.name} - ${e.message} - ${e.stack}`),
-  )
-  instructorConnection.on('close', () => {
-    instructorConnectionOpen = false
-    onConnectionClose(instructorConnection.peer)
+  connection.on('error', (e) => {
+    if (isCurrent()) onError(`${e.type} - ${e.name} - ${e.message} - ${e.stack}`)
   })
-
-  instructorConnection.on('open', () => {
+  connection.on('close', () => {
+    if (!isCurrent()) return
+    onConnectionClose(connection.peer)
+  })
+  connection.on('open', () => {
+    if (!isCurrent()) {
+      connection.close()
+      return
+    }
     instructorConnectionOpen = true
     trace(`OPEN Connected to a peer ${remotePeerId}`)
-    sendEnvelopeToConnection(instructorConnection, 'identity', {
+    sendEnvelopeToConnection(connection, 'identity', {
       name: props.accountName || '',
       callsign: displayname.value || '',
     })
-    // Data received from remote peer
-    instructorConnection.on('data', (data: unknown) => {
-      onData(data as PeerData, instructorConnection)
-    })
+  })
+  connection.on('data', (data: unknown) => {
+    if (isCurrent()) onData(data as PeerData, connection)
   })
 }
 
@@ -1598,7 +1544,8 @@ const focusClassroomPanel = () => {
 }
 
 const setRosterRowRef = (element: Element | ComponentPublicInstance | null, peerId: string) => {
-  if (element instanceof HTMLElement) rosterRowRefs.set(peerId, element)
+  const row = element && '$el' in element ? element.$el : element
+  if (row instanceof HTMLElement) rosterRowRefs.set(peerId, row)
   else rosterRowRefs.delete(peerId)
 }
 const setRosterDetailRef = (element: Element | ComponentPublicInstance | null) => {
@@ -1776,13 +1723,6 @@ const handleClassroomKeydown = (event: KeyboardEvent) => {
   }
 }
 
-const rowClass = (peerId: string) => {
-  return [
-    focusedPeerId.value === peerId ? 'bg-simInputBackground' : '',
-    isPeerSelected(peerId) ? 'text-simActiveButton' : 'text-secondary',
-  ]
-}
-
 const formatCheckpointTime = (timestamp: number) =>
   new Date(timestamp).toLocaleTimeString([], {
     hour: '2-digit',
@@ -1794,36 +1734,6 @@ const formatAssignmentDeadline = (timestamp: number) =>
     hour: '2-digit',
     minute: '2-digit',
   })
-
-const compactStatus = (status?: string) => {
-  const normalized = status?.trim().toLowerCase()
-  if (!normalized) return 'ON'
-  return (
-    {
-      online: 'ON',
-      running: 'RUN',
-      paused: 'PAUSE',
-      trial: 'TRIAL',
-      'structural damage': 'DMG',
-    }[normalized] || status?.slice(0, 5).toUpperCase()
-  )
-}
-const exerciseDetail = (peer: ConnectionsList[string]) => {
-  if (!peer.exercise) return ''
-  const checkpoint = peer.metadata.checkPoint ? ` · ${peer.metadata.checkPoint}` : ''
-  return `${peer.exercise.name} · ${peer.exercise.status}${checkpoint}`
-}
-const compactExerciseStatus = (status: ClassroomExerciseStatus) =>
-  ({
-    assigned: 'ASN',
-    running: 'RUN',
-    completed: 'DONE',
-    stopped: 'STOP',
-    error: 'ERR',
-    overdue: 'LATE',
-  })[status]
-const exerciseStatusSymbol = (status: ClassroomExerciseStatus) =>
-  ({ assigned: '○', running: '▶', completed: '✓', stopped: '■', error: '!', overdue: '!' })[status]
 
 const updateOverdueAssignments = () => {
   const now = Date.now()
@@ -1981,11 +1891,26 @@ const aiCoordinator = createAICoordinator({
   },
 })
 const aiJobs = aiCoordinator.jobs
-const visibleAIJobs = computed(() =>
-  aiJobs.value.filter((job) => job.peerId === detailsPeerId.value),
-)
-const pendingAI = (peerId: string) =>
-  aiJobs.value.some((job) => job.peerId === peerId && job.state !== 'finished')
+// Build once per queue change. Rows receive only a stable, primitive badge state.
+const aiJobIndex = computed(() => {
+  const byPeer = new Map<string, AIJob[]>()
+  const pendingByPeer = new Map<string, 'pending' | 'review'>()
+  let pendingCount = 0
+  for (const job of aiJobs.value) {
+    const jobs = byPeer.get(job.peerId)
+    if (jobs) jobs.push(job)
+    else byPeer.set(job.peerId, [job])
+    if (job.state !== 'finished') {
+      pendingCount++
+      if (job.state === 'review' || !pendingByPeer.has(job.peerId)) {
+        pendingByPeer.set(job.peerId, job.state === 'review' ? 'review' : 'pending')
+      }
+    }
+  }
+  return { byPeer, pendingByPeer, pendingCount }
+})
+const visibleAIJobs = computed(() => aiJobIndex.value.byPeer.get(detailsPeerId.value) || [])
+const pendingAI = (peerId: string) => aiJobIndex.value.pendingByPeer.has(peerId)
 const suggestPeerFeedback = (peerId: string) => {
   const assignment = incomingConns.value[peerId]?.exercise
   if (!assignment?.checkpoints.length) return
@@ -2206,24 +2131,9 @@ const reportExerciseResult = (
   sendExerciseStatus(status, detail)
 }
 
-const exerciseStatusClass = (status: ClassroomExerciseStatus) => ({
-  'font-bold text-secondary': ['completed', 'running', 'error', 'overdue'].includes(status),
-  'opacity-60': ['assigned', 'stopped'].includes(status),
-})
-
 const connectionAge = (peer: ConnectionsList[string]) => {
   clock.value
   return Math.floor((Date.now() - peer.lastSeen) / 1000)
-}
-
-const participantSummary = (peer: ConnectionsList[string]) => {
-  const identity = [peer.metadata.callsign || peer.metadata.displayName, peer.metadata.name].filter(
-    Boolean,
-  )
-  const exercise = peer.exercise ? `${peer.exercise.name}: ${peer.exercise.status}` : 'Unassigned'
-  const checkpoint = peer.metadata.checkPoint ? ` · ${peer.metadata.checkPoint}` : ''
-  const network = connectionAge(peer) > 15 ? 'Network stale' : `${peer.latency ?? '—'}ms`
-  return `${identity.join(' · ')} · ${compactStatus(peer.metadata.status)} · ${exercise}${checkpoint} · ${network}`
 }
 
 const confirmDisconnect = (peerId: string, peer: ConnectionsList[string]) => {
@@ -2245,14 +2155,6 @@ const acknowledgeHandRequest = (peerId: string) => {
   peer.handRaised = false
   sendEnvelopeToConnection(peer.conn, 'hand-control', { state: 'acknowledged' })
   logSessionEvent('hand', peerId, 'acknowledged')
-}
-
-const handWaitTime = (peer: ConnectionsList[string]) => {
-  clock.value
-  if (!peer.handRaisedAt) return ''
-  const seconds = Math.max(0, Math.floor((Date.now() - peer.handRaisedAt) / 1000))
-  const minutes = Math.floor(seconds / 60)
-  return `${minutes}:${(seconds % 60).toString().padStart(2, '0')}`
 }
 
 const exportSession = () => {
@@ -2338,13 +2240,6 @@ const sendScript = (title: string, content: string) => {
 const reset = () => {
   trace('Resetting classroom')
   disconnect()
-  if (selfPeer) {
-    selfPeer.destroy()
-    selfPeer = undefined as any
-  }
-  incomingConns.value = {}
-  peerRosterOrder.value = []
-  instructorConnection = undefined as any
 }
 
 defineExpose({
@@ -2409,14 +2304,6 @@ const trace = (text: string) => {
   @apply h-5 shrink-0 bg-primary px-1 text-secondary hover:bg-secondary hover:text-primary disabled:cursor-default disabled:opacity-40;
 }
 
-.peer-details-toggle {
-  @apply bg-primary text-secondary hover:bg-secondary hover:text-primary;
-}
-
-.peer-details-toggle[aria-expanded='true'] {
-  @apply bg-secondary text-primary;
-}
-
 .roster-primary-action {
   @apply bg-panelActive px-2 text-white hover:bg-panelActive hover:text-white;
 }
@@ -2461,17 +2348,8 @@ const trace = (text: string) => {
   @apply text-secondary;
 }
 
-.classroom-roster-row {
-  @apply border-b border-panelBorder/50;
-}
-
-.roster-exercise-status {
-  @apply ml-auto inline-flex items-center gap-1 bg-primary px-1 text-secondary;
-}
-
 .roster-group-heading:focus-visible,
 .roster-detail summary:focus-visible,
-.peer-details-toggle:focus-visible,
 .command-button:focus-visible {
   outline: 1px solid rgb(var(--color-panelActive));
   outline-offset: -1px;
@@ -2482,15 +2360,6 @@ const trace = (text: string) => {
 }
 
 @container (max-width: 26rem) {
-  .roster-net {
-    display: none;
-  }
-  .roster-secondary-id {
-    display: none;
-  }
-  .roster-checkpoint {
-    display: none;
-  }
   .roster-group-summary {
     flex-basis: 100%;
     padding-left: 1rem;
