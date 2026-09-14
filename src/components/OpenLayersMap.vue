@@ -23,7 +23,9 @@
         <button class="nav-map-btn" @click="recenterNavMap" title="Center aircraft">◎</button>
 
         <!-- CLOSE -->
-        <button class="nav-map-btn" @click="requestMap(false)" title="Close navigation map">✕</button>
+        <button class="nav-map-btn" @click="requestMap(false)" title="Close navigation map">
+          ✕
+        </button>
       </div>
     </div>
   </div>
@@ -36,7 +38,7 @@ declare global {
   }
 }
 
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 
 const showNavMap = ref(false)
 const emit = defineEmits<{
@@ -95,24 +97,34 @@ interface CameraState {
 // CESIUM
 // ============================================================
 
-let ol3d: OLCesium
-let cesiumScene: Cesium.Scene
+let ol3d: OLCesium | undefined
+let cesiumScene: Cesium.Scene | undefined
 
-// animation frame id
-let animationFrameId: number | null = null
+let removeCameraUpdate: (() => void) | undefined
+let resizeObserver: ResizeObserver | undefined
+let intersectionObserver: IntersectionObserver | undefined
+let disposed = false
+let containerIntersecting = true
+let mapRenderingActive = false
+let navMapActive = false
 
 // ============================================================
 // PROPS
 // ============================================================
 
-const props = defineProps<{
-  lat: number
-  lon: number
-  altFt: number
-  pitchDeg: number
-  bankDeg: number
-  headingDeg: number
-}>()
+const props = withDefaults(
+  defineProps<{
+    lat: number
+    lon: number
+    altFt: number
+    pitchDeg: number
+    bankDeg: number
+    headingDeg: number
+    /** Map-only frame cap; does not affect the simulator or instrument update rates. */
+    maxFrameRate?: number
+  }>(),
+  { maxFrameRate: 30 },
+)
 
 defineExpose({
   updateMap,
@@ -129,6 +141,9 @@ defineExpose({
 
 const followAircraft = ref(true)
 const currentLonLat = ref<[number, number]>([props.lon, props.lat])
+let currentAltitudeFt = props.altFt
+let navPositionDirty = true
+let navHeadingDirty = true
 
 const map3dContainer = ref<HTMLDivElement | null>(null)
 const map2dContainer = ref<HTMLDivElement | null>(null)
@@ -195,6 +210,10 @@ const interpolatedPosition = new Cesium.Cartesian3()
 // smaller = smoother
 //
 const SMOOTHING = 8.0
+// Stop interpolating below 1 cm / approximately 0.0006 degrees, then snap exactly.
+const POSITION_EPSILON_METERS = 0.01
+const ANGLE_EPSILON_RADIANS = 0.00001
+let cameraNeedsUpdate = true
 
 // ============================================================
 // HELPERS
@@ -208,6 +227,85 @@ function recenterNavMap() {
     center: fromLonLat(currentLonLat.value),
     duration: 350,
   })
+}
+
+function configureFrameRate() {
+  const rate = props.maxFrameRate
+  ol3d?.setTargetFrameRate(Number.isFinite(rate) && rate > 0 ? rate : 30)
+}
+
+watch(() => props.maxFrameRate, configureFrameRate)
+
+function updateNavMap() {
+  if (!navMapActive || !map2d) return
+
+  if (navPositionDirty) {
+    const center = fromLonLat(currentLonLat.value)
+    vehiclePoint2D.setCoordinates(center)
+    if (followAircraft.value) map2d.getView().setCenter(center)
+    navPositionDirty = false
+  }
+  if (navHeadingDirty) {
+    markerStyle.getImage()?.setRotation(targetCamera.heading)
+    vehicleFeature2D.changed()
+    navHeadingDirty = false
+  }
+}
+
+function syncNavMapVisibility() {
+  if (disposed || !map2d) return
+  const active = mapRenderingActive && showNavMap.value && !!map2dContainer.value
+  if (active === navMapActive) return
+
+  navMapActive = active
+  // Keep the view and layers, but stop OpenLayers drawing/requesting tiles while closed.
+  if (!active) map2d.getView().cancelAnimations()
+  map2d.setTarget(active ? map2dContainer.value! : undefined)
+  if (active) {
+    // Restore follow position even if hiding interrupted a recenter animation.
+    navPositionDirty = true
+    map2d.updateSize()
+    updateNavMap()
+  }
+}
+
+watch(showNavMap, syncNavMapVisibility, { flush: 'post' })
+
+function snapCameraToTarget() {
+  Cesium.Cartesian3.clone(targetCamera.position, currentCamera.position)
+  currentCamera.heading = targetCamera.heading
+  currentCamera.pitch = targetCamera.pitch
+  currentCamera.roll = targetCamera.roll
+}
+
+function syncMapVisibility() {
+  if (disposed || !ol3d || !cesiumScene) return
+  const host = map3dContainer.value
+  const active = !!(
+    !document.hidden &&
+    containerIntersecting &&
+    host?.isConnected &&
+    host.offsetWidth > 0 &&
+    host.offsetHeight > 0
+  )
+
+  if (active !== mapRenderingActive) {
+    mapRenderingActive = active
+    if (active) {
+      // Hidden time is not animation time: resume at the latest aircraft state.
+      snapCameraToTarget()
+      cameraNeedsUpdate = true
+      lastFrameTime = performance.now()
+    }
+  }
+  // Blocking cancels OL-Cesium's RAF without toggling 2D/3D mode or resetting its view.
+  ol3d.setBlockCesiumRendering(!active)
+  syncNavMapVisibility()
+  if (active) {
+    map3d?.updateSize()
+    if (navMapActive) map2d?.updateSize()
+    cesiumScene.requestRender()
+  }
 }
 
 function lerp(a: number, b: number, t: number): number {
@@ -235,7 +333,7 @@ function damp(dt: number): number {
 }
 
 // ============================================================
-// TELEMETRY UPDATE (20 Hz)
+// TELEMETRY UPDATE (called by the simulator's UI update loop)
 // ============================================================
 //
 // IMPORTANT:
@@ -255,32 +353,35 @@ function updateMap(
 ) {
   if (!map3d || !map2d || !cesiumScene) return
 
-  // --------------------------------------------------------
-  // update marker immediately
-  // --------------------------------------------------------
-  //   vehiclePoint.setCoordinates(fromLonLat([lon, lat]))
-  vehiclePoint2D.setCoordinates(fromLonLat([lon, lat]))
-  markerStyle.getImage()?.setRotation(heading)
-  currentLonLat.value = [lon, lat]
-
-  if (followAircraft.value && map2d) {
-    map2d.getView().setCenter(fromLonLat([lon, lat]))
+  const locationChanged = lon !== currentLonLat.value[0] || lat !== currentLonLat.value[1]
+  if (locationChanged) {
+    currentLonLat.value = [lon, lat]
+    navPositionDirty = true
   }
-
-  // --------------------------------------------------------
-  // update TARGET camera state
-  // --------------------------------------------------------
-
-  Cesium.Cartesian3.fromDegrees(
-    lon,
-    lat,
-    altFt * 0.3048,
-    Cesium.Ellipsoid.WGS84,
-    targetCamera.position,
-  )
-  targetCamera.heading = heading
-  targetCamera.pitch = pitch
-  targetCamera.roll = bank
+  if (locationChanged || altFt !== currentAltitudeFt) {
+    currentAltitudeFt = altFt
+    Cesium.Cartesian3.fromDegrees(
+      lon,
+      lat,
+      altFt * 0.3048,
+      Cesium.Ellipsoid.WGS84,
+      targetCamera.position,
+    )
+    cameraNeedsUpdate = true
+  }
+  if (
+    heading !== targetCamera.heading ||
+    pitch !== targetCamera.pitch ||
+    bank !== targetCamera.roll
+  ) {
+    navHeadingDirty ||= heading !== targetCamera.heading
+    targetCamera.heading = heading
+    targetCamera.pitch = pitch
+    targetCamera.roll = bank
+    cameraNeedsUpdate = true
+  }
+  // Hidden maps retain only the latest telemetry; there is no rendering backlog.
+  updateNavMap()
 }
 
 // ============================================================
@@ -288,10 +389,10 @@ function updateMap(
 // ============================================================
 let lastFrameTime = performance.now()
 function animate(now: number) {
-  animationFrameId = requestAnimationFrame(animate)
-  if (!cesiumScene) return
+  if (!mapRenderingActive || !cesiumScene) return
   const dt = Math.min((now - lastFrameTime) / 1000, 0.1)
   lastFrameTime = now
+  if (!cameraNeedsUpdate) return
   const t = damp(dt)
 
   // --------------------------------------------------------
@@ -307,20 +408,32 @@ function animate(now: number) {
   currentCamera.pitch = lerp(currentCamera.pitch, targetCamera.pitch, t)
   currentCamera.roll = lerp(currentCamera.roll, targetCamera.roll, t)
 
+  if (
+    Cesium.Cartesian3.distanceSquared(currentCamera.position, targetCamera.position) <=
+      POSITION_EPSILON_METERS ** 2 &&
+    Math.abs(lerpAngle(currentCamera.heading, targetCamera.heading, 1) - currentCamera.heading) <=
+      ANGLE_EPSILON_RADIANS &&
+    Math.abs(currentCamera.pitch - targetCamera.pitch) <= ANGLE_EPSILON_RADIANS &&
+    Math.abs(currentCamera.roll - targetCamera.roll) <= ANGLE_EPSILON_RADIANS
+  ) {
+    snapCameraToTarget()
+    cameraNeedsUpdate = false
+  }
+
   // --------------------------------------------------------
   // apply to camera
   // --------------------------------------------------------
   const camera = cesiumScene.camera
 
-  // direct mutation is cheaper than setView()
-  camera.position = currentCamera.position
   camera.setView({
+    destination: currentCamera.position,
     orientation: {
       heading: currentCamera.heading,
       pitch: currentCamera.pitch,
       roll: currentCamera.roll,
     },
   })
+  cesiumScene.requestRender()
 }
 
 // ============================================================
@@ -384,8 +497,7 @@ onMounted(() => {
   // =====================================================
 
   map2d = new Map({
-    target: map2dContainer.value,
-
+    // Attached only when the navigation map is visible.
     layers: [
       new TileLayer({
         source: new OSM(),
@@ -434,9 +546,16 @@ onMounted(() => {
     map: map3d,
   })
 
+  ol3d.setBlockCesiumRendering(true)
+  configureFrameRate()
+  // This backing 2D view is not the navigation map; avoid syncing it on every 3D frame.
+  ol3d.setRefresh2DAfterCameraMoveEndOnly(true)
   ol3d.setEnabled(true)
 
   cesiumScene = ol3d.getCesiumScene()
+  // Tile loads and camera changes still trigger renders. Wall-clock time alone does not.
+  cesiumScene.requestRenderMode = true
+  cesiumScene.maximumRenderTimeChange = Infinity
 
   // =====================================================
   // CAMERA INIT
@@ -456,12 +575,22 @@ onMounted(() => {
   currentCamera.roll = targetCamera.roll = Cesium.Math.toRadians(props.bankDeg)
 
   // =====================================================
-  // START LOOP
+  // RENDER / VISIBILITY LIFECYCLE
   // =====================================================
 
-  animationFrameId = requestAnimationFrame(animate)
-
-  //   updateMap(props.lat, props.lon, props.altFt, props.pitchDeg, props.bankDeg, props.headingDeg)
+  // Reuse OL-Cesium's capped loop. preUpdate runs even when a draw is not requested,
+  // and runs before Cesium checks whether the camera or scene needs a new frame.
+  removeCameraUpdate = cesiumScene.preUpdate.addEventListener(() => animate(performance.now()))
+  resizeObserver = new ResizeObserver(syncMapVisibility)
+  resizeObserver.observe(map3dContainer.value)
+  intersectionObserver = new IntersectionObserver(([entry]) => {
+    if (disposed || !entry) return
+    containerIntersecting = entry.isIntersecting
+    syncMapVisibility()
+  })
+  intersectionObserver.observe(map3dContainer.value)
+  document.addEventListener('visibilitychange', syncMapVisibility)
+  syncMapVisibility()
 })
 
 // ============================================================
@@ -469,19 +598,26 @@ onMounted(() => {
 // ============================================================
 
 onUnmounted(() => {
-  if (animationFrameId !== null) {
-    cancelAnimationFrame(animationFrameId)
-  }
+  if (disposed) return
+  disposed = true
+  mapRenderingActive = false
+  navMapActive = false
+  resizeObserver?.disconnect()
+  intersectionObserver?.disconnect()
+  document.removeEventListener('visibilitychange', syncMapVisibility)
+  removeCameraUpdate?.()
 
-  if (map3d) {
-    map3d.setTarget(undefined)
-    map3d = null
-  }
+  // OL-Cesium owns the only 3D render loop and its WebGL resources.
+  ol3d?.setBlockCesiumRendering(true)
+  ol3d?.setEnabled(false)
+  ol3d?.destroy()
+  ol3d = undefined
+  cesiumScene = undefined
 
-  if (map2d) {
-    map2d.setTarget(undefined)
-    map2d = null
-  }
+  map2d?.dispose()
+  map3d?.dispose()
+  map2d = null
+  map3d = null
 })
 </script>
 
