@@ -188,14 +188,7 @@
 
     <div v-else class="relative flex min-h-0 flex-1 flex-col">
       <div class="min-h-0 flex-1">
-        <MonacoEditor
-          :theme="isDarkMode ? 'vs-dark' : 'vs-light'"
-          :options="options"
-          language="typescript"
-          v-model:value="code"
-          @editorWillMount="SetupTypes"
-          @editorDidMount="setupMonaco"
-        />
+        <LessonCodeEditor :is-dark-mode="isDarkMode" v-model:value="code" />
       </div>
       <aside
         v-if="aiPanelOpen"
@@ -249,7 +242,13 @@
           <div class="flex h-6 shrink-0 items-center justify-between">
             <span>GENERATED LESSON</span>
             <span :class="aiValidationIssues.length ? 'text-panelActive' : 'text-secondary'">
-              {{ aiValidationIssues.length ? `${aiValidationIssues.length} ISSUE(S)` : 'TS OK' }}
+              {{
+                aiValidationPending
+                  ? 'CHECKING…'
+                  : aiValidationIssues.length
+                    ? `${aiValidationIssues.length} ISSUE(S)`
+                    : 'TS OK'
+              }}
             </span>
           </div>
           <pre
@@ -263,8 +262,20 @@
             <div v-for="issue in aiValidationIssues" :key="issue">! {{ issue }}</div>
           </div>
           <div class="mt-1 flex gap-1">
-            <button class="action-button" @click="applyGeneratedLesson(false)">CREATE NEW</button>
-            <button class="action-button" @click="applyGeneratedLesson(true)">REPLACE</button>
+            <button
+              class="action-button"
+              :disabled="aiValidationPending"
+              @click="applyGeneratedLesson(false)"
+            >
+              CREATE NEW
+            </button>
+            <button
+              class="action-button"
+              :disabled="aiValidationPending"
+              @click="applyGeneratedLesson(true)"
+            >
+              REPLACE
+            </button>
             <button class="action-button" @click="aiGeneratedCode = ''">REVISE</button>
           </div>
         </template>
@@ -289,7 +300,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, PropType, onMounted, onUnmounted } from 'vue'
+import {
+  computed,
+  defineAsyncComponent,
+  h,
+  ref,
+  watch,
+  PropType,
+  onMounted,
+  onUnmounted,
+} from 'vue'
 import {
   ExtendedMainModule,
   repositionWithAutopilot,
@@ -297,24 +317,7 @@ import {
   waitFor,
   waitForCondition,
 } from '../core.ts'
-import * as ts_compiler from 'typescript'
-import types_definitions from './../../src/wasm/generated/editorTypes.txt?raw'
-import simMetaTypes from './../../src/wasm/generated/flightsimulator_exec_meta.ts?raw'
 import { resetTimeouts } from '../core.ts'
-// core.ts converted to js
-import coreSimJs from 'virtual:transpiled-core-js'
-// core.ts types converted to d.ts
-// import coreSimTsTypesRaw from 'virtual:transpiled-core-dts';
-
-// Monaco Editor
-declare module 'monaco-editor-vue3'
-import MonacoEditor from 'monaco-editor-vue3'
-import * as monaco from 'monaco-editor'
-import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
-import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker'
-import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker'
-import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker'
-import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
 import { createScriptContext, runUserScript } from '../ScriptContext.ts'
 import type {
   AskQuestionOptions,
@@ -323,11 +326,23 @@ import type {
   ScriptContext,
   WaitForUserOptions,
 } from '../ScriptContext.ts'
-import scriptApiTypes from '../ScriptContext.ts?raw'
 import { LayoutTypes } from '../../src/wasm/siminterface.ts'
-import { compileUserScript, stripImportsExports } from '../EditorScriptRuntime.ts'
+import { stripImportsExports } from '../ScriptSource'
 import { useLessonRun } from '../useLessonRun'
 import type { CheckpointData, LessonAIRequest, LessonAIResponse } from '../ScriptContext'
+
+const LessonCodeEditor = defineAsyncComponent({
+  loader: () => import('./LessonCodeEditor.vue'),
+  loadingComponent: () =>
+    h('div', { class: 'p-2 text-secondary', role: 'status' }, 'Loading editor…'),
+  errorComponent: () =>
+    h(
+      'div',
+      { class: 'p-2 text-secondary', role: 'alert' },
+      'Unable to load the code editor. Lessons remain available.',
+    ),
+})
+const loadLessonCompiler = () => import('../EditorScriptRuntime')
 
 const lessonRun = useLessonRun()
 const runStatus = lessonRun.status
@@ -354,8 +369,6 @@ let runClockTimer: ReturnType<typeof setInterval> | undefined
 let executionGeneration = 0
 let aiRunController = new AbortController()
 
-// let monacoEditor: monaco.editor.IStandaloneCodeEditor | null = null;
-
 // Define the event emitter
 const emit = defineEmits<{
   (event: 'start', code: string): void
@@ -365,24 +378,6 @@ const emit = defineEmits<{
 }>()
 
 export type ScriptStatus = 'IN-PROGRESS' | 'IDLE' | 'ERROR'
-
-window.MonacoEnvironment = {
-  getWorker(_: string, label: string) {
-    if (label === 'json') {
-      return new jsonWorker()
-    }
-    if (label === 'css' || label === 'scss' || label === 'less') {
-      return new cssWorker()
-    }
-    if (label === 'html' || label === 'handlebars' || label === 'razor') {
-      return new htmlWorker()
-    }
-    if (label === 'typescript' || label === 'javascript') {
-      return new tsWorker()
-    }
-    return new editorWorker()
-  },
-}
 
 const props = defineProps({
   contextObject: {
@@ -432,51 +427,6 @@ const props = defineProps({
   },
 })
 
-// ------------------------
-// ts-interface-extractor.ts
-// ------------------------
-// import * as ts from "typescript";
-
-const options = {
-  automaticLayout: true,
-  colorDecorators: true,
-  tabSize: 2,
-  minimap: {
-    enabled: false,
-  },
-  scrollBeyondLastLine: false,
-  lineNumbers: 'off',
-  glyphMargin: false,
-  folding: false,
-  // Undocumented see https://github.com/Microsoft/vscode/issues/30795#issuecomment-410998882
-  lineDecorationsWidth: 10,
-  lineNumbersMinChars: 0,
-  scrollbar: {
-    verticalScrollbarSize: 7,
-    horizontalScrollbarSize: 7,
-  },
-}
-
-// Set up Monaco Editor with TypeScript definitions from ScriptContext and the generated modelfile
-const SetupTypes = () => {
-  monaco.typescript.typescriptDefaults.addExtraLib(
-    `${types_definitions}\n${stripImportsExports(simMetaTypes)}\n${stripImportsExports(scriptApiTypes)}`,
-  )
-}
-
-// Define the Monaco Editor configuration
-const setupMonaco = (_editor: monaco.editor.IStandaloneCodeEditor) => {
-  monaco.typescript.typescriptDefaults.setCompilerOptions({
-    target: monaco.typescript.ScriptTarget.ES2020,
-    allowNonTsExtensions: true,
-    // moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-    module: monaco.typescript.ModuleKind.ESNext,
-    noEmit: true,
-    strict: true,
-    //typeRoots: ['node_modules/@types'],
-  })
-}
-
 const executionResult = ref<string | null>(null)
 const code = ref(``)
 
@@ -510,9 +460,8 @@ const executeCode = async (): Promise<boolean> => {
   reset(false)
   const runGeneration = executionGeneration
   const aiSignal = aiRunController.signal
-  let coreCode = coreSimJs
-  coreCode = stripImportsExports(coreCode)
-  code.value = stripImportsExports(code.value)
+  const source = stripImportsExports(code.value)
+  code.value = source
   const lessonTitle = ModuleTitle.value
   const run = lessonRun.begin(selectedModule.value?.path ?? lessonTitle, lessonTitle)
   const metrics = run.metrics
@@ -523,6 +472,10 @@ const executeCode = async (): Promise<boolean> => {
   try {
     runClock.value = Date.now()
     emit('start', code.value)
+
+    const { compileUserScript } = await loadLessonCompiler()
+    // Loading must not resurrect a stopped/replaced lesson or evaluate its top-level code.
+    if (runGeneration !== executionGeneration || aiSignal.aborted) return false
 
     const deps: ScriptContext<typeof props.simProps> = {
       controls: props.contextObject,
@@ -593,7 +546,7 @@ const executeCode = async (): Promise<boolean> => {
       },
     }
 
-    const finalUserCode = compileUserScript<typeof props.simProps>(code.value, (message) =>
+    const finalUserCode = compileUserScript<typeof props.simProps>(source, (message) =>
       props.utilityFuncs.notifyUser('Error', message, 3000),
     )
     const ctx = createScriptContext(deps)
@@ -746,24 +699,29 @@ const openPlayground = () => {
   viewMode.value = 'code'
 }
 
-const aiValidationIssues = computed(() => {
-  if (!aiGeneratedCode.value) return []
-  const issues: string[] = []
-  if (!/export\s+async\s+function\s+main\s*\(/.test(aiGeneratedCode.value)) {
-    issues.push('Missing export async function main(context: ScriptContext).')
-  }
-  const output = ts_compiler.transpileModule(aiGeneratedCode.value, {
-    compilerOptions: {
-      target: ts_compiler.ScriptTarget.ES2020,
-      module: ts_compiler.ModuleKind.ESNext,
-    },
-    reportDiagnostics: true,
-  })
-  output.diagnostics?.forEach((diagnostic) => {
-    issues.push(ts_compiler.flattenDiagnosticMessageText(diagnostic.messageText, ' '))
-  })
-  return [...new Set(issues)]
-})
+const aiValidationIssues = ref<string[]>([])
+const aiValidationPending = ref(false)
+watch(
+  aiGeneratedCode,
+  async (source, _previous, onCleanup) => {
+    let cancelled = false
+    onCleanup(() => {
+      cancelled = true
+    })
+    aiValidationIssues.value = []
+    aiValidationPending.value = Boolean(source)
+    if (!source) return
+    try {
+      const { validateGeneratedLesson } = await loadLessonCompiler()
+      if (!cancelled) aiValidationIssues.value = validateGeneratedLesson(source)
+    } catch {
+      if (!cancelled) aiValidationIssues.value = ['Unable to load TypeScript validation.']
+    } finally {
+      if (!cancelled) aiValidationPending.value = false
+    }
+  },
+  { flush: 'sync' },
+)
 
 const generatedLessonRequest = () => {
   const currentCodeContext = aiIncludeCurrentCode.value
@@ -856,7 +814,7 @@ const generateLesson = async () => {
 }
 
 const applyGeneratedLesson = (replaceCurrent: boolean) => {
-  if (!aiGeneratedCode.value) return
+  if (!aiGeneratedCode.value || aiValidationPending.value) return
   if (replaceCurrent && !window.confirm('Replace the current editor contents?')) return
   code.value = aiGeneratedCode.value
   if (!replaceCurrent) {

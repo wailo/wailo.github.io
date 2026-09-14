@@ -1,15 +1,11 @@
 import * as ts from 'typescript'
 
 import type { ScriptSimProps, UserScript } from './ScriptContext'
+import { stripImportsExports } from './ScriptSource'
+
+export { stripImportsExports } from './ScriptSource'
 
 export type InvalidScriptHandler = (message: string) => void
-
-export function stripImportsExports(input: string): string {
-  return input
-    .replace(/^\s*export\s+/gm, '')
-    .replace(/^\s*import[\s\S]*?['"].*?['"];?/gm, '')
-    .trim()
-}
 
 export function loadUserScript<TProps extends ScriptSimProps>(
   code: string,
@@ -41,4 +37,19 @@ export function compileUserScript<TProps extends ScriptSimProps>(
   })
 
   return loadUserScript<TProps>(javascript, onInvalidScript)
+}
+
+export function validateGeneratedLesson(source: string): string[] {
+  const issues: string[] = []
+  if (!/export\s+async\s+function\s+main\s*\(/.test(source)) {
+    issues.push('Missing export async function main(context: ScriptContext).')
+  }
+  const output = ts.transpileModule(source, {
+    compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.ESNext },
+    reportDiagnostics: true,
+  })
+  output.diagnostics?.forEach((diagnostic) => {
+    issues.push(ts.flattenDiagnosticMessageText(diagnostic.messageText, ' '))
+  })
+  return [...new Set(issues)]
 }
