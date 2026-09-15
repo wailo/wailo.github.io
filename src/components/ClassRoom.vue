@@ -250,18 +250,31 @@
       <div class="roster-body flex min-h-0 flex-1 flex-col overflow-hidden">
         <div class="roster-list min-h-0 flex-1 overflow-auto">
           <section v-for="group in participantExerciseGroups" :key="group.key">
-            <button
-              class="roster-group-heading"
-              :aria-expanded="!collapsedExerciseGroups.has(group.key)"
-              @click="toggleExerciseGroup(group.key)"
-            >
-              <span aria-hidden="true">{{
-                collapsedExerciseGroups.has(group.key) ? '▸' : '▾'
-              }}</span>
-              <span class="min-w-0 flex-1 truncate font-medium">{{ group.label }}</span>
-              <span class="shrink-0 opacity-60">{{ group.participants.length }} peers</span>
-              <span class="roster-group-summary">{{ group.summary }}</span>
-            </button>
+            <div class="roster-group-heading">
+              <button
+                class="flex min-w-0 flex-1 items-center gap-2 text-left"
+                :aria-expanded="!collapsedExerciseGroups.has(group.key)"
+                @click="toggleExerciseGroup(group.key)"
+              >
+                <span aria-hidden="true">{{
+                  collapsedExerciseGroups.has(group.key) ? '▸' : '▾'
+                }}</span>
+                <span class="min-w-0 flex-1 truncate font-medium">{{ group.label }}</span>
+                <span class="shrink-0">{{ group.participants.length }} peers</span>
+              </button>
+              <button
+                v-if="group.key === 'unassigned'"
+                class="command-button"
+                @click="
+                  openExercisePalette(
+                    undefined,
+                    group.participants.map((p) => p.peerId),
+                  )
+                "
+              >
+                Assign lesson
+              </button>
+            </div>
             <template
               v-for="participant in collapsedExerciseGroups.has(group.key)
                 ? []
@@ -784,18 +797,15 @@ const participantExerciseGroups = computed(() => {
     {
       key: string
       label: string
-      summary: string
       participants: Array<(typeof filteredParticipants.value)[number] & { rosterIndex: number }>
     }
   >()
 
   for (const participant of filteredParticipants.value) {
-    const exerciseName = participant.peer.exercise?.name?.trim()
-    const key = exerciseName ? `exercise:${exerciseName}` : 'unassigned'
+    const key = participant.peer.exercise ? 'assigned' : 'unassigned'
     const group = groups.get(key) || {
       key,
-      label: exerciseName || 'Unassigned',
-      summary: '',
+      label: key === 'assigned' ? 'Assigned' : 'Unassigned',
       participants: [],
     }
     group.participants.push({ ...participant, rosterIndex: 0 })
@@ -809,13 +819,17 @@ const participantExerciseGroups = computed(() => {
   })
   let rosterIndex = 0
   for (const group of sortedGroups) {
-    const counts = new Map<string, number>()
+    group.participants.sort((a, b) => {
+      const name = (p: typeof a) =>
+        p.peer.metadata.callsign || p.peer.metadata.displayName || p.peerId
+      return (
+        name(a).localeCompare(name(b), undefined, { numeric: true, sensitivity: 'base' }) ||
+        a.peerId.localeCompare(b.peerId)
+      )
+    })
     for (const participant of group.participants) {
-      const status = participant.peer.exercise?.status
-      if (status) counts.set(status, (counts.get(status) || 0) + 1)
       participant.rosterIndex = collapsedExerciseGroups.value.has(group.key) ? -1 : rosterIndex++
     }
-    group.summary = [...counts].map(([status, count]) => `${count} ${status}`).join(' · ')
   }
   return sortedGroups
 })
@@ -1548,10 +1562,18 @@ const focusClassroomPanel = () => {
 const setRosterRowRef = (element: Element | ComponentPublicInstance | null, peerId: string) => {
   const row = element && '$el' in element ? element.$el : element
   if (row instanceof HTMLElement) rosterRowRefs.set(peerId, row)
-  else rosterRowRefs.delete(peerId)
+  else
+    nextTick(() => {
+      // Moving between sections can mount the replacement before the old ref clears.
+      if (!rosterRowRefs.get(peerId)?.isConnected) rosterRowRefs.delete(peerId)
+    })
 }
 const setRosterDetailRef = (element: Element | ComponentPublicInstance | null) => {
-  rosterDetailRef.value = element instanceof HTMLElement ? element : null
+  if (element instanceof HTMLElement) rosterDetailRef.value = element
+  else
+    nextTick(() => {
+      if (!rosterDetailRef.value?.isConnected) rosterDetailRef.value = null
+    })
 }
 
 const restoreRosterFocus = async (
@@ -1590,8 +1612,9 @@ const clearRosterSearch = () => {
   restoreRosterFocus()
 }
 
-const openExercisePalette = (peerId?: string) => {
-  const targets = peerId && incomingConns.value[peerId] ? [peerId] : [...actionTargetIds.value]
+const openExercisePalette = (peerId?: string, targetIds?: string[]) => {
+  const targets =
+    targetIds ?? (peerId && incomingConns.value[peerId] ? [peerId] : [...actionTargetIds.value])
   if (!targets.length) return
   exercisePaletteTargetIds.value = targets
   exercisePalettePeerId.value = peerId || ''
@@ -2348,11 +2371,7 @@ const trace = (text: string) => {
   @apply flex min-h-7 w-full flex-wrap items-center gap-x-2 gap-y-0.5 border-y border-panelBorder bg-panelHeaderBackground px-2 py-1 text-left text-secondary;
 }
 
-.roster-group-summary {
-  @apply text-secondary;
-}
-
-.roster-group-heading:focus-visible,
+.roster-group-heading button:focus-visible,
 .roster-detail summary:focus-visible,
 .command-button:focus-visible {
   outline: 1px solid rgb(var(--color-panelActive));
@@ -2361,12 +2380,5 @@ const trace = (text: string) => {
 
 .menu-command {
   @apply block h-6 w-full px-2 text-left text-secondary hover:bg-simInputBackground disabled:cursor-default disabled:opacity-40;
-}
-
-@container (max-width: 26rem) {
-  .roster-group-summary {
-    flex-basis: 100%;
-    padding-left: 1rem;
-  }
 }
 </style>

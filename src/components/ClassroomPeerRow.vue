@@ -3,7 +3,7 @@
     class="classroom-roster-row grid h-7 cursor-default grid-cols-[1.25rem_minmax(0,1fr)_auto_auto] items-center gap-x-1 px-1 outline-none"
     :class="[
       focused ? 'bg-simInputBackground' : '',
-      selected ? 'text-simActiveButton' : 'text-secondary',
+      selected || peer.exercise?.status === 'running' ? 'text-simActiveButton' : 'text-secondary',
     ]"
     :aria-selected="selected"
     :title="summary"
@@ -41,25 +41,29 @@
         >
           AI {{ aiState }}
         </button>
+      </div>
+      <div class="flex min-w-0 flex-1 items-center gap-1">
+        <span class="min-w-0 truncate">{{ peer.exercise?.name || 'No lesson assigned' }}</span>
         <span
           v-if="peer.exercise"
           class="roster-exercise-status shrink-0"
           :title="peer.exercise.status"
         >
-          {{ exerciseStatusSymbol(peer.exercise.status) }}
+          <span v-if="peer.exercise.status !== 'running'" aria-hidden="true">{{
+            exerciseStatusSymbol(peer.exercise.status)
+          }}</span>
           <span :class="exerciseStatusClass(peer.exercise.status)">{{
-            compactExerciseStatus(peer.exercise.status)
+            peer.exercise.status === 'running'
+              ? 'IN PROGRESS'
+              : compactExerciseStatus(peer.exercise.status)
           }}</span>
         </span>
       </div>
-      <div class="roster-checkpoint min-w-0 flex-1 truncate text-secondary">
-        {{ peer.metadata.checkPoint || exerciseDetail || '—' }}
-      </div>
     </div>
-    <div
-      class="roster-net flex items-center gap-1 whitespace-nowrap px-1 text-right text-secondary"
-    >
-      {{ connectionAge > 15 ? 'STALE' : `${peer.latency ?? '—'}ms` }}
+    <div class="roster-net flex items-center gap-1 whitespace-nowrap px-1 text-right">
+      <span class="roster-ping">{{
+        connectionAge > 15 ? 'STALE' : `${peer.latency ?? '—'}ms`
+      }}</span>
       <div v-if="peer.handState === 'raised'" class="font-bold text-panelActive">
         {{ handWaitTime }}
       </div>
@@ -114,12 +118,6 @@ const summary = computed(() => {
   const network = connectionAge.value > 15 ? 'Network stale' : `${peer.latency ?? '—'}ms`
   return `${identity.join(' · ')} · ${compactStatus(peer.metadata.status)} · ${exercise}${checkpoint} · ${network}`
 })
-const exerciseDetail = computed(() => {
-  const peer = props.peer
-  if (!peer.exercise) return ''
-  const checkpoint = peer.metadata.checkPoint ? ` · ${peer.metadata.checkPoint}` : ''
-  return `${peer.exercise.name} · ${peer.exercise.status}${checkpoint}`
-})
 const handWaitTime = computed(() => {
   props.clock
   if (!props.peer.handRaisedAt) return ''
@@ -130,7 +128,7 @@ const handWaitTime = computed(() => {
 const exerciseStatusSymbol = (status: ClassroomExerciseStatus) =>
   ({ assigned: '○', running: '▶', completed: '✓', stopped: '■', error: '!', overdue: '!' })[status]
 const exerciseStatusClass = (status: ClassroomExerciseStatus) => ({
-  'font-bold text-secondary': ['completed', 'running', 'error', 'overdue'].includes(status),
+  'font-bold': ['completed', 'running', 'error', 'overdue'].includes(status),
   'opacity-60': ['assigned', 'stopped'].includes(status),
 })
 </script>
@@ -157,7 +155,16 @@ const exerciseStatusClass = (status: ClassroomExerciseStatus) => ({
 }
 
 .roster-exercise-status {
-  @apply ml-auto inline-flex items-center gap-1 bg-primary px-1 text-secondary;
+  @apply ml-auto inline-flex items-center gap-1;
+}
+
+.roster-ping {
+  display: inline-block;
+  width: 7ch;
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
 }
 
 .peer-details-toggle:focus-visible,
@@ -168,8 +175,7 @@ const exerciseStatusClass = (status: ClassroomExerciseStatus) => ({
 
 @container (max-width: 26rem) {
   .roster-net,
-  .roster-secondary-id,
-  .roster-checkpoint {
+  .roster-secondary-id {
     display: none;
   }
 }

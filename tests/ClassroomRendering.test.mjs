@@ -75,7 +75,7 @@ function rosterFixture() {
       Vue.markRaw(this)
     }
     get isConnected() {
-      return !!this.parent
+      return this === document.body || !!this.parent?.isConnected
     }
     focus() {
       document.activeElement = this
@@ -230,6 +230,52 @@ const textContent = (node) =>
 const event = (extra = {}) => ({ stopPropagation() {}, preventDefault() {}, ...extra })
 const job = (peerId, state = 'queued') => ({ id: peerId, peerId, state, request: { evidence: {} } })
 
+test('running exercise uses a static IN PROGRESS label, updated when stopped', async () => {
+  const f = rosterFixture()
+  try {
+    const peer = f.state.incomingConns.value['peer-0']
+    peer.exercise.status = 'running'
+    await Vue.nextTick()
+    assert.match(f.row('peer-0').props.class, /text-simActiveButton/)
+    const status = findElement(f.row('peer-0'), (node) =>
+      node.props.class?.includes('roster-exercise-status'),
+    )
+    assert.equal(status.type, 'span')
+    assert.match(textContent(status), /IN PROGRESS/)
+    assert.doesNotMatch(textContent(status), /▶/)
+    const dot = findElement(status, (node) => node.props.class?.includes('roster-running-dot'))
+    assert.equal(dot, undefined)
+    peer.exercise.status = 'stopped'
+    await Vue.nextTick()
+    assert.match(textContent(status), /STOP/)
+    assert.equal(
+      findElement(status, (node) => node.props.class?.includes('roster-running-dot')),
+      undefined,
+    )
+    assert.doesNotMatch(sfc('ClassroomPeerRow').styles[0].content, /roster-running-pulse/)
+  } finally {
+    f.app.unmount()
+  }
+})
+
+test('ping updates retain a fixed-width tabular field', async () => {
+  const f = rosterFixture()
+  try {
+    const peer = f.state.incomingConns.value['peer-0']
+    const ping = findElement(f.row('peer-0'), (node) => node.props.class === 'roster-ping')
+    for (const latency of [12, 123, 1234]) {
+      peer.latency = latency
+      await Vue.nextTick()
+      assert.equal(textContent(ping), `${latency}ms`)
+    }
+    const css = sfc('ClassroomPeerRow').styles[0].content
+    assert.match(css, /\.roster-ping\s*\{[^}]*width: 7ch;/)
+    assert.match(css, /\.roster-ping\s*\{[^}]*font-variant-numeric: tabular-nums;/)
+  } finally {
+    f.app.unmount()
+  }
+})
+
 test('one peer update does not render the parent roster or the other 29 peer rows', async () => {
   const f = rosterFixture()
   try {
@@ -243,7 +289,7 @@ test('one peer update does not render the parent roster or the other 29 peer row
     }
     assert.deepEqual([...f.updates], [['peer-0', 20]])
     assert.equal(f.parentUpdates(), 0)
-    assert.match(textContent(f.row('peer-0')), /Answer 19 selected/)
+    assert.match(f.row('peer-0').props.title, /Answer 19 selected/)
     assert.equal(peer.exercise.checkpoints.length, 20)
   } finally {
     f.app.unmount()
@@ -278,7 +324,45 @@ test('AI badges are indexed once and only the changed peer badge rerenders', asy
   }
 })
 
-test('assignment status regrouping and selection leave unchanged row props stable', async () => {
+test('assignment sections stay name-sorted and preserve selection and details when peers move', async () => {
+  const f = rosterFixture()
+  try {
+    const peer = f.state.incomingConns.value['peer-2']
+    const exercise = peer.exercise
+    f.state.selectedPeerIds.value = ['peer-2']
+    f.state.detailsPeerId.value = 'peer-2'
+    peer.exercise = undefined
+    await Vue.nextTick()
+    assert.deepEqual(
+      f.state.participantExerciseGroups.value.map((g) => g.key),
+      ['unassigned', 'assigned'],
+    )
+    assert.match(textContent(f.row('peer-2')), /No lesson assigned/)
+    assert.equal(f.row('peer-2').props['aria-selected'], true)
+    peer.exercise = { ...exercise, name: 'Different lesson' }
+    await Vue.nextTick()
+    assert.deepEqual(
+      f.state.participantExerciseGroups.value.map((g) => g.key),
+      ['assigned'],
+    )
+    assert.equal(f.state.detailsPeerId.value, 'peer-2')
+    assert.equal(f.row('peer-2').props['aria-selected'], true)
+    assert.match(textContent(f.row('peer-2')), /Different lesson/)
+    const order = f.state.visibleParticipantRows.value.map((p) => p.peerId)
+    assert.deepEqual(order.slice(0, 4), ['peer-0', 'peer-1', 'peer-2', 'peer-3'])
+    peer.exercise.status = 'completed'
+    await Vue.nextTick()
+    assert.deepEqual(
+      f.state.visibleParticipantRows.value.map((p) => p.peerId),
+      order,
+    )
+    assert.ok(f.state.rosterDetailRef.value, 'details remain visible after assignment')
+  } finally {
+    f.app.unmount()
+  }
+})
+
+test('assignment status and selection leave unchanged row props stable', async () => {
   const f = rosterFixture()
   try {
     f.state.incomingConns.value['peer-0'].exercise.status = 'completed'
@@ -307,6 +391,7 @@ test('assignment status regrouping and selection leave unchanged row props stabl
   } finally {
     f.app.unmount()
   }
+  await Vue.nextTick()
   assert.equal(f.state.rosterRowRefs.size, 0)
 })
 
