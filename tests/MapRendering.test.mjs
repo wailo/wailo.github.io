@@ -102,6 +102,10 @@ function mapFixture(options = {}) {
       this.blocked = blocked
     }
     setEnabled(enabled) {
+      // OL-Cesium syncs the 2D view on disable; Cesium cannot pick a detached canvas.
+      if (!enabled && (!host.isConnected || !host.offsetWidth || !host.offsetHeight)) {
+        throw new Error('ray is required')
+      }
       this.enabled = enabled
     }
     setTargetFrameRate(rate) {
@@ -441,13 +445,16 @@ test('reopening after an interrupted recenter still follows a stationary aircraf
   assert.deepEqual(nav.view.center, [0, 51])
 })
 
-test('map teardown releases listeners, observers, the renderer and both maps exactly once', () => {
+test('map teardown skips view synchronization on a detached canvas and releases resources once', () => {
   const f = mapFixture()
   f.frame()
+  f.host.isConnected = false
+  f.host.offsetWidth = 0
+  f.host.offsetHeight = 0
   f.unmount()
   f.unmount()
   assert.equal(f.renderer.blocked, true)
-  assert.equal(f.renderer.enabled, false)
+  assert.equal(f.renderer.enabled, true, 'destroy directly without switching back to 2D')
   assert.equal(f.renderer.destroyed, 1)
   assert.equal(f.scene.preUpdate.numberOfListeners, 0)
   assert.equal(f.observers.resize.disconnected, true)

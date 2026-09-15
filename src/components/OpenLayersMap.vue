@@ -608,8 +608,9 @@ onUnmounted(() => {
   removeCameraUpdate?.()
 
   // OL-Cesium owns the only 3D render loop and its WebGL resources.
+  // Do not setEnabled(false): it picks the globe to sync the 2D view, but an
+  // unmounted canvas has no size/pick ray. Both views are being destroyed anyway.
   ol3d?.setBlockCesiumRendering(true)
-  ol3d?.setEnabled(false)
   ol3d?.destroy()
   ol3d = undefined
   cesiumScene = undefined
