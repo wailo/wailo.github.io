@@ -3,10 +3,25 @@ import fs from 'node:fs'
 import path from 'node:path'
 import test from 'node:test'
 import { fileURLToPath } from 'node:url'
+import { execFileSync } from 'node:child_process'
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const modelfilePath = path.join(projectRoot, 'src/wasm/generated/Modelfile')
+// Exercise the same generation/semantic validation as installation, not stale local output.
+execFileSync(process.execPath, ['--import', 'tsx', 'src/generate-modelfile.ts'], {
+  cwd: projectRoot,
+  timeout: 60000,
+  stdio: 'pipe',
+})
 const modelfile = fs.readFileSync(modelfilePath, 'utf8')
+
+test('fresh lesson contract includes checkpoint, assessment and AI dependencies', () => {
+  for (const name of ['CheckpointData', 'AssessmentSubmission', 'LessonAIRequest']) {
+    assert.match(modelfile, new RegExp(`interface ${name} \\{`))
+  }
+  assert.match(modelfile, /type LessonAIResponse\s*=/)
+  assert.match(modelfile, /submit: \(result: AssessmentSubmission\) => void/)
+})
 
 test('generated Modelfile exposes aircraft-specific plotting catalogs', () => {
   assert.match(modelfile, /interface B747SimProps \{/)
@@ -17,10 +32,7 @@ test('generated Modelfile exposes aircraft-specific plotting catalogs', () => {
 })
 
 test('generated plotting properties retain useful metadata', () => {
-  assert.match(
-    modelfile,
-    /Indicated Airspeed[^\n]*group: flight[^\n]*unit: knots[^\n]*read-only/,
-  )
+  assert.match(modelfile, /Indicated Airspeed[^\n]*group: flight[^\n]*unit: knots[^\n]*read-only/)
   assert.match(modelfile, /Target Indicated Airspeed[^\n]*range: 0\.\.450[^\n]*read\/write/)
 })
 
@@ -34,6 +46,9 @@ test('generated lesson instructions are import-free and distinguish values from 
   const systemPrompt = modelfile.match(/SYSTEM """([\s\S]*?)"""/)?.[1] ?? ''
   assert.match(systemPrompt, /Do not .*add imports/)
   assert.match(systemPrompt, /context\.controls\.flightModel for live numeric or boolean/)
-  assert.match(systemPrompt, /context\.props\.<property> metadata with plotView\(\) and dataView\(\)/)
+  assert.match(
+    systemPrompt,
+    /context\.props\.<property> metadata with plotView\(\) and dataView\(\)/,
+  )
   assert.doesNotMatch(systemPrompt, /^import\s/m)
 })

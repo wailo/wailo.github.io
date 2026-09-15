@@ -223,8 +223,13 @@ function metadataContract(): string {
 }
 
 function scriptApiContract(): string {
+  const source = sourceFile(SCRIPT_CONTEXT_FILE)
   return [
     questionContract(),
+    interfaceText(source, 'CheckpointData'),
+    interfaceText(source, 'AssessmentSubmission'),
+    interfaceText(source, 'LessonAIRequest'),
+    typeAliasText(source, 'LessonAIResponse'),
     `declare function notifyUser(
   title: string,
   message?: string,
@@ -239,7 +244,7 @@ function scriptApiContract(): string {
   timeoutMs?: number,
   preConfiguration?: () => void,
 ): Promise<boolean>`,
-    interfaceText(sourceFile(SCRIPT_CONTEXT_FILE), 'ScriptContext'),
+    interfaceText(source, 'ScriptContext'),
   ].join('\n\n')
 }
 
