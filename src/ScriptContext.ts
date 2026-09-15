@@ -68,6 +68,13 @@ export interface CheckpointData {
   [key: string]: unknown
 }
 
+/** Script-owned score and threshold, not an independently verified assessment. */
+export interface AssessmentSubmission {
+  score: number
+  maxScore: number
+  passingScore: number
+}
+
 export interface LessonAIRequest {
   purpose: 'debrief'
   evidence: CheckpointData
@@ -124,6 +131,8 @@ export interface ScriptContext<TProps extends ScriptSimProps = FlightModelSimPro
   }
   resetPanels: () => void
   checkPoint: (content: string, data?: CheckpointData) => void
+  /** Submit once per run. The backend finalizes the outcome only on successful completion. */
+  assessment: { submit: (result: AssessmentSubmission) => void }
   ai: { request: (request: LessonAIRequest) => Promise<LessonAIResponse> }
   metrics: any[]
 }
@@ -133,8 +142,9 @@ export interface ScriptContext<TProps extends ScriptSimProps = FlightModelSimPro
 // ==============================
 
 export function createScriptContext<TProps extends ScriptSimProps>(
-  deps: ScriptContext<TProps>,
+  deps: Omit<ScriptContext<TProps>, 'assessment'>,
 ): ScriptContext<TProps> {
+  let assessmentSubmitted = false
   return {
     controls: deps.controls,
     props: deps.props,
@@ -148,6 +158,28 @@ export function createScriptContext<TProps extends ScriptSimProps>(
     plotView: deps.plotView,
     dataDisplayReset: deps.dataDisplayReset,
     checkPoint: deps.checkPoint,
+    assessment: {
+      submit(result) {
+        const { score, maxScore, passingScore } = result
+        if (
+          ![score, maxScore, passingScore].every(Number.isFinite) ||
+          maxScore <= 0 ||
+          score < 0 ||
+          score > maxScore ||
+          passingScore < 0 ||
+          passingScore > maxScore
+        )
+          throw new Error('Invalid assessment score or threshold')
+        if (assessmentSubmitted) throw new Error('Assessment already submitted for this run')
+        deps.checkPoint(
+          `Assessment submitted: ${score}/${maxScore} · Pass mark ${passingScore}/${maxScore}`,
+          {
+            assessment: { score, maxScore, passingScore },
+          },
+        )
+        assessmentSubmitted = true
+      },
+    },
     ai: deps.ai,
     setLayout: deps.setLayout,
     layoutTypes: LayoutTypes,

@@ -17,7 +17,7 @@ test('classroom follows matching lifecycle transitions without progress traffic 
   )
   scope.run(() => watchLessonLifecycle(store, reportLessonState))
   try {
-    const first = store.begin('assignment-1', 'Test')
+    const first = store.begin('lesson-1', 'Test', 'assignment-1')
     store.addEvent(first.runId, 'Progress')
     store.recordCheckpoint(first.runId, 'Answer selected')
     assert.deepEqual(
@@ -26,22 +26,22 @@ test('classroom follows matching lifecycle transitions without progress traffic 
     )
     store.finish(first.runId, 'STOPPED', 'Lesson stopped')
     assert.deepEqual(sent.at(-1), ['stopped', 'Lesson stopped'])
-    const second = store.begin('assignment-1', 'Test')
+    const second = store.begin('lesson-1', 'Test', 'assignment-1')
     store.finish(first.runId, 'COMPLETED', 'Stale completion')
     assert.equal(sent.at(-1)[0], 'running')
     store.finish(second.runId, 'COMPLETED', 'Lesson completed')
     assert.equal(sent.at(-1)[0], 'completed')
-    const third = store.begin('assignment-1', 'Test')
+    const third = store.begin('lesson-1', 'Test', 'assignment-1')
     store.finish(third.runId, 'ERROR', 'Script failed')
     assert.deepEqual(sent.at(-1), ['error', 'Script failed'])
-    store.begin('assignment-1', 'Test')
+    store.begin('lesson-1', 'Test', 'assignment-1')
     const before = sent.length
     store.begin('unrelated-lesson', 'Test')
     assert.equal(sent.length, before + 1, 'replacement reports stop, not unrelated start')
     assert.equal(sent.at(-1)[0], 'stopped')
     scope.stop()
     const count = sent.length
-    store.begin('assignment-1', 'Test')
+    store.begin('lesson-1', 'Test', 'assignment-1')
     assert.equal(sent.length, count, 'watcher is disposed with its component')
   } finally {
     scope.stop()

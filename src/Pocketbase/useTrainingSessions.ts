@@ -1,43 +1,15 @@
 import { pb } from '../Pocketbase/pocketbase.ts'
 
-type Metric = {
-  timestamp: number
-  altitude: number
-  speed: number
-  turnRate: number
-}
-
-type SessionInput = {
-  scenario: string
-  start_time: Date
-  end_time: Date
-  model_version: string
-  ui_version: string
-  raw_metrics: Metric[]
-  score?: number
-}
-
 export function useTrainingSessions() {
-  const submitSession = async (data: SessionInput) => {
-    try {
-      let recordServices = await pb.collection('studentRecords')
-      const result = await recordServices.create({
-        ...data,
-        student: pb.authStore.record?.id,
-      })
-      return result
-    } catch (error) {
-      console.log('Failed to submit session:', error)
-      throw error
-    }
-  }
-
-  const fetchMySessions = async () => {
-    return await pb.collection('studentRecords').getFullList({
-      filter: `student = "${pb.authStore.model?.id}"`,
-      sort: '-created',
+  // Writes go exclusively through the authenticated training recorder endpoints.
+  const fetchMySessions = async (page = 1) => {
+    if (!pb.authStore.isValid || !pb.authStore.record)
+      throw new Error('Sign in to view training history')
+    return await pb.collection('studentRecords').getList(page, 50, {
+      filter: pb.filter('student = {:student}', { student: pb.authStore.record.id }),
+      sort: '-start_time,-id',
     })
   }
 
-  return { submitSession, fetchMySessions }
+  return { fetchMySessions }
 }

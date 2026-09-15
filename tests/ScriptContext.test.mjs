@@ -31,6 +31,43 @@ function createDependencies(props) {
   }
 }
 
+test('assessment submits a snapshot through checkpoints once per run, including zero scores', () => {
+  const deps = createDependencies({})
+  const checkpoints = []
+  deps.checkPoint = (message, data) => checkpoints.push({ message, data })
+  const context = createScriptContext(deps)
+  const result = { score: 0, maxScore: 6, passingScore: 5 }
+  context.assessment.submit(result)
+  result.score = 6
+  assert.deepEqual(checkpoints[0].data.assessment, { score: 0, maxScore: 6, passingScore: 5 })
+  assert.match(checkpoints[0].message, /0\/6/)
+  assert.throws(() => context.assessment.submit(result), /already submitted/)
+  createScriptContext(deps).assessment.submit(result)
+  assert.equal(checkpoints.length, 2, 'a new run has its own submission state')
+})
+
+test('invalid assessment scores and thresholds never publish evidence', () => {
+  const deps = createDependencies({})
+  deps.checkPoint = () => assert.fail('invalid scores must not publish')
+  const context = createScriptContext(deps)
+  for (const change of [
+    { score: -1 },
+    { score: 7 },
+    { score: NaN },
+    { score: Infinity },
+    { score: '5' },
+    { maxScore: 0 },
+    { maxScore: Infinity },
+    { passingScore: -1 },
+    { passingScore: 7 },
+  ]) {
+    assert.throws(
+      () => context.assessment.submit({ score: 5, maxScore: 6, passingScore: 5, ...change }),
+      /Invalid assessment/,
+    )
+  }
+})
+
 test('createScriptContext preserves live simulator properties and forwards utilities', () => {
   let altitude = 1200
   const props = {

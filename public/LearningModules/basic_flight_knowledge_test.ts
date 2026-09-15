@@ -5,6 +5,8 @@ import type {
 } from '../../src/ScriptContext'
 
 export async function main(context: ScriptContext) {
+  // This lesson owns its pass mark; the archived script preserves it for this attempt.
+  const passingScore = 5
   const questions: Array<
     Omit<MultipleChoiceQuestionOptions, 'type' | 'mode'> & { explanation: string }
   > = [
@@ -102,7 +104,7 @@ export async function main(context: ScriptContext) {
 
   await context.notifyUser(
     'Basic flight knowledge test',
-    `This test contains **${questions.length} questions**. Each answer is final and the test advances immediately. Your score will be reported after the last question.`,
+    `This test contains **${questions.length} questions**. Pass mark: **${passingScore}/${questions.length}**. Each answer is final and the test advances immediately. Your score will be reported after the last question.`,
   )
 
   let correctAnswers = 0
@@ -133,6 +135,7 @@ export async function main(context: ScriptContext) {
   }
 
   const score = Math.round((correctAnswers / questions.length) * 100)
+  context.assessment.submit({ score: correctAnswers, maxScore: questions.length, passingScore })
   context.metrics.push({
     kind: 'assessment-summary',
     correct: correctAnswers,
@@ -145,7 +148,7 @@ export async function main(context: ScriptContext) {
     'Test complete',
     `You answered **${correctAnswers} of ${questions.length}** questions correctly.
 
-Final score: **${score}%**`,
+Final score: **${score}%** · ${correctAnswers >= passingScore ? 'Passed' : 'Failed'} (script-reported)`,
   )
 
   const incorrectResponses = questions.flatMap((question, index) => {

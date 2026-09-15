@@ -9,6 +9,7 @@ export interface InstructorActionResult {
 }
 export interface InstructorAssignment {
   id: string
+  lessonId?: string
   name: string
   source: string
   deadline: number
@@ -22,7 +23,7 @@ interface Dependencies {
   canAct: () => boolean
   session: () => unknown
   peer: (id: string) => PeerState | undefined
-  lesson: (id: string) => { name: string; path: string } | undefined
+  lesson: (id: string) => { id?: string; name: string; path: string } | undefined
   loadSource: (path: string) => Promise<string>
   send: (
     id: string,
@@ -130,6 +131,7 @@ export function createInstructorActions(deps: Dependencies) {
       }
       const assignment = {
         id: crypto.randomUUID(),
+        lessonId: lesson.id ?? lesson.path,
         name: lesson.name,
         source,
         deadline: Date.now() + durationMs,

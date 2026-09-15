@@ -88,6 +88,15 @@ function diagnosticText(diagnostics) {
     .join('\n')
 }
 
+test('lesson editor types expose script-owned assessment scoring', () => {
+  const diagnostics = lessonDiagnostics(`
+    async function lesson(context: ScriptContext<B747SimProps>) {
+      context.assessment.submit({ score: 5, maxScore: 6, passingScore: 5 });
+    }
+  `)
+  assert.equal(diagnostics.length, 0, diagnosticText(diagnostics))
+})
+
 test('B747 simulator properties are autocomplete-friendly and aircraft-specific', () => {
   const completions = propertyCompletions('B747SimProps')
 

@@ -31,6 +31,21 @@
         </button>
       </div>
 
+      <div
+        class="flex min-h-6 shrink-0 items-center gap-2 border-b border-panelBorder px-1"
+        role="status"
+      >
+        <span v-if="progressStatus === 'ready'"
+          >{{ completedCount }} of {{ lessons.length }} lessons completed</span
+        >
+        <span v-else-if="progressStatus === 'loading'">Loading progress…</span>
+        <span v-else-if="progressStatus === 'guest'">Guest practice · progress not saved</span>
+        <template v-else>
+          <span>Progress unavailable</span>
+          <button class="row-action" type="button" @click="refreshProgress">Retry</button>
+        </template>
+      </div>
+
       <div class="mt-1 min-h-0 flex-1 overflow-y-auto">
         <div v-if="filteredLessons.length === 0" class="p-2 opacity-60">NO MATCHING LESSONS</div>
         <section v-for="group in filteredLessonGroups" :key="group.category" class="mb-2">
@@ -42,77 +57,106 @@
             <span class="opacity-60">{{ group.lessons.length }}</span>
           </button>
           <div v-show="isLessonGroupOpen(group.category)" class="ml-3">
-            <div
-              v-for="lesson in group.lessons"
-              :key="lesson.path"
-              class="grid min-h-5 w-full cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-1 px-2 py-0.5 text-left leading-tight hover:bg-simInputBackground/60"
-              :class="selectedFile === lesson.name ? 'bg-panelHeaderBackground' : ''"
-              role="button"
-              tabindex="0"
-              @click="selectLesson(lesson)"
-              @keydown.enter.prevent="selectLesson(lesson)"
-              @keydown.space.prevent.stop="toggleLessonQueue(lesson)"
-            >
-              <span
-                class="flex min-w-0 items-center gap-1"
-                :class="selectedFile === lesson.name ? 'text-panelActive' : 'text-secondary'"
+            <template v-for="lesson in group.lessons" :key="lesson.id">
+              <div
+                class="grid min-h-5 w-full cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-1 px-2 py-0.5 text-left leading-tight hover:bg-simInputBackground/60"
+                :class="selectedFile === lesson.name ? 'bg-panelHeaderBackground' : ''"
+                role="button"
+                tabindex="0"
+                @click="selectLesson(lesson)"
+                @keydown.enter.prevent="selectLesson(lesson)"
+                @keydown.space.prevent.stop="toggleLessonQueue(lesson)"
               >
-                <span class="truncate">{{ lesson.name }}</span>
                 <span
-                  v-if="completedLessons.has(lesson.name)"
-                  class="shrink-0 opacity-60"
-                  title="Completed"
-                  aria-label="Completed"
+                  class="flex min-w-0 items-center gap-1"
+                  :class="selectedFile === lesson.name ? 'text-panelActive' : 'text-secondary'"
                 >
-                  ✓
+                  <span class="w-4 shrink-0 text-center text-simActiveButton">
+                    <span
+                      v-if="
+                        progressStatus === 'ready' &&
+                        (lessonProgress.get(lesson.id)?.completedAttempts ?? 0) > 0
+                      "
+                      :title="completionTitle(lesson.id)"
+                      :aria-label="completionTitle(lesson.id)"
+                      >✓</span
+                    >
+                  </span>
+                  <span class="truncate">{{ lesson.name }}</span>
+                  <span
+                    v-if="
+                      runStatus === 'RUNNING' &&
+                      [lesson.id, lesson.legacyId].includes(lessonRun.current.value?.lessonId)
+                    "
+                    class="shrink-0 text-simActiveButton text-xs"
+                    >In progress</span
+                  >
                 </span>
-              </span>
-              <span class="flex items-center gap-1">
-                <button
-                  class="row-action"
-                  type="button"
-                  :title="
-                    isScriptRunning
-                      ? `Stop current lesson and run ${lesson.name}`
-                      : `Run ${lesson.name}`
-                  "
-                  :aria-label="
-                    isScriptRunning
-                      ? `Stop current lesson and run ${lesson.name}`
-                      : `Run ${lesson.name}`
-                  "
-                  :disabled="queuePlaying"
-                  @click.stop="runLesson(lesson)"
-                >
-                  ▶
-                </button>
-                <button
-                  class="queue-action"
-                  type="button"
-                  :class="queuePosition(lesson) ? 'is-queued' : ''"
-                  :title="queuePosition(lesson) ? 'Remove from queue' : 'Add to queue'"
-                  :aria-label="
-                    queuePosition(lesson)
-                      ? `Remove ${lesson.name} from queue`
-                      : `Add ${lesson.name} to queue`
-                  "
-                  :aria-pressed="Boolean(queuePosition(lesson))"
-                  :disabled="queuePlaying"
-                  @click.stop="toggleLessonQueue(lesson)"
-                >
-                  {{ queuePosition(lesson) || '+' }}
-                </button>
-                <button
-                  class="row-action"
-                  type="button"
-                  :title="`Edit ${lesson.name}`"
-                  :aria-label="`Edit ${lesson.name}`"
-                  @click.stop="editLesson(lesson)"
-                >
-                  ✎
-                </button>
-              </span>
-            </div>
+                <span class="flex items-center gap-1">
+                  <button
+                    class="row-action"
+                    type="button"
+                    :aria-label="`History for ${lesson.name}`"
+                    :title="`History for ${lesson.name}`"
+                    :aria-expanded="historyLessonId === lesson.id"
+                    :aria-controls="`lesson-history-${lesson.id}`"
+                    @click.stop="historyLessonId = historyLessonId === lesson.id ? null : lesson.id"
+                    @keydown.stop
+                  >
+                    <span aria-hidden="true">◷</span>
+                  </button>
+                  <button
+                    class="row-action"
+                    type="button"
+                    :title="
+                      isScriptRunning
+                        ? `Stop current lesson and run ${lesson.name}`
+                        : `Run ${lesson.name}`
+                    "
+                    :aria-label="
+                      isScriptRunning
+                        ? `Stop current lesson and run ${lesson.name}`
+                        : `Run ${lesson.name}`
+                    "
+                    :disabled="queuePlaying"
+                    @click.stop="runLesson(lesson)"
+                  >
+                    ▶
+                  </button>
+                  <button
+                    class="queue-action"
+                    type="button"
+                    :class="queuePosition(lesson) ? 'is-queued' : ''"
+                    :title="queuePosition(lesson) ? 'Remove from queue' : 'Add to queue'"
+                    :aria-label="
+                      queuePosition(lesson)
+                        ? `Remove ${lesson.name} from queue`
+                        : `Add ${lesson.name} to queue`
+                    "
+                    :aria-pressed="Boolean(queuePosition(lesson))"
+                    :disabled="queuePlaying"
+                    @click.stop="toggleLessonQueue(lesson)"
+                  >
+                    {{ queuePosition(lesson) || '+' }}
+                  </button>
+                  <button
+                    class="row-action"
+                    type="button"
+                    :title="`Edit ${lesson.name}`"
+                    :aria-label="`Edit ${lesson.name}`"
+                    @click.stop="editLesson(lesson)"
+                  >
+                    ✎
+                  </button>
+                </span>
+              </div>
+              <LessonHistory
+                v-if="historyLessonId === lesson.id"
+                :id="`lesson-history-${lesson.id}`"
+                :lesson="lesson"
+                :refresh-key="historyRefreshKey"
+              />
+            </template>
           </div>
         </section>
       </div>
@@ -327,8 +371,11 @@ import type {
   WaitForUserOptions,
 } from '../ScriptContext.ts'
 import { LayoutTypes } from '../../src/wasm/siminterface.ts'
-import { stripImportsExports } from '../ScriptSource'
 import { useLessonRun } from '../useLessonRun'
+import { createTrainingRecorder } from '../TrainingRecorder'
+import { trainingTransport } from '../Pocketbase/trainingTransport'
+import { pb } from '../Pocketbase/pocketbase'
+import { createLessonProgress } from '../LessonProgress'
 import type { CheckpointData, LessonAIRequest, LessonAIResponse } from '../ScriptContext'
 
 const LessonCodeEditor = defineAsyncComponent({
@@ -357,7 +404,6 @@ const viewModes = ['lessons', 'run', 'code'] as const
 const viewMode = ref<(typeof viewModes)[number]>('lessons')
 const lessonFilter = ref('')
 const runClock = ref(Date.now())
-const completedLessons = ref(new Set<string>())
 const lessonQueue = ref<LessonListEntry[]>([])
 const queuePlaying = ref(false)
 const aiPanelOpen = ref(false)
@@ -427,6 +473,41 @@ const props = defineProps({
   },
 })
 
+const {
+  status: progressStatus,
+  byLesson: lessonProgress,
+  completedCount,
+  refresh: refreshProgress,
+  dispose: disposeProgress,
+} = createLessonProgress(pb, Object.values(importedNModuleTree).flat())
+watch(viewMode, (mode) => {
+  if (mode === 'lessons') void refreshProgress()
+})
+const completionTitle = (id: string) => {
+  const progress = lessonProgress.value.get(id)
+  if (!progress) return 'Saved completion'
+  const date = new Date(progress.lastCompletedAt.replace(' ', 'T')).toLocaleString()
+  return `Completed ${date} · ${progress.completedAttempts} saved completion(s) · Latest outcome: ${progress.latestOutcome || 'not assessed'}`
+}
+const historyLessonId = ref<string | null>(null)
+const historyRefreshKey = ref(0)
+const trainingRecorder = createTrainingRecorder(
+  lessonRun,
+  trainingTransport,
+  (error) => {
+    console.error('Training history could not be saved:', error)
+    props.utilityFuncs.notifyUser(
+      'Training history not saved',
+      'Progress could not be saved. You can continue as unrecorded practice; this attempt will not count as verified training.',
+      8000,
+    )
+  },
+  () => {
+    void refreshProgress()
+    historyRefreshKey.value++
+  },
+)
+
 const executionResult = ref<string | null>(null)
 const code = ref(``)
 
@@ -444,26 +525,34 @@ const reset = (markStopped = true) => {
   emit('reset')
 }
 
-const executeExternalCode = (title: string, content: string, lessonId?: string) => {
+const executeExternalCode = (
+  title: string,
+  content: string,
+  assignmentId?: string,
+  lessonId?: string,
+) => {
   props.utilityFuncs.notifyUser(`Running a script from instrutor`, title, 2000)
   ModuleTitle.value = title
   selectedFile.value = title
   code.value = content
   viewMode.value = 'run'
-  executeCode(lessonId ?? title)
+  executeCode(lessonId ?? title, assignmentId)
 }
 
 defineExpose({ reset, executeExternalCode })
 
 // Function to execute code in the context of the provided object
-const executeCode = async (lessonId?: string): Promise<boolean> => {
+const executeCode = async (lessonId?: string, assignmentId?: string): Promise<boolean> => {
   reset(false)
   const runGeneration = executionGeneration
   const aiSignal = aiRunController.signal
-  const source = stripImportsExports(code.value)
-  code.value = source
+  const source = code.value
   const lessonTitle = ModuleTitle.value
-  const run = lessonRun.begin(lessonId ?? selectedModule.value?.path ?? lessonTitle, lessonTitle)
+  const run = lessonRun.begin(
+    lessonId ?? selectedModule.value?.id ?? lessonTitle,
+    lessonTitle,
+    assignmentId,
+  )
   const metrics = run.metrics
   const addRunEvent = (message: string, replaceKey?: string) =>
     lessonRun.addEvent(run.runId, message, replaceKey)
@@ -473,11 +562,40 @@ const executeCode = async (lessonId?: string): Promise<boolean> => {
     runClock.value = Date.now()
     emit('start', code.value)
 
-    const { compileUserScript } = await loadLessonCompiler()
+    const { prepareTrainingArtifact, loadUserScript } = await loadLessonCompiler()
     // Loading must not resurrect a stopped/replaced lesson or evaluate its top-level code.
     if (runGeneration !== executionGeneration || aiSignal.aborted) return false
 
-    const deps: ScriptContext<typeof props.simProps> = {
+    const artifact = prepareTrainingArtifact(source)
+    await trainingRecorder.start(
+      lessonRun.snapshot()!,
+      artifact,
+      {
+        appCommit: import.meta.env.VITE_GIT_SHA,
+        modelVersion: String(props.contextObject.FLIGHTMODEL_VERSION),
+      },
+      {
+        browser: navigator.userAgent,
+        aircraftId: props.contextObject.simulation?.flight_model_id,
+        initialState: Object.fromEntries(
+          [
+            'latitude',
+            'longitude',
+            'altitude_ft',
+            'pitch',
+            'bank',
+            'yaw',
+            'speed_indicated_knots',
+            'engine_throttle_position',
+            'flaps_selector_position',
+            'landing_gear_selector_position',
+          ].map((key) => [key, (props.contextObject.flightModel as any)?.[key]]),
+        ),
+      },
+    )
+    if (runGeneration !== executionGeneration || aiSignal.aborted) return false
+
+    const deps: Omit<ScriptContext<typeof props.simProps>, 'assessment'> = {
       controls: props.contextObject,
       props: props.simProps,
       repositionWithAutopilot: repositionWithAutopilot,
@@ -546,31 +664,18 @@ const executeCode = async (lessonId?: string): Promise<boolean> => {
       },
     }
 
-    const finalUserCode = compileUserScript<typeof props.simProps>(source, (message) =>
+    const finalUserCode = loadUserScript<typeof props.simProps>(artifact.javascript, (message) =>
       props.utilityFuncs.notifyUser('Error', message, 3000),
     )
     const ctx = createScriptContext(deps)
 
-    const startStime = new Date()
     await runUserScript(finalUserCode, ctx)
     aiRunController.signal === aiSignal && aiRunController.abort()
     if (runGeneration !== executionGeneration) return false
     lessonRun.finish(run.runId, 'COMPLETED', 'Lesson completed')
-    completedLessons.value = new Set([...completedLessons.value, lessonTitle])
     emit('completed', lessonTitle)
     emit('reset')
 
-    const endTime = new Date()
-    submitSession({
-      scenario: lessonTitle,
-      start_time: startStime,
-      end_time: endTime,
-      model_version: deps.controls.FLIGHTMODEL_VERSION.toString(),
-      ui_version: import.meta.env.VITE_GIT_SHA,
-      raw_metrics: metrics,
-    }).catch((err) => {
-      emit('error', err, lessonTitle)
-    })
     return true
   } catch (err) {
     if (aiRunController.signal === aiSignal) aiRunController.abort()
@@ -583,9 +688,7 @@ const executeCode = async (lessonId?: string): Promise<boolean> => {
 }
 
 import { moduleTree as importedNModuleTree, type ModuleEntry } from './data/EASAModules'
-
-import { useTrainingSessions } from '../Pocketbase/useTrainingSessions.ts'
-const { submitSession } = useTrainingSessions()
+import LessonHistory from './LessonHistory.vue'
 
 // Reactive copy of the fileTree
 const fileTree = ref(importedNModuleTree)
@@ -840,7 +943,7 @@ const loadFileContent = async (file: ModuleEntry) => {
     ModuleTitle.value = file.name
     const response = await fetch(file.path)
     const text = await response.text()
-    code.value = stripImportsExports(text)
+    code.value = text
   } catch (error) {
     console.error(error)
     code.value = `// Failed to load ${file.name}`
@@ -892,6 +995,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   reset()
+  trainingRecorder.dispose()
+  disposeProgress()
   window.removeEventListener('keydown', handleEditorKeydown, true)
   if (runClockTimer) clearInterval(runClockTimer)
 })

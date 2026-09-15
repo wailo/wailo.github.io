@@ -33,6 +33,7 @@ type ClassroomHandState = 'idle' | 'raised' | 'acknowledged' | 'resolved'
 
 type ClassroomExerciseAssignment = {
   id: string
+  lessonId?: string
   name: string
   source: string
   deadline: number

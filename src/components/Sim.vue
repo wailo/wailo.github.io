@@ -521,6 +521,7 @@
                       exercise.name,
                       exercise.source,
                       exercise.id,
+                      exercise.lessonId,
                     )
                 "
                 @exercise-stop="editorComponentRef?.reset()"

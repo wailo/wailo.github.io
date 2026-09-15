@@ -17,6 +17,9 @@ test('debrief receives readable mistakes and authored explanations only after al
     resetPanels() {},
     setTab() {},
     metrics,
+    assessment: {
+      submit: (result) => assert.deepEqual(result, { score: 5, maxScore: 6, passingScore: 5 }),
+    },
     notifyUser: async () => {},
     checkPoint() {},
     askQuestion: async (question) => {
@@ -54,6 +57,7 @@ test('cancelled questions do not trigger post-test explanations or a final score
     resetPanels() {},
     setTab() {},
     metrics,
+    assessment: { submit: () => assert.fail('No assessment for incomplete questions') },
     notifyUser: async () => {},
     checkPoint() {},
     askQuestion: async () => ({ cancelled: true }),
@@ -72,6 +76,9 @@ for (const status of ['completed', 'unavailable', 'failed', 'timeout', 'dismisse
       resetPanels() {},
       setTab() {},
       metrics,
+      assessment: {
+        submit: (result) => assert.deepEqual(result, { score: 6, maxScore: 6, passingScore: 5 }),
+      },
       notifyUser: async (title, body) => {
         prompts.push({ title, body })
       },

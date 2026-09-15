@@ -1192,6 +1192,7 @@ const handleEnvelope = (message: ClassroomEnvelope, conn: PeerJS.DataConnection)
         if (currentAssignment.value?.status === 'running') emit('exerciseStop')
         currentAssignment.value = {
           id: String(payload.id || message.id),
+          lessonId: String(payload.lessonId || payload.name || ''),
           name: String(payload.name || ''),
           source: String(payload.source || ''),
           deadline: Number(payload.deadline || Date.now()),
@@ -2146,7 +2147,7 @@ const startExercisesFromKeyboard = () => {
 }
 
 const reportLessonState = (state: LessonState) => {
-  if (!currentAssignment.value || state.lessonId !== currentAssignment.value.id) return
+  if (!currentAssignment.value || state.assignmentId !== currentAssignment.value.id) return
   const status = {
     IDLE: undefined,
     RUNNING: 'running',

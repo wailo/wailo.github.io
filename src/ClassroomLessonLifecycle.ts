@@ -1,7 +1,9 @@
 import { watch } from 'vue'
 import type { LessonRun, createLessonRunStore } from './useLessonRun'
 
-export type LessonState = Pick<LessonRun, 'runId' | 'lessonId' | 'status'> & { detail?: string }
+export type LessonState = Pick<LessonRun, 'runId' | 'lessonId' | 'assignmentId' | 'status'> & {
+  detail?: string
+}
 
 /** Component-owned watcher; synchronous so replacement cannot hide the previous run's stop. */
 export function watchLessonLifecycle(
@@ -16,6 +18,7 @@ export function watchLessonLifecycle(
       report({
         runId: run.runId,
         lessonId: run.lessonId,
+        assignmentId: run.assignmentId,
         status: run.status,
         detail: run.events.at(-1)?.message,
       })

@@ -2,6 +2,7 @@ import * as ts from 'typescript'
 
 import type { ScriptSimProps, UserScript } from './ScriptContext'
 import { stripImportsExports } from './ScriptSource'
+import type { TrainingArtifact } from './TrainingArtifact'
 
 export { stripImportsExports } from './ScriptSource'
 
@@ -30,13 +31,24 @@ export function compileUserScript<TProps extends ScriptSimProps>(
   source: string,
   onInvalidScript?: InvalidScriptHandler,
 ): UserScript<TProps> {
-  const code = stripImportsExports(source)
-  const javascript = ts.transpile(code, {
+  return loadUserScript<TProps>(prepareTrainingArtifact(source).javascript, onInvalidScript)
+}
+
+/** Compilation only: no top-level lesson code executes until loadUserScript is called. */
+export function prepareTrainingArtifact(originalSource: string): TrainingArtifact {
+  const preparedSource = stripImportsExports(originalSource)
+  const javascript = ts.transpile(preparedSource, {
     target: ts.ScriptTarget.ES2020,
     module: ts.ModuleKind.None,
   })
 
-  return loadUserScript<TProps>(javascript, onInvalidScript)
+  return {
+    schemaVersion: 1,
+    originalSource,
+    preparedSource,
+    javascript,
+    compiler: { name: 'typescript', version: ts.version, target: 'ES2020', module: 'None' },
+  }
 }
 
 export function validateGeneratedLesson(source: string): string[] {

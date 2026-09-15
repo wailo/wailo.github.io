@@ -3,13 +3,18 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import ts from 'typescript'
 import { ref, computed, watch, nextTick, shallowReactive, effectScope } from 'vue'
-import { compileUserScript, validateGeneratedLesson } from '../src/EditorScriptRuntime.ts'
+import {
+  prepareTrainingArtifact,
+  loadUserScript,
+  validateGeneratedLesson,
+} from '../src/EditorScriptRuntime.ts'
 import { stripImportsExports } from '../src/ScriptSource.ts'
 import { createScriptContext, runUserScript } from '../src/ScriptContext.ts'
 import { createLessonRunStore } from '../src/useLessonRun.ts'
+import { createTrainingRecorder } from '../src/TrainingRecorder.ts'
 import { componentScript, declarations, hook, evaluate } from './helpers/vue-script.mjs'
 
-const compiler = { compileUserScript, validateGeneratedLesson }
+const compiler = { prepareTrainingArtifact, loadUserScript, validateGeneratedLesson }
 function deferred() {
   let resolve, reject
   const promise = new Promise((yes, no) => {
@@ -25,6 +30,8 @@ function runnerFixture(loadLessonCompiler = async () => compiler) {
     checkpoints = [],
     sessions = []
   const deps = {
+    navigator: { userAgent: 'test-browser' },
+    trainingRecorder: { start: async () => {} },
     ref,
     computed,
     stripImportsExports,
@@ -67,7 +74,7 @@ function runnerFixture(loadLessonCompiler = async () => compiler) {
     'reset',
     'executeCode',
     'executeExternalCode',
-  ]).replaceAll('import.meta.env.VITE_GIT_SHA', '"test"')
+  ]).replaceAll('import.meta.env.VITE_GIT_SHA', '"' + 'a'.repeat(40) + '"')
   const api = evaluate(`${code}; return {code, reset, executeCode, executeExternalCode}`, deps)
   return { ...api, deps, events, checkpoints, sessions, lessonRun }
 }
@@ -76,11 +83,12 @@ test('assigned execution uses assignment identity and local stop finishes that s
   const f = runnerFixture(() => new Promise(() => {}))
   f.deps.selectedModule.value = { path: 'unrelated-local-lesson' }
   f.executeExternalCode('Assigned test', '', 'assignment-123')
-  assert.equal(f.lessonRun.current.value.lessonId, 'assignment-123')
+  assert.equal(f.lessonRun.current.value.assignmentId, 'assignment-123')
+  assert.equal(f.lessonRun.current.value.lessonId, 'Assigned test')
   assert.equal(f.lessonRun.status.value, 'RUNNING')
   f.reset()
   assert.equal(f.lessonRun.status.value, 'STOPPED')
-  assert.equal(f.lessonRun.current.value.lessonId, 'assignment-123')
+  assert.equal(f.lessonRun.current.value.assignmentId, 'assignment-123')
 })
 
 test('lesson shell has only dynamic dependencies on Monaco and the compiler', () => {
@@ -117,7 +125,7 @@ test('assigned lesson executes checkpoints and saves results without opening COD
   assert.equal(f.deps.viewMode.value, 'run')
   assert.equal(f.lessonRun.status.value, 'COMPLETED')
   assert.equal(f.checkpoints[0][0], 'Test complete')
-  assert.equal(f.sessions[0].raw_metrics[0].score, 6)
+  assert.equal(f.lessonRun.current.value.metrics[0].score, 6)
   assert.ok(f.events.some((event) => event[0] === 'completed' && event[1] === 'Assigned test'))
 })
 
@@ -139,6 +147,51 @@ test('stop while compiler loads prevents even top-level script evaluation', asyn
   assert.equal(compilations, 0)
   assert.equal(f.lessonRun.status.value, 'STOPPED')
   assert.equal(f.sessions.length, 0)
+})
+
+test('archive acknowledgement gates top-level execution and captures source before edits', async () => {
+  const saved = deferred()
+  const f = runnerFixture()
+  let archived
+  f.deps.trainingRecorder.start = async (_run, artifact) => {
+    archived = artifact
+    await saved.promise
+  }
+  const source = 'globalThis.__trainingGate = true; export async function main() {}'
+  f.code.value = source
+  const result = f.executeCode()
+  f.code.value = 'edited later'
+  await new Promise(setImmediate)
+  assert.equal(archived.originalSource, source)
+  assert.equal(globalThis.__trainingGate, undefined)
+  f.reset()
+  saved.resolve()
+  assert.equal(await result, false)
+  assert.equal(globalThis.__trainingGate, undefined)
+})
+
+test('backend failure still runs the lesson and reports unrecorded practice', async () => {
+  const f = runnerFixture()
+  const warnings = []
+  const recorder = createTrainingRecorder(
+    f.lessonRun,
+    () => async () => {
+      throw new Error('Backend unavailable')
+    },
+    (error) => warnings.push(error),
+  )
+  f.deps.trainingRecorder.start = recorder.start
+  try {
+    f.code.value = 'globalThis.__trainingGate = true;\nexport async function main() {}'
+    assert.equal(await f.executeCode(), true)
+    assert.equal(globalThis.__trainingGate, true)
+    assert.equal(f.lessonRun.status.value, 'COMPLETED')
+    assert.equal(warnings.length, 1)
+    assert.ok(!f.events.some((event) => event[0] === 'error'))
+  } finally {
+    recorder.dispose()
+    delete globalThis.__trainingGate
+  }
 })
 
 test('replacement during compiler loading runs only the new lesson', async () => {

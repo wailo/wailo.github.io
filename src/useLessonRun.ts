@@ -30,6 +30,7 @@ export interface LessonAnswer {
 export interface LessonRun {
   runId: string
   lessonId: string
+  assignmentId?: string
   title: string
   status: LessonRunStatus
   startedAt: number
@@ -42,10 +43,20 @@ export interface LessonRun {
   metrics: any[]
 }
 
+export type TrainingEvidence = {
+  runId: string
+  kind: 'answer' | 'checkpoint' | 'finished'
+  payload: unknown
+}
+
 /** One store per simulator; the factory also allows isolated consumers/tests. */
 export function createLessonRunStore() {
   const current = ref<LessonRun | null>(null)
   let eventId = 0
+  const evidenceListeners = new Set<(event: TrainingEvidence) => void>()
+  const publish = (event: TrainingEvidence) => {
+    for (const listener of evidenceListeners) listener(event)
+  }
   const active = (runId: string) =>
     current.value?.runId === runId && current.value.status === 'RUNNING'
 
@@ -69,8 +80,9 @@ export function createLessonRunStore() {
   const finish = (runId: string, status: 'COMPLETED' | 'STOPPED' | 'ERROR', message: string) => {
     if (!active(runId)) return
     addEvent(runId, message)
-    current.value!.status = status
     current.value!.endedAt = Date.now()
+    current.value!.status = status
+    publish({ runId, kind: 'finished', payload: current.value })
   }
 
   return {
@@ -78,11 +90,18 @@ export function createLessonRunStore() {
     status: computed(() => current.value?.status ?? 'IDLE'),
     startedAt: computed(() => current.value?.startedAt ?? null),
     events: computed(() => readonly(current.value?.events ?? [])),
-    begin(lessonId: string, title: string) {
+    subscribeEvidence(listener: (event: TrainingEvidence) => void) {
+      evidenceListeners.add(listener)
+      return () => {
+        evidenceListeners.delete(listener)
+      }
+    },
+    begin(lessonId: string, title: string, assignmentId?: string) {
       if (current.value) finish(current.value.runId, 'STOPPED', 'Lesson replaced')
       current.value = {
         runId: crypto.randomUUID(),
         lessonId,
+        assignmentId,
         title,
         status: 'RUNNING',
         startedAt: Date.now(),
@@ -106,6 +125,7 @@ export function createLessonRunStore() {
       if (typeof checkpoint.data?.step === 'string') current.value!.step = checkpoint.data.step
       current.value!.checkpoints.push(checkpoint)
       addEvent(runId, message)
+      publish({ runId, kind: 'checkpoint', payload: checkpoint })
       return checkpoint
     },
     recordAnswer(runId: string, options: AskQuestionOptions, result: QuestionResult) {
@@ -121,6 +141,7 @@ export function createLessonRunStore() {
             : undefined,
         result: { ...result },
       })
+      publish({ runId, kind: 'answer', payload: current.value!.answers.at(-1) })
     },
     snapshot(): LessonRun | null {
       return current.value ? JSON.parse(JSON.stringify(current.value)) : null
