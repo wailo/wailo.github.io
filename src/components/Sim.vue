@@ -132,9 +132,9 @@
               v-if="sim_module_loaded"
               class="h-full w-full"
               :sim-props="allSimProps"
-              :lift-coefficient="FlightSimModule.flightModel.cl"
-              :max-angle-of-attack="FlightSimModule.flightModel.max_aoa_deg"
-              :stalling="FlightSimModule.flightModel.stalling"
+              :lift-coefficient="airflowState.liftCoefficient"
+              :max-angle-of-attack="airflowState.maxAngleOfAttack"
+              :stalling="airflowState.stalling"
             />
           </template>
         </Panel>
@@ -1185,6 +1185,16 @@ const allSimProps = computed(() => ({
   ...simulationControlsProps.value,
   ...flightModelProps.value,
 }))
+// WASM getters are not reactive; sample airflow state on the existing UI tick.
+const airflowState = computed(() => {
+  renderSignal.value
+  const model = FlightSimModule?.flightModel
+  return {
+    liftCoefficient: model?.cl ?? 0,
+    maxAngleOfAttack: model?.max_aoa_deg ?? 0,
+    stalling: model?.stalling ?? false,
+  }
+})
 const simulationPanelControls = computed(() =>
   Object.values(simulationControlsProps.value)
     .filter((control) => control.group === 'simulation' && control.setterFunc)
