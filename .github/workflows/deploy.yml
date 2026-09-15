@@ -19,9 +19,9 @@ jobs:
         with:
           ref: 'development'
 
-      - name: Set Short Git SHA
-        # Generate short SHA and save it to GITHUB_ENV for subsequent steps
-        run: echo "VITE_GIT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+      - name: Set Git SHA
+        # Preserve the full commit identifier for training records.
+        run: echo "VITE_GIT_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
       - name: Setup Node.js
         uses: actions/setup-node@v2
