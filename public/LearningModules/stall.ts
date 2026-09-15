@@ -5,6 +5,10 @@ export async function main(context: ScriptContext) {
   const notifyUser = context.notifyUser
   const waitFor = context.waitFor
   const waitForCondition = context.waitForCondition
+  const simulation = context.controls.simulation
+
+  context.resetPanels()
+  simulation.reset_simulation()
 
   await notifyUser(
     'Stall Demonstration',
