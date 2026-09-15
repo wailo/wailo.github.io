@@ -602,6 +602,8 @@ import {
   type ComponentPublicInstance,
 } from 'vue'
 import Fuse from 'fuse.js'
+import { useLessonRun } from '../useLessonRun'
+import { watchLessonLifecycle, type LessonState } from '../ClassroomLessonLifecycle'
 import wButton from './wButton.vue'
 import ClassroomPeerRow from './ClassroomPeerRow.vue'
 import { compactStatus, compactExerciseStatus, type ClassroomPeer } from '../ClassroomPeer'
@@ -2070,8 +2072,9 @@ const disconnectPeer = (peerId: string) => {
 }
 
 const sendExerciseStatus = (status: ClassroomExerciseStatus, detail?: string) => {
-  if (!currentAssignment.value || !instructorConnectionOpen || !instructorConnection) return
+  if (!currentAssignment.value) return
   currentAssignment.value.status = status
+  if (!instructorConnectionOpen || !instructorConnection) return
   sendEnvelopeToConnection(instructorConnection, 'exercise-status', {
     id: currentAssignment.value.id,
     name: currentAssignment.value.name,
@@ -2082,14 +2085,12 @@ const sendExerciseStatus = (status: ClassroomExerciseStatus, detail?: string) =>
 
 const startAssignedExercise = () => {
   if (!currentAssignment.value || currentAssignment.value.status === 'running') return
-  sendExerciseStatus('running')
   emit('exerciseStart', currentAssignment.value)
 }
 
 const stopAssignedExercise = () => {
   if (!currentAssignment.value || currentAssignment.value.status !== 'running') return
   emit('exerciseStop')
-  sendExerciseStatus('stopped')
 }
 
 const sendExerciseControl = (action: 'start' | 'stop', targets = actionTargetIds.value) => {
@@ -2121,15 +2122,19 @@ const startExercisesFromKeyboard = () => {
   }
 }
 
-const reportExerciseResult = (
-  status: 'completed' | 'error',
-  detail?: string,
-  exerciseName?: string,
-) => {
-  if (currentAssignment.value?.status !== 'running') return
-  if (exerciseName && exerciseName !== currentAssignment.value.name) return
-  sendExerciseStatus(status, detail)
+const reportLessonState = (state: LessonState) => {
+  if (!currentAssignment.value || state.lessonId !== currentAssignment.value.id) return
+  const status = {
+    IDLE: undefined,
+    RUNNING: 'running',
+    STOPPED: 'stopped',
+    COMPLETED: 'completed',
+    ERROR: 'error',
+  }[state.status] as ClassroomExerciseStatus | undefined
+  if (status) sendExerciseStatus(status, state.detail)
 }
+
+watchLessonLifecycle(useLessonRun(), reportLessonState)
 
 const connectionAge = (peer: ConnectionsList[string]) => {
   clock.value
@@ -2249,7 +2254,6 @@ defineExpose({
   sendScript,
   sendCheckPoint,
   sendWhiteboardState,
-  reportExerciseResult,
   reset,
 })
 

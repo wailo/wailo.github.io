@@ -72,6 +72,17 @@ function runnerFixture(loadLessonCompiler = async () => compiler) {
   return { ...api, deps, events, checkpoints, sessions, lessonRun }
 }
 
+test('assigned execution uses assignment identity and local stop finishes that same run', () => {
+  const f = runnerFixture(() => new Promise(() => {}))
+  f.deps.selectedModule.value = { path: 'unrelated-local-lesson' }
+  f.executeExternalCode('Assigned test', '', 'assignment-123')
+  assert.equal(f.lessonRun.current.value.lessonId, 'assignment-123')
+  assert.equal(f.lessonRun.status.value, 'RUNNING')
+  f.reset()
+  assert.equal(f.lessonRun.status.value, 'STOPPED')
+  assert.equal(f.lessonRun.current.value.lessonId, 'assignment-123')
+})
+
 test('lesson shell has only dynamic dependencies on Monaco and the compiler', () => {
   const source = componentScript('Editor')
   const imports = source.statements

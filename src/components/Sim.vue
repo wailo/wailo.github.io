@@ -247,15 +247,10 @@
                 }
               "
               @reset="scriptComponentStatus = 'IDLE'"
-              @completed="
-                (title: string) =>
-                  classroomComponentRef?.reportExerciseResult('completed', title, title)
-              "
               @error="
-                (error: any, title?: string) => {
+                (error: any) => {
                   simFunctions.notifyUser('Editor Error', error, 5000)
                   scriptComponentStatus = 'ERROR'
-                  classroomComponentRef?.reportExerciseResult('error', String(error), title)
                 }
               "
               class="w-full h-full"
@@ -522,7 +517,11 @@
                 @announcement="handleClassroomAnnouncement"
                 @exercise-start="
                   (exercise: ClassroomExerciseAssignment) =>
-                    editorComponentRef?.executeExternalCode(exercise.name, exercise.source)
+                    editorComponentRef?.executeExternalCode(
+                      exercise.name,
+                      exercise.source,
+                      exercise.id,
+                    )
                 "
                 @exercise-stop="editorComponentRef?.reset()"
                 ref="classroomComponentRef"

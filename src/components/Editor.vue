@@ -444,26 +444,26 @@ const reset = (markStopped = true) => {
   emit('reset')
 }
 
-const executeExternalCode = (title: string, content: string) => {
+const executeExternalCode = (title: string, content: string, lessonId?: string) => {
   props.utilityFuncs.notifyUser(`Running a script from instrutor`, title, 2000)
   ModuleTitle.value = title
   selectedFile.value = title
   code.value = content
   viewMode.value = 'run'
-  executeCode()
+  executeCode(lessonId ?? title)
 }
 
 defineExpose({ reset, executeExternalCode })
 
 // Function to execute code in the context of the provided object
-const executeCode = async (): Promise<boolean> => {
+const executeCode = async (lessonId?: string): Promise<boolean> => {
   reset(false)
   const runGeneration = executionGeneration
   const aiSignal = aiRunController.signal
   const source = stripImportsExports(code.value)
   code.value = source
   const lessonTitle = ModuleTitle.value
-  const run = lessonRun.begin(selectedModule.value?.path ?? lessonTitle, lessonTitle)
+  const run = lessonRun.begin(lessonId ?? selectedModule.value?.path ?? lessonTitle, lessonTitle)
   const metrics = run.metrics
   const addRunEvent = (message: string, replaceKey?: string) =>
     lessonRun.addEvent(run.runId, message, replaceKey)
