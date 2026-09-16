@@ -22,10 +22,11 @@
         <wButton
           v-if="isInstructor"
           class="ml-auto h-5 shrink-0"
-          :button-label="`MIRROR ${followMode ? 'ON' : 'OFF'}`"
+          button-label="SYNC"
           :button-state="followMode"
           :button-click="() => (followMode = !followMode)"
-          title="Mirror instructor commands to connected peers"
+          :active-indicator="true"
+          title="Synchronize instructor actions with connected peers"
         />
         <button
           class="px-1 hover:text-panelActive focus-visible:outline focus-visible:outline-1 focus-visible:outline-panelActive"
@@ -871,7 +872,6 @@ const assignmentTimeRemaining = computed(() => {
 watch(isOnline, (newValue: boolean) => {
   emit('classroomConnection', newValue)
   emit('classroomRoom', newValue ? classroomRoomId.value : '')
-  followMode.value = true
 })
 
 watch(classroomRoomId, (roomId) => {

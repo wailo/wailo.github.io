@@ -12,6 +12,13 @@
     ]"
     @click="props.buttonClick"
   >
+    <span
+      v-if="props.activeIndicator && props.buttonState"
+      class="active-indicator mr-1"
+      aria-hidden="true"
+    >
+      ●
+    </span>
     <span class="min-w-0 truncate">{{ props.buttonLabel }}</span>
   </button>
 </template>
@@ -30,6 +37,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  activeIndicator: {
+    type: Boolean,
+    default: false,
+  },
   buttonClick: {
     type: Function as PropType<(event: MouseEvent) => void>,
     required: true,
@@ -38,6 +49,26 @@ const props = defineProps({
 </script>
 
 <style scoped>
+.active-indicator {
+  animation: active-indicator-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes active-indicator-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .active-indicator {
+    animation: none;
+  }
+}
+
 .efis-button {
   box-shadow:
     inset 1px 1px 0 rgb(var(--color-simElementBorder)),
