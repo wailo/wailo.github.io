@@ -104,8 +104,12 @@ watchEffect(() => {
           :key="tab.name"
           @click="requestActiveTab(tab.name)"
           :class="[
-            'px-1 rounded-t flex items-center',
-            tabMap.length > 1 ? (activeTab === tab.name ? 'bg-panelActive' : 'text-xs') : '',
+            'px-1 rounded-t flex items-center uppercase transition-none',
+            tabMap.length > 1
+              ? activeTab === tab.name
+                ? 'font-medium text-secondary opacity-100'
+                : 'text-xs opacity-50 hover:opacity-100'
+              : 'font-medium text-secondary opacity-100',
           ]"
         >
           {{ tab.display }}

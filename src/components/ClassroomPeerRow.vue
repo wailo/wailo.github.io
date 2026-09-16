@@ -1,6 +1,6 @@
 <template>
   <div
-    class="classroom-roster-row grid h-7 cursor-default grid-cols-[1.25rem_minmax(0,1fr)_auto_auto] items-center gap-x-1 px-1 outline-none"
+    class="classroom-roster-row grid h-6 cursor-default grid-cols-[1.25rem_minmax(0,1fr)_auto_auto] items-center gap-x-1 px-1 outline-none"
     :class="[
       focused ? 'bg-simInputBackground' : '',
       selected || peer.exercise?.status === 'running' ? 'text-simActiveButton' : 'text-secondary',
@@ -69,7 +69,7 @@
       </div>
     </div>
     <button
-      class="peer-details-toggle h-5 whitespace-nowrap px-1 text-center"
+      class="peer-details-toggle h-5 whitespace-nowrap px-1 text-center leading-none"
       :aria-expanded="detailsOpen"
       :title="detailsOpen ? 'Close peer details' : 'View peer details'"
       @click.stop="emit('toggleDetails', peerId)"
