@@ -57,7 +57,7 @@ export async function main(context: ScriptContext) {
   flightModel.set_autopilot_heading_target(270)
   flightModel.set_autopilot_heading_hold(true)
 
-  context.setTab('realtime', 'Real-Time-Data')
+  context.setTab('realtime', 'Flight-Data')
   context.plotView([simProps.flaps_selector_position, simProps.flaps_position], true)
   context.plotView([simProps.aoa_deg, simProps.cl], true)
   context.plotView([simProps.lift, simProps.drag], true)

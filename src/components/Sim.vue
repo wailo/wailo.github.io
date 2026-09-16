@@ -114,7 +114,7 @@
           :status="`${1000 / update_interval_ms} HZ`"
           class="gap-1"
         >
-          <template #Real-Time-Data display="Real Time Data">
+          <template #Flight-Data>
             <SimDataDisplay
               ref="dataDisplayRef"
               :simProps="allSimProps"
@@ -298,7 +298,7 @@
           :status="activeAircraftType"
           v-if="sim_module_loaded"
         >
-          <template #Flight-Model>
+          <template #Controls>
             <div class="w-full min-w-0 self-start">
               <div
                 class="sticky top-0 z-20 flex h-6 items-center border-b border-simElementBorder bg-panelHeaderBackground"
@@ -547,7 +547,7 @@
           :active="userActionPending"
           :flash="userActionPending"
         >
-          <template #Prompt>
+          <template #Console>
             <MarkDown
               ref="markdownRef"
               class="w-full h-full"

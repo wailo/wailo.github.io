@@ -47,7 +47,7 @@ export async function main(context: ScriptContext) {
   context.setLayout(context.layoutTypes.PILOT)
   context.setVisuals(true)
   context.setMap(false)
-  context.setTab('realtime', 'Real-Time-Data')
+  context.setTab('realtime', 'Flight-Data')
   context.plotView([simProps.speed_indicated_knots, simProps.speed_true_knots], true)
   context.plotView([simProps.engine_throttle_position, simProps.thrust], true)
 

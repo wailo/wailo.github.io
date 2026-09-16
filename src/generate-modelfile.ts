@@ -264,7 +264,7 @@ const EXAMPLE_LESSON = `export async function main(context: ScriptContext<B747Si
   const simProps = context.props
 
   context.resetPanels()
-  context.setTab('realtime', 'Real-Time-Data')
+  context.setTab('realtime', 'Flight-Data')
   context.plotView([simProps.speed_indicated_knots, simProps.aoa_deg, simProps.cl], true)
 
   await context.notifyUser(
@@ -400,7 +400,7 @@ function validateContract(contract: string) {
     'readonly engine_4_n1: SimulationProperties',
     'readonly engine_mixture_position: SimulationProperties',
     'interface ScriptContext',
-    "(panelId: 'realtime', tabName: 'Real-Time-Data' | 'Airflow')",
+    "(panelId: 'realtime', tabName: 'Flight-Data' | 'Airflow')",
     'Promise<boolean>',
   ]
   const missing = requiredFragments.filter((fragment) => !contract.includes(fragment))

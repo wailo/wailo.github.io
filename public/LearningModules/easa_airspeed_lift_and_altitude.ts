@@ -57,7 +57,7 @@ export async function main(context: ScriptContext) {
   })
   context.checkPoint(`Lift-equation question answered in ${liftEquation.attempts} attempt(s)`)
 
-  context.setTab('realtime', 'Real-Time-Data')
+  context.setTab('realtime', 'Flight-Data')
   context.plotView(simProps.altitude_ft, true)
   context.plotView(simProps.atmosphere_density, true)
   context.plotView([simProps.speed_indicated_knots, simProps.speed_true_knots], true)

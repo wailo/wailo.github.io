@@ -28,6 +28,11 @@ const emit = defineEmits<{
 const tabSlots = useSlots()
 const tabMap = ref<{ name: string; display: string }[]>([])
 const activeTab = ref<string | null>(null)
+const tabDisplayNames: Record<string, string> = {
+  Controls: 'CONTROLS',
+  'Flight-Data': 'FLIGHT DATA',
+  Console: 'CONSOLE',
+}
 
 const setActiveTab = (tabName: string) => {
   if (tabMap.value.some((tab) => tab.name === tabName)) activeTab.value = tabName
@@ -70,7 +75,7 @@ watchEffect(() => {
     .filter((key) => key !== 'default')
     .map((slotName) => ({
       name: slotName,
-      display: slotName.replace(/-/g, ' '), // Customize to your liking
+      display: tabDisplayNames[slotName] ?? slotName.replace(/-/g, ' '),
     }))
 
   if (!activeTab.value && tabMap.value.length > 0) {

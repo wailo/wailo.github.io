@@ -37,7 +37,7 @@ test('generated plotting properties retain useful metadata', () => {
 })
 
 test('generated API contract preserves TypeScript literals and promises', () => {
-  assert.match(modelfile, /\(panelId: 'realtime', tabName: 'Real-Time-Data' \| 'Airflow'\)/)
+  assert.match(modelfile, /\(panelId: 'realtime', tabName: 'Flight-Data' \| 'Airflow'\)/)
   assert.match(modelfile, /waitForCondition: \([\s\S]*?\) => Promise<boolean>/)
   assert.doesNotMatch(modelfile, /\) -> /)
 })

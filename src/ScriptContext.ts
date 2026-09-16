@@ -121,13 +121,13 @@ export interface ScriptContext<TProps extends ScriptSimProps = FlightModelSimPro
   setTheme: (dark: boolean) => void
   setTab: {
     (panelId: 'cockpit', tabName: 'Cockpit'): void
-    (panelId: 'realtime', tabName: 'Real-Time-Data' | 'Airflow'): void
+    (panelId: 'realtime', tabName: 'Flight-Data' | 'Airflow'): void
     (panelId: 'simulation', tabName: 'Simulation'): void
     (panelId: 'learning-modules', tabName: 'Learning-Modules'): void
     (panelId: 'autopilot', tabName: 'Autopilot'): void
-    (panelId: 'flight-model', tabName: 'Flight-Model' | 'Joystick' | 'Reposition'): void
+    (panelId: 'flight-model', tabName: 'Controls' | 'Joystick' | 'Reposition'): void
     (panelId: 'classroom', tabName: 'Classroom'): void
-    (panelId: 'prompt', tabName: 'Prompt' | 'whiteboard'): void
+    (panelId: 'prompt', tabName: 'Console' | 'whiteboard'): void
   }
   resetPanels: () => void
   checkPoint: (content: string, data?: CheckpointData) => void
