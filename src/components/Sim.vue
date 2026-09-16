@@ -167,6 +167,7 @@
                   :buttonLabel="input.label"
                   :buttonClick="() => input.setterFunc?.()"
                   :button-state="input?.inputValue as boolean"
+                  :momentary="input.type === 'void'"
                   class="border border-simElementBorder"
                 />
 
@@ -183,26 +184,34 @@
                   :inputStep="input.step"
                   class="border border-simElementBorder"
                 />
-                <select
+                <label
                   v-else-if="input.type === 'enum' && input.enumValues"
-                  class="border border-simElementBorder bg-simInputBackground text-secondary"
-                  :value="input.inputValue"
-                  @change="
-                    (e) => {
-                      const value = (e.target as HTMLSelectElement).value
-                      const selected = input.enumValues?.find((v) => String(v.enumValue) === value)
-                      input.setterFunc?.(selected?.enumValue)
-                    }
-                  "
+                  class="enum-control relative flex min-w-0 cursor-pointer items-stretch border border-simElementBorder bg-simInputBackground text-secondary"
+                  @click="openEnumPicker"
                 >
-                  <option
-                    v-for="value in input.enumValues"
-                    :key="value.enumName"
-                    :value="String(value.enumValue)"
+                  <select
+                    class="h-full min-w-0 flex-1 cursor-pointer appearance-none bg-transparent px-1 text-secondary outline-none"
+                    :value="input.inputValue"
+                    @change="
+                      (e) => {
+                        const value = (e.target as HTMLSelectElement).value
+                        const selected = input.enumValues?.find(
+                          (v) => String(v.enumValue) === value,
+                        )
+                        input.setterFunc?.(selected?.enumValue)
+                      }
+                    "
                   >
-                    {{ value.enumName }}
-                  </option>
-                </select>
+                    <option
+                      v-for="value in input.enumValues"
+                      :key="value.enumName"
+                      :value="String(value.enumValue)"
+                    >
+                      {{ value.enumName }}
+                    </option>
+                  </select>
+                  <span class="enum-chevron" aria-hidden="true">⌄</span>
+                </label>
               </template>
             </div>
           </template>
@@ -400,25 +409,28 @@
                   <div v-else-if="sim_prop.type === 'boolean'" class="min-h-0 min-w-0">
                     <wButton
                       class="h-full w-full min-w-0 overflow-hidden text-ellipsis"
-                      :buttonLabel="sim_prop.inputValue ? 'On' : 'Off'"
+                      :buttonLabel="sim_prop.inputValue ? 'ON' : 'OFF'"
                       :buttonClick="() => sim_prop.setterFunc?.()"
                       :buttonState="sim_prop.inputValue as boolean"
+                      :boolean-status="true"
                     />
                   </div>
                   <div v-else-if="sim_prop.type === 'void'" class="min-h-0 min-w-0">
                     <wButton
                       class="h-full w-full min-w-0 overflow-hidden text-ellipsis"
-                      buttonLabel="▶"
+                      buttonLabel=""
                       :buttonClick="() => sim_prop.setterFunc?.()"
+                      :momentary="true"
                     />
                   </div>
                   <!-- Enum Input -->
                   <label
                     v-else-if="sim_prop.type === 'enum' && sim_prop.enumValues"
-                    class="flightmodel-value flex min-w-0 items-stretch border border-simElementBorder bg-simInputBackground"
+                    class="flightmodel-value enum-control relative flex min-w-0 cursor-pointer items-stretch border border-simElementBorder bg-simInputBackground"
+                    @click="openEnumPicker"
                   >
                     <select
-                      class="h-full min-w-0 flex-1 bg-transparent px-1 text-secondary"
+                      class="h-full min-w-0 flex-1 cursor-pointer appearance-none bg-transparent px-1 text-secondary outline-none"
                       :value="sim_prop.inputValue"
                       @change="
                         (e) => {
@@ -438,6 +450,7 @@
                         {{ value.enumName }}
                       </option>
                     </select>
+                    <span class="enum-chevron" aria-hidden="true">⌄</span>
                   </label>
                 </div>
               </template>
@@ -845,6 +858,21 @@ let maximumRunDependencies = 0
 const formatMegabytes = (bytes: number) => {
   const megabytes = bytes / (1024 * 1024)
   return megabytes.toFixed(megabytes >= 10 ? 1 : 2)
+}
+
+const openEnumPicker = (event: MouseEvent) => {
+  if (event.target instanceof HTMLSelectElement) return
+  const select = (event.currentTarget as HTMLElement).querySelector('select')
+  if (!select) return
+
+  const picker = select as HTMLSelectElement & { showPicker?: () => void }
+  event.preventDefault()
+  try {
+    if (picker.showPicker) picker.showPicker()
+    else picker.click()
+  } catch {
+    picker.focus()
+  }
 }
 
 const updateLoadingStatus = (status: string) => {
@@ -1581,6 +1609,17 @@ function createRemoteManager(FlightSimModule: ExtendedMainModule) {
 </script>
 
 <style scoped>
+.enum-chevron {
+  display: flex;
+  width: 2.5rem;
+  flex: 0 0 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-left: 1px solid rgb(var(--color-simElementBorder));
+  color: rgb(var(--color-secondary));
+  pointer-events: none;
+}
+
 .sim-loading-overlay {
   font-family: 'Orbitron', sans-serif;
 }
