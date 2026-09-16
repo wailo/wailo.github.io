@@ -13,9 +13,9 @@
       <span class="ml-auto truncate opacity-60">{{ ModuleTitle || 'NO LESSON SELECTED' }}</span>
     </div>
 
-    <div v-if="viewMode === 'lessons'" class="flex min-h-0 flex-1 flex-col p-1">
-      <div class="flex h-7 shrink-0 items-center border-b border-simElementBorder px-1">
-        <span class="px-2 opacity-60">/</span>
+    <div v-if="viewMode === 'lessons'" class="flex min-h-0 flex-1 flex-col">
+      <div class="flex h-6 shrink-0 items-center border-b border-simElementBorder px-1">
+        <span class="px-1 opacity-60">/</span>
         <input
           v-model="lessonFilter"
           type="search"
@@ -31,35 +31,24 @@
         </button>
       </div>
 
-      <div
-        class="flex min-h-6 shrink-0 items-center gap-2 border-b border-panelBorder px-1"
-        role="status"
-      >
-        <span v-if="progressStatus === 'ready'"
-          >{{ completedCount }} of {{ lessons.length }} lessons completed</span
-        >
-        <span v-else-if="progressStatus === 'loading'">Loading progress…</span>
-        <span v-else-if="progressStatus === 'guest'">Guest practice · progress not saved</span>
-        <template v-else>
-          <span>Progress unavailable</span>
-          <button class="row-action" type="button" @click="refreshProgress">Retry</button>
-        </template>
-      </div>
-
-      <div class="mt-1 min-h-0 flex-1 overflow-y-auto">
+      <div class="min-h-0 flex-1 overflow-y-auto">
         <div v-if="filteredLessons.length === 0" class="p-2 opacity-60">NO MATCHING LESSONS</div>
-        <section v-for="group in filteredLessonGroups" :key="group.category" class="mb-2">
+        <section v-for="group in filteredLessonGroups" :key="group.category" class="mb-1">
           <button
-            class="flex h-6 w-full items-center justify-between px-1 pt-1 text-left opacity-75 hover:bg-simInputBackground/40 hover:opacity-100"
+            class="flex h-5 w-full items-center justify-between px-1 text-left opacity-75 hover:bg-simInputBackground/40 hover:opacity-100"
             @click="toggleLessonGroup(group.category)"
           >
-            <span>{{ isLessonGroupOpen(group.category) ? '▾' : '▸' }} {{ group.category }}</span>
-            <span class="opacity-60">{{ group.lessons.length }}</span>
+            <span>
+              {{ isLessonGroupOpen(group.category) ? '▾' : '▸' }} {{ group.category }}
+              <span class="opacity-60"
+                >[{{ completedLessonsIn(group.lessons) }}/{{ group.lessons.length }}]</span
+              >
+            </span>
           </button>
           <div v-show="isLessonGroupOpen(group.category)" class="ml-3">
             <template v-for="lesson in group.lessons" :key="lesson.id">
               <div
-                class="grid min-h-5 w-full cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-1 px-2 py-0.5 text-left leading-tight hover:bg-simInputBackground/60"
+                class="grid h-5 w-full cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-1 px-1 text-left leading-tight hover:bg-simInputBackground/60"
                 :class="selectedFile === lesson.name ? 'bg-panelHeaderBackground' : ''"
                 role="button"
                 tabindex="0"
@@ -476,7 +465,6 @@ const props = defineProps({
 const {
   status: progressStatus,
   byLesson: lessonProgress,
-  completedCount,
   refresh: refreshProgress,
   dispose: disposeProgress,
 } = createLessonProgress(pb, Object.values(importedNModuleTree).flat())
@@ -716,6 +704,12 @@ const filteredLessonGroups = computed(() =>
     }))
     .filter((group) => group.lessons.length > 0),
 )
+const completedLessonsIn = (groupLessons: LessonListEntry[]) =>
+  progressStatus.value === 'ready'
+    ? groupLessons.filter(
+        (lesson) => (lessonProgress.value.get(lesson.id)?.completedAttempts ?? 0) > 0,
+      ).length
+    : 0
 const isLessonGroupOpen = (category: string) =>
   Boolean(lessonFilter.value.trim()) || openLessonGroups.value.has(category)
 const toggleLessonGroup = (category: string) => {
