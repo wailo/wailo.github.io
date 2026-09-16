@@ -100,7 +100,7 @@ export async function main(context: ScriptContext) {
   ]
 
   context.resetPanels()
-  context.setTab('prompt', 'Prompt')
+  context.setTab('prompt', 'Console')
 
   await context.notifyUser(
     'Basic flight knowledge test',

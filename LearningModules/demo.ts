@@ -73,7 +73,7 @@ export async function main(context: ScriptContext) {
   // Keep the introduction separate from checklist entries and tour scheduling.
   simulation.set_simulation_pause(true)
   try {
-    context.setTab('prompt', 'Prompt')
+    context.setTab('prompt', 'Console')
     await context.notifyUser(
       'Flight simulation & training',
       'A C++ flight simulator for exploring aircraft handling, flight instruments, and autopilot behavior. Use interactive lessons, live telemetry, and TypeScript scripts for self-study, classroom instruction, and repeatable experiments.',
@@ -342,7 +342,7 @@ No input is required. The checklist tracks flight actions and their conditions; 
         'Realtime monitoring',
         'Engine N1, throttle, airspeed and altitude will be plotted.',
       )
-      await step(() => context.setTab('realtime', 'Real-Time-Data'))
+      await step(() => context.setTab('realtime', 'Flight-Data'))
       await announce('Live data · flaps')
       await step(() => context.dataView(simProps.flaps_selector_position, true))
       await announce('Live data · landing gear')
@@ -471,10 +471,10 @@ No input is required. The checklist tracks flight actions and their conditions; 
     await waitFor(8000)
     context.checkPoint('Airflow view demonstrated during climb')
   } finally {
-    context.setTab('realtime', 'Real-Time-Data')
+    context.setTab('realtime', 'Flight-Data')
   }
 
-  // Explain before switching: Whiteboard shares the Prompt panel.
+  // Explain before switching: Whiteboard shares the Console panel.
   await announce('Whiteboard', 'Shared sketches · brush sizes · colors · undo / redo.')
   await waitFor(3000)
   context.setTab('prompt', 'whiteboard')
@@ -482,7 +482,7 @@ No input is required. The checklist tracks flight actions and their conditions; 
     await waitFor(8000)
     context.checkPoint('Whiteboard canvas and drawing tools shown')
   } finally {
-    context.setTab('prompt', 'Prompt')
+    context.setTab('prompt', 'Console')
   }
 
   await announce('3D world')
@@ -511,7 +511,7 @@ No input is required. The checklist tracks flight actions and their conditions; 
       }
       tourEntries.push(bankEntry)
       await refreshChecklist()
-      context.setTab('realtime', 'Real-Time-Data')
+      context.setTab('realtime', 'Flight-Data')
       flightModel.set_autopilot_bank_hold(true)
       flightModel.set_autopilot_bank_target(30)
       await waitForCondition(() => Math.abs(flightModel.bank_deg - 30) < 1, 500, 100)
@@ -560,7 +560,7 @@ No input is required. The checklist tracks flight actions and their conditions; 
       await Promise.all(backgroundTasks)
       simulation.set_simulation_pause(false)
       simulation.set_simulation_speed(1)
-      context.setTab('realtime', 'Real-Time-Data')
+      context.setTab('realtime', 'Flight-Data')
       context.checkPoint(
         `Demonstration completed${rotationSpeed ? ` — rotation ${rotationSpeed.toFixed(0)} kt` : ''}`,
       )

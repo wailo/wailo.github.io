@@ -56,7 +56,7 @@ export async function main(context: ScriptContext) {
   flightModel.set_autopilot_bank_target(0)
   flightModel.set_autopilot_bank_hold(true)
 
-  context.setTab('realtime', 'Real-Time-Data')
+  context.setTab('realtime', 'Flight-Data')
   context.plotView([simProps.lift, simProps.weight], true)
   context.plotView([simProps.thrust, simProps.drag], true)
   context.plotView([simProps.bank_deg, simProps.g_force], true)
