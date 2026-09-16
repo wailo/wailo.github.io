@@ -6,7 +6,7 @@
         <input
           v-model="searchQuery"
           type="text"
-          placeholder="/ Search signals"
+          placeholder="/ Search"
           class="min-w-0 flex-1 text-secondary bg-simInputBackground border border-simElementBorder px-1 outline-none focus:border-panelActive"
           @focus="isFocused = true"
         />
