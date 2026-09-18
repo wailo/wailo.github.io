@@ -9,16 +9,15 @@
     @keydown="handleClassroomKeydown"
   >
     <div class="order-1 w-full">
-      <div class="flex h-6 min-w-0 items-center gap-2 px-2">
+      <div class="flex h-8 min-w-0 items-center gap-2 px-2">
         <span :class="isOnline ? 'text-simActiveButton' : 'opacity-60'">●</span>
         <button
-          class="shrink-0"
+          class="shrink-0 text-xs"
           @click="isOnline ? disconnect() : connectToPeerJsServer(requestedRoomId)"
         >
-          {{ isOnline ? 'ONLINE' : 'OFFLINE' }}
+          {{ isOnline ? 'Online' : 'Offline' }}
         </button>
-        <span class="min-w-0 truncate font-medium">ROOM {{ classroomRoomId || '—' }}</span>
-        <span v-if="displayname" class="min-w-0 truncate opacity-60">· {{ displayname }}</span>
+        <span v-if="isInstructor && isOnline" class="min-w-0 truncate">· {{ participantRecords.length }} peers</span>
         <wButton
           v-if="isInstructor"
           class="ml-auto h-5 shrink-0"
@@ -30,11 +29,28 @@
         />
         <button
           class="px-1 hover:text-panelActive focus-visible:outline focus-visible:outline-1 focus-visible:outline-panelActive"
-          title="Connection settings"
+          title="Classroom settings"
+          aria-label="Classroom settings"
+          :aria-expanded="connectionSettingsOpen"
           @click="connectionSettingsOpen = !connectionSettingsOpen"
         >
           {{ connectionSettingsOpen ? '×' : '⋯' }}
         </button>
+      </div>
+
+      <div id="classroom-shortcuts" popover="auto" class="shortcut-help" aria-labelledby="classroom-shortcuts-title" @keydown.stop>
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <strong id="classroom-shortcuts-title">Keyboard shortcuts</strong>
+          <button type="button" popovertarget="classroom-shortcuts" popovertargetaction="hide" class="command-button h-6 w-6" aria-label="Close keyboard shortcuts">×</button>
+        </div>
+        <p class="mb-2">Instructor shortcuts work while connected and focused in Classroom, outside text fields.</p>
+        <dl class="shortcut-list">
+          <template v-for="shortcut in classroomShortcuts" :key="shortcut.keys">
+            <dt><kbd>{{ shortcut.keys }}</kbd></dt><dd>{{ shortcut.action }}</dd>
+          </template>
+        </dl>
+        <p class="mt-3">Assign, Unassign and Message affect selected peers, or the focused peer if none are selected.</p>
+        <p class="mt-2">In the lesson picker: ↑ / ↓ choose a lesson, Enter assigns it, Esc cancels.</p>
       </div>
 
       <form
@@ -66,18 +82,16 @@
       >
         <label
           class="flex items-center gap-1"
-          title="Script debriefs share lesson evidence with the configured AI provider. Policy changes apply to new requests."
+          title="Feedback debriefs use lesson evidence. Policy changes apply to new requests."
         >
-          Script AI
+          Feedback
           <select v-model="aiPolicy" class="h-5 bg-simInputBackground px-1 text-secondary">
-            <option value="off">Off</option>
-            <option value="review">Review before sending</option>
-            <option value="automatic">Auto-send</option>
+            <option value="off">OFF</option>
+            <option value="review">REVIEW</option>
+            <option value="automatic">AUTO</option>
           </select>
         </label>
-        <span class="text-xs"
-          >{{ feedbackProviderConfig.provider }} · {{ aiJobIndex.pendingCount }} pending</span
-        >
+        <span class="text-xs">{{ aiJobIndex.pendingCount }} pending</span>
       </div>
 
       <div v-if="connectionSettingsOpen" class="grid gap-1 bg-panelHeaderBackground p-2">
@@ -158,7 +172,7 @@
         :disabled="!actionTargetIds.length"
         @click="openExercisePalette()"
       >
-        Assign exercise
+        Assign exercise <kbd class="ml-1 opacity-70">A</kbd>
       </button>
       <button
         class="command-button"
@@ -187,9 +201,9 @@
         class="fixed bottom-8 right-2 z-[60] min-w-36 bg-panelContentBackground p-1 shadow-lg ring-1 ring-panelBorder"
       >
         <button class="menu-command" :disabled="!targetHaveAssignments" @click="unassignExercise">
-          Unassign
+          Unassign <kbd class="float-right opacity-70">U</kbd>
         </button>
-        <button class="menu-command" @click="openMessageComposer()">Message</button>
+        <button class="menu-command" @click="openMessageComposer()">Message <kbd class="float-right opacity-70">M</kbd></button>
         <button class="menu-command" @click="exportSession">Export session</button>
       </div>
 
@@ -220,15 +234,21 @@
       v-if="isInstructor && isOnline"
       class="classroom-roster order-2 flex min-h-24 flex-1 flex-col overflow-hidden font-panelFont"
     >
-      <div class="flex h-7 shrink-0 items-center gap-2 px-2">
-        <span class="w-20 shrink-0 font-medium">
+      <div class="flex items-center justify-between gap-2 px-2 pt-3 pb-1 font-medium">
+        <span>
           {{ selectedPeerIds.length ? `${selectedPeerIds.length} SELECTED` : 'PEERS' }}
         </span>
+        <button class="command-button" :aria-pressed="rosterFilter === 'unassigned'" @click="rosterFilter = rosterFilter === 'unassigned' ? 'all' : 'unassigned'">
+          {{ unassignedPeerCount }} unassigned
+        </button>
+      </div>
+      <div class="flex h-7 shrink-0 items-center gap-2 px-2">
         <input
           ref="rosterSearchRef"
           v-model="rosterSearch"
           class="h-5 min-w-20 flex-1 border border-simElementBorder bg-simInputBackground px-2 text-secondary outline-none focus:border-panelActive"
-          placeholder="Search / filter..."
+          placeholder="Search peers..."
+          aria-label="Search peers"
           @keydown.esc.stop.prevent="clearRosterSearch"
           @keydown.down.prevent="moveRosterFocus(1)"
           @keydown.up.prevent="moveRosterFocus(-1)"
@@ -242,7 +262,8 @@
           class="h-5 max-w-24 shrink-0 bg-primary px-1 text-secondary outline-none"
           title="Filter peers"
         >
-          <option value="all">ALL {{ participantRecords.length }}</option>
+          <option value="all">All</option>
+          <option value="unassigned">Unassigned</option>
           <option value="active">ACTIVE {{ activeExerciseCount }}</option>
           <option value="hand">HAND {{ raisedHandCount }}</option>
           <option value="overdue">OVERDUE {{ overdueCount }}</option>
@@ -250,38 +271,21 @@
       </div>
       <div class="roster-body flex min-h-0 flex-1 flex-col overflow-hidden">
         <div class="roster-list min-h-0 flex-1 overflow-auto">
-          <section v-for="group in participantExerciseGroups" :key="group.key">
-            <div class="roster-group-heading">
-              <button
-                class="flex min-w-0 flex-1 items-center gap-2 text-left"
-                :aria-expanded="!collapsedExerciseGroups.has(group.key)"
-                @click="toggleExerciseGroup(group.key)"
-              >
-                <span aria-hidden="true">{{
-                  collapsedExerciseGroups.has(group.key) ? '▸' : '▾'
-                }}</span>
-                <span class="min-w-0 flex-1 truncate font-medium">{{ group.label }}</span>
-                <span class="shrink-0">{{ group.participants.length }} peers</span>
-              </button>
-              <button
-                v-if="group.key === 'unassigned'"
-                class="command-button"
-                @click="
-                  openExercisePalette(
-                    undefined,
-                    group.participants.map((p) => p.peerId),
-                  )
-                "
-              >
-                Assign lesson
-              </button>
-            </div>
-            <template
-              v-for="participant in collapsedExerciseGroups.has(group.key)
-                ? []
-                : group.participants"
-              :key="participant.peerId"
-            >
+          <table class="peer-table" aria-label="Classroom peers">
+            <colgroup>
+              <col class="peer-column" /><col class="lesson-column" /><col />
+              <col class="status-column" /><col class="latency-column" /><col class="details-column" />
+            </colgroup>
+          <thead class="roster-columns"><tr>
+            <th scope="col">Peer</th>
+            <th scope="col" class="roster-lesson-heading">Lesson</th>
+            <th scope="col">Progress</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="roster-latency-heading text-right">Latency</th>
+            <th scope="col"><span class="sr-only">Details</span></th>
+          </tr></thead>
+          <tbody>
+            <template v-for="participant in visibleParticipantRows" :key="participant.peerId">
               <ClassroomPeerRow
                 :ref="(element) => setRosterRowRef(element, participant.peerId)"
                 :peer-id="participant.peerId"
@@ -296,16 +300,18 @@
                 @open-details="openPeerDetails"
                 @close-details="closePeerDetails"
                 @toggle-details="togglePeerDetails"
+                @assign-lesson="openExercisePalette"
               />
 
-              <section
+              <tr
                 v-if="detailsPeerId === participant.peerId"
                 :ref="setRosterDetailRef"
-                class="roster-detail flex max-h-72 flex-col overflow-hidden border-y border-panelBorder bg-panelHeaderBackground text-secondary"
+                class="roster-detail text-secondary"
               >
+                <td colspan="6" class="p-0"><div class="roster-detail-content flex max-h-72 min-h-0 flex-col overflow-hidden">
                 <div class="flex min-h-7 items-center gap-1 px-2">
                   <span class="min-w-0 flex-1 truncate font-medium text-secondary">
-                    Peer details
+                    {{ participant.peer.metadata.callsign || participant.peer.metadata.displayName }} · Peer details
                   </span>
                   <button
                     class="command-button"
@@ -408,21 +414,20 @@
                         !participant.peer.conn.open ||
                         !participant.peer.exercise.checkpoints.length
                       "
-                      :title="`Shares lesson evidence with ${feedbackProviderConfig.provider}`"
+                      title="Shares lesson evidence for feedback"
                       @click="suggestPeerFeedback(participant.peerId)"
                     >
                       Suggest feedback
                     </button>
-                    <span>{{ feedbackProviderConfig.provider }}</span>
                   </div>
                   <section
                     v-if="visibleAIJobs.length"
-                    aria-label="AI debriefs"
+                    aria-label="Feedback debriefs"
                     class="py-1 text-secondary"
                   >
                     <article v-for="job in visibleAIJobs" :key="job.id" class="py-1">
                       <div role="status">
-                        AI ·
+                        Feedback ·
                         {{
                           job.state === 'finished'
                             ? job.result?.status
@@ -500,9 +505,12 @@
                     </span>
                   </div>
                 </div>
-              </section>
+                </div>
+                </td>
+              </tr>
             </template>
-          </section>
+          </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -664,6 +672,18 @@ const props = defineProps<{ accountName?: string }>()
 defineOptions({ inheritAttrs: false })
 
 const isDevelopment = import.meta.env.DEV
+const classroomShortcuts = [
+  { keys: '↑ / ↓', action: 'Previous / next peer' },
+  { keys: '→ / ←', action: 'Open / close details' },
+  { keys: 'Space', action: 'Toggle peer selection' },
+  { keys: '/', action: 'Peer search' },
+  { keys: 'Shift+A', action: 'Select all peers' },
+  { keys: 'A', action: 'Assign lesson' },
+  { keys: 'U', action: 'Unassign lesson' },
+  { keys: 'M', action: 'Message peers' },
+  { keys: 'S', action: 'Start lessons' },
+  { keys: 'Esc', action: 'Close or clear current view' },
+]
 const baseUrl = window.location.origin
 let selfPeer: PeerJS.Peer | undefined
 let instructorConnection: PeerJS.DataConnection | undefined
@@ -694,7 +714,7 @@ const selectedPeerIds = ref<string[]>([])
 const focusedPeerId = ref('')
 const detailsPeerId = ref('')
 const rosterSearch = ref('')
-const rosterFilter = ref<'all' | 'active' | 'hand' | 'overdue'>('all')
+const rosterFilter = ref<'all' | 'unassigned' | 'active' | 'hand' | 'overdue'>('all')
 const batchMenuOpen = ref(false)
 const rosterSearchRef = ref<HTMLInputElement | null>(null)
 const exercisePaletteOpen = ref(false)
@@ -736,6 +756,14 @@ const dismissPeerDetailsOnOutsideClick = (event: PointerEvent) => {
   if (event.target.closest('.peer-details-toggle')) return
   detailsPeerId.value = ''
 }
+const clearFocusedPeerOnOutsideClick = (event: PointerEvent) => {
+  if (!(event.target instanceof Element)) return
+  if (event.target.closest('.classroom-roster-row, .roster-detail')) return
+  focusedPeerId.value = ''
+  if (document.activeElement instanceof HTMLElement && document.activeElement.classList.contains('classroom-roster-row')) {
+    document.activeElement.blur()
+  }
+}
 const overdueCount = computed(
   () =>
     Object.values(incomingConns.value).filter((peer) => peer.exercise?.status === 'overdue').length,
@@ -757,6 +785,7 @@ const participantRecords = computed(() => {
 })
 const filteredParticipants = computed(() => {
   const statusFiltered = participantRecords.value.filter(({ peer }) => {
+    if (rosterFilter.value === 'unassigned') return !peer.exercise
     if (rosterFilter.value === 'active') return peer.exercise?.status === 'running'
     if (rosterFilter.value === 'hand') return peer.handState === 'raised'
     if (rosterFilter.value === 'overdue') return peer.exercise?.status === 'overdue'
@@ -779,65 +808,9 @@ const filteredParticipants = computed(() => {
     .search(rosterSearch.value)
     .map((result) => result.item)
 })
-const collapsedExerciseGroups = ref(new Set<string>())
-const toggleExerciseGroup = (key: string) => {
-  if (collapsedExerciseGroups.value.has(key)) collapsedExerciseGroups.value.delete(key)
-  else {
-    collapsedExerciseGroups.value.add(key)
-    if (
-      participantExerciseGroups.value
-        .find((group) => group.key === key)
-        ?.participants.some((participant) => participant.peerId === detailsPeerId.value)
-    )
-      closePeerDetails()
-  }
-}
-const participantExerciseGroups = computed(() => {
-  const groups = new Map<
-    string,
-    {
-      key: string
-      label: string
-      participants: Array<(typeof filteredParticipants.value)[number] & { rosterIndex: number }>
-    }
-  >()
-
-  for (const participant of filteredParticipants.value) {
-    const key = participant.peer.exercise ? 'assigned' : 'unassigned'
-    const group = groups.get(key) || {
-      key,
-      label: key === 'assigned' ? 'Assigned' : 'Unassigned',
-      participants: [],
-    }
-    group.participants.push({ ...participant, rosterIndex: 0 })
-    groups.set(key, group)
-  }
-
-  const sortedGroups = [...groups.values()].sort((a, b) => {
-    if (a.key === 'unassigned') return -1
-    if (b.key === 'unassigned') return 1
-    return a.label.localeCompare(b.label)
-  })
-  let rosterIndex = 0
-  for (const group of sortedGroups) {
-    group.participants.sort((a, b) => {
-      const name = (p: typeof a) =>
-        p.peer.metadata.callsign || p.peer.metadata.displayName || p.peerId
-      return (
-        name(a).localeCompare(name(b), undefined, { numeric: true, sensitivity: 'base' }) ||
-        a.peerId.localeCompare(b.peerId)
-      )
-    })
-    for (const participant of group.participants) {
-      participant.rosterIndex = collapsedExerciseGroups.value.has(group.key) ? -1 : rosterIndex++
-    }
-  }
-  return sortedGroups
-})
+const unassignedPeerCount = computed(() => participantRecords.value.filter(({ peer }) => !peer.exercise).length)
 const visibleParticipantRows = computed(() =>
-  participantExerciseGroups.value.flatMap((group) =>
-    collapsedExerciseGroups.value.has(group.key) ? [] : group.participants,
-  ),
+  filteredParticipants.value.map((participant, rosterIndex) => ({ ...participant, rosterIndex })),
 )
 const exerciseResults = computed(() => {
   if (!exerciseQuery.value.trim()) return exerciseModules
@@ -923,6 +896,7 @@ onMounted(() => {
   // When the user closes the tab, disconnect
   window.addEventListener('beforeunload', disconnect)
   document.addEventListener('pointerdown', dismissPeerDetailsOnOutsideClick)
+  document.addEventListener('pointerdown', clearFocusedPeerOnOutsideClick)
   document.addEventListener('pointerdown', recordFocusInteraction, true)
   document.addEventListener('keydown', recordFocusInteraction, true)
   healthTimer = setInterval(() => {
@@ -950,6 +924,7 @@ onUnmounted(() => {
   disconnect()
   window.removeEventListener('beforeunload', disconnect)
   document.removeEventListener('pointerdown', dismissPeerDetailsOnOutsideClick)
+  document.removeEventListener('pointerdown', clearFocusedPeerOnOutsideClick)
   document.removeEventListener('pointerdown', recordFocusInteraction, true)
   document.removeEventListener('keydown', recordFocusInteraction, true)
   if (healthTimer) clearInterval(healthTimer)
@@ -1514,7 +1489,6 @@ const openPeerDetails = (peerId: string) => {
   focusPeer(peerId)
   detailsPeerId.value = peerId
   restoreRosterFocus(peerId)
-  nextTick(() => rosterDetailRef.value?.scrollIntoView({ block: 'nearest' }))
 }
 
 const closePeerDetails = () => {
@@ -1711,6 +1685,14 @@ const handleClassroomKeydown = (event: KeyboardEvent) => {
   )
     return
   if (isEditableKeyboardTarget(event.target) || isEditableKeyboardTarget(document.activeElement)) {
+    return
+  }
+  if (event.key === '?') {
+    event.preventDefault()
+    const popover = document.getElementById('classroom-shortcuts') as
+      | (HTMLElement & { showPopover?: () => void })
+      | null
+    popover?.showPopover?.()
     return
   }
   if (event.key === 'ArrowDown' || (event.ctrlKey && event.key.toLowerCase() === 'n')) {
@@ -2050,7 +2032,7 @@ const assignExercise = async (targets: string[], detailsTargetPeerId = '') => {
   )
     return
   if (detailsTargetPeerId && sent.includes(detailsTargetPeerId)) {
-    openPeerDetails(detailsTargetPeerId)
+    restoreRosterFocus(detailsTargetPeerId)
   } else if (sent.length === results.length) {
     consumeActionSelection(sent)
   } else {
@@ -2324,8 +2306,61 @@ const trace = (text: string) => {
 </script>
 
 <style scoped>
+.shortcut-help {
+  margin: auto;
+  width: min(28rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  padding: 0.75rem;
+  background: rgb(var(--color-panelContentBackground));
+  color: rgb(var(--color-secondary));
+  border: 1px solid rgb(var(--color-panelBorder));
+  font: inherit;
+}
+.shortcut-list { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.5rem 0.75rem; }
+.shortcut-list dt { white-space: nowrap; }
+.shortcut-help kbd { font: inherit; font-weight: 600; }
 .classroom-roster {
   container-type: inline-size;
+  margin-top: 0.5rem;
+  border-top: 1px solid rgb(var(--color-panelBorder));
+}
+.roster-list {
+  scrollbar-gutter: stable;
+}
+
+.peer-table { width: 100%; table-layout: fixed; border-collapse: collapse; font: inherit; }
+.roster-detail-content {
+  margin: 0.25rem 0.25rem 0.75rem 1.25rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid rgb(var(--color-simElementBorder));
+}
+.peer-column { width: 22%; }
+.lesson-column { width: 23%; }
+.status-column { width: 6rem; }
+.latency-column { width: 3.5rem; }
+.details-column { width: 2rem; }
+.roster-columns th { padding: 4px; text-align: left; font-weight: normal; }
+.roster-columns th.text-right { text-align: right; }
+.roster-columns {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: rgb(var(--color-panelContentBackground));
+  font-size: inherit;
+  color: rgb(var(--color-secondary) / 0.75);
+  border-bottom: 1px solid rgb(var(--color-panelBorder));
+}
+
+@container (max-width: 38rem) {
+  .lesson-column { display: none; }
+  .peer-column { width: 27%; }
+  .roster-lesson-heading { display: none; }
+}
+@container (max-width: 28rem) {
+  .latency-column { display: none; }
+  .status-column { width: 5rem; }
+  .roster-latency-heading { display: none; }
 }
 
 .command-button {
@@ -2368,11 +2403,6 @@ const trace = (text: string) => {
   text-decoration-thickness: 2px;
 }
 
-.roster-group-heading {
-  @apply flex min-h-7 w-full flex-wrap items-center gap-x-2 gap-y-0.5 border-y border-panelBorder bg-panelHeaderBackground px-2 py-1 text-left text-secondary;
-}
-
-.roster-group-heading button:focus-visible,
 .roster-detail summary:focus-visible,
 .command-button:focus-visible {
   outline: 1px solid rgb(var(--color-panelActive));

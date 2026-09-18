@@ -161,9 +161,7 @@ function rosterFixture() {
   const names = [
     'participantRecords',
     'filteredParticipants',
-    'collapsedExerciseGroups',
-    'toggleExerciseGroup',
-    'participantExerciseGroups',
+    'unassignedPeerCount',
     'visibleParticipantRows',
     'aiJobIndex',
     'visibleAIJobs',
@@ -236,23 +234,49 @@ test('running exercise uses a static IN PROGRESS label, updated when stopped', a
     const peer = f.state.incomingConns.value['peer-0']
     peer.exercise.status = 'running'
     await Vue.nextTick()
-    assert.match(f.row('peer-0').props.class, /text-simActiveButton/)
+    assert.match(f.row('peer-0').props.class, /text-secondary/)
     const status = findElement(f.row('peer-0'), (node) =>
       node.props.class?.includes('roster-exercise-status'),
     )
     assert.equal(status.type, 'span')
-    assert.match(textContent(status), /IN PROGRESS/)
+    assert.match(status.props.class, /bg-simActiveButton/)
+    assert.match(textContent(status), /In progress/)
     assert.doesNotMatch(textContent(status), /▶/)
     const dot = findElement(status, (node) => node.props.class?.includes('roster-running-dot'))
     assert.equal(dot, undefined)
     peer.exercise.status = 'stopped'
     await Vue.nextTick()
-    assert.match(textContent(status), /STOP/)
+    assert.match(textContent(status), /Stopped/)
     assert.equal(
       findElement(status, (node) => node.props.class?.includes('roster-running-dot')),
       undefined,
     )
     assert.doesNotMatch(sfc('ClassroomPeerRow').styles[0].content, /roster-running-pulse/)
+  } finally {
+    f.app.unmount()
+  }
+})
+
+test('latest checkpoint shows its own timestamp and updates in the peer row', async () => {
+  const f = rosterFixture()
+  try {
+    const peer = f.state.incomingConns.value['peer-0']
+    peer.exercise.checkpoints = []
+    await Vue.nextTick()
+    const progress = findElement(f.row('peer-0'), (node) =>
+      node.props.class?.includes('roster-progress'),
+    )
+    assert.match(textContent(progress), /No progress/)
+    const timestamp = new Date(2026, 8, 18, 14, 32).getTime()
+    peer.exercise.checkpoints.push({ timestamp, message: 'Bank 30°' })
+    await Vue.nextTick()
+    assert.match(textContent(progress), /Bank 30°/)
+    assert.match(textContent(progress), /14:32/)
+    const time = findElement(progress, (node) => node.type === 'time')
+    assert.equal(time.props.datetime, new Date(timestamp).toISOString())
+    peer.lastSeen = timestamp + 60_000
+    await Vue.nextTick()
+    assert.match(textContent(progress), /14:32/)
   } finally {
     f.app.unmount()
   }
@@ -269,7 +293,7 @@ test('ping updates retain a fixed-width tabular field', async () => {
       assert.equal(textContent(ping), `${latency}ms`)
     }
     const css = sfc('ClassroomPeerRow').styles[0].content
-    assert.match(css, /\.roster-ping\s*\{[^}]*width: 7ch;/)
+    assert.match(sfc('ClassRoom').styles[0].content, /\.latency-column\s*\{\s*width: 3.5rem;/)
     assert.match(css, /\.roster-ping\s*\{[^}]*font-variant-numeric: tabular-nums;/)
   } finally {
     f.app.unmount()
@@ -296,7 +320,7 @@ test('one peer update does not render the parent roster or the other 29 peer row
   }
 })
 
-test('AI badges are indexed once and only the changed peer badge rerenders', async () => {
+test('feedback badges are indexed once and only the changed peer badge rerenders', async () => {
   const f = rosterFixture()
   try {
     f.state.aiJobs.value.push(job('peer-0'), job('peer-1', 'finished'))
@@ -313,18 +337,18 @@ test('AI badges are indexed once and only the changed peer badge rerenders', asy
     f.state.aiJobs.value[0].state = 'review'
     await Vue.nextTick()
     assert.deepEqual([...f.updates], [['peer-0', 2]])
-    assert.match(textContent(f.row('peer-0')), /AI review/)
+    assert.match(textContent(f.row('peer-0')), /Feedback review/)
     f.state.aiJobs.value[0].state = 'finished'
     await Vue.nextTick()
     assert.equal(f.state.aiJobIndex.value.pendingCount, 0)
     assert.equal(f.state.pendingAI('peer-0'), false)
-    assert.doesNotMatch(textContent(f.row('peer-0')), /AI review|AI pending/)
+    assert.doesNotMatch(textContent(f.row('peer-0')), /Feedback review|Feedback pending/)
   } finally {
     f.app.unmount()
   }
 })
 
-test('assignment sections stay name-sorted and preserve selection and details when peers move', async () => {
+test('assignment changes preserve peer order, selection and details in the continuous table', async () => {
   const f = rosterFixture()
   try {
     const peer = f.state.incomingConns.value['peer-2']
@@ -333,18 +357,17 @@ test('assignment sections stay name-sorted and preserve selection and details wh
     f.state.detailsPeerId.value = 'peer-2'
     peer.exercise = undefined
     await Vue.nextTick()
-    assert.deepEqual(
-      f.state.participantExerciseGroups.value.map((g) => g.key),
-      ['unassigned', 'assigned'],
-    )
-    assert.match(textContent(f.row('peer-2')), /No lesson assigned/)
+    assert.equal(f.state.unassignedPeerCount.value, 1)
+    assert.equal(f.row('peer-2').type, 'tr')
+    const assign = findElement(f.row('peer-2'), (node) => node.props.class?.includes('assign-lesson'))
+    assert.match(assign.props.class, /command-button/)
+    assert.match(textContent(assign), /Assign/)
+    assert.match(textContent(f.row('peer-2')), /Unassigned/)
     assert.equal(f.row('peer-2').props['aria-selected'], true)
     peer.exercise = { ...exercise, name: 'Different lesson' }
     await Vue.nextTick()
-    assert.deepEqual(
-      f.state.participantExerciseGroups.value.map((g) => g.key),
-      ['assigned'],
-    )
+    assert.equal(f.state.unassignedPeerCount.value, 0)
+    assert.equal(findElement(f.row('peer-2'), (node) => node.props.class?.includes('assign-lesson')), undefined)
     assert.equal(f.state.detailsPeerId.value, 'peer-2')
     assert.equal(f.row('peer-2').props['aria-selected'], true)
     assert.match(textContent(f.row('peer-2')), /Different lesson/)
@@ -368,7 +391,7 @@ test('assignment status and selection leave unchanged row props stable', async (
     f.state.incomingConns.value['peer-0'].exercise.status = 'completed'
     await Vue.nextTick()
     assert.deepEqual([...f.updates], [['peer-0', 1]])
-    assert.match(textContent(f.row('peer-0')), /DONE/)
+    assert.match(textContent(f.row('peer-0')), /Done/)
     f.state.selectedPeerIds.value = ['peer-2']
     await Vue.nextTick()
     assert.equal(f.row('peer-2').props['aria-selected'], true)
@@ -403,6 +426,7 @@ test('row clicks, checkboxes and details arrows retain their peer identity and f
     await Vue.nextTick()
     assert.equal(f.document.activeElement, row)
     assert.equal(f.state.focusedPeerId.value, 'peer-2')
+    assert.equal(f.state.detailsPeerId.value, '', 'row click only focuses the peer')
     findElement(row, (node) => node.type === 'input').props.onClick(event())
     await Vue.nextTick()
     assert.deepEqual(f.state.selectedPeerIds.value, ['peer-2'])
@@ -449,7 +473,8 @@ test('the existing health clock still refreshes stale connections and raised-han
     t.mock.timers.tick(20_000)
     f.state.clock.value = Date.now()
     await Vue.nextTick()
-    assert.match(textContent(f.row('peer-0')), /STALE\s*0:20/)
+    assert.match(textContent(f.row('peer-0')), /HAND 0:20/)
+    assert.match(textContent(f.row('peer-0')), /STALE/)
     peer.lastSeen = Date.now()
     await Vue.nextTick()
     assert.doesNotMatch(textContent(f.row('peer-0')), /STALE/)
