@@ -75,6 +75,7 @@ function fixture() {
     window: { removeEventListener() {} },
     document: { removeEventListener() {} },
     dismissPeerDetailsOnOutsideClick() {},
+    clearFocusedPeerOnOutsideClick() {},
     recordFocusInteraction() {},
     healthTimer: undefined,
     clearInterval() {},
