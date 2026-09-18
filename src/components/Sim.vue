@@ -127,9 +127,9 @@
               @remove-plot="simFunctions.removePlot"
             />
           </template>
-          <template #Airflow>
+          <template #Airflow="{ active }">
             <Airflow
-              v-if="sim_module_loaded"
+              v-if="sim_module_loaded && active"
               class="h-full w-full"
               :sim-props="allSimProps"
               :lift-coefficient="airflowState.liftCoefficient"
