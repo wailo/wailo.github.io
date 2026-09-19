@@ -489,6 +489,7 @@
             <div class="flex flex-col h-full w-full">
               <Accounts
                 v-if="sim_module_loaded"
+                :class="{ 'order-last': isAccountAuthenticated }"
                 @onLogin="
                   (url: string, authToken: string, name: string) => {
                     isAccountAuthenticated = true

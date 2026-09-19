@@ -28,15 +28,15 @@ const handleLogout = () => {
 
 <template>
   <div class="w-full min-w-0 text-secondary">
-    <div class="flex h-6 min-w-0 items-center gap-2 bg-panelHeaderBackground px-1">
-      <span :class="isLoggedIn ? 'text-simActiveButton' : 'opacity-60'" aria-hidden="true">●</span>
-      <span class="opacity-60">AUTH</span>
-      <span class="min-w-0 flex-1 truncate">
+    <div class="flex h-6 min-w-0 items-center gap-2 px-2 text-xs">
+      <span class="opacity-70">Account</span>
+      <span class="min-w-0 flex-1 truncate opacity-70">
         {{ isLoggedIn ? accountName || 'ACCOUNT' : 'GUEST MODE' }}
       </span>
       <button
         class="px-1 hover:text-panelActive focus-visible:outline focus-visible:outline-1 focus-visible:outline-panelActive"
         :title="settingsOpen ? 'Close account controls' : 'Open account controls'"
+        aria-label="Account settings"
         :aria-expanded="settingsOpen"
         @click="settingsOpen = !settingsOpen"
       >
