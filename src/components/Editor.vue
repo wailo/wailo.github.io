@@ -14,57 +14,114 @@
     </div>
 
     <div v-if="viewMode === 'lessons'" class="flex min-h-0 flex-1 flex-col">
-      <div class="flex h-6 shrink-0 items-center border-b border-simElementBorder px-1">
-        <span class="px-1 opacity-60">/</span>
+      <div
+        class="flex min-h-6 shrink-0 flex-wrap items-center gap-x-1 border-b border-simElementBorder px-1"
+      >
+        <div class="flex items-center" role="group" aria-label="Filter lessons by source">
+          <button
+            class="library-filter"
+            :aria-pressed="libraryTab === 'all'"
+            @click="libraryTab = 'all'"
+          >
+            ALL
+          </button>
+          <button
+            class="library-filter"
+            :aria-pressed="libraryTab === 'mine'"
+            @click="libraryTab = 'mine'"
+          >
+            CUSTOM
+          </button>
+          <button
+            class="library-filter"
+            :aria-pressed="libraryTab === 'demo'"
+            @click="libraryTab = 'demo'"
+          >
+            DEMO
+          </button>
+        </div>
+        <div class="ml-auto flex items-center">
+          <button class="library-action" title="Create a new lesson" @click="openPlayground">
+            + NEW
+          </button>
+          <button
+            class="library-action"
+            title="Generate a lesson with AI"
+            @click="openLessonGenerator"
+          >
+            <span aria-hidden="true">✦</span> GENERATE
+          </button>
+        </div>
+      </div>
+      <div
+        class="mx-1 my-0.5 flex h-5 shrink-0 items-center border border-simElementBorder px-1 focus-within:border-panelActive"
+      >
         <input
           v-model="lessonFilter"
           type="search"
-          placeholder="Search title or category"
+          aria-label="Search lessons"
+          placeholder="Search lessons…"
           class="min-w-0 flex-1 bg-transparent outline-none placeholder:text-secondary/50"
         />
         <button
-          class="px-2 opacity-70 hover:text-panelActive hover:opacity-100"
-          title="New playground"
-          @click="openPlayground"
+          v-if="libraryTab !== 'demo' && lessonAccountId"
+          class="library-action"
+          :disabled="libraryStatus === 'loading'"
+          title="Refresh custom lessons"
+          aria-label="Refresh custom lessons"
+          @click="refreshLibrary"
         >
-          + NEW
+          ↻
         </button>
       </div>
-
-      <div class="flex shrink-0 justify-end border-b border-simElementBorder px-1 py-1">
-        <button class="action-button inline-flex items-center gap-1" @click="openLessonGenerator">
-          <span aria-hidden="true">✦</span> Generate lesson <span class="ai-badge">AI</span>
-        </button>
+      <div v-if="libraryTab === 'mine' && !lessonAccountId" class="p-2 opacity-70" role="status">
+        Sign in to create and save your own lessons. Demos are available without an account.
+      </div>
+      <div
+        v-else-if="libraryTab !== 'demo' && libraryStatus === 'loading'"
+        class="px-2 py-1 opacity-60"
+        role="status"
+      >
+        Loading your lessons…
+      </div>
+      <div v-else-if="libraryTab !== 'demo' && libraryStatus === 'error'" class="p-2" role="alert">
+        Could not load your lessons. Use Refresh to retry. Demos remain available.
       </div>
 
       <div class="min-h-0 flex-1 overflow-y-auto">
-        <div v-if="filteredLessons.length === 0" class="p-2 opacity-60">NO MATCHING LESSONS</div>
-        <section v-for="group in filteredLessonGroups" :key="group.category" class="mb-1">
+        <div
+          v-if="
+            filteredLessons.length === 0 && (libraryTab !== 'mine' || libraryStatus === 'ready')
+          "
+          class="p-2 opacity-60"
+        >
+          {{
+            lessonFilter.trim() || libraryTab !== 'mine'
+              ? 'No matching lessons.'
+              : 'No saved lessons yet. Create one or save a copy of a demo.'
+          }}
+        </div>
+        <section v-for="group in filteredLessonGroups" :key="group.category">
           <button
-            class="flex h-5 w-full items-center justify-between px-1 text-left opacity-75 hover:bg-simInputBackground/40 hover:opacity-100"
+            class="library-group flex h-5 w-full items-center px-1 text-left opacity-70"
+            :aria-expanded="isLessonGroupOpen(group.category)"
+            :title="`${completedLessonsIn(group.lessons)} of ${group.lessons.length} completed`"
             @click="toggleLessonGroup(group.category)"
           >
-            <span>
-              {{ isLessonGroupOpen(group.category) ? '▾' : '▸' }} {{ group.category }}
-              <span class="opacity-60"
-                >[{{ completedLessonsIn(group.lessons) }}/{{ group.lessons.length }}]</span
-              >
-            </span>
+            <span> {{ isLessonGroupOpen(group.category) ? '▾' : '▸' }} {{ group.category }} </span>
           </button>
           <div v-show="isLessonGroupOpen(group.category)" class="ml-3">
             <template v-for="lesson in group.lessons" :key="lesson.id">
               <div
-                class="grid h-5 w-full cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-1 px-1 text-left leading-tight hover:bg-simInputBackground/60"
-                :class="selectedFile === lesson.name ? 'bg-panelHeaderBackground' : ''"
-                role="button"
-                tabindex="0"
-                @click="selectLesson(lesson)"
-                @keydown.enter.prevent="selectLesson(lesson)"
-                @keydown.space.prevent.stop="toggleLessonQueue(lesson)"
+                class="lesson-row grid h-5 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-1 px-1 text-left leading-tight hover:bg-simInputBackground/40"
+                :class="selectedFile === lesson.id ? 'bg-panelHeaderBackground' : ''"
               >
-                <span
-                  class="flex min-w-0 items-center gap-1"
-                  :class="selectedFile === lesson.name ? 'text-panelActive' : 'text-secondary'"
+                <button
+                  class="lesson-title flex h-full min-w-0 items-center gap-1 text-left"
+                  :title="`${lesson.name} · ${lesson.recordId ? 'Custom lesson' : 'Demo'}`"
+                  :aria-label="`${lesson.name}, ${lesson.recordId ? 'custom lesson' : 'demo'}`"
+                  @click="selectLesson(lesson)"
+                  :class="selectedFile === lesson.id ? 'text-panelActive' : 'text-secondary'"
                 >
                   <span class="w-4 shrink-0 text-center text-simActiveButton">
                     <span
@@ -77,7 +134,7 @@
                       >✓</span
                     >
                   </span>
-                  <span class="truncate">{{ lesson.name }}</span>
+                  <span class="min-w-0 flex-1 truncate">{{ lesson.name }}</span>
                   <span
                     v-if="
                       runStatus === 'RUNNING' &&
@@ -86,11 +143,15 @@
                     class="shrink-0 text-simActiveButton text-xs"
                     >In progress</span
                   >
-                </span>
-                <span class="flex items-center gap-1">
+                  <span v-if="libraryTab === 'all'" class="w-12 shrink-0 text-right opacity-40">{{
+                    lesson.recordId ? 'Custom' : 'Demo'
+                  }}</span>
+                </button>
+                <span class="flex shrink-0 items-center gap-1">
                   <button
                     class="row-action"
                     type="button"
+                    :class="historyLessonId === lesson.id ? 'is-active' : ''"
                     :aria-label="`History for ${lesson.name}`"
                     :title="`History for ${lesson.name}`"
                     :aria-expanded="historyLessonId === lesson.id"
@@ -99,6 +160,22 @@
                     @keydown.stop
                   >
                     <span aria-hidden="true">◷</span>
+                  </button>
+                  <button
+                    class="queue-action"
+                    type="button"
+                    :class="queuePosition(lesson) ? 'is-queued' : ''"
+                    :title="queuePosition(lesson) ? 'Remove from queue' : 'Add to queue'"
+                    :aria-label="
+                      queuePosition(lesson)
+                        ? `Remove ${lesson.name} from queue`
+                        : `Add ${lesson.name} to queue`
+                    "
+                    :aria-pressed="Boolean(queuePosition(lesson))"
+                    :disabled="queuePlaying"
+                    @click.stop="toggleLessonQueue(lesson)"
+                  >
+                    {{ queuePosition(lesson) || '+' }}
                   </button>
                   <button
                     class="row-action"
@@ -117,22 +194,6 @@
                     @click.stop="runLesson(lesson)"
                   >
                     ▶
-                  </button>
-                  <button
-                    class="queue-action"
-                    type="button"
-                    :class="queuePosition(lesson) ? 'is-queued' : ''"
-                    :title="queuePosition(lesson) ? 'Remove from queue' : 'Add to queue'"
-                    :aria-label="
-                      queuePosition(lesson)
-                        ? `Remove ${lesson.name} from queue`
-                        : `Add ${lesson.name} to queue`
-                    "
-                    :aria-pressed="Boolean(queuePosition(lesson))"
-                    :disabled="queuePlaying"
-                    @click.stop="toggleLessonQueue(lesson)"
-                  >
-                    {{ queuePosition(lesson) || '+' }}
                   </button>
                   <button
                     class="row-action"
@@ -226,6 +287,80 @@
     </div>
 
     <div v-else class="relative flex min-h-0 flex-1 flex-col">
+      <div class="shrink-0 border-b border-simElementBorder p-1">
+        <div class="flex flex-wrap items-center gap-1">
+          <input
+            v-model="ModuleTitle"
+            aria-label="Lesson title"
+            maxlength="200"
+            placeholder="Lesson title"
+            class="min-w-24 flex-1 border border-simElementBorder bg-simInputBackground px-1"
+          />
+          <template v-if="lessonAccountId">
+            <button
+              class="action-button"
+              :disabled="savingLesson || loadingLesson || !ModuleTitle.trim()"
+              @click="saveLesson(false)"
+            >
+              {{
+                savingLesson
+                  ? 'Saving…'
+                  : loadedLesson
+                    ? 'Save'
+                    : selectedModule
+                      ? 'Save a copy'
+                      : 'Save to account'
+              }}
+            </button>
+            <button
+              v-if="loadedLesson"
+              class="action-button"
+              :disabled="savingLesson || loadingLesson || !ModuleTitle.trim()"
+              @click="saveLesson(true)"
+            >
+              Save a copy
+            </button>
+          </template>
+        </div>
+        <details class="mt-1">
+          <summary class="cursor-pointer opacity-70">Learning objectives and category</summary>
+          <label class="mt-1 block"
+            >Category<input
+              v-model="lessonCategory"
+              maxlength="100"
+              class="ml-1 border border-simElementBorder bg-simInputBackground px-1"
+          /></label>
+          <label class="mt-1 block"
+            >Learning objectives<textarea
+              v-model="lessonObjectives"
+              maxlength="5000"
+              rows="2"
+              class="block w-full resize-y border border-simElementBorder bg-simInputBackground p-1"
+            />
+          </label>
+        </details>
+        <div class="mt-1 flex flex-wrap items-center gap-1" role="status">
+          <span>{{
+            loadingLesson
+              ? 'Loading lesson…'
+              : saveMessage ||
+                (dirtyLesson
+                  ? 'Unsaved changes'
+                  : loadedLesson
+                    ? 'Saved to your account'
+                    : 'Local lesson')
+          }}</span>
+          <span v-if="!lessonAccountId" class="opacity-60">· Sign in to save to your account.</span>
+          <button
+            v-if="saveConflict"
+            class="action-button"
+            :disabled="savingLesson || loadingLesson"
+            @click="reloadSavedLesson"
+          >
+            Reload saved version
+          </button>
+        </div>
+      </div>
       <div class="min-h-0 flex-1">
         <LessonCodeEditor
           ref="codeEditor"
@@ -342,7 +477,7 @@
       <div class="flex h-8 shrink-0 items-center gap-1 border-t border-simElementBorder px-1">
         <button
           class="action-button w-16 shrink-0"
-          :disabled="!isScriptRunning && codeErrorCount > 0"
+          :disabled="!isScriptRunning && (codeErrorCount > 0 || loadingLesson)"
           :title="
             !isScriptRunning && codeErrorCount > 0 ? 'Fix code errors before running' : undefined
           "
@@ -414,6 +549,7 @@ import { createTrainingRecorder } from '../TrainingRecorder'
 import { trainingTransport } from '../Pocketbase/trainingTransport'
 import { pb } from '../Pocketbase/pocketbase'
 import { createLessonProgress } from '../LessonProgress'
+import { createLessonRepository, type SavedLesson } from '../LessonRepository'
 import type { CheckpointData, LessonAIRequest, LessonAIResponse } from '../ScriptContext'
 
 const LessonCodeEditor = defineAsyncComponent({
@@ -428,6 +564,15 @@ const LessonCodeEditor = defineAsyncComponent({
     ),
 })
 const loadLessonCompiler = () => import('../EditorScriptRuntime')
+const loadLessonValidator = () => import('../LessonScriptValidation')
+const lessonRepository = createLessonRepository(pb)
+const {
+  accountId: lessonAccountId,
+  lessons: savedLessons,
+  status: libraryStatus,
+  refresh: refreshLibrary,
+} = lessonRepository
+const libraryTab = ref<'all' | 'mine' | 'demo'>('all')
 
 const lessonRun = useLessonRun()
 const runStatus = lessonRun.status
@@ -540,7 +685,7 @@ const {
   byLesson: lessonProgress,
   refresh: refreshProgress,
   dispose: disposeProgress,
-} = createLessonProgress(pb, Object.values(importedNModuleTree).flat())
+} = createLessonProgress(pb, () => lessons.value)
 watch(viewMode, (mode) => {
   if (mode === 'lessons') void refreshProgress()
 })
@@ -571,6 +716,118 @@ const trainingRecorder = createTrainingRecorder(
 
 const executionResult = ref<string | null>(null)
 const code = ref(``)
+const loadedLesson = ref<SavedLesson | null>(null)
+const lessonObjectives = ref('')
+const lessonCategory = ref('')
+const savedSnapshot = ref(JSON.stringify(['', '', '', '']))
+const lessonSnapshot = () =>
+  JSON.stringify([ModuleTitle.value, lessonObjectives.value, lessonCategory.value, code.value])
+const dirtyLesson = computed(() => lessonSnapshot() !== savedSnapshot.value)
+const savingLesson = ref(false)
+const loadingLesson = ref(false)
+const saveMessage = ref('')
+const saveConflict = ref(false)
+let lessonLoadGeneration = 0
+let editorDocumentGeneration = 0
+const discardEdits = () => !dirtyLesson.value || window.confirm('Discard unsaved lesson changes?')
+const applyLesson = (
+  title: string,
+  source: string,
+  category = '',
+  objectives = '',
+  record: SavedLesson | null = null,
+  id = '',
+) => {
+  editorDocumentGeneration++
+  loadedLesson.value = record
+  selectedFile.value = id
+  ModuleTitle.value = title
+  lessonCategory.value = category
+  lessonObjectives.value = objectives
+  code.value = source
+  savedSnapshot.value = lessonSnapshot()
+  saveMessage.value = ''
+  saveConflict.value = false
+}
+const saveLesson = async (copy: boolean) => {
+  if (
+    savingLesson.value ||
+    loadingLesson.value ||
+    !lessonAccountId.value ||
+    !ModuleTitle.value.trim()
+  )
+    return
+  const document = editorDocumentGeneration
+  const snapshot = lessonSnapshot()
+  const draft = {
+    title: ModuleTitle.value,
+    objectives: lessonObjectives.value,
+    category: lessonCategory.value,
+    source: code.value,
+  }
+  savingLesson.value = true
+  saveMessage.value = ''
+  saveConflict.value = false
+  try {
+    const record = await lessonRepository.save(
+      draft,
+      copy ? undefined : (loadedLesson.value ?? undefined),
+    )
+    if (document !== editorDocumentGeneration) return
+    loadedLesson.value = record
+    selectedFile.value = `saved:${record.id}`
+    savedSnapshot.value = snapshot
+    saveMessage.value =
+      lessonSnapshot() === snapshot
+        ? 'Saved to your account'
+        : 'Saved. Newer edits are not saved yet.'
+    void refreshProgress()
+  } catch (error: any) {
+    if (document !== editorDocumentGeneration) return
+    saveConflict.value = error.status === 409
+    saveMessage.value = saveConflict.value
+      ? 'Saved elsewhere. Reload or save a copy to keep your changes.'
+      : 'Could not save. Your edits are still here; try again.'
+  } finally {
+    savingLesson.value = false
+  }
+}
+const reloadSavedLesson = async () => {
+  const record = loadedLesson.value
+  if (!record || !discardEdits()) return
+  await loadFileContent(
+    { id: `saved:${record.id}`, recordId: record.id, name: record.title, path: '' },
+    true,
+  )
+}
+watch(
+  [code, ModuleTitle, lessonObjectives, lessonCategory],
+  () => {
+    if (!saveConflict.value) saveMessage.value = ''
+  },
+  { flush: 'sync' },
+)
+watch(
+  lessonAccountId,
+  (_account, previousAccount) => {
+    lessonLoadGeneration++
+    editorDocumentGeneration++
+    loadingLesson.value = false
+    lessonQueue.value = []
+    queuePlaying.value = false
+    reset()
+    if (previousAccount) {
+      applyLesson('', '')
+      aiPrompt.value = ''
+      aiGeneratedCode.value = ''
+      aiPanelOpen.value = false
+    }
+  },
+  { flush: 'sync' },
+)
+watch(savedLessons, () => {
+  void refreshProgress()
+})
 // Keep known errors when the code tab closes, but never apply them to another source.
 const codeDiagnostics = ref<{ source: string; errorCount: number } | null>(null)
 const codeErrorCount = computed(() =>
@@ -578,6 +835,11 @@ const codeErrorCount = computed(() =>
 )
 
 const reset = (markStopped = true) => {
+  if (markStopped) {
+    lessonLoadGeneration++
+    loadingLesson.value = false
+    queuePlaying.value = false
+  }
   executionGeneration++
   aiRunController.abort()
   aiRunController = new AbortController()
@@ -597,10 +859,10 @@ const executeExternalCode = (
   assignmentId?: string,
   lessonId?: string,
 ) => {
+  lessonLoadGeneration++
+  loadingLesson.value = false
   props.utilityFuncs.notifyUser(`Running a script from instrutor`, title, 2000)
-  ModuleTitle.value = title
-  selectedFile.value = title
-  code.value = content
+  applyLesson(title, content)
   viewMode.value = 'run'
   executeCode(lessonId ?? title, assignmentId)
 }
@@ -609,6 +871,7 @@ defineExpose({ reset, executeExternalCode })
 
 // Function to execute code in the context of the provided object
 const executeCode = async (lessonId?: string, assignmentId?: string): Promise<boolean> => {
+  if (loadingLesson.value) return false
   if (codeErrorCount.value > 0) {
     props.utilityFuncs.notifyUser(
       'Code errors',
@@ -634,7 +897,18 @@ const executeCode = async (lessonId?: string, assignmentId?: string): Promise<bo
   executionResult.value = null
   try {
     runClock.value = Date.now()
-    emit('start', code.value)
+    executionResult.value = 'Checking code…'
+    const { validateLessonSource } = await loadLessonValidator()
+    if (runGeneration !== executionGeneration || aiSignal.aborted) return false
+    const issues = await validateLessonSource(source)
+    if (runGeneration !== executionGeneration || aiSignal.aborted) return false
+    if (issues.length) {
+      if (code.value === source) codeDiagnostics.value = { source, errorCount: issues.length }
+      props.utilityFuncs.notifyUser('Code errors', issues.slice(0, 3).join('\n'), 6000)
+      throw new Error(issues.join('\n'))
+    }
+    executionResult.value = null
+    emit('start', source)
 
     const { prepareTrainingArtifact, loadUserScript } = await loadLessonCompiler()
     // Loading must not resurrect a stopped/replaced lesson or evaluate its top-level code.
@@ -764,8 +1038,23 @@ const executeCode = async (lessonId?: string, assignmentId?: string): Promise<bo
 import { moduleTree as importedNModuleTree, type ModuleEntry } from './data/EASAModules'
 import LessonHistory from './LessonHistory.vue'
 
-// Reactive copy of the fileTree
-const fileTree = ref(importedNModuleTree)
+const fileTree = computed(() => {
+  const tree = Object.create(null) as Record<string, ModuleEntry[]>
+  for (const [category, entries] of Object.entries(importedNModuleTree))
+    tree[category] = [...entries]
+  for (const record of savedLessons.value) {
+    const category = record.category || 'Custom lessons'
+    ;(tree[category] ??= []).push({
+      id: `saved:${record.id}`,
+      recordId: record.id,
+      name: record.title,
+      description: record.objectives,
+      category,
+      path: '',
+    })
+  }
+  return tree
+})
 const openLessonGroups = ref(new Set(Object.keys(importedNModuleTree)))
 type LessonListEntry = ModuleEntry & { category: string }
 const lessons = computed<LessonListEntry[]>(() =>
@@ -774,9 +1063,14 @@ const lessons = computed<LessonListEntry[]>(() =>
   ),
 )
 const filteredLessons = computed(() => {
+  const visible = lessons.value.filter(
+    (lesson) =>
+      libraryTab.value === 'all' ||
+      (libraryTab.value === 'mine' ? Boolean(lesson.recordId) : !lesson.recordId),
+  )
   const query = lessonFilter.value.trim().toLocaleLowerCase()
-  if (!query) return lessons.value
-  return lessons.value.filter((lesson) =>
+  if (!query) return visible
+  return visible.filter((lesson) =>
     [lesson.name, lesson.category, lesson.description]
       .filter(Boolean)
       .some((value) => String(value).toLocaleLowerCase().includes(query)),
@@ -786,7 +1080,9 @@ const filteredLessonGroups = computed(() =>
   Object.keys(fileTree.value)
     .map((category) => ({
       category,
-      lessons: filteredLessons.value.filter((lesson) => lesson.category === category),
+      lessons: filteredLessons.value
+        .filter((lesson) => lesson.category === category)
+        .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id)),
     }))
     .filter((group) => group.lessons.length > 0),
 )
@@ -806,7 +1102,16 @@ const toggleLessonGroup = (category: string) => {
   openLessonGroups.value = next
 }
 const selectedModule = computed(() =>
-  lessons.value.find((lesson) => lesson.name === selectedFile.value),
+  lessons.value.find((lesson) => lesson.id === selectedFile.value),
+)
+watch(
+  savedLessons,
+  (records) => {
+    const next = new Set(openLessonGroups.value)
+    for (const record of records) next.add(record.category || 'Custom lessons')
+    openLessonGroups.value = next
+  },
+  { immediate: true },
 )
 const elapsedDisplay = computed(() => {
   if (!runStartedAt.value) return '00:00'
@@ -818,13 +1123,13 @@ const elapsedDisplay = computed(() => {
 })
 
 const queuePosition = (lesson: ModuleEntry) =>
-  lessonQueue.value.findIndex((queued) => queued.path === lesson.path) + 1
+  lessonQueue.value.findIndex((queued) => queued.id === lesson.id) + 1
 
 const toggleLessonQueue = (lesson: LessonListEntry) => {
   if (queuePlaying.value) return
   const position = queuePosition(lesson)
   lessonQueue.value = position
-    ? lessonQueue.value.filter((queued) => queued.path !== lesson.path)
+    ? lessonQueue.value.filter((queued) => queued.id !== lesson.id)
     : [...lessonQueue.value, lesson]
 }
 
@@ -839,11 +1144,11 @@ const playLessonQueue = async () => {
 
   for (const lesson of queuedLessons) {
     if (!queuePlaying.value) break
-    await loadFileContent(lesson)
+    if (!(await loadFileContent(lesson))) break
     viewMode.value = 'run'
     const completed = await executeCode()
     if (!completed) break
-    lessonQueue.value = lessonQueue.value.filter((queued) => queued.path !== lesson.path)
+    lessonQueue.value = lessonQueue.value.filter((queued) => queued.id !== lesson.id)
   }
 
   queuePlaying.value = false
@@ -856,24 +1161,26 @@ const selectLesson = async (lesson: ModuleEntry) => {
 const runLesson = async (lesson: ModuleEntry) => {
   if (queuePlaying.value) return
   if (isScriptRunning.value) reset()
-  await loadFileContent(lesson)
+  if (!(await loadFileContent(lesson))) return
   viewMode.value = 'run'
   await executeCode()
 }
 
 const runSelectedLesson = async () => {
   if (!selectedModule.value) return
-  await runLesson(selectedModule.value)
+  await executeCode()
 }
 
 const editLesson = async (lesson: ModuleEntry) => {
-  await loadFileContent(lesson)
+  if (!(await loadFileContent(lesson))) return
   viewMode.value = 'code'
 }
 
 const openPlayground = () => {
-  selectedFile.value = 'Playground'
-  ModuleTitle.value = 'Playground'
+  if (!discardEdits()) return
+  lessonLoadGeneration++
+  loadingLesson.value = false
+  applyLesson('Playground', '')
   code.value = `export async function main(context: ScriptContext) {
   context.notifyUser('Hello, World!')
   const simControls = context.controls
@@ -999,11 +1306,13 @@ const generateLesson = async () => {
 const applyGeneratedLesson = (replaceCurrent: boolean) => {
   if (!aiGeneratedCode.value || aiValidationPending.value) return
   if (replaceCurrent && !window.confirm('Replace the current editor contents?')) return
-  code.value = aiGeneratedCode.value
+  if (!replaceCurrent && !discardEdits()) return
+  lessonLoadGeneration++
+  loadingLesson.value = false
   if (!replaceCurrent) {
-    selectedFile.value = 'AI Draft'
-    ModuleTitle.value = 'AI Draft'
-  }
+    applyLesson('AI Draft', aiGeneratedCode.value, '', aiPrompt.value)
+    savedSnapshot.value = ''
+  } else code.value = aiGeneratedCode.value
   executionResult.value = aiValidationIssues.value.length
     ? `Generated with ${aiValidationIssues.value.length} validation issue(s)`
     : 'Generated lesson ready'
@@ -1017,21 +1326,48 @@ const handleEditorKeydown = (event: KeyboardEvent) => {
   closeLessonGenerator()
 }
 
-const loadFileContent = async (file: ModuleEntry) => {
+const loadFileContent = async (file: ModuleEntry, discardConfirmed = false): Promise<boolean> => {
+  if (!discardConfirmed && !discardEdits()) return false
+  const generation = ++lessonLoadGeneration
+  const previousSnapshot = lessonSnapshot()
+  loadingLesson.value = true
   try {
-    selectedFile.value = file.name
-    ModuleTitle.value = file.name
-    const response = await fetch(file.path)
-    const text = await response.text()
-    code.value = text
+    if (file.recordId) {
+      const record = await lessonRepository.load(file.recordId)
+      if (generation !== lessonLoadGeneration) return false
+      if (lessonSnapshot() !== previousSnapshot) throw new Error('Editor changed during loading')
+      applyLesson(record.title, record.source, record.category, record.objectives, record, file.id)
+    } else {
+      const response = await fetch(file.path)
+      if (!response.ok) throw new Error('Lesson download failed')
+      const text = await response.text()
+      if (generation !== lessonLoadGeneration) return false
+      if (lessonSnapshot() !== previousSnapshot) throw new Error('Editor changed during loading')
+      applyLesson(file.name, text, file.category || '', file.description || '', null, file.id)
+    }
+    return true
   } catch (error) {
+    if (generation !== lessonLoadGeneration) return false
     console.error(error)
-    code.value = `// Failed to load ${file.name}`
-    ModuleTitle.value = `Error loading ${file.name}`
+    props.utilityFuncs.notifyUser(
+      'Unable to load lesson',
+      `Could not load ${file.name}. Your current edits are unchanged.`,
+      5000,
+    )
+    return false
+  } finally {
+    if (generation === lessonLoadGeneration) loadingLesson.value = false
   }
 }
 
+const guardUnsavedLesson = (event: BeforeUnloadEvent) => {
+  if (!dirtyLesson.value) return
+  event.preventDefault()
+  event.returnValue = ''
+}
+
 onMounted(() => {
+  window.addEventListener('beforeunload', guardUnsavedLesson)
   window.addEventListener('keydown', handleEditorKeydown, true)
   runClockTimer = setInterval(() => {
     runClock.value = Date.now()
@@ -1066,23 +1402,59 @@ onMounted(() => {
     props.utilityFuncs
       .notifyUser(`${found.name}`, `Lesson will start in 5 seconds`, 5000)
       .then(() => {
-        loadFileContent(found).then(() => {
-          executeCode()
+        loadFileContent(found).then((loaded) => {
+          if (loaded) executeCode()
         })
       })
   }
 })
 
 onUnmounted(() => {
+  lessonLoadGeneration++
+  editorDocumentGeneration++
+  lessonRepository.dispose()
   reset()
   trainingRecorder.dispose()
   disposeProgress()
   window.removeEventListener('keydown', handleEditorKeydown, true)
+  window.removeEventListener('beforeunload', guardUnsavedLesson)
   if (runClockTimer) clearInterval(runClockTimer)
 })
 </script>
 
 <style scoped>
+.library-action,
+.library-filter {
+  flex-shrink: 0;
+  height: 1.25rem;
+  padding-inline: 0.25rem;
+  opacity: 0.65;
+}
+
+.library-filter[aria-pressed='true'],
+.library-action:hover:not(:disabled),
+.library-filter:hover {
+  opacity: 1;
+}
+
+.library-filter[aria-pressed='true'] {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  color: rgb(var(--color-panelActive));
+}
+
+.library-action:disabled {
+  opacity: 0.35;
+}
+
+.library-action:focus-visible,
+.library-filter:focus-visible,
+.library-group:focus-visible,
+.lesson-title:focus-visible {
+  outline: 1px solid rgb(var(--color-panelActive));
+  outline-offset: -1px;
+}
+
 .queue-action {
   min-width: 1.25rem;
   height: 1.1rem;
@@ -1146,6 +1518,11 @@ onUnmounted(() => {
   opacity: 0.35;
 }
 
+.action-button[aria-pressed='true'] {
+  border-color: rgb(var(--color-panelActive));
+  color: rgb(var(--color-panelActive));
+}
+
 .ai-badge {
   border: 1px solid rgb(var(--color-simElementBorder));
   border-radius: 2px;
@@ -1156,7 +1533,7 @@ onUnmounted(() => {
 }
 
 .diagnostic-button {
-  height: 1.5rem;
+  height: 1.25rem;
   padding-inline: 0.25rem;
 }
 

@@ -40,7 +40,7 @@ export function indexLessonProgress(rows: LessonProgressSummary[], catalogue: Le
 
 export function createLessonProgress(
   client: Pick<PocketBase, 'authStore' | 'send'>,
-  catalogue: LessonIdentity[],
+  catalogue: LessonIdentity[] | (() => LessonIdentity[]),
 ) {
   const status = ref<'guest' | 'loading' | 'ready' | 'error'>('guest')
   const byLesson = shallowRef(new Map<string, LessonProgressSummary>())
@@ -91,7 +91,10 @@ export function createLessonProgress(
         )
       )
         throw new Error('Invalid lesson progress response')
-      byLesson.value = indexLessonProgress(result.lessons, catalogue)
+      byLesson.value = indexLessonProgress(
+        result.lessons,
+        typeof catalogue === 'function' ? catalogue() : catalogue,
+      )
       status.value = 'ready'
     } catch {
       if (!disposed && current === generation) status.value = 'error'

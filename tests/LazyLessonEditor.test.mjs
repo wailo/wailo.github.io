@@ -9,7 +9,6 @@ import {
   validateGeneratedLesson,
 } from '../src/EditorScriptRuntime.ts'
 import { stripImportsExports } from '../src/ScriptSource.ts'
-import { createEditorTypeLibraries } from '../src/EditorTypeLibraries.ts'
 import { createScriptContext, runUserScript } from '../src/ScriptContext.ts'
 import { createLessonRunStore } from '../src/useLessonRun.ts'
 import { createTrainingRecorder } from '../src/TrainingRecorder.ts'
@@ -25,7 +24,10 @@ function deferred() {
   return { promise, resolve, reject }
 }
 
-function runnerFixture(loadLessonCompiler = async () => compiler) {
+function runnerFixture(
+  loadLessonCompiler = async () => compiler,
+  validateLessonSource = async () => [],
+) {
   const lessonRun = createLessonRunStore()
   const events = [],
     checkpoints = [],
@@ -41,6 +43,7 @@ function runnerFixture(loadLessonCompiler = async () => compiler) {
     lessonRun,
     runStatus: lessonRun.status,
     loadLessonCompiler,
+    loadLessonValidator: async () => ({ validateLessonSource }),
     ModuleTitle: ref('Test'),
     selectedFile: ref(''),
     selectedModule: ref(null),
@@ -72,6 +75,17 @@ function runnerFixture(loadLessonCompiler = async () => compiler) {
     'aiRunController',
     'executionResult',
     'code',
+    'loadedLesson',
+    'lessonObjectives',
+    'lessonCategory',
+    'savedSnapshot',
+    'lessonSnapshot',
+    'saveMessage',
+    'saveConflict',
+    'loadingLesson',
+    'lessonLoadGeneration',
+    'editorDocumentGeneration',
+    'applyLesson',
     'codeDiagnostics',
     'codeErrorCount',
     'reset',
@@ -101,6 +115,86 @@ test('known editor errors block execution before compiler loading or run side ef
   f.codeDiagnostics.value = { source: f.code.value, errorCount: 0 }
   assert.equal(await f.executeCode(), true)
   assert.equal(compilerLoads, 1)
+})
+
+test('run without a mounted editor awaits frontend type checks before compilation or execution', async () => {
+  const checking = deferred()
+  let compiled = false
+  const f = runnerFixture(
+    async () => {
+      compiled = true
+      return compiler
+    },
+    () => checking.promise,
+  )
+  f.code.value = 'export async function main() {}'
+  const running = f.executeCode()
+  await new Promise(setImmediate)
+  assert.equal(compiled, false)
+  assert.ok(!f.events.some(([event]) => event === 'start'))
+  checking.resolve(['Line 1: API method no longer exists'])
+  assert.equal(await running, false)
+  assert.equal(compiled, false)
+  assert.equal(f.codeErrorCount.value, 1)
+  assert.equal(f.lessonRun.status.value, 'ERROR')
+})
+
+test('stop during validation prevents a late successful check from launching the script', async () => {
+  const checking = deferred()
+  let compiled = false
+  const f = runnerFixture(
+    async () => {
+      compiled = true
+      return compiler
+    },
+    () => checking.promise,
+  )
+  f.code.value = 'export async function main() {}'
+  const running = f.executeCode()
+  await new Promise(setImmediate)
+  f.reset()
+  checking.resolve([])
+  assert.equal(await running, false)
+  assert.equal(compiled, false)
+  assert.equal(f.lessonRun.status.value, 'STOPPED')
+})
+
+test('edits made during validation are not executed or assigned the previous source diagnostics', async () => {
+  const checking = deferred()
+  let checkedSource
+  const f = runnerFixture(
+    async () => compiler,
+    (source) => {
+      checkedSource = source
+      return checking.promise
+    },
+  )
+  f.code.value = `export async function main(context: ScriptContext) { context.checkPoint('Original') }`
+  const running = f.executeCode()
+  await new Promise(setImmediate)
+  assert.equal(checkedSource, f.code.value)
+  f.code.value = 'newer unsaved code'
+  checking.resolve([])
+  assert.equal(await running, true)
+  assert.equal(f.code.value, 'newer unsaved code')
+  assert.deepEqual(
+    f.checkpoints.map(([message]) => message),
+    ['Original'],
+  )
+})
+
+test('validator failures prevent execution and allow retry', async () => {
+  let checks = 0
+  const f = runnerFixture(
+    async () => compiler,
+    async () => {
+      if (++checks === 1) throw new Error('Worker unavailable')
+      return []
+    },
+  )
+  f.code.value = 'export async function main() {}'
+  assert.equal(await f.executeCode(), false)
+  assert.equal(await f.executeCode(), true)
 })
 
 test('diagnostics for another source do not block replacement lessons', async () => {
@@ -433,7 +527,11 @@ function codeEditorFixture(props, failCreation = false) {
         ref,
         watch,
         monaco,
-        createEditorTypeLibraries,
+        acquireLessonTypes: () => ({
+          dispose() {
+            calls.push('definitions')
+          },
+        }),
         typesDefinitions: '',
         simMetaTypes: '',
         scriptApiTypes: '',
@@ -506,14 +604,7 @@ test('code tab preserves edits and themes, disposing models and definitions on e
   assert.equal(first.calls.at(-1), 'vs-dark')
   first.close()
   first.dispose() // Idempotent, including after a failed mount.
-  assert.deepEqual(first.calls.slice(-6), [
-    'listener',
-    'editor',
-    'model',
-    'definitions',
-    'definitions',
-    'definitions',
-  ])
+  assert.deepEqual(first.calls.slice(-4), ['listener', 'editor', 'model', 'definitions'])
   const second = codeEditorFixture(props)
   second.mount()
   assert.equal(second.models[0].getValue(), 'edited code')
@@ -528,9 +619,9 @@ test('failed editor mount releases a partially created model and type definition
   const f = codeEditorFixture(shallowReactive({ value: '', isDarkMode: false }), true)
   f.mount()
   assert.match(f.editorError.value, /Unable to open/)
-  assert.deepEqual(f.calls, ['model', 'definitions', 'definitions', 'definitions'])
+  assert.deepEqual(f.calls, ['model', 'definitions'])
   f.close()
-  assert.deepEqual(f.calls, ['model', 'definitions', 'definitions', 'definitions'])
+  assert.deepEqual(f.calls, ['model', 'definitions'])
 })
 
 test('review errors focuses the first error in source order and shows its explanation', () => {

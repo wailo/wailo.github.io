@@ -13,13 +13,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
-import * as monaco from 'monaco-editor'
-import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
-import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
-import typesDefinitions from '../wasm/generated/editorTypes.txt?raw'
-import simMetaTypes from '../wasm/generated/flightsimulator_exec_meta.ts?raw'
-import scriptApiTypes from '../ScriptContext.ts?raw'
-import { createEditorTypeLibraries } from '../EditorTypeLibraries'
+import { monaco, acquireLessonTypes } from '../LessonEditorEnvironment'
 
 const props = defineProps<{ value: string; isDarkMode: boolean }>()
 const emit = defineEmits<{
@@ -57,12 +51,6 @@ const focusFirstError = () => {
 
 defineExpose({ focusFirstError })
 
-window.MonacoEnvironment = {
-  getWorker(_workerId: string, label: string) {
-    return label === 'typescript' || label === 'javascript' ? new tsWorker() : new editorWorker()
-  },
-}
-
 const disposeEditor = () => {
   markerChanges?.dispose()
   changes?.dispose()
@@ -79,21 +67,7 @@ const disposeEditor = () => {
 onMounted(() => {
   if (!container.value) return
   try {
-    const defaults = monaco.typescript.typescriptDefaults
-    defaults.setCompilerOptions({
-      target: monaco.typescript.ScriptTarget.ES2020,
-      allowNonTsExtensions: true,
-      module: monaco.typescript.ModuleKind.ESNext,
-      noEmit: true,
-      strict: true,
-    })
-    for (const library of createEditorTypeLibraries(
-      typesDefinitions,
-      simMetaTypes,
-      scriptApiTypes,
-    )) {
-      definitions.push(defaults.addExtraLib(library.content, library.filePath))
-    }
+    definitions.push(acquireLessonTypes())
     model = monaco.editor.createModel(
       props.value,
       'typescript',

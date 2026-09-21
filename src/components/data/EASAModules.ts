@@ -5,6 +5,9 @@ export type ModuleEntry = {
   name: string
   path: string
   description?: string
+  /** Present only for private account lessons stored in PocketBase. */
+  recordId?: string
+  category?: string
 }
 
 export type ModuleTree = Record<string, ModuleEntry[]>
