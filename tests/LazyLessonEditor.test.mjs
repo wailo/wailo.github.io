@@ -9,6 +9,7 @@ import {
   validateGeneratedLesson,
 } from '../src/EditorScriptRuntime.ts'
 import { stripImportsExports } from '../src/ScriptSource.ts'
+import { createEditorTypeLibraries } from '../src/EditorTypeLibraries.ts'
 import { createScriptContext, runUserScript } from '../src/ScriptContext.ts'
 import { createLessonRunStore } from '../src/useLessonRun.ts'
 import { createTrainingRecorder } from '../src/TrainingRecorder.ts'
@@ -71,13 +72,45 @@ function runnerFixture(loadLessonCompiler = async () => compiler) {
     'aiRunController',
     'executionResult',
     'code',
+    'codeDiagnostics',
+    'codeErrorCount',
     'reset',
     'executeCode',
     'executeExternalCode',
   ]).replaceAll('import.meta.env.VITE_GIT_SHA', '"' + 'a'.repeat(40) + '"')
-  const api = evaluate(`${code}; return {code, reset, executeCode, executeExternalCode}`, deps)
+  const api = evaluate(
+    `${code}; return {code, codeDiagnostics, codeErrorCount, reset, executeCode, executeExternalCode}`,
+    deps,
+  )
   return { ...api, deps, events, checkpoints, sessions, lessonRun }
 }
+
+test('known editor errors block execution before compiler loading or run side effects', async () => {
+  let compilerLoads = 0
+  const f = runnerFixture(async () => {
+    compilerLoads++
+    return compiler
+  })
+  f.code.value = 'export async function main() {}'
+  f.codeDiagnostics.value = { source: f.code.value, errorCount: 1 }
+  assert.equal(await f.executeCode(), false)
+  assert.equal(compilerLoads, 0)
+  assert.equal(f.lessonRun.current.value, null)
+  assert.deepEqual(f.events, [])
+
+  f.codeDiagnostics.value = { source: f.code.value, errorCount: 0 }
+  assert.equal(await f.executeCode(), true)
+  assert.equal(compilerLoads, 1)
+})
+
+test('diagnostics for another source do not block replacement lessons', async () => {
+  const f = runnerFixture()
+  f.codeDiagnostics.value = { source: 'broken previous lesson', errorCount: 2 }
+  f.executeExternalCode('Replacement', 'export async function main() {}')
+  await new Promise(setImmediate)
+  assert.equal(f.codeErrorCount.value, 0)
+  assert.equal(f.lessonRun.status.value, 'COMPLETED')
+})
 
 test('assigned execution uses assignment identity and local stop finishes that same run', () => {
   const f = runnerFixture(() => new Promise(() => {}))
@@ -296,8 +329,12 @@ function codeEditorFixture(props, failCreation = false) {
   const scope = effectScope()
   const calls = [],
     models = []
-  let change
+  const diagnostics = []
+  let change, markerChange
+  let markers = []
   const monaco = {
+    MarkerSeverity: { Error: 8 },
+    Uri: { parse: (value) => ({ toString: () => value }) },
     typescript: {
       ScriptTarget: { ES2020: 1 },
       ModuleKind: { ESNext: 1 },
@@ -313,11 +350,24 @@ function codeEditorFixture(props, failCreation = false) {
       },
     },
     editor: {
+      getModelMarkers({ resource }) {
+        return markers.filter((marker) => marker.resource === resource)
+      },
+      onDidChangeMarkers(fn) {
+        markerChange = fn
+        return {
+          dispose() {
+            markerChange = undefined
+            calls.push('marker listener')
+          },
+        }
+      },
       setTheme(theme) {
         calls.push(theme)
       },
-      createModel(value) {
+      createModel(value, _language, uri) {
         const model = {
+          uri,
           getValue: () => value,
           setValue(next) {
             value = next
@@ -334,6 +384,22 @@ function codeEditorFixture(props, failCreation = false) {
         if (failCreation) throw new Error('Cannot create editor')
         calls.push(options.theme)
         return {
+          setPosition(position) {
+            calls.push(['position', position])
+          },
+          revealLineInCenterIfOutsideViewport(line) {
+            calls.push(['reveal', line])
+          },
+          focus() {
+            calls.push('focus')
+          },
+          getAction(id) {
+            return {
+              run() {
+                calls.push(['action', id])
+              },
+            }
+          },
           dispose() {
             calls.push('editor')
           },
@@ -359,20 +425,24 @@ function codeEditorFixture(props, failCreation = false) {
   )
   const api = scope.run(() =>
     evaluate(
-      `${declarations(source, ['container', 'editorError', 'editor', 'model', 'definitions', 'changes', 'disposeEditor'])}
+      `${declarations(source, ['container', 'editorError', 'editor', 'model', 'definitions', 'changes', 'markerChanges', 'publishDiagnostics', 'focusFirstError', 'disposeEditor'])}
     ${watchers.map((w) => w.getText(source)).join('\n')}
-    return {container, editorError, mount: ${hook(source, 'onMounted')}, dispose: ${hook(source, 'onBeforeUnmount')}}`,
+    return {container, editorError, focusFirstError, mount: ${hook(source, 'onMounted')}, dispose: ${hook(source, 'onBeforeUnmount')}}`,
       {
         props,
         ref,
         watch,
         monaco,
-        stripImportsExports,
+        createEditorTypeLibraries,
         typesDefinitions: '',
         simMetaTypes: '',
         scriptApiTypes: '',
         console: { error() {} },
         emit(name, value) {
+          if (name === 'diagnostics') {
+            diagnostics.push(value)
+            return
+          }
           assert.equal(name, 'update:value')
           props.value = value
         },
@@ -384,6 +454,11 @@ function codeEditorFixture(props, failCreation = false) {
     ...api,
     calls,
     models,
+    diagnostics,
+    updateMarkers(next, resources = [models[0].uri]) {
+      markers = next
+      markerChange?.(resources)
+    },
     close() {
       api.dispose()
       scope.stop()
@@ -391,10 +466,39 @@ function codeEditorFixture(props, failCreation = false) {
   }
 }
 
+test('editor reports only its own errors, updates after fixes, and releases marker listener', () => {
+  const f = codeEditorFixture(shallowReactive({ value: 'broken code', isDarkMode: false }))
+  f.mount()
+  assert.deepEqual(f.diagnostics.at(-1), { source: 'broken code', errorCount: 0 })
+  const resource = f.models[0].uri
+  const other = { toString: () => 'file:///other.ts' }
+  const markers = [
+    { resource, severity: 8 },
+    { resource, severity: 4 },
+    { resource: other, severity: 8 },
+  ]
+  f.updateMarkers(markers, [other])
+  assert.equal(f.diagnostics.length, 1)
+  f.updateMarkers(markers)
+  assert.deepEqual(f.diagnostics.at(-1), { source: 'broken code', errorCount: 1 })
+  f.models[0].setValue('fixed code')
+  f.updateMarkers([{ resource, severity: 4 }])
+  assert.deepEqual(f.diagnostics.at(-1), { source: 'fixed code', errorCount: 0 })
+  f.close()
+  const count = f.diagnostics.length
+  f.updateMarkers(markers)
+  assert.equal(f.diagnostics.length, count)
+  assert.equal(f.calls.filter((call) => call === 'marker listener').length, 1)
+})
+
 test('code tab preserves edits and themes, disposing models and definitions on every close', async () => {
   const props = shallowReactive({ value: 'original', isDarkMode: false })
   const first = codeEditorFixture(props)
   first.mount()
+  assert.match(
+    first.models[0].uri.toString(),
+    /^file:\/\/\/public\/LearningModules\/lesson-.+\.ts$/,
+  )
   first.models[0].setValue('edited code')
   assert.equal(props.value, 'edited code')
   props.isDarkMode = true
@@ -402,7 +506,14 @@ test('code tab preserves edits and themes, disposing models and definitions on e
   assert.equal(first.calls.at(-1), 'vs-dark')
   first.close()
   first.dispose() // Idempotent, including after a failed mount.
-  assert.deepEqual(first.calls.slice(-4), ['listener', 'editor', 'model', 'definitions'])
+  assert.deepEqual(first.calls.slice(-6), [
+    'listener',
+    'editor',
+    'model',
+    'definitions',
+    'definitions',
+    'definitions',
+  ])
   const second = codeEditorFixture(props)
   second.mount()
   assert.equal(second.models[0].getValue(), 'edited code')
@@ -417,7 +528,32 @@ test('failed editor mount releases a partially created model and type definition
   const f = codeEditorFixture(shallowReactive({ value: '', isDarkMode: false }), true)
   f.mount()
   assert.match(f.editorError.value, /Unable to open/)
-  assert.deepEqual(f.calls, ['model', 'definitions'])
+  assert.deepEqual(f.calls, ['model', 'definitions', 'definitions', 'definitions'])
   f.close()
-  assert.deepEqual(f.calls, ['model', 'definitions'])
+  assert.deepEqual(f.calls, ['model', 'definitions', 'definitions', 'definitions'])
+})
+
+test('review errors focuses the first error in source order and shows its explanation', () => {
+  const f = codeEditorFixture(shallowReactive({ value: 'code', isDarkMode: false }))
+  f.mount()
+  const resource = f.models[0].uri
+  f.updateMarkers([
+    { resource, severity: 8, startLineNumber: 9, startColumn: 1 },
+    { resource, severity: 4, startLineNumber: 1, startColumn: 1 },
+    { resource, severity: 8, startLineNumber: 3, startColumn: 5 },
+    { resource, severity: 8, startLineNumber: 3, startColumn: 2 },
+  ])
+  f.focusFirstError()
+  assert.deepEqual(f.calls.slice(-4), [
+    ['position', { lineNumber: 3, column: 2 }],
+    ['reveal', 3],
+    'focus',
+    ['action', 'editor.action.showHover'],
+  ])
+  f.updateMarkers([])
+  const callCount = f.calls.length
+  f.focusFirstError()
+  assert.equal(f.calls.length, callCount)
+  f.close()
+  assert.doesNotThrow(() => f.focusFirstError())
 })

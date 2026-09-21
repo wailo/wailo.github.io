@@ -31,6 +31,12 @@
         </button>
       </div>
 
+      <div class="flex shrink-0 justify-end border-b border-simElementBorder px-1 py-1">
+        <button class="action-button inline-flex items-center gap-1" @click="openLessonGenerator">
+          <span aria-hidden="true">✦</span> Generate lesson <span class="ai-badge">AI</span>
+        </button>
+      </div>
+
       <div class="min-h-0 flex-1 overflow-y-auto">
         <div v-if="filteredLessons.length === 0" class="p-2 opacity-60">NO MATCHING LESSONS</div>
         <section v-for="group in filteredLessonGroups" :key="group.category" class="mb-1">
@@ -221,39 +227,50 @@
 
     <div v-else class="relative flex min-h-0 flex-1 flex-col">
       <div class="min-h-0 flex-1">
-        <LessonCodeEditor :is-dark-mode="isDarkMode" v-model:value="code" />
+        <LessonCodeEditor
+          ref="codeEditor"
+          :is-dark-mode="isDarkMode"
+          v-model:value="code"
+          @diagnostics="codeDiagnostics = $event"
+        />
       </div>
       <aside
         v-if="aiPanelOpen"
-        class="absolute bottom-9 right-1 top-1 z-30 flex w-[46%] min-w-72 flex-col border border-panelBorder bg-panelContentBackground p-1 shadow-lg"
+        class="absolute bottom-9 right-1 top-1 z-30 flex w-[calc(100%-0.5rem)] max-w-md flex-col overflow-y-auto border border-panelBorder bg-panelContentBackground p-2 shadow-lg"
+        aria-labelledby="lesson-generator-title"
       >
         <div
           class="flex h-6 shrink-0 items-center justify-between border-b border-simElementBorder"
         >
-          <span>AI LESSON GENERATOR</span>
-          <button class="px-1" title="Close" @click="aiPanelOpen = false">×</button>
+          <span id="lesson-generator-title"
+            >Generate a lesson <span class="ai-badge">AI</span></span
+          >
+          <button
+            class="action-button"
+            aria-label="Close lesson generator"
+            @click="closeLessonGenerator"
+          >
+            ×
+          </button>
         </div>
 
         <template v-if="!aiGeneratedCode">
-          <label class="mt-1 opacity-60" for="ai-lesson-request">REQUEST</label>
+          <label class="mt-2" for="ai-lesson-request">What are the learning objectives?</label>
           <textarea
             id="ai-lesson-request"
+            ref="aiPromptInput"
             v-model="aiPrompt"
             class="min-h-24 resize-y border border-simElementBorder bg-simInputBackground p-1 text-secondary outline-none focus:border-panelActive"
-            placeholder="Describe the lesson, initial conditions, student actions and completion condition..."
+            placeholder="A beginner C172 lesson on maintaining altitude, with practice and a short quiz."
             @keydown.ctrl.enter.prevent="generateLesson"
+            @keydown.meta.enter.prevent="generateLesson"
           />
 
-          <div class="mt-1 flex flex-wrap gap-1">
-            <button
-              class="action-button"
-              :class="aiIncludeCurrentCode ? 'border-panelActive text-panelActive' : ''"
-              @click="aiIncludeCurrentCode = !aiIncludeCurrentCode"
-            >
-              CURRENT CODE {{ aiIncludeCurrentCode ? 'ON' : 'OFF' }}
-            </button>
-            <span class="self-center opacity-60">SIM API ON · AUTHORING GUIDE ON</span>
-          </div>
+          <label class="mt-2 flex items-center gap-1">
+            <input v-model="aiIncludeCurrentCode" type="checkbox" :disabled="!code.trim()" />
+            Use the current lesson as a starting point
+          </label>
+          <p class="mt-2 opacity-60">Generate a draft, then review it before using it.</p>
 
           <div class="mt-auto flex gap-1 pt-1">
             <button
@@ -261,30 +278,39 @@
               :disabled="!aiPrompt.trim() || isLLMPending"
               @click="generateLesson"
             >
-              {{ isLLMPending ? 'GENERATING…' : 'GENERATE' }}
+              {{ isLLMPending ? 'Generating…' : 'Generate draft' }}
             </button>
-            <button class="action-button" @click="aiPanelOpen = false">CANCEL</button>
-            <span class="ml-auto self-center opacity-60">CTRL+ENTER</span>
+            <button class="action-button" @click="closeLessonGenerator">Close</button>
           </div>
-          <div v-if="aiError" class="mt-1 border border-panelActive p-1 text-panelActive">
+          <div
+            v-if="aiError"
+            class="mt-1 border border-panelActive p-1 text-panelActive"
+            role="alert"
+          >
             {{ aiError }}
           </div>
         </template>
 
         <template v-else>
           <div class="flex h-6 shrink-0 items-center justify-between">
-            <span>GENERATED LESSON</span>
-            <span :class="aiValidationIssues.length ? 'text-panelActive' : 'text-secondary'">
+            <span>Lesson draft</span>
+            <span
+              :class="aiValidationIssues.length ? 'text-panelActive' : 'text-secondary'"
+              role="status"
+            >
               {{
                 aiValidationPending
-                  ? 'CHECKING…'
+                  ? 'Checking…'
                   : aiValidationIssues.length
-                    ? `${aiValidationIssues.length} ISSUE(S)`
-                    : 'TS OK'
+                    ? `${aiValidationIssues.length} issue(s)`
+                    : 'Ready to review'
               }}
             </span>
           </div>
           <pre
+            ref="aiDraftPreview"
+            tabindex="-1"
+            aria-label="Generated lesson draft"
             class="min-h-0 flex-1 overflow-auto border border-simElementBorder bg-simInputBackground p-1 text-secondary"
             >{{ aiGeneratedCode }}</pre
           >
@@ -294,37 +320,59 @@
           >
             <div v-for="issue in aiValidationIssues" :key="issue">! {{ issue }}</div>
           </div>
-          <div class="mt-1 flex gap-1">
+          <div class="mt-1 flex flex-wrap gap-1">
             <button
               class="action-button"
               :disabled="aiValidationPending"
               @click="applyGeneratedLesson(false)"
             >
-              CREATE NEW
+              Use this lesson
             </button>
             <button
               class="action-button"
               :disabled="aiValidationPending"
               @click="applyGeneratedLesson(true)"
             >
-              REPLACE
+              Replace current
             </button>
-            <button class="action-button" @click="aiGeneratedCode = ''">REVISE</button>
+            <button class="action-button" @click="reviseLessonDraft">Revise request</button>
           </div>
         </template>
       </aside>
       <div class="flex h-8 shrink-0 items-center gap-1 border-t border-simElementBorder px-1">
-        <button class="action-button" @click="isScriptRunning ? reset() : executeCode()">
+        <button
+          class="action-button w-16 shrink-0"
+          :disabled="!isScriptRunning && codeErrorCount > 0"
+          :title="
+            !isScriptRunning && codeErrorCount > 0 ? 'Fix code errors before running' : undefined
+          "
+          @click="isScriptRunning ? reset() : executeCode()"
+        >
           {{ isScriptRunning ? '■ STOP' : '▶ RUN' }}
         </button>
         <button
-          class="action-button"
+          ref="generateLessonButton"
+          class="action-button inline-flex shrink-0 items-center gap-1"
           :class="aiPanelOpen ? 'text-panelActive' : ''"
-          @click="aiPanelOpen = true"
+          :aria-expanded="aiPanelOpen"
+          @click="openLessonGenerator"
         >
-          ASK AI
+          <span aria-hidden="true">✦</span> Generate lesson <span class="ai-badge">AI</span>
         </button>
-        <span v-if="executionResult" class="ml-auto truncate opacity-60">{{
+        <button
+          v-if="codeErrorCount"
+          class="diagnostic-button ml-auto inline-flex min-w-0 items-center gap-1"
+          :class="isDarkMode ? 'text-red-300' : 'text-red-700'"
+          :title="`${codeErrorCount} TypeScript ${codeErrorCount === 1 ? 'error' : 'errors'}. Click to review the first error.`"
+          :aria-label="`Review ${codeErrorCount} code ${codeErrorCount === 1 ? 'error' : 'errors'}`"
+          @click="reviewCodeErrors"
+        >
+          <span aria-hidden="true">⚠</span>
+          <span class="truncate"
+            >{{ codeErrorCount }} {{ codeErrorCount === 1 ? 'error' : 'errors' }}</span
+          >
+        </button>
+        <span v-else-if="executionResult" class="ml-auto truncate opacity-60">{{
           executionResult
         }}</span>
       </div>
@@ -342,6 +390,7 @@ import {
   PropType,
   onMounted,
   onUnmounted,
+  nextTick,
 } from 'vue'
 import {
   ExtendedMainModule,
@@ -396,6 +445,30 @@ const runClock = ref(Date.now())
 const lessonQueue = ref<LessonListEntry[]>([])
 const queuePlaying = ref(false)
 const aiPanelOpen = ref(false)
+const codeEditor = ref<{ focusFirstError: () => void } | null>(null)
+const aiPromptInput = ref<HTMLTextAreaElement | null>(null)
+const aiDraftPreview = ref<HTMLElement | null>(null)
+const generateLessonButton = ref<HTMLButtonElement | null>(null)
+const openLessonGenerator = async () => {
+  viewMode.value = 'code'
+  aiPanelOpen.value = true
+  await nextTick()
+  const focusTarget = aiPromptInput.value ?? aiDraftPreview.value
+  focusTarget?.focus()
+}
+const closeLessonGenerator = () => {
+  aiPanelOpen.value = false
+  generateLessonButton.value?.focus()
+}
+const reviseLessonDraft = async () => {
+  aiGeneratedCode.value = ''
+  await nextTick()
+  aiPromptInput.value?.focus()
+}
+const reviewCodeErrors = () => {
+  aiPanelOpen.value = false
+  codeEditor.value?.focusFirstError()
+}
 const aiPrompt = ref('')
 const aiIncludeCurrentCode = ref(false)
 const aiGeneratedCode = ref('')
@@ -498,6 +571,11 @@ const trainingRecorder = createTrainingRecorder(
 
 const executionResult = ref<string | null>(null)
 const code = ref(``)
+// Keep known errors when the code tab closes, but never apply them to another source.
+const codeDiagnostics = ref<{ source: string; errorCount: number } | null>(null)
+const codeErrorCount = computed(() =>
+  codeDiagnostics.value?.source === code.value ? codeDiagnostics.value.errorCount : 0,
+)
 
 const reset = (markStopped = true) => {
   executionGeneration++
@@ -531,6 +609,14 @@ defineExpose({ reset, executeExternalCode })
 
 // Function to execute code in the context of the provided object
 const executeCode = async (lessonId?: string, assignmentId?: string): Promise<boolean> => {
+  if (codeErrorCount.value > 0) {
+    props.utilityFuncs.notifyUser(
+      'Code errors',
+      'Fix code errors in the CODE tab before running.',
+      3000,
+    )
+    return false
+  }
   reset(false)
   const runGeneration = executionGeneration
   const aiSignal = aiRunController.signal
@@ -921,14 +1007,14 @@ const applyGeneratedLesson = (replaceCurrent: boolean) => {
   executionResult.value = aiValidationIssues.value.length
     ? `Generated with ${aiValidationIssues.value.length} validation issue(s)`
     : 'Generated lesson ready'
-  aiPanelOpen.value = false
+  closeLessonGenerator()
   aiGeneratedCode.value = ''
 }
 
 const handleEditorKeydown = (event: KeyboardEvent) => {
   if (event.key !== 'Escape' || !aiPanelOpen.value) return
   event.stopPropagation()
-  aiPanelOpen.value = false
+  closeLessonGenerator()
 }
 
 const loadFileContent = async (file: ModuleEntry) => {
@@ -1058,5 +1144,26 @@ onUnmounted(() => {
 .action-button:disabled {
   cursor: not-allowed;
   opacity: 0.35;
+}
+
+.ai-badge {
+  border: 1px solid rgb(var(--color-simElementBorder));
+  border-radius: 2px;
+  padding: 0 0.2rem;
+  font-size: 0.75em;
+  line-height: 1.3;
+  opacity: 0.7;
+}
+
+.diagnostic-button {
+  height: 1.5rem;
+  padding-inline: 0.25rem;
+}
+
+.diagnostic-button:hover,
+.diagnostic-button:focus-visible {
+  background: rgb(var(--color-panelHeaderBackground));
+  outline: 1px solid currentColor;
+  outline-offset: -1px;
 }
 </style>

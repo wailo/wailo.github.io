@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 
 import ts from 'typescript'
 
-import { stripImportsExports } from '../src/EditorScriptRuntime.ts'
+import { createEditorTypeLibraries } from '../src/EditorTypeLibraries.ts'
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const editorTypesPath = path.join(projectRoot, 'src/wasm/generated/editorTypes.txt')
@@ -18,23 +18,22 @@ function readRequiredFile(filePath) {
   return fs.readFileSync(filePath, 'utf8')
 }
 
-const editorDefinitions = [
+const editorLibraries = createEditorTypeLibraries(
   readRequiredFile(editorTypesPath),
-  stripImportsExports(readRequiredFile(simulatorMetaPath)),
-  stripImportsExports(readRequiredFile(scriptContextPath)),
-].join('\n')
+  readRequiredFile(simulatorMetaPath),
+  readRequiredFile(scriptContextPath),
+)
 
 function createLanguageService(source) {
-  const lessonPath = path.join(projectRoot, '__editor_test_lesson.ts')
-  const definitionsPath = path.join(projectRoot, '__editor_test_definitions.ts')
+  const lessonPath = 'file:///public/LearningModules/lesson.ts'
   const virtualFiles = new Map([
     [lessonPath, source],
-    [definitionsPath, editorDefinitions],
+    ...editorLibraries.map(({ filePath, content }) => [filePath, content]),
   ])
   const compilerOptions = {
     target: ts.ScriptTarget.ES2020,
     module: ts.ModuleKind.ESNext,
-    moduleResolution: ts.ModuleResolutionKind.Bundler,
+    moduleResolution: ts.ModuleResolutionKind.Classic,
     strict: true,
     noEmit: true,
     skipLibCheck: true,
@@ -49,8 +48,8 @@ function createLanguageService(source) {
     },
     getCurrentDirectory: () => projectRoot,
     getDefaultLibFileName: (options) => ts.getDefaultLibFilePath(options),
-    fileExists: ts.sys.fileExists,
-    readFile: ts.sys.readFile,
+    fileExists: (fileName) => virtualFiles.has(fileName) || ts.sys.fileExists(fileName),
+    readFile: (fileName) => virtualFiles.get(fileName) ?? ts.sys.readFile(fileName),
     readDirectory: ts.sys.readDirectory,
   }
 
@@ -208,4 +207,65 @@ test('multiple-choice questions reject unknown modes', () => {
   `)
 
   assert.match(diagnosticText(diagnostics), /practice.*assessment|assessment.*practice/)
+})
+
+test('core imports resolve to the existing simulator types', () => {
+  const diagnostics = lessonDiagnostics(`
+    import { ScriptContext, b747 } from '../../src/core'
+    export async function main(context: ScriptContext) {
+      const model = context.controls.flightModel as b747
+      context.plotView(context.props.altitude_ft, true)
+      model.set_engine_throttle_position(0.5)
+    }
+  `)
+  assert.equal(diagnostics.length, 0, diagnosticText(diagnostics))
+})
+
+test('ScriptContext imports retain aircraft-specific type checking', () => {
+  const source = `
+    import type { ScriptContext, C172SimProps } from '../../src/ScriptContext'
+    export async function main(context: ScriptContext<C172SimProps>) {
+      context.plotView(context.props.altitude_ft, true)
+    }
+  `
+  assert.equal(lessonDiagnostics(source).length, 0)
+  const diagnostics = lessonDiagnostics(source.replace('altitude_ft', 'altitutde_ft'))
+  assert.match(diagnosticText(diagnostics), /altitutde_ft/)
+  assert.ok(!diagnostics.some((diagnostic) => diagnostic.code === 2307))
+})
+
+test('core imports retain errors for invalid simulator arguments', () => {
+  const diagnostics = lessonDiagnostics(`
+    import { ScriptContext } from '../../src/core'
+    export async function main(context: ScriptContext) {
+      context.controls.flightModel.set_engine_throttle_position('invalid')
+    }
+  `)
+  assert.match(diagnosticText(diagnostics), /string.*number/)
+})
+
+test('virtual modules do not hide missing exports or unknown imports', () => {
+  assert.match(
+    diagnosticText(
+      lessonDiagnostics(`
+    import type { MissingType } from '../../src/core'
+  `),
+    ),
+    /MissingType/,
+  )
+  assert.match(
+    diagnosticText(
+      lessonDiagnostics(`
+    import type { ScriptContext } from '../../src/missing'
+  `),
+    ),
+    /Cannot find module/,
+  )
+})
+
+test('demo lesson imports resolve without losing its type checks', () => {
+  const diagnostics = lessonDiagnostics(
+    readRequiredFile(path.join(projectRoot, 'public/LearningModules/demo.ts')),
+  )
+  assert.equal(diagnostics.length, 0, diagnosticText(diagnostics))
 })
