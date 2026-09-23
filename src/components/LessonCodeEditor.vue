@@ -68,13 +68,8 @@ onMounted(() => {
   if (!container.value) return
   try {
     definitions.push(acquireLessonTypes())
-    model = monaco.editor.createModel(
-      props.value,
-      'typescript',
-      monaco.Uri.parse(`file:///public/LearningModules/lesson-${crypto.randomUUID()}.ts`),
-    )
     editor = monaco.editor.create(container.value, {
-      model,
+      model: null,
       theme: props.isDarkMode ? 'vs-dark' : 'vs',
       automaticLayout: true,
       colorDecorators: true,
@@ -88,6 +83,12 @@ onMounted(() => {
       lineNumbersMinChars: 0,
       scrollbar: { verticalScrollbarSize: 7, horizontalScrollbarSize: 7 },
     })
+    model = monaco.editor.createModel(
+      props.value,
+      'typescript',
+      monaco.Uri.parse(`file:///public/LearningModules/lesson-${crypto.randomUUID()}.ts`),
+    )
+    editor.setModel(model)
     changes = editor.onDidChangeModelContent(() => {
       const value = model!.getValue()
       if (value !== props.value) emit('update:value', value)

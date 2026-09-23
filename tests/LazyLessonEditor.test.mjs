@@ -109,12 +109,14 @@ test('known editor errors block execution before compiler loading or run side ef
   f.codeDiagnostics.value = { source: f.code.value, errorCount: 1 }
   assert.equal(await f.executeCode(), false)
   assert.equal(compilerLoads, 0)
+  assert.equal(f.deps.viewMode.value, 'code')
   assert.equal(f.lessonRun.current.value, null)
   assert.deepEqual(f.events, [])
 
   f.codeDiagnostics.value = { source: f.code.value, errorCount: 0 }
   assert.equal(await f.executeCode(), true)
   assert.equal(compilerLoads, 1)
+  assert.equal(f.deps.viewMode.value, 'run')
 })
 
 test('run without a mounted editor awaits frontend type checks before compilation or execution', async () => {
@@ -131,10 +133,12 @@ test('run without a mounted editor awaits frontend type checks before compilatio
   const running = f.executeCode()
   await new Promise(setImmediate)
   assert.equal(compiled, false)
+  assert.equal(f.deps.viewMode.value, 'run')
   assert.ok(!f.events.some(([event]) => event === 'start'))
   checking.resolve(['Line 1: API method no longer exists'])
   assert.equal(await running, false)
   assert.equal(compiled, false)
+  assert.equal(f.deps.viewMode.value, 'code')
   assert.equal(f.codeErrorCount.value, 1)
   assert.equal(f.lessonRun.status.value, 'ERROR')
 })
@@ -240,7 +244,7 @@ test('lesson shell has only dynamic dependencies on Monaco and the compiler', ()
   assert.doesNotMatch(cleanup, /from ['"]typescript['"]|import\(/)
 })
 
-test('assigned lesson executes checkpoints and saves results without opening CODE', async () => {
+test('assigned lesson executes checkpoints and saves results in RUN', async () => {
   const f = runnerFixture()
   f.executeExternalCode(
     'Assigned test',
@@ -478,6 +482,7 @@ function codeEditorFixture(props, failCreation = false) {
         if (failCreation) throw new Error('Cannot create editor')
         calls.push(options.theme)
         return {
+          setModel() {},
           setPosition(position) {
             calls.push(['position', position])
           },
@@ -615,13 +620,13 @@ test('code tab preserves edits and themes, disposing models and definitions on e
   second.close()
 })
 
-test('failed editor mount releases a partially created model and type definitions', () => {
+test('failed editor mount releases types without creating a model before editor initialization', () => {
   const f = codeEditorFixture(shallowReactive({ value: '', isDarkMode: false }), true)
   f.mount()
   assert.match(f.editorError.value, /Unable to open/)
-  assert.deepEqual(f.calls, ['model', 'definitions'])
+  assert.deepEqual(f.calls, ['definitions'])
   f.close()
-  assert.deepEqual(f.calls, ['model', 'definitions'])
+  assert.deepEqual(f.calls, ['definitions'])
 })
 
 test('review errors focuses the first error in source order and shows its explanation', () => {

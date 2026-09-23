@@ -1,10 +1,11 @@
-import { monaco, acquireLessonTypes } from './LessonEditorEnvironment'
+import { monaco, acquireLessonTypes, ensureTypeScriptReady } from './LessonEditorEnvironment'
 
 /** Always checks a separate immutable snapshot, including when the CODE tab is closed. */
 export async function validateLessonSource(source: string): Promise<string[]> {
   const types = acquireLessonTypes()
   let model: monaco.editor.ITextModel | undefined
   try {
+    await ensureTypeScriptReady()
     model = monaco.editor.createModel(
       source,
       'typescript',

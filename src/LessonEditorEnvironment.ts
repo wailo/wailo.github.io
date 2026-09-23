@@ -14,6 +14,32 @@ window.MonacoEnvironment = {
 }
 let users = 0
 let libraries: monaco.IDisposable[] = []
+let initialization: Promise<void> | undefined
+
+/** Initialize through Monaco's public editor API without mounting visible UI. */
+export function ensureTypeScriptReady(): Promise<void> {
+  if (!initialization) {
+    initialization = (async () => {
+      let editor: monaco.editor.IStandaloneCodeEditor | undefined
+      let model: monaco.editor.ITextModel | undefined
+      try {
+        // Editor services must exist before the first TypeScript model is created.
+        editor = monaco.editor.create(document.createElement('div'), { model: null })
+        model = monaco.editor.createModel('', 'typescript')
+        editor.setModel(model)
+        const getWorker = await monaco.typescript.getTypeScriptWorker()
+        await getWorker(model.uri)
+      } finally {
+        editor?.dispose()
+        model?.dispose()
+      }
+    })().catch((error) => {
+      initialization = undefined
+      throw error
+    })
+  }
+  return initialization
+}
 
 /** Editors and temporary validation models share one compiler configuration and type library. */
 export function acquireLessonTypes(): monaco.IDisposable {

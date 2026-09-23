@@ -873,6 +873,7 @@ defineExpose({ reset, executeExternalCode })
 const executeCode = async (lessonId?: string, assignmentId?: string): Promise<boolean> => {
   if (loadingLesson.value) return false
   if (codeErrorCount.value > 0) {
+    viewMode.value = 'code'
     props.utilityFuncs.notifyUser(
       'Code errors',
       'Fix code errors in the CODE tab before running.',
@@ -880,6 +881,7 @@ const executeCode = async (lessonId?: string, assignmentId?: string): Promise<bo
     )
     return false
   }
+  viewMode.value = 'run'
   reset(false)
   const runGeneration = executionGeneration
   const aiSignal = aiRunController.signal
@@ -903,6 +905,7 @@ const executeCode = async (lessonId?: string, assignmentId?: string): Promise<bo
     const issues = await validateLessonSource(source)
     if (runGeneration !== executionGeneration || aiSignal.aborted) return false
     if (issues.length) {
+      viewMode.value = 'code'
       if (code.value === source) codeDiagnostics.value = { source, errorCount: issues.length }
       props.utilityFuncs.notifyUser('Code errors', issues.slice(0, 3).join('\n'), 6000)
       throw new Error(issues.join('\n'))

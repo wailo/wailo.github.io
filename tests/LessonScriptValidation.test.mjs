@@ -99,6 +99,7 @@ function validationFixture(fail = false) {
     `${declarations(sourceFile('LessonScriptValidation'), ['validateLessonSource']).replace('export async', 'async')}; return {validateLessonSource}`,
     {
       monaco,
+      ensureTypeScriptReady: async () => {},
       acquireLessonTypes: () => ({
         dispose() {
           calls.push('dispose types')
@@ -125,4 +126,68 @@ test('worker failures still release the temporary model and type libraries', asy
   const f = validationFixture(true)
   await assert.rejects(f.validateLessonSource('snapshot'), /Worker failed/)
   assert.deepEqual(f.calls.slice(-2), ['dispose model', 'dispose types'])
+})
+
+function initializationFixture() {
+  const calls = []
+  let fail = false
+  const worker = async () => {
+    if (fail) throw new Error('Worker unavailable')
+  }
+  const monaco = {
+    editor: {
+      create(_host, options) {
+        assert.equal(options.model, null)
+        calls.push('editor')
+        return {
+          setModel() {
+            calls.push('attach')
+          },
+          dispose() {
+            calls.push('dispose editor')
+          },
+        }
+      },
+      createModel() {
+        calls.push('model')
+        return {
+          uri: {},
+          dispose() {
+            calls.push('dispose model')
+          },
+        }
+      },
+    },
+    typescript: { getTypeScriptWorker: async () => worker },
+  }
+  const api = evaluate(
+    `${declarations(sourceFile('LessonEditorEnvironment'), ['initialization', 'ensureTypeScriptReady']).replace('export function', 'function')}; return {ensureTypeScriptReady}`,
+    { monaco, document: { createElement: () => ({}) } },
+  )
+  return {
+    ...api,
+    calls,
+    setFail(value) {
+      fail = value
+    },
+  }
+}
+
+test('internal initialization is shared, creates editor before model, and disposes temporary resources', async () => {
+  const f = initializationFixture()
+  const first = f.ensureTypeScriptReady()
+  assert.equal(f.ensureTypeScriptReady(), first)
+  await first
+  await f.ensureTypeScriptReady()
+  assert.deepEqual(f.calls, ['editor', 'model', 'attach', 'dispose editor', 'dispose model'])
+})
+
+test('failed initialization cleans up and permits a later retry', async () => {
+  const f = initializationFixture()
+  f.setFail(true)
+  await assert.rejects(f.ensureTypeScriptReady(), /Worker unavailable/)
+  assert.deepEqual(f.calls.slice(-2), ['dispose editor', 'dispose model'])
+  f.setFail(false)
+  await f.ensureTypeScriptReady()
+  assert.equal(f.calls.filter((call) => call === 'editor').length, 2)
 })
