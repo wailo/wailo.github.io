@@ -120,7 +120,7 @@ export interface ScriptContext<TProps extends ScriptSimProps = FlightModelSimPro
   setMap: (state: boolean) => void
   setTheme: (dark: boolean) => void
   setTab: {
-    (panelId: 'cockpit', tabName: 'Cockpit'): void
+    (panelId: 'cockpit', tabName: 'Cockpit' | 'Keyboard-Commands'): void
     (panelId: 'realtime', tabName: 'Flight-Data' | 'Airflow'): void
     (panelId: 'simulation', tabName: 'Simulation'): void
     (panelId: 'learning-modules', tabName: 'Learning-Modules'): void

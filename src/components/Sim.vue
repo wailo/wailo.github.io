@@ -104,6 +104,9 @@
               />
             </div>
           </template>
+          <template #Keyboard-Commands>
+            <CockpitKeyboardCommands :aircraft-type="activeAircraftType" />
+          </template>
         </Panel>
       </template>
       <template #realtime>
@@ -629,6 +632,7 @@ import { c172, MainModule } from '../../src/wasm/generated/flightsimulator_exec'
 import OpenLayersMap from './OpenLayersMap.vue'
 import Airflow from './Airflow.vue'
 import CockpitControls from './CockpitControls.vue'
+import CockpitKeyboardCommands from './CockpitKeyboardCommands.vue'
 import ResizableSimLayout from './ResizableSimLayout.vue'
 import type {
   ActiveFlightModelSimProps,
