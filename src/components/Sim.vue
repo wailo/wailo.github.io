@@ -468,6 +468,8 @@
             <Joystick
               v-if="FlightSimModule"
               :external-inputs="computedJoystickInputs"
+              :actual-flaps="computedJoystickInputs.actualFlaps"
+              :actual-gear="computedJoystickInputs.actualGear"
               :flap-options="computedJoystickOptions.flaps"
               :gear-options="computedJoystickOptions.gear"
               @input="(changes) => applyJoystickChanges(FlightSimModule.flightModel, changes)"
@@ -1314,11 +1316,13 @@ const computedJoystickInputs = computed(() => {
     throttle: FlightSimModule.flightModel.engine_throttle_position,
     mixture: (FlightSimModule.flightModel as c172).engine_mixture_position,
     flaps: FlightSimModule.flightModel.flaps_selector_position,
+    actualFlaps: FlightSimModule.flightModel.flaps_position,
+    actualGear: FlightSimModule.flightModel.gear_position,
     gear: FlightSimModule.flightModel.landing_gear_selector_position,
     aileronTrim: FlightSimModule.flightModel.aileron_trim_position,
     elevatorTrim: FlightSimModule.flightModel.elevator_trim_position,
     rudderTrim: FlightSimModule.flightModel.rudder_trim_position,
-  } as JoystickInput
+  } satisfies JoystickInput & { actualFlaps: number; actualGear: number }
 })
 const computedJoystickOptions = computed(() =>
   activeAircraftType.value === 'B747'

@@ -19,10 +19,17 @@
           :key="`flap-${option.value}`"
           type="button"
           class="h-5 min-w-7 border border-simElementBorder bg-panelHeaderBackground px-1 text-[9px]"
-          :class="
-            input.flaps === option.value
-              ? 'border-simActiveButton bg-simInputBackground text-simActiveButton'
-              : ''
+          :class="{
+            'border-simActiveButton bg-simInputBackground text-simActiveButton':
+              input.flaps === option.value,
+            'control-moving': input.flaps === option.value && flapsMoving,
+          }"
+          :aria-pressed="input.flaps === option.value"
+          :aria-label="`Flaps ${option.label}${input.flaps === option.value && flapsMoving ? ', moving to selected position' : ''}`"
+          :title="
+            input.flaps === option.value && flapsMoving
+              ? 'Flaps moving to selected position'
+              : undefined
           "
           @click="setFlaps(option.value)"
         >
@@ -37,10 +44,17 @@
           type="button"
           :disabled="gearOptions.length === 1"
           class="h-5 min-w-7 border border-simElementBorder bg-panelHeaderBackground px-1 text-[9px] disabled:opacity-50"
-          :class="
-            input.gear === option.value
-              ? 'border-simActiveButton bg-simInputBackground text-simActiveButton'
-              : ''
+          :class="{
+            'border-simActiveButton bg-simInputBackground text-simActiveButton':
+              input.gear === option.value,
+            'control-moving': input.gear === option.value && gearMoving,
+          }"
+          :aria-pressed="input.gear === option.value"
+          :aria-label="`Gear ${option.label}${input.gear === option.value && gearMoving ? ', moving to selected position' : ''}`"
+          :title="
+            input.gear === option.value && gearMoving
+              ? 'Gear moving to selected position'
+              : undefined
           "
           @click="setGear(option.value)"
         >
@@ -281,6 +295,8 @@ export type JoystickControlOption = { label: string; value: number }
 // --- Input Channel (Props) ---
 const props = defineProps<{
   externalInputs?: JoystickInput
+  actualFlaps?: number
+  actualGear?: number
   flapOptions: JoystickControlOption[]
   gearOptions: JoystickControlOption[]
 }>()
@@ -318,6 +334,27 @@ const signedPercent = (value: number) => {
   const rounded = percent(value)
   return `${rounded > 0 ? '+' : ''}${rounded}`
 }
+
+// Actual flap feedback is in degrees; allow for the model's floating-point settling.
+const flapsMoving = computed(
+  () =>
+    props.actualFlaps !== undefined &&
+    Number.isFinite(props.actualFlaps) &&
+    Math.abs(props.actualFlaps - input.flaps) > 0.1,
+)
+
+const gearMoving = computed(() => {
+  // Selector: DOWN=0, UP=1, OFF=2. Actual extension: retracted=0, extended=1.
+  // OFF removes the movement command, so it has no target to flash towards.
+  if (
+    props.gearOptions.length === 1 ||
+    props.actualGear === undefined ||
+    !Number.isFinite(props.actualGear) ||
+    (input.gear !== 0 && input.gear !== 1)
+  )
+    return false
+  return Math.abs(props.actualGear - (input.gear === 0 ? 1 : 0)) > 0.001
+})
 
 const telemetry = computed(() => {
   const values = [
@@ -775,3 +812,26 @@ onBeforeUnmount(() => {
   cleanup(rudTrimRef.value, onRudTrimMove, onRudTrimUp)
 })
 </script>
+
+<style scoped>
+.control-moving {
+  animation: control-travel 0.9s ease-in-out infinite;
+}
+
+@keyframes control-travel {
+  0%,
+  100% {
+    border-color: rgb(var(--color-simActiveButton));
+  }
+  50% {
+    border-color: rgb(var(--color-simActiveButton) / 0.15);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .control-moving {
+    animation: none;
+    border-style: dashed;
+  }
+}
+</style>
