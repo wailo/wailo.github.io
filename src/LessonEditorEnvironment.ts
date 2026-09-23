@@ -16,6 +16,23 @@ let users = 0
 let libraries: monaco.IDisposable[] = []
 let initialization: Promise<void> | undefined
 
+/** Monaco's language activation starts asynchronously and its worker getter does not await it. */
+async function waitForTypeScriptRegistration() {
+  const deadline = Date.now() + 10000
+  for (;;) {
+    try {
+      return await monaco.typescript.getTypeScriptWorker()
+    } catch (error) {
+      // Retry only Monaco's registration race, never download or worker startup failures.
+      if (error !== 'TypeScript not registered!') throw error
+      if (Date.now() >= deadline) {
+        throw new Error('TypeScript initialization timed out. Reload the page and try again.')
+      }
+      await new Promise<void>((resolve) => setTimeout(resolve, 25))
+    }
+  }
+}
+
 /** Initialize through Monaco's public editor API without mounting visible UI. */
 export function ensureTypeScriptReady(): Promise<void> {
   if (!initialization) {
@@ -27,7 +44,7 @@ export function ensureTypeScriptReady(): Promise<void> {
         editor = monaco.editor.create(document.createElement('div'), { model: null })
         model = monaco.editor.createModel('', 'typescript')
         editor.setModel(model)
-        const getWorker = await monaco.typescript.getTypeScriptWorker()
+        const getWorker = await waitForTypeScriptRegistration()
         await getWorker(model.uri)
       } finally {
         editor?.dispose()

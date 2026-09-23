@@ -161,7 +161,7 @@ function initializationFixture() {
     typescript: { getTypeScriptWorker: async () => worker },
   }
   const api = evaluate(
-    `${declarations(sourceFile('LessonEditorEnvironment'), ['initialization', 'ensureTypeScriptReady']).replace('export function', 'function')}; return {ensureTypeScriptReady}`,
+    `${declarations(sourceFile('LessonEditorEnvironment'), ['initialization', 'waitForTypeScriptRegistration', 'ensureTypeScriptReady']).replace('export function', 'function')}; return {ensureTypeScriptReady}`,
     { monaco, document: { createElement: () => ({}) } },
   )
   return {
@@ -190,4 +190,54 @@ test('failed initialization cleans up and permits a later retry', async () => {
   f.setFail(false)
   await f.ensureTypeScriptReady()
   assert.equal(f.calls.filter((call) => call === 'editor').length, 2)
+})
+
+function registrationFixture(getTypeScriptWorker) {
+  let now = 0
+  let waits = 0
+  const api = evaluate(
+    `${declarations(sourceFile('LessonEditorEnvironment'), ['waitForTypeScriptRegistration'])}; return {waitForTypeScriptRegistration}`,
+    {
+      monaco: { typescript: { getTypeScriptWorker } },
+      Date: { now: () => now },
+      setTimeout(resolve, milliseconds) {
+        waits++
+        now += milliseconds
+        resolve()
+      },
+    },
+  )
+  return { ...api, waits: () => waits }
+}
+
+test('initial worker lookup waits for delayed TypeScript registration', async () => {
+  let attempts = 0
+  const worker = async () => ({})
+  const f = registrationFixture(async () => {
+    if (++attempts < 4) throw 'TypeScript not registered!'
+    return worker
+  })
+  assert.equal(await f.waitForTypeScriptRegistration(), worker)
+  assert.equal(f.waits(), 3)
+})
+
+test('registered TypeScript proceeds immediately and real worker failures are not retried', async () => {
+  const worker = async () => ({})
+  const ready = registrationFixture(async () => worker)
+  assert.equal(await ready.waitForTypeScriptRegistration(), worker)
+  assert.equal(ready.waits(), 0)
+  const failure = new Error('Worker download failed')
+  const broken = registrationFixture(async () => {
+    throw failure
+  })
+  await assert.rejects(broken.waitForTypeScriptRegistration(), (error) => error === failure)
+  assert.equal(broken.waits(), 0)
+})
+
+test('missing TypeScript registration times out instead of leaving Run pending forever', async () => {
+  const f = registrationFixture(async () => {
+    throw 'TypeScript not registered!'
+  })
+  await assert.rejects(f.waitForTypeScriptRegistration(), /TypeScript initialization timed out/)
+  assert.equal(f.waits(), 400)
 })
