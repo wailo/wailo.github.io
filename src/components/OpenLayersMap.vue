@@ -5,6 +5,13 @@
     ====================================================== -->
 
     <div ref="map3dContainer" class="map-3d" />
+    <div
+      v-if="basemapError"
+      class="absolute left-2 top-2 z-10 bg-black/80 p-2 text-xs text-white"
+      role="alert"
+    >
+      {{ basemapError }}
+    </div>
 
     <!-- =====================================================
      FLOATING 2D NAV MAP
@@ -64,7 +71,6 @@ window.Cesium = Cesium
 import TileLayer from 'ol/layer/Tile'
 import VectorLayer from 'ol/layer/Vector'
 
-// import OSM from 'ol/source/OSM'
 import VectorSource from 'ol/source/Vector'
 
 import Feature from 'ol/Feature'
@@ -77,7 +83,6 @@ import RegularShape from 'ol/style/RegularShape'
 import Fill from 'ol/style/Fill'
 import Stroke from 'ol/style/Stroke'
 
-import XYZ from 'ol/source/XYZ'
 import OSM from 'ol/source/OSM'
 
 import 'ol/ol.css'
@@ -99,6 +104,21 @@ interface CameraState {
 
 let ol3d: OLCesium | undefined
 let cesiumScene: Cesium.Scene | undefined
+
+const basemapError = ref('')
+const basemapAbort = new AbortController()
+async function loadBasemap(scene: Cesium.Scene) {
+  try {
+    const { createOpenFreeMapImagery } = await import('../OpenFreeMapImagery')
+    const provider = await createOpenFreeMapImagery(basemapAbort.signal)
+    if (disposed || scene.isDestroyed() || scene !== cesiumScene) return
+    scene.imageryLayers.addImageryProvider(provider)
+    scene.requestRender()
+  } catch {
+    if (!disposed)
+      basemapError.value = 'OpenFreeMap could not load. Check your connection and reload the map.'
+  }
+}
 
 let removeCameraUpdate: (() => void) | undefined
 let resizeObserver: ResizeObserver | undefined
@@ -469,22 +489,7 @@ onMounted(() => {
   map3d = new Map({
     target: map3dContainer.value,
 
-    layers: [
-      new TileLayer({
-        source: new XYZ({
-          url: 'https://{a-d}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}.png',
-        }),
-      }),
-
-      // new TileLayer({
-      //   opacity: 0.7,
-      //   source: new XYZ({
-      //     url: 'https://{a-d}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png',
-      //   }),
-      // }),
-
-      vectorLayer3D,
-    ],
+    layers: [vectorLayer3D],
 
     view: new View({
       center: fromLonLat([props.lon, props.lat]),
@@ -502,21 +507,6 @@ onMounted(() => {
       new TileLayer({
         source: new OSM(),
       }),
-
-      new TileLayer({
-        source: new XYZ({
-          url: 'https://{a-c}://{z}/{x}/{y}{r}.png',
-          // attributions: '© <a href="https://openstreetmap.org">OpenStreetMap</a> contributors © <a href="https://carto.com">CARTO</a>'
-        }),
-      }),
-
-      //   new TileLayer({
-      //     opacity: 0.7,
-      //     source: new XYZ({
-      //       url: 'https://{a-d}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png',
-      //     }),
-      //   }),
-
       vectorLayer2D,
     ],
 
@@ -556,6 +546,7 @@ onMounted(() => {
   // Tile loads and camera changes still trigger renders. Wall-clock time alone does not.
   cesiumScene.requestRenderMode = true
   cesiumScene.maximumRenderTimeChange = Infinity
+  void loadBasemap(cesiumScene)
 
   // =====================================================
   // CAMERA INIT
@@ -600,6 +591,7 @@ onMounted(() => {
 onUnmounted(() => {
   if (disposed) return
   disposed = true
+  basemapAbort.abort()
   mapRenderingActive = false
   navMapActive = false
   resizeObserver?.disconnect()
@@ -644,7 +636,7 @@ onUnmounted(() => {
   height: 100%;
 
   overflow: hidden;
-
+  /* Keep white PFD symbology readable over the basemap. */
   filter: invert(100%) hue-rotate(180deg);
 }
 
