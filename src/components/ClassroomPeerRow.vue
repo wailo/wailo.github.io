@@ -27,9 +27,6 @@
         <span class="min-w-0 truncate font-medium">
           {{ peer.metadata.callsign || peer.metadata.displayName || '—' }}
         </span>
-        <span class="roster-secondary-id shrink-0">
-          · {{ compactStatus(peer.metadata.status) }}
-        </span>
       </div>
     </td>
       <td class="roster-lesson" :title="peer.exercise?.name">

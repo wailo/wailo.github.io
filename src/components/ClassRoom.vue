@@ -2335,7 +2335,7 @@ const trace = (text: string) => {
   padding-left: 0.5rem;
   border-left: 1px solid rgb(var(--color-simElementBorder));
 }
-.peer-column { width: 22%; }
+.peer-column { width: 10ch; }
 .lesson-column { width: 23%; }
 .status-column { width: 6rem; }
 .latency-column { width: 3.5rem; }
@@ -2354,7 +2354,7 @@ const trace = (text: string) => {
 
 @container (max-width: 38rem) {
   .lesson-column { display: none; }
-  .peer-column { width: 27%; }
+  .peer-column { width: 10ch; }
   .roster-lesson-heading { display: none; }
 }
 @container (max-width: 28rem) {
