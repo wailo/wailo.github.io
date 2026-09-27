@@ -165,8 +165,10 @@
 
     <section
       v-if="isInstructor && isOnline"
-      class="relative order-4 flex min-h-7 shrink-0 flex-wrap items-center gap-1 border-t border-panelBorder bg-panelHeaderBackground px-2 py-1 text-secondary"
+      aria-label="Class commands"
+      class="class-command-bar relative order-4 flex min-h-7 shrink-0 flex-wrap items-center gap-1 border-t border-panelBorder bg-panelHeaderBackground px-2 py-1 text-secondary"
     >
+      <span class="command-scope">{{ selectedPeerIds.length ? `${selectedPeerIds.length} SELECTED` : 'ALL PEERS' }}</span>
       <button
         class="command-button roster-primary-action"
         :disabled="!actionTargetIds.length"
@@ -234,7 +236,7 @@
       v-if="isInstructor && isOnline"
       class="classroom-roster order-2 flex min-h-24 flex-1 flex-col overflow-hidden font-panelFont"
     >
-      <div class="flex items-center justify-between gap-2 px-2 pt-3 pb-1 font-medium">
+      <div class="flex items-center justify-between gap-2 px-2 py-1 font-medium">
         <span>
           {{ selectedPeerIds.length ? `${selectedPeerIds.length} SELECTED` : 'PEERS' }}
         </span>
@@ -308,44 +310,54 @@
                 :ref="setRosterDetailRef"
                 class="roster-detail text-secondary"
               >
-                <td colspan="6" class="p-0"><div class="roster-detail-content flex max-h-72 min-h-0 flex-col overflow-hidden">
-                <div class="flex min-h-7 items-center gap-1 px-2">
-                  <span class="min-w-0 flex-1 truncate font-medium text-secondary">
-                    {{ participant.peer.metadata.callsign || participant.peer.metadata.displayName }} · Peer details
+                <td colspan="6" class="p-0"><div
+                  class="roster-detail-content flex min-h-0 flex-col"
+                  role="region"
+                  :aria-label="`Peer details: ${participant.peer.metadata.callsign || participant.peer.metadata.displayName || participant.peerId}`"
+                >
+                <div class="peer-window-header flex min-h-7 shrink-0 items-center gap-2 px-2">
+                  <span aria-hidden="true" class="opacity-50">//</span>
+                  <span class="min-w-0 truncate font-semibold text-panelActive">
+                    {{ participant.peer.metadata.callsign || participant.peer.metadata.displayName || participant.peerId }}
                   </span>
+                  <span class="flex-1 text-[9px] uppercase tracking-wider opacity-50">— Peer details</span>
                   <button
                     class="command-button"
                     aria-label="Close peer details"
                     title="Close peer details"
                     @click="closePeerDetails"
                   >
-                    ×
+                    [x]
                   </button>
                 </div>
+                <div class="peer-inspection-grid">
+                <section class="peer-inspection-section">
+                  <h4 class="inspection-label">Identity / connection</h4>
                 <dl
-                  class="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-x-2 border-t border-simElementBorder px-2 py-1 leading-tight"
+                  class="identity-fields grid grid-cols-[4.5rem_minmax(0,1fr)] gap-x-2 leading-tight"
                 >
-                  <dt class="opacity-50">Name</dt>
+                  <dt class="opacity-50">NAME:</dt>
                   <dd class="truncate">
                     {{
                       participant.peer.metadata.name || participant.peer.metadata.displayName || '—'
                     }}
                   </dd>
-                  <dt class="opacity-50">Callsign</dt>
+                  <dt class="opacity-50">CALLSIGN:</dt>
                   <dd class="truncate">{{ participant.peer.metadata.callsign || '—' }}</dd>
-                  <dt class="opacity-50">Peer ID</dt>
-                  <dd class="truncate" :title="participant.peerId">{{ participant.peerId }}</dd>
-                  <dt class="opacity-50">Connection</dt>
+                  <dt class="opacity-50">PEER ID:</dt>
+                  <dd class="peer-identifier" :title="participant.peerId"><code>{{ participant.peerId }}</code></dd>
+                  <dt class="opacity-50">CONNECTION:</dt>
                   <dd class="truncate">
                     {{ compactStatus(participant.peer.metadata.status) }} ·
                     {{ connectionAge(participant.peer) > 15 ? 'stale' : 'connected' }} ·
                     {{ participant.peer.latency ?? '—' }}ms
                   </dd>
                 </dl>
-                <div class="border-t border-simElementBorder px-2 py-1 leading-tight">
-                  <div class="mb-0.5 opacity-50">Assignment</div>
-                  <div v-if="participant.peer.exercise" class="flex min-w-0 flex-wrap gap-x-1">
-                    <span class="min-w-0 truncate font-medium">{{
+                </section>
+                <section class="peer-inspection-section leading-tight">
+                  <h4 class="inspection-label">Assignment</h4>
+                  <div v-if="participant.peer.exercise" class="assignment-summary">
+                    <span class="block break-words font-semibold">{{
                       participant.peer.exercise.name
                     }}</span>
                     <span>· {{ compactExerciseStatus(participant.peer.exercise.status) }}</span>
@@ -354,8 +366,10 @@
                     </span>
                   </div>
                   <div v-else class="opacity-60">Unassigned</div>
-                </div>
-                <div class="flex flex-wrap gap-1 border-t border-simElementBorder px-2 py-1">
+                </section>
+                <section class="peer-inspection-section">
+                  <h4 class="inspection-label">Actions · this peer</h4>
+                  <div class="peer-actions flex flex-wrap gap-1">
                   <button
                     class="command-button"
                     :class="{ 'roster-primary-action': !participant.peer.exercise }"
@@ -364,7 +378,7 @@
                     {{ participant.peer.exercise ? 'Replace' : 'Assign' }}
                   </button>
                   <button
-                    class="command-button"
+                    class="command-button command-positive"
                     :disabled="
                       !participant.peer.exercise || participant.peer.exercise.status === 'running'
                     "
@@ -394,14 +408,16 @@
                     Message
                   </button>
                   <button
-                    class="command-button command-destructive ml-auto"
+                    class="command-button command-destructive peer-disconnect"
                     @click="disconnectPeer(participant.peerId)"
                   >
                     Disconnect
                   </button>
                 </div>
+                </section>
+                </div>
                 <div
-                  class="roster-detail-history min-h-0 flex-1 overflow-auto border-t border-simElementBorder px-2 pb-1"
+                  class="roster-detail-history min-h-0 max-h-48 overflow-auto border-t border-simElementBorder px-2 pb-1"
                 >
                   <div
                     v-if="participant.peer.exercise"
@@ -487,19 +503,20 @@
                       </div>
                     </article>
                   </section>
-                  <div class="pt-1 font-medium">Progress history</div>
+                  <div class="roster-history-heading pt-1 text-[9px] uppercase tracking-wider opacity-60">Progress history</div>
                   <div
                     v-if="!participant.peer.exercise?.checkpoints.length"
                     class="py-1 opacity-50"
                   >
-                    No progress recorded.
+                    &gt; [SYSTEM] No progress recorded.
                   </div>
                   <div
                     v-for="(checkpoint, index) in participant.peer.exercise?.checkpoints || []"
                     :key="`${checkpoint.timestamp}-${index}`"
-                    class="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-2 py-0.5 leading-tight"
+                    class="history-entry grid grid-cols-[8ch_minmax(0,1fr)] gap-3 py-0.5 leading-tight"
+                    :class="{ 'history-latest': index === (participant.peer.exercise?.checkpoints.length ?? 0) - 1 }"
                   >
-                    <span class="opacity-50">{{ formatCheckpointTime(checkpoint.timestamp) }}</span>
+                    <span class="tabular-nums opacity-50">{{ formatCheckpointTime(checkpoint.timestamp) }}</span>
                     <span class="min-w-0 break-words">
                       {{ checkpoint.message }}
                     </span>
@@ -1736,6 +1753,7 @@ const formatCheckpointTime = (timestamp: number) =>
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
+    hourCycle: 'h23',
   })
 const formatAssignmentDeadline = (timestamp: number) =>
   new Date(timestamp).toLocaleTimeString([], {
@@ -2329,15 +2347,23 @@ const trace = (text: string) => {
   scrollbar-gutter: stable;
 }
 
-.peer-table { width: 100%; table-layout: fixed; border-collapse: collapse; font: inherit; }
+.peer-table { width: 100%; min-width: 40rem; table-layout: fixed; border-collapse: collapse; font: inherit; }
 .roster-detail-content {
-  margin: 0.25rem 0.25rem 0.75rem 1.25rem;
-  padding-left: 0.5rem;
-  border-left: 1px solid rgb(var(--color-simElementBorder));
+  position: relative;
+  margin: 0.125rem 0.5rem 0.625rem 1.25rem;
+  border: 3px double rgb(var(--color-simElementBorder));
+  background: rgb(var(--color-panelContentBackground));
+}
+.peer-window-header {
+  background: rgb(var(--color-panelHeaderBackground));
+  border-bottom: 1px solid rgb(var(--color-simElementBorder));
+}
+.roster-detail-history {
+  scrollbar-gutter: stable;
 }
 .peer-column { width: 10ch; }
 .lesson-column { width: 23%; }
-.status-column { width: 6rem; }
+.status-column { width: 9rem; }
 .latency-column { width: 3.5rem; }
 .details-column { width: 2rem; }
 .roster-columns th { padding: 4px; text-align: left; font-weight: normal; }
@@ -2352,16 +2378,37 @@ const trace = (text: string) => {
   border-bottom: 1px solid rgb(var(--color-panelBorder));
 }
 
-@container (max-width: 38rem) {
-  .lesson-column { display: none; }
-  .peer-column { width: 10ch; }
-  .roster-lesson-heading { display: none; }
+.peer-inspection-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 12px;
+  padding-bottom: 6px;
 }
-@container (max-width: 28rem) {
-  .latency-column { display: none; }
-  .status-column { width: 5rem; }
-  .roster-latency-heading { display: none; }
+.peer-inspection-section { min-width: 0; padding: 6px 8px; }
+
+.inspection-label, .command-scope {
+  font-size: 9px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  opacity: .65;
 }
+.inspection-label { margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid rgb(var(--color-panelBorder)); }
+.identity-fields { row-gap: 3px; }
+.identity-fields dd { white-space: normal; overflow-wrap: anywhere; }
+.identity-fields .peer-identifier { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .65; font-size: .9em; }
+.peer-identifier code { font: inherit; }
+.peer-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; }
+.peer-actions .command-button { min-width: 0; text-align: left; }
+.peer-actions .peer-disconnect { grid-column: 1 / -1; justify-self: start; margin-top: 4px; }
+.assignment-summary { line-height: 1.5; }
+.assignment-summary > span:first-child { margin-bottom: 3px; }
+.history-entry { opacity: .75; }
+.history-latest { opacity: 1; }
+.history-latest > span:last-child { font-weight: 600; }
+.roster-history-heading { margin-bottom: 4px; }
+.class-command-bar { border-top: 2px solid rgb(var(--color-simElementBorder)); }
+.class-command-bar .command-scope { margin-right: 5px; }
+.class-command-bar .command-button, .peer-actions .command-button { text-transform: uppercase; }
 
 .command-button {
   @apply h-5 shrink-0 bg-primary px-1 text-secondary hover:bg-secondary hover:text-primary disabled:cursor-default disabled:opacity-40;
@@ -2371,28 +2418,33 @@ const trace = (text: string) => {
   @apply bg-panelActive px-2 text-white hover:bg-panelActive hover:text-white;
 }
 
-/* Filled controls distinguish actions from the adjacent read-only metadata. */
+/* Uniform command blocks; semantic colors are drawn from the existing palette. */
 .roster-detail .command-button {
-  @apply px-2;
-  background: rgb(var(--color-secondary) / 0.16);
+  padding-inline: 6px;
+  border: 1px solid rgb(var(--color-simElementBorder));
+  border-radius: 0;
+  background: transparent;
+  color: rgb(var(--color-secondary) / .8);
+  box-shadow: none;
 }
-
-.roster-detail .command-button:enabled:hover {
-  @apply bg-secondary text-primary;
-}
-
 .roster-detail .roster-primary-action {
-  @apply bg-panelActive text-white;
+  border-color: rgb(var(--color-secondary));
+  color: rgb(var(--color-secondary));
+  font-weight: 600;
 }
-
+.roster-detail .command-positive {
+  border-color: rgb(var(--color-simActiveButton));
+  color: rgb(var(--color-simActiveButton));
+}
 .roster-detail .command-destructive {
-  box-shadow: inset 0 -2px rgb(var(--color-panelActive));
+  border-color: rgb(var(--color-panelActive));
+  color: rgb(var(--color-panelActive));
 }
-
-.roster-detail .command-destructive:enabled:hover,
-.roster-detail .roster-primary-action:enabled:hover {
-  @apply bg-panelActive text-white;
-  filter: brightness(1.1);
+.roster-detail .command-button:disabled { opacity: .3; }
+.roster-detail .command-button:enabled:hover {
+  background: rgb(var(--color-secondary));
+  color: rgb(var(--color-panelContentBackground));
+  border-color: rgb(var(--color-secondary));
 }
 
 .detail-disclosure {
