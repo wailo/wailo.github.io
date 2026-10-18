@@ -2,17 +2,18 @@
   <!-- Button or Label -->
   <button
     :title="props.buttonLabel"
+    :aria-label="props.buttonIconOnly ? props.buttonLabel : undefined"
     :class="[
-      'efis-button relative inline-flex h-full min-w-0 items-center justify-center overflow-hidden text-ellipsis text-nowrap px-1',
+      'efis-button relative inline-flex min-w-0 items-center justify-center overflow-hidden text-ellipsis text-nowrap px-1',
       'border border-panelBorder outline-none cursor-pointer font-medium',
       'active:translate-y-px focus-visible:outline focus-visible:outline-1 focus-visible:outline-panelActive',
       props.momentary
         ? 'bg-panelHeaderBackground text-secondary'
         : props.booleanStatus
-        ? 'bg-panelHeaderBackground'
-        : props.buttonState === true
-          ? 'bg-simActiveButton text-primary'
-          : 'bg-panelHeaderBackground text-secondary',
+          ? 'bg-panelHeaderBackground'
+          : props.buttonState === true
+            ? 'bg-simActiveButton text-primary'
+            : 'bg-panelHeaderBackground text-secondary',
     ]"
     :aria-pressed="props.booleanStatus ? props.buttonState : undefined"
     @click="props.buttonClick"
@@ -35,16 +36,20 @@
     </span>
     <span
       v-if="!props.momentary || props.buttonLabel"
-      class="min-w-0 truncate"
-      :class="props.booleanStatus ? (props.buttonState ? 'text-simActiveButton' : 'text-secondary') : ''"
+      class="flex min-w-0 items-center justify-center gap-1"
+      :class="
+        props.booleanStatus ? (props.buttonState ? 'text-simActiveButton' : 'text-secondary') : ''
+      "
     >
-      {{ props.buttonLabel }}
+      <wIcon v-if="props.buttonIcon" :name="props.buttonIcon" class="h-4 w-4 shrink-0" />
+      <span v-if="!props.buttonIconOnly" class="min-w-0 truncate">{{ props.buttonLabel }}</span>
     </span>
   </button>
 </template>
 
 <script setup lang="ts">
 import { PropType } from 'vue'
+import wIcon from './wIcon.vue'
 
 // The best thing to do is to seperate the button from text input
 // Props
@@ -54,6 +59,14 @@ const props = defineProps({
     required: true,
   },
   buttonState: {
+    type: Boolean,
+    default: false,
+  },
+  buttonIcon: {
+    type: String,
+    default: '',
+  },
+  buttonIconOnly: {
     type: Boolean,
     default: false,
   },

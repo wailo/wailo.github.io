@@ -1,13 +1,13 @@
 <template>
   <div
     ref="menuRoot"
-    class="pointer-events-auto absolute left-1 top-1 z-30 font-mono text-xs text-secondary"
+    class="pointer-events-auto absolute left-1 top-1 z-30 font-mono text-[10px] text-secondary"
   >
     <wButton
       button-label="☰"
       :button-state="open"
       :button-click="() => (open = !open)"
-      class="h-6 w-7"
+      class="h-5 w-7"
       title="Cockpit controls"
       aria-label="Cockpit controls"
       aria-haspopup="true"
@@ -32,96 +32,110 @@
       </div>
 
       <section class="control-group">
-        <div class="group-label">APPEARANCE</div>
-        <div class="mt-1 grid grid-cols-2 gap-1">
+        <div class="group-caption">
+          <span class="group-caption-label">APPEARANCE</span>
+        </div>
+        <div class="mt-0.5 grid grid-cols-2 gap-1">
           <wButton
             button-label="DARK THEME"
+            :button-icon="controlIcons[themeControl.id]"
+            button-icon-only
             :button-state="themeControl.value"
             :button-click="() => toggleControl(themeControl)"
-            class="h-7 min-w-0"
+            class="h-5 min-w-0"
           />
           <wButton
             button-label="FULLSCREEN"
+            :button-icon="controlIcons[fullscreenControl.id]"
+            button-icon-only
             :button-state="fullscreenControl.value"
             :button-click="() => toggleControl(fullscreenControl)"
-            class="h-7 min-w-0"
+            class="h-5 min-w-0"
           />
         </div>
-        <div class="mt-1 grid grid-cols-4 gap-1">
+        <div class="mt-1 grid grid-cols-3 gap-1">
           <wButton
             v-for="control in layoutControls"
             :key="control.id"
             :button-label="control.label"
             :button-state="control.value"
             :button-click="() => control.setValue(true)"
-            class="h-7 min-w-0"
+            class="h-5 min-w-0"
           />
         </div>
       </section>
 
       <section class="control-group">
-        <button class="group-toggle" @click="visualsOpen = !visualsOpen">
-          <span>{{ visualsOpen ? '▾' : '▸' }} VISUALS</span>
-          <span>{{ enabledCount(utilityControls) }}/{{ utilityControls.length }}</span>
-        </button>
-        <div v-if="visualsOpen" class="mt-1 grid grid-cols-4 gap-1">
+        <div class="group-caption">
+          <span class="group-caption-label">VISUALS</span>
+          <span class="group-caption-state"
+            >{{ enabledCount(utilityControls) }}/{{ utilityControls.length }}</span
+          >
+        </div>
+        <div class="mt-0.5 grid grid-cols-4 gap-1">
           <wButton
             v-for="control in utilityControls"
             :key="control.id"
             :button-label="control.label"
+            :button-icon="controlIcons[control.id]"
+            button-icon-only
             :button-state="control.value"
             :button-click="() => toggleControl(control)"
-            class="h-7 min-w-0"
+            class="h-5 min-w-0"
           />
         </div>
       </section>
 
       <section class="control-group">
-        <div class="control-group-header">
-          <button class="group-disclosure" @click="sixOpen = !sixOpen">
-            <span>{{ sixOpen ? '▾' : '▸' }} SIX INSTRUMENTS</span>
-            <span>{{ groupState(sixGroup) }}</span>
-          </button>
-          <wButton
-            button-label="MASTER"
-            :button-state="sixGroup.master.value"
-            :button-click="() => toggleControl(sixGroup.master)"
-            class="h-7 w-20"
-          />
+        <div class="group-caption">
+          <span class="group-caption-label">SIX INSTRUMENTS</span>
+          <span class="group-caption-side">
+            <span class="group-caption-state">{{ groupState(sixGroup) }}</span>
+            <wButton
+              button-label="MASTER"
+              button-icon="power"
+              button-icon-only
+              :button-state="sixGroup.master.value"
+              :button-click="() => toggleControl(sixGroup.master)"
+              class="h-5 w-7"
+            />
+          </span>
         </div>
-        <div v-if="sixOpen" class="mt-1 grid grid-cols-3 gap-1">
+        <div class="mt-0.5 grid grid-cols-3 gap-1">
           <wButton
             v-for="control in sixGroup.children"
             :key="control.id"
             :button-label="control.label"
             :button-state="control.value"
             :button-click="() => toggleControl(control)"
-            class="h-7 min-w-0"
+            class="h-5 min-w-0"
           />
         </div>
       </section>
 
       <section class="control-group">
-        <div class="control-group-header">
-          <button class="group-disclosure" @click="pfdOpen = !pfdOpen">
-            <span>{{ pfdOpen ? '▾' : '▸' }} PFD</span>
-            <span>{{ groupState(pfdGroup) }}</span>
-          </button>
-          <wButton
-            button-label="MASTER"
-            :button-state="pfdGroup.master.value"
-            :button-click="() => toggleControl(pfdGroup.master)"
-            class="h-7 w-20"
-          />
+        <div class="group-caption">
+          <span class="group-caption-label">PFD</span>
+          <span class="group-caption-side">
+            <span class="group-caption-state">{{ groupState(pfdGroup) }}</span>
+            <wButton
+              button-label="MASTER"
+              button-icon="power"
+              button-icon-only
+              :button-state="pfdGroup.master.value"
+              :button-click="() => toggleControl(pfdGroup.master)"
+              class="h-5 w-7"
+            />
+          </span>
         </div>
-        <div v-if="pfdOpen" class="mt-1 grid grid-cols-4 gap-1">
+        <div class="mt-0.5 grid grid-cols-4 gap-1">
           <wButton
             v-for="control in pfdGroup.children"
             :key="control.id"
             :button-label="control.label"
             :button-state="control.value"
             :button-click="() => toggleControl(control)"
-            class="h-7 min-w-0"
+            class="h-5 min-w-0"
           />
         </div>
       </section>
@@ -174,9 +188,16 @@ defineProps({
 
 const open = ref(false)
 const menuRoot = ref<HTMLElement | null>(null)
-const visualsOpen = ref(true)
-const pfdOpen = ref(false)
-const sixOpen = ref(false)
+
+// Control id -> wIcon name. Controls not listed here stay as text labels.
+const controlIcons: Record<string, string> = {
+  'dark-theme': 'moon',
+  fullscreen: 'fullscreen',
+  visual: 'globe',
+  map: 'map',
+  motion: 'activity',
+  audio: 'volume',
+}
 
 const allEnabled = (group: CockpitToggleGroup) => group.children.every((item) => item.value)
 const someEnabled = (group: CockpitToggleGroup) => group.children.some((item) => item.value)
@@ -209,50 +230,38 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.group-toggle,
-.group-disclosure {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.group-toggle {
-  width: 100%;
-  border: 1px solid rgb(var(--color-simElementBorder));
-  background: rgb(var(--color-panelHeaderBackground));
-  padding: 0.2rem 0.3rem;
-}
-
-.group-toggle:focus-visible,
-.group-disclosure:focus-visible {
-  outline: 1px solid rgb(var(--color-panelActive));
-}
-
 .control-group {
   margin-top: 0.3rem;
 }
 
-.control-group-header {
+.group-caption {
   display: flex;
-  align-items: stretch;
-  gap: 0.25rem;
-}
-
-.group-disclosure {
-  min-width: 0;
-  flex: 1;
-  border: 1px solid rgb(var(--color-simElementBorder));
-  background: rgb(var(--color-panelHeaderBackground));
-  padding: 0.2rem 0.3rem;
-}
-
-.group-label {
-  display: flex;
-  min-width: 0;
-  flex: 1;
   align-items: center;
-  border: 1px solid rgb(var(--color-simElementBorder));
-  background: rgb(var(--color-panelHeaderBackground));
-  padding: 0.2rem 0.3rem;
+  justify-content: space-between;
+  min-width: 0;
+  padding: 0 2px;
+}
+
+.group-caption-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.group-caption-side {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.group-caption-state {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  opacity: 0.5;
 }
 </style>
