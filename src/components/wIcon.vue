@@ -40,12 +40,31 @@
       <path d="M12 2v10" />
       <path d="M18.36 6.64a9 9 0 1 1-12.72 0" />
     </template>
+    <template v-else-if="name === 'rows'">
+      <path d="M4 7h16" />
+      <path d="M4 12h16" />
+      <path d="M4 17h10" />
+    </template>
+    <template v-else-if="name === 'chart'">
+      <path d="M3 3v18h18" />
+      <path d="M7.5 14.5l3-4.5 3 2.5 5.5-7" />
+    </template>
+    <template v-else-if="name === 'trash'">
+      <path d="M3 6h18" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    </template>
+    <template v-else-if="name === 'reset'">
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+    </template>
   </svg>
 </template>
 
 <script setup lang="ts">
 /**
  * Available names: 'moon' | 'fullscreen' | 'globe' | 'map' | 'activity' | 'volume' | 'power'
+ *                 | 'rows' | 'chart' | 'trash' | 'reset'
  */
 defineProps({
   name: {

@@ -1,19 +1,28 @@
 <template>
-  <div ref="displayRoot" class="flex flex-col w-full h-full">
+  <div class="flex flex-col w-full h-full">
     <div class="relative w-full space-y-1">
       <!-- Input + Buttons Row -->
-      <div class="flex h-6 gap-1">
+      <div ref="searchRowRef" class="flex h-6 gap-1">
         <input
           v-model="searchQuery"
           type="text"
           placeholder="/ Search"
           class="min-w-0 flex-1 text-secondary bg-simInputBackground border border-simElementBorder px-1 outline-none focus:border-panelActive"
           @focus="isFocused = true"
+          @click="isFocused = true"
         />
-        <wButton class="w-14" button-label="Clear" :button-click="hideAll" />
         <wButton
-          class="w-14"
+          class="w-9"
+          button-label="Clear"
+          button-icon="trash"
+          button-icon-only
+          :button-click="hideAll"
+        />
+        <wButton
+          class="w-9"
           button-label="Reset"
+          button-icon="reset"
+          button-icon-only
           :button-click="() => timePlotRef?.reset_x_axis()"
         />
       </div>
@@ -21,6 +30,7 @@
       <!-- Signal palette -->
       <div
         v-if="isDropdownVisible"
+        ref="searchPaletteRef"
         class="absolute left-0 right-0 top-6 z-30 max-h-64 overflow-auto border border-simElementBorder bg-panelContentBackground shadow-lg"
       >
         <div
@@ -58,25 +68,31 @@
               {{ item.label }}
               <span v-if="item.unit" class="opacity-60">({{ item.unit }})</span>
             </div>
-            <div class="grid w-[6.25rem] shrink-0 grid-cols-2 gap-1">
+            <div class="flex h-full shrink-0 items-center justify-end gap-1">
               <wButton
                 v-if="plotComposer"
-                class="col-span-2 h-4 w-full"
+                class="h-5 w-7"
                 button-label="Series"
+                button-icon="chart"
+                button-icon-only
                 :button-state="plotSelection.has(item.id.toLowerCase())"
                 :button-click="() => togglePlotSelection(item.id)"
               />
               <template v-else>
                 <wButton
-                  class="h-4 w-full"
+                  class="h-5 w-7"
                   button-label="Data"
+                  button-icon="rows"
+                  button-icon-only
                   :button-state="visibleItems.has(item.id.toLowerCase())"
                   :button-click="() => toggleDataView(item)"
                 />
                 <wButton
                   v-if="isPlottableSimulationProperty(item)"
-                  class="h-4 w-full"
+                  class="h-5 w-7"
                   button-label="Plot"
+                  button-icon="chart"
+                  button-icon-only
                   :button-state="activePlotIds.has(item.id.toLowerCase())"
                   :button-click="() => togglePlot(item)"
                 />
@@ -128,8 +144,10 @@
             <td class="flex w-24 justify-end gap-1 pl-1">
               <wButton
                 v-if="isPlottableSimulationProperty(item)"
-                class="h-5 w-12"
+                class="h-5 w-9"
                 button-label="Plot"
+                button-icon="chart"
+                button-icon-only
                 :button-state="activePlotIds.has(item.id.toLowerCase())"
                 :button-click="() => togglePlot(item)"
               />
@@ -190,7 +208,8 @@ const props = defineProps({
 // UI state
 const searchQuery = ref('')
 const isFocused = ref(false)
-const displayRoot = ref<HTMLElement | null>(null)
+const searchRowRef = ref<HTMLElement | null>(null)
+const searchPaletteRef = ref<HTMLElement | null>(null)
 const timePlotRef = ref<InstanceType<typeof TimePlot> | null>(null)
 const plotComposer = ref<{ plotId: string; sourceIds: string[] } | null>(null)
 const plotSelection = ref(new Set<string>())
@@ -378,9 +397,12 @@ function tickPlot() {
 }
 
 function handleClickOutside(e: MouseEvent) {
-  if (displayRoot.value && !displayRoot.value.contains(e.target as Node)) {
-    closePalette()
-  }
+  const target = e.target as Node
+  // Palette stays open while the click is inside the popup or the search row
+  // (input, Clear, Reset); anything else dismisses it.
+  if (searchPaletteRef.value?.contains(target)) return
+  if (searchRowRef.value?.contains(target)) return
+  closePalette()
 }
 
 onMounted(() => {
