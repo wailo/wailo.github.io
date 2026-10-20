@@ -5,6 +5,7 @@ const fields = {
   elevator: 'elevator_position',
   rudder: 'rudder_position',
   throttle: 'engine_throttle_position',
+  reverseCommand: 'engine_throttle_reverser_position',
   mixture: 'engine_mixture_position',
   flaps: 'flaps_selector_position',
   gear: 'landing_gear_selector_position',
@@ -19,6 +20,7 @@ type JoystickModel = Partial<Record<Field, number>> & {
   set_elevator_position(value: number): unknown
   set_rudder_position(value: number): unknown
   set_engine_throttle_position(value: number): unknown
+  set_engine_throttle_reverser_position?(value: number): unknown
   set_engine_mixture_position?(value: number): unknown
   set_flaps_selector_position(value: number): unknown
   set_landing_gear_selector_position(value: number): unknown
@@ -27,9 +29,16 @@ type JoystickModel = Partial<Record<Field, number>> & {
   set_rudder_trim_position(value: number): unknown
 }
 
-/** Apply only the controls the user touched, through the existing mirrored setters. */
+/**
+ * Apply only the controls the user touched, through the existing mirrored setters.
+ *
+ * Throttle moves carry exactly one thrust channel (see throttleFromSlider): the
+ * engine treats the two setters as one lever, so writing both would let the
+ * reverser write stomp a forward throttle back to idle.
+ */
 export function applyJoystickChanges(model: JoystickModel, changes: Partial<JoystickInput>) {
-  for (const key of Object.keys(changes) as Array<keyof JoystickInput>) {
+  const keys = Object.keys(changes) as Array<keyof JoystickInput>
+  for (const key of keys) {
     const field = fields[key]
     const value = changes[key]
     if (!field || value === undefined || !Number.isFinite(value) || value === model[field]) continue

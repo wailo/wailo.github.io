@@ -76,13 +76,22 @@
               <span class="block opacity-70">THR</span>
               <span class="block opacity-50">Throttle</span>
               <span class="block tabular-nums text-[10px] text-simActiveButton">
-                {{ percent(input.throttle) }}%
+                {{ throttleReadout }}
               </span>
             </div>
             <div class="relative flex min-h-0 flex-1 justify-center">
               <div
                 ref="throttleBaseRef"
-                class="relative h-full min-h-20 w-[18px] touch-none cursor-ns-resize overflow-hidden border border-simElementBorder bg-simInputBackground"
+                class="relative h-full min-h-20 w-[18px] touch-none cursor-ns-resize border border-simElementBorder bg-simInputBackground focus-visible:outline focus-visible:outline-1 focus-visible:outline-simActiveButton"
+                role="slider"
+                tabindex="0"
+                aria-label="Engine thrust"
+                aria-orientation="vertical"
+                :aria-valuemin="0"
+                :aria-valuemax="100"
+                :aria-valuenow="Math.round(throttleSliderPosition * 100)"
+                :aria-valuetext="throttleReadout"
+                @keydown="onThrottleKeydown"
                 @pointerdown="startThrottleDrag"
               >
                 <div
@@ -92,8 +101,16 @@
                   :style="{ bottom: `${i * 10}%` }"
                 ></div>
 
-                <div class="absolute left-0 right-0" style="bottom: 20%">
-                  <div class="h-px bg-simActiveButton w-full"></div>
+                <div
+                  v-if="combinedThrottle"
+                  class="absolute left-0 right-0 bottom-[5px] bg-simActiveButton/10 pointer-events-none"
+                  :style="{ top: markerTop(0.25) }"
+                ></div>
+                <div
+                  v-if="combinedThrottle"
+                  class="throttle-idle-band absolute left-0 right-0 pointer-events-none"
+                  :style="{ top: markerTop(0.3), bottom: `calc(25% + 2.5px)` }"
+                >
                   <span
                     class="absolute left-full ml-2 -translate-y-1/2 top-1/2 text-[8px] text-simActiveButton opacity-90 whitespace-nowrap pointer-events-none"
                   >
@@ -276,9 +293,12 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onBeforeUnmount, watch, onMounted, type Ref } from 'vue'
+import { sliderFromThrottle, sliderFromReadback, throttleFromSlider } from '../ThrottleControl'
+import { describeB747Throttle, reverseIdleEntry, forwardIdleExit } from '../B747ThrottleDetents'
 
 export interface JoystickInput {
   throttle: number
+  reverseCommand?: number
   rudder: number
   elevator: number
   aileron: number
@@ -297,6 +317,7 @@ const props = defineProps<{
   externalInputs?: JoystickInput
   actualFlaps?: number
   actualGear?: number
+  combinedThrottle?: boolean
   flapOptions: JoystickControlOption[]
   gearOptions: JoystickControlOption[]
 }>()
@@ -356,9 +377,18 @@ const gearMoving = computed(() => {
   return Math.abs(props.actualGear - (input.gear === 0 ? 1 : 0)) > 0.001
 })
 
+const throttleSliderPosition = computed(() => sliderFromThrottle(input.throttle))
+// Map axis boundaries to the handle center, accounting for its 10px height.
+const markerTop = (axis: number) => `calc(${(1 - axis) * 100}% + ${axis * 10 - 5}px)`
+const throttleReadout = computed(() =>
+  props.combinedThrottle
+    ? describeB747Throttle(throttleSliderPosition.value)
+    : `${percent(input.throttle)}%`,
+)
+
 const telemetry = computed(() => {
   const values = [
-    { label: 'THR', value: `${percent(input.throttle)}%` },
+    { label: 'THR', value: throttleReadout.value },
     { label: 'ELEV', value: signedPercent(input.elevator) },
     { label: 'AIL', value: signedPercent(input.aileron) },
     { label: 'RUD', value: signedPercent(input.rudder) },
@@ -441,7 +471,7 @@ const syncPositionsFromControls = () => {
     if (rect.height > 0) {
       const handleHeight = HANDLE.throttle.height
       const maxTravel = rect.height - handleHeight
-      throttlePos.y = (1 - input.throttle) * maxTravel
+      throttlePos.y = (1 - throttleSliderPosition.value) * maxTravel
     }
   }
 
@@ -514,7 +544,9 @@ watch(
   () => props.externalInputs,
   (newVal) => {
     if (!newVal) return
-    input.throttle = Math.max(0, Math.min(1, newVal.throttle ?? 0))
+    input.throttle = props.combinedThrottle
+      ? sliderFromReadback(newVal.throttle ?? 0, newVal.reverseCommand ?? 0)
+      : Math.max(0, Math.min(1, newVal.throttle ?? 0))
     input.rudder = Math.max(-1, Math.min(1, newVal.rudder ?? 0))
     input.elevator = Math.max(-1, Math.min(1, newVal.elevator ?? 0))
     input.aileron = Math.max(-1, Math.min(1, newVal.aileron ?? 0))
@@ -527,7 +559,7 @@ watch(
     input.gear = newVal.gear
     syncPositionsFromControls()
   },
-  { deep: true, flush: 'post' },
+  { deep: true, flush: 'post', immediate: true },
 )
 
 const setFlaps = (value: number) => {
@@ -542,16 +574,53 @@ const setGear = (value: number) => {
 }
 
 // --- Throttle Logic ---
+const setThrottleSlider = (position: number) => {
+  // `throttle` is the one combined-axis readback and slider position. The
+  // command values below select which WASM setter receives the movement.
+  input.throttle = Math.max(0, Math.min(1, position))
+  const changes = throttleFromSlider(position, props.combinedThrottle)
+  emit('input', changes)
+}
+
+const onThrottleKeydown = (event: KeyboardEvent) => {
+  const position = throttleSliderPosition.value
+  const step = event.shiftKey ? 0.1 : 0.01
+  const positions: Record<string, number> = {
+    ArrowUp: position + step,
+    ArrowRight: position + step,
+    ArrowDown: position - step,
+    ArrowLeft: position - step,
+    Home: 0,
+    End: 1,
+  }
+  if (!(event.key in positions)) return
+  event.preventDefault()
+  // Stop at the first detent crossed; further key presses traverse the idle valley.
+  let next = positions[event.key]
+  if (props.combinedThrottle && event.key.startsWith('Arrow')) {
+    const boundaries =
+      next > position ? [reverseIdleEntry, forwardIdleExit] : [forwardIdleExit, reverseIdleEntry]
+    for (const boundary of boundaries) {
+      if ((position - boundary) * (next - boundary) < -1e-12) {
+        next = boundary
+        break
+      }
+    }
+  }
+  setThrottleSlider(next)
+  syncPositionsFromControls()
+}
+
 const handleThrottleMove = (event: PointerEvent) => {
   if (!throttleBaseRef.value) return
   const rect = throttleBaseRef.value.getBoundingClientRect()
   const handleHeight = HANDLE.throttle.height
   const maxTravel = rect.height - handleHeight
+  if (maxTravel <= 0) return
   let y = event.clientY - rect.top - handleHeight / 2
   y = Math.max(0, Math.min(maxTravel, y))
   throttlePos.y = y
-  input.throttle = 1 - y / maxTravel
-  emit('input', { throttle: input.throttle })
+  setThrottleSlider(1 - y / maxTravel)
 }
 
 const startThrottleDrag = (e: PointerEvent) => {
@@ -814,6 +883,11 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.throttle-idle-band {
+  border-block: 1px solid rgb(var(--color-simActiveButton));
+  background: rgb(var(--color-secondary) / 0.12);
+}
+
 .control-moving {
   animation: control-travel 0.9s ease-in-out infinite;
 }

@@ -5,6 +5,7 @@ import { RemoteCallManager } from '../src/RemoteCallManager.ts'
 
 const fields = {
   throttle: 'engine_throttle_position',
+  reverseCommand: 'engine_throttle_reverser_position',
   aileron: 'aileron_position',
   elevator: 'elevator_position',
   rudder: 'rudder_position',
@@ -54,9 +55,10 @@ test('every supported control maps to its setter; unsupported mixture is ignored
   const { model, calls } = fixture()
   for (const key of Object.keys(fields)) applyJoystickChanges(model, { [key]: 1 })
   assert.equal(calls.length, Object.keys(fields).length)
+  delete model.set_engine_throttle_reverser_position
   delete model.set_engine_mixture_position
   applyJoystickChanges(model, { mixture: 0 })
-  assert.equal(calls.length, 10)
+  assert.equal(calls.length, 11)
 })
 
 test('invalid or absent values do not call setters', () => {

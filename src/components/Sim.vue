@@ -471,6 +471,7 @@
             <Joystick
               v-if="FlightSimModule"
               :external-inputs="computedJoystickInputs"
+              :combined-throttle="activeAircraftType === 'B747'"
               :actual-flaps="computedJoystickInputs.actualFlaps"
               :actual-gear="computedJoystickInputs.actualGear"
               :flap-options="computedJoystickOptions.flaps"
@@ -1318,6 +1319,8 @@ const computedJoystickInputs = computed(() => {
     elevator: FlightSimModule.flightModel.elevator_position,
     rudder: FlightSimModule.flightModel.rudder_position,
     throttle: FlightSimModule.flightModel.engine_throttle_position,
+    reverseCommand: (FlightSimModule.flightModel as c172 & { engine_throttle_reverser_position?: number })
+      .engine_throttle_reverser_position,
     mixture: (FlightSimModule.flightModel as c172).engine_mixture_position,
     flaps: FlightSimModule.flightModel.flaps_selector_position,
     actualFlaps: FlightSimModule.flightModel.flaps_position,
