@@ -40,6 +40,7 @@ const pending = ref(false)
 const errorMessage = ref('')
 const copied = ref(false)
 let digitAnimation: ReturnType<typeof setInterval> | undefined
+let disposed = false
 
 const normalizedAccountNumber = computed(() => normalizeAccountCode(accountNumber.value))
 const accountNumberInput = computed({
@@ -169,14 +170,29 @@ const logout = () => {
   emit('logout')
 }
 
-onMounted(() => {
+onMounted(async () => {
   emit('flow-state', flow.value)
-  if (pb.authStore.isValid && pb.authStore.record) {
-    emit('login', pb.baseURL, pb.authStore.token, String(pb.authStore.record.name || ''))
+  if (!pb.authStore.isValid) return
+
+  // A restored session may only have the token stored while the record is missing.
+  // Refresh once so the display name is available again.
+  if (!pb.authStore.record) {
+    try {
+      await pb.collection('users').authRefresh()
+    } catch {
+      // Keep the stored session; the licence check below still needs the token.
+    }
   }
+
+  if (disposed || !pb.authStore.isValid || !pb.authStore.token) return
+
+  userInfo.value = pb.authStore.record
+  flow.value = 'authenticated'
+  emit('login', pb.baseURL, pb.authStore.token, String(pb.authStore.record?.name || ''))
 })
 
 onUnmounted(() => {
+  disposed = true
   unsubscribeAuth()
   if (digitAnimation) clearInterval(digitAnimation)
 })
