@@ -374,7 +374,6 @@ No input is required. The checklist tracks flight actions and their conditions; 
   await n1Stable
   await frame(2, '3 · Visual Scene and Layouts', 'Ground roll · layouts and themes.', async () => {
     const layoutSteps = [
-      { name: 'Focus', layout: context.layoutTypes.FOCUS },
       { name: 'Pilot', layout: context.layoutTypes.PILOT },
       { name: 'Instructor', layout: context.layoutTypes.INSTRUCTOR },
     ]

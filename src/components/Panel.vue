@@ -18,6 +18,14 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  hiddenTabs: {
+    type: Array as PropType<string[]>,
+    default: () => [],
+  },
+  translucent: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits<{
@@ -32,6 +40,8 @@ const tabDisplayNames: Record<string, string> = {
   Controls: 'CONTROLS',
   'Flight-Data': 'FLIGHT DATA',
   Console: 'CONSOLE',
+  Classroom: 'CLASSROOM',
+  Account: 'ACCOUNT',
 }
 
 const setActiveTab = (tabName: string) => {
@@ -72,14 +82,16 @@ onBeforeUnmount(() => {
 
 watchEffect(() => {
   tabMap.value = Object.keys(tabSlots)
-    .filter((key) => key !== 'default')
+    .filter(
+      (key) => key !== 'default' && key !== 'header-actions' && !props.hiddenTabs.includes(key),
+    )
     .map((slotName) => ({
       name: slotName,
       display: tabDisplayNames[slotName] ?? slotName.replace(/-/g, ' '),
     }))
 
-  if (!activeTab.value && tabMap.value.length > 0) {
-    activeTab.value = tabMap.value[0].name
+  if (!tabMap.value.some((tab) => tab.name === activeTab.value)) {
+    activeTab.value = tabMap.value[0]?.name ?? null
   }
 })
 </script>
@@ -90,13 +102,16 @@ watchEffect(() => {
     :class="[
       'flex flex-col border w-full h-full box-border min-w-0 min-h-0 rounded overflow-hidden',
       props.active ? 'border-panelActive' : 'border-panelBorder',
-      { 'panel-attention-flash': props.flash },
+      {
+        'panel-attention-flash': props.flash,
+        'panel-translucent': props.translucent,
+      },
     ]"
   >
     <!-- panel-header -->
     <div
       :class="[
-        'max-h-1/6 text-xs font-medium h-5 box-border justify-between border-b pb-0 flex items-center bg-panelHeaderBackground',
+        'panel-header max-h-1/6 text-xs font-medium h-5 box-border justify-between border-b pb-0 flex items-center bg-panelHeaderBackground',
         props.active ? 'border-panelActive' : 'border-panelBorder',
       ]"
       :title="props.panelId ? 'Double-click to maximize or restore panel' : undefined"
@@ -121,6 +136,8 @@ watchEffect(() => {
         </button>
       </div>
 
+      <slot name="header-actions"></slot>
+
       <!-- panel-status -->
       <span
         :class="[
@@ -134,7 +151,7 @@ watchEffect(() => {
 
     <!-- panel-content -->
     <div
-      class="h-5/6 flex flex-1 box-border items-start justify-center pt-2 p-1 overflow-auto text-panelFont text-secondary bg-panelContentBackground w-full"
+      class="panel-content h-5/6 flex flex-1 box-border items-start justify-center pt-2 p-1 overflow-auto text-panelFont text-secondary bg-panelContentBackground w-full"
     >
       <div
         v-for="tab in tabMap"
@@ -149,6 +166,18 @@ watchEffect(() => {
 </template>
 
 <style scoped>
+.panel-translucent {
+  background-color: transparent;
+}
+
+.panel-translucent .panel-header {
+  background-color: rgb(var(--color-panelHeaderBackground) / 0.88);
+}
+
+.panel-translucent .panel-content {
+  background-color: rgb(var(--color-panelContentBackground) / 0.82);
+}
+
 .panel-attention-flash {
   animation: panel-attention-flash 850ms ease-in-out infinite;
 }

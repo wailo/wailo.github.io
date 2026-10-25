@@ -3,6 +3,7 @@
     class="sim-split-layout"
     :data-active-layout="layout"
     :data-maximized-panel="maximizedPanel ?? ''"
+    :data-panel-revision="panelRevision"
     :push-other-panes="false"
     :maximize-panes="false"
     @resize="notifyResize"
@@ -23,6 +24,7 @@
           horizontal
           :data-active-layout="layout"
           :data-maximized-panel="maximizedPanel ?? ''"
+          :data-panel-revision="panelRevision"
           :push-other-panes="true"
           :maximize-panes="false"
           @resize="notifyResize"
@@ -57,7 +59,7 @@ import { computed, nextTick, ref } from 'vue'
 import { Pane, Splitpanes } from 'splitpanes'
 import 'splitpanes/dist/splitpanes.css'
 
-type LayoutName = 'instructor' | 'pilot' | 'focus'
+type LayoutName = 'instructor' | 'pilot'
 type PanelId =
   | 'cockpit'
   | 'realtime'
@@ -73,9 +75,23 @@ type ColumnDefinition = { min?: number; panels: PanelDefinition[] }
 type LayoutPreset = { columns: number[]; panels: Record<PanelId, number> }
 type SplitpanesEvent = { panes: Array<{ size: number }> }
 
-const props = defineProps<{ layout: LayoutName; maximizedPanel?: string | null }>()
+const props = withDefaults(
+  defineProps<{
+    layout: LayoutName
+    maximizedPanel?: string | null
+    pilotConsoleOpen?: boolean
+    pilotPlotsOpen?: boolean
+    pilotAutopilotOpen?: boolean
+  }>(),
+  {
+    maximizedPanel: null,
+    pilotConsoleOpen: true,
+    pilotPlotsOpen: true,
+    pilotAutopilotOpen: true,
+  },
+)
 
-const columns: ColumnDefinition[] = [
+const instructorColumns: ColumnDefinition[] = [
   {
     panels: [{ id: 'cockpit' }, { id: 'autopilot', min: 5 }, { id: 'learningmodules' }],
   },
@@ -84,6 +100,17 @@ const columns: ColumnDefinition[] = [
   },
   {
     panels: [{ id: 'realtime' }, { id: 'flightmodel' }],
+  },
+]
+
+const pilotColumns: ColumnDefinition[] = [
+  {
+    min: 20,
+    panels: [{ id: 'cockpit' }, { id: 'autopilot', min: 5 }],
+  },
+  {
+    min: 12,
+    panels: [{ id: 'prompt' }, { id: 'realtime' }],
   },
 ]
 
@@ -102,34 +129,21 @@ const layouts: Record<LayoutName, LayoutPreset> = {
     },
   },
   pilot: {
-    columns: [50, 25, 25],
+    columns: [62, 38],
     panels: {
-      cockpit: 87.5,
-      autopilot: 12.5,
+      cockpit: 88,
+      autopilot: 12,
       learningmodules: 0,
-      prompt: 87.5,
-      classroom: 12.5,
-      simulation: 0,
-      realtime: 50,
-      flightmodel: 50,
-    },
-  },
-  focus: {
-    columns: [50, 25, 25],
-    panels: {
-      cockpit: 100,
-      autopilot: 0,
-      learningmodules: 0,
-      prompt: 85,
+      prompt: 42,
       classroom: 0,
-      simulation: 15,
-      realtime: 100,
+      simulation: 0,
+      realtime: 58,
       flightmodel: 0,
     },
   },
 }
 
-const storageKey = (layout: LayoutName) => `sim-split-layout-v2-${layout}`
+const storageKey = (layout: LayoutName) => `sim-split-layout-v5-${layout}`
 const layoutRevision = ref(0)
 const panelAliases: Record<string, PanelId> = {
   'learning-modules': 'learningmodules',
@@ -140,19 +154,62 @@ const maximizedPanel = computed<PanelId | null>(() => {
   return panelAliases[props.maximizedPanel] ?? (props.maximizedPanel as PanelId)
 })
 
+const layoutColumns = computed(() =>
+  props.layout === 'pilot' ? pilotColumns : instructorColumns,
+)
+
+// Splitpanes reads pane sizes when its own render runs. The nested workspace
+// toggles panels through props, so give each splitpanes instance a changing
+// attribute to force that render without remounting the panel contents.
+const panelRevision = computed(() =>
+  [
+    props.layout,
+    props.pilotConsoleOpen ? '1' : '0',
+    props.pilotPlotsOpen ? '1' : '0',
+    props.pilotAutopilotOpen ? '1' : '0',
+    props.maximizedPanel ?? '',
+    layoutRevision.value,
+  ].join(':'),
+)
+
+const isPanelVisible = (panelId: PanelId, preset: LayoutPreset) => {
+  if (props.layout === 'pilot') {
+    switch (panelId) {
+      case 'cockpit':
+        return true
+      case 'autopilot':
+        return props.pilotAutopilotOpen
+      case 'prompt':
+        return props.pilotConsoleOpen
+      case 'realtime':
+        return props.pilotPlotsOpen
+      default:
+        return false
+    }
+  }
+  return preset.panels[panelId] > 0
+}
+
+const isColumnVisible = (column: ColumnDefinition, preset: LayoutPreset) =>
+  column.panels.some((panel) => isPanelVisible(panel.id, preset))
+
 const activeColumns = computed(() => {
   layoutRevision.value
   const preset = layouts[props.layout]
+  const columns = layoutColumns.value
+  const pilotDeckVisible =
+    props.layout === 'pilot' && (props.pilotConsoleOpen || props.pilotPlotsOpen)
   const maximizedColumnIndex = maximizedPanel.value
     ? columns.findIndex((column) =>
         column.panels.some(
-          (panel) => panel.id === maximizedPanel.value && preset.panels[panel.id] > 0,
+          (panel) =>
+            panel.id === maximizedPanel.value && isPanelVisible(panel.id, preset),
         ),
       )
     : -1
   const maximizedColumnSiblingMinimum = columns.reduce(
     (sum, column, columnIndex) =>
-      columnIndex !== maximizedColumnIndex && preset.columns[columnIndex] > 0
+      columnIndex !== maximizedColumnIndex && isColumnVisible(column, preset)
         ? sum + (column.min ?? 10)
         : sum,
     0,
@@ -163,10 +220,14 @@ const activeColumns = computed(() => {
   } catch {
     // Ignore stale layout data.
   }
+  const savedColumns =
+    Array.isArray(saved.columns) && saved.columns.length === columns.length
+      ? saved.columns
+      : null
 
   return columns.map((column, columnIndex) => {
     const panels = column.panels.map((panel) => {
-      const visible = preset.panels[panel.id] > 0
+      const visible = isPanelVisible(panel.id, preset)
       return {
         ...panel,
         visible,
@@ -178,7 +239,15 @@ const activeColumns = computed(() => {
       }
     })
 
-    const maximizedInColumn = panels.some((panel) => panel.id === maximizedPanel.value)
+    // A single visible panel owns the full column; otherwise use the saved split.
+    if (props.layout === 'pilot') {
+      const visiblePanels = panels.filter((panel) => panel.visible)
+      if (visiblePanels.length === 1) visiblePanels[0].size = 100
+    }
+
+    const maximizedInColumn = panels.some(
+      (panel) => panel.visible && panel.id === maximizedPanel.value,
+    )
     if (maximizedInColumn) {
       const siblingMinimum = panels
         .filter((panel) => panel.visible && panel.id !== maximizedPanel.value)
@@ -193,8 +262,12 @@ const activeColumns = computed(() => {
       })
     }
 
-    const visible = preset.columns[columnIndex] > 0
-    const normalSize = visible ? (saved.columns?.[columnIndex] ?? preset.columns[columnIndex]) : 0
+    const visible = isColumnVisible(column, preset)
+    let normalSize = visible ? (savedColumns?.[columnIndex] ?? preset.columns[columnIndex]) : 0
+    if (props.layout === 'pilot') {
+      if (columnIndex === 0) normalSize = pilotDeckVisible ? (savedColumns?.[0] ?? 62) : 100
+      if (columnIndex === 1) normalSize = pilotDeckVisible ? (savedColumns?.[1] ?? 38) : 0
+    }
     const maximizedSize =
       maximizedColumnIndex < 0
         ? normalSize
@@ -224,6 +297,13 @@ const readSaved = () => {
 
 const saveColumnSizes = ({ panes }: SplitpanesEvent) => {
   if (maximizedPanel.value) return
+  if (
+    props.layout === 'pilot' &&
+    !props.pilotConsoleOpen &&
+    !props.pilotPlotsOpen
+  ) {
+    return
+  }
   const saved = readSaved()
   saved.columns = panes.map((pane) => pane.size)
   localStorage.setItem(storageKey(props.layout), JSON.stringify(saved))
@@ -232,12 +312,19 @@ const saveColumnSizes = ({ panes }: SplitpanesEvent) => {
 
 const savePanelSizes = (columnIndex: number, { panes }: SplitpanesEvent) => {
   if (maximizedPanel.value) return
+  const preset = layouts[props.layout]
+  const column = layoutColumns.value[columnIndex]
+  if (!column) return
+  const visiblePanels = column.panels.filter((panel) =>
+    isPanelVisible(panel.id, preset),
+  )
+  if (visiblePanels.length < 2) return
   const saved = readSaved()
   saved.panels ||= {}
-  columns[columnIndex].panels.forEach((panel, panelIndex) => {
-    if (layouts[props.layout].panels[panel.id] > 0) {
-      saved.panels[panel.id] = panes[panelIndex].size
-    }
+  column.panels.forEach((panel, panelIndex) => {
+    if (!isPanelVisible(panel.id, preset)) return
+    const pane = panes[panelIndex]
+    if (pane) saved.panels[panel.id] = pane.size
   })
   localStorage.setItem(storageKey(props.layout), JSON.stringify(saved))
   notifyResize()

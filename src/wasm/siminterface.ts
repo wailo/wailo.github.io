@@ -24,7 +24,6 @@ export { type graphics } from './generated/flightsimulator_exec'
 export enum LayoutTypes {
   INSTRUCTOR = 'instructor',
   PILOT = 'pilot',
-  FOCUS = 'focus',
 }
 
 export async function initializeModule(options: any): Promise<[MainModule, ExtendedMainModule]> {

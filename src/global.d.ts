@@ -18,7 +18,6 @@ type ClassroomCommand =
   | 'reset'
   | 'layout-instructor'
   | 'layout-pilot'
-  | 'layout-focus'
   | 'clear-whiteboard'
 
 type ClassroomExerciseStatus =

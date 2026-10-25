@@ -1,6 +1,7 @@
 <template>
   <div
-    class="flex h-full w-full select-none flex-col gap-1 overflow-hidden bg-simBackground p-1 font-mono text-secondary"
+    class="joystick-surface flex h-full w-full select-none flex-col gap-1 overflow-hidden p-1 font-mono text-secondary"
+    :data-translucent="translucent ? 'true' : 'false'"
   >
     <div class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-0.5 px-1 text-[9px]">
       <span v-for="item in telemetry" :key="item.label" class="whitespace-nowrap">
@@ -10,7 +11,7 @@
     </div>
 
     <div
-      class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-y border-panelBorder bg-panelContentBackground px-2 py-1"
+      class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-y border-panelBorder joystick-section px-2 py-1"
     >
       <div class="flex min-w-0 items-center gap-1">
         <span class="mr-1 text-[8px] tracking-[0.15em] opacity-60">FLAPS</span>
@@ -64,9 +65,9 @@
     </div>
 
     <div
-      class="grid min-h-0 flex-1 grid-cols-[minmax(85px,0.85fr)_minmax(140px,1.25fr)_minmax(90px,0.9fr)] gap-px overflow-auto bg-panelBorder"
+      class="joystick-grid grid min-h-0 flex-1 grid-cols-[minmax(85px,0.85fr)_minmax(140px,1.25fr)_minmax(90px,0.9fr)] gap-px overflow-auto"
     >
-      <section class="flex min-h-[140px] min-w-0 flex-col bg-panelContentBackground p-1.5">
+      <section class="flex min-h-[140px] min-w-0 flex-col joystick-section p-1.5">
         <h3 class="mb-1 border-b border-panelBorder pb-1 text-[9px] tracking-[0.18em] opacity-70">
           ENGINE
         </h3>
@@ -159,7 +160,7 @@
         </div>
       </section>
 
-      <section class="flex min-h-[140px] min-w-0 flex-col bg-panelContentBackground p-1.5">
+      <section class="flex min-h-[140px] min-w-0 flex-col joystick-section p-1.5">
         <h3 class="mb-1 border-b border-panelBorder pb-1 text-[9px] tracking-[0.18em] opacity-70">
           FLIGHT CONTROLS
         </h3>
@@ -220,7 +221,7 @@
         </div>
       </section>
 
-      <section class="min-w-0 bg-panelContentBackground p-1.5">
+      <section class="min-w-0 joystick-section p-1.5">
         <h3 class="mb-3 border-b border-panelBorder pb-1 text-[9px] tracking-[0.18em] opacity-70">
           TRIM
         </h3>
@@ -320,6 +321,7 @@ const props = defineProps<{
   combinedThrottle?: boolean
   flapOptions: JoystickControlOption[]
   gearOptions: JoystickControlOption[]
+  translucent?: boolean
 }>()
 
 // --- Output Channel (Emits) ---
@@ -883,6 +885,24 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.joystick-surface {
+  background-color: rgb(var(--color-simBackground));
+}
+
+.joystick-section {
+  background-color: rgb(var(--color-panelContentBackground));
+}
+
+.joystick-grid {
+  background-color: rgb(var(--color-panelBorder));
+}
+
+.joystick-surface[data-translucent='true'],
+.joystick-surface[data-translucent='true'] .joystick-section,
+.joystick-surface[data-translucent='true'] .joystick-grid {
+  background-color: transparent;
+}
+
 .throttle-idle-band {
   border-block: 1px solid rgb(var(--color-simActiveButton));
   background: rgb(var(--color-secondary) / 0.12);

@@ -213,6 +213,7 @@ onUnmounted(() => {
           {{ userInfo?.name || 'Account user' }}
         </strong>
       </div>
+      <slot name="status" />
       <button type="button" class="account-button account-button-secondary" @click="logout">
         Sign out
       </button>

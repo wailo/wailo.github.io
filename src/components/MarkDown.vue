@@ -103,6 +103,7 @@ import type {
 
 const emit = defineEmits<{
   (event: 'action-pending', pending: boolean): void
+  (event: 'latest', prompt: { title: string; text: string }): void
 }>()
 
 type ContinueInteraction = {
@@ -161,6 +162,16 @@ marked.setOptions({
 
 const renderMarkdown = (content: string) => String(marked.parse(content))
 
+const plainText = (content: string) =>
+  renderMarkdown(content)
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\s+/g, ' ')
+    .trim()
+
 const updateActionPending = () => {
   const pending = cards.value.some(({ interaction }) => {
     if (!interaction) return false
@@ -172,7 +183,7 @@ const updateActionPending = () => {
   emit('action-pending', pending)
 }
 
-const addCard = async (card: PromptCard, replace = false) => {
+const addCard = async (card: PromptCard, replace = false, notifyHud = true) => {
   if (replace) {
     cancelPromptInteractions()
     cards.value = [card]
@@ -181,6 +192,8 @@ const addCard = async (card: PromptCard, replace = false) => {
   } else {
     cards.value.push(card)
   }
+
+  if (notifyHud) emit('latest', { title: card.title, text: plainText(card.markdown) })
 
   if (followLatest) await scrollToLatest()
   else pendingMessages.value++
@@ -213,7 +226,7 @@ async function write(
   title: string,
   message?: string,
   time: number = 0,
-  options: { append?: boolean; replace?: boolean } = {},
+  options: { append?: boolean; replace?: boolean; hud?: boolean } = {},
 ): Promise<void> {
   const text = message || ''
   const card = {
@@ -223,7 +236,7 @@ async function write(
     html: renderMarkdown(text),
   }
 
-  await addCard(card, options.replace)
+  await addCard(card, options.replace, options.hud !== false)
 
   if (time <= 0) return
   await new Promise<void>((resolve) => setTimeout(resolve, time))
@@ -386,13 +399,14 @@ const reset = () => {
   pendingMessages.value = 0
   followLatest = true
   nextCardId = 0
+  emit('latest', { title: '', text: '' })
   updateActionPending()
   void nextTick(() => {
     if (transcriptRef.value) transcriptRef.value.scrollTop = 0
   })
 }
 
-defineExpose({ askQuestion, cancelPromptInteractions, reset, waitForUser, write })
+defineExpose({ askQuestion, cancelPromptInteractions, reset, showLatest, waitForUser, write })
 </script>
 
 <style>

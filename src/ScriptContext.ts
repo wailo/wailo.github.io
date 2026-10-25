@@ -53,6 +53,20 @@ export interface EssayQuestionOptions extends BaseQuestionOptions {
 
 export type AskQuestionOptions = MultipleChoiceQuestionOptions | EssayQuestionOptions
 
+export type PilotAttention = 'console' | 'plots' | 'instruments'
+
+export interface PilotViewOptions {
+  console?: boolean
+  plots?: boolean
+  autopilot?: boolean
+  controls?: boolean
+  classroom?: boolean
+  lessons?: boolean
+  airflow?: boolean
+  whiteboard?: boolean
+  attention?: PilotAttention | null
+}
+
 export interface QuestionResult {
   questionId?: string
   type: AskQuestionOptions['type']
@@ -114,6 +128,8 @@ export interface ScriptContext<TProps extends ScriptSimProps = FlightModelSimPro
   dataView: (prop: SimulationProperties, state: boolean) => void
   plotView: (prop: SimulationProperties | SimulationProperties[], state: boolean) => void
   dataDisplayReset: () => void
+  /** Control Pilot workspace visibility and direct the pilot's attention. */
+  setPilotView: (view: PilotViewOptions) => void
   setLayout: (mode: LayoutTypes) => void
   layoutTypes: typeof LayoutTypes
   setVisuals: (state: boolean) => void
@@ -157,6 +173,7 @@ export function createScriptContext<TProps extends ScriptSimProps>(
     dataView: deps.dataView,
     plotView: deps.plotView,
     dataDisplayReset: deps.dataDisplayReset,
+    setPilotView: deps.setPilotView,
     checkPoint: deps.checkPoint,
     assessment: {
       submit(result) {

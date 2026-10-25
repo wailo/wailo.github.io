@@ -539,6 +539,7 @@ import { createScriptContext, runUserScript } from '../ScriptContext.ts'
 import type {
   AskQuestionOptions,
   ActiveFlightModelSimProps,
+  PilotViewOptions,
   QuestionResult,
   ScriptContext,
   WaitForUserOptions,
@@ -624,7 +625,7 @@ let aiRunController = new AbortController()
 
 // Define the event emitter
 const emit = defineEmits<{
-  (event: 'start', code: string): void
+  (event: 'start', code: string, title: string): void
   (event: 'reset'): void
   (event: 'error', error: any, title?: string): void
   (event: 'completed', title: string): void
@@ -663,6 +664,7 @@ const props = defineProps({
       plotView: (item: SimulationProperties | SimulationProperties[], state: boolean) => void
       dataView: (item: SimulationProperties, state: boolean) => void
       dataDisplayReset: () => void
+      setPilotView: (view: PilotViewOptions) => void
       setLayout: (mode: LayoutTypes) => void
       setVisuals: (state: boolean) => void
       setMap: (state: boolean) => void
@@ -911,7 +913,7 @@ const executeCode = async (lessonId?: string, assignmentId?: string): Promise<bo
       throw new Error(issues.join('\n'))
     }
     executionResult.value = null
-    emit('start', source)
+    emit('start', source, lessonTitle)
 
     const { prepareTrainingArtifact, loadUserScript } = await loadLessonCompiler()
     // Loading must not resurrect a stopped/replaced lesson or evaluate its top-level code.
@@ -988,6 +990,7 @@ const executeCode = async (lessonId?: string, assignmentId?: string): Promise<bo
       dataView: props.utilityFuncs.dataView,
       plotView: props.utilityFuncs.plotView,
       dataDisplayReset: props.utilityFuncs.dataDisplayReset,
+      setPilotView: props.utilityFuncs.setPilotView,
       setLayout: props.utilityFuncs.setLayout,
       setVisuals: props.utilityFuncs.setVisuals,
       setMap: props.utilityFuncs.setMap,
