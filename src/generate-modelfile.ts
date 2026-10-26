@@ -9,6 +9,8 @@ const SIMULATOR_META_FILE = 'src/wasm/generated/flightsimulator_exec_meta.ts'
 const SCRIPT_CONTEXT_FILE = 'src/ScriptContext.ts'
 const SIM_INTERFACE_FILE = 'src/wasm/siminterface.ts'
 const OUTPUT_FILE = 'src/wasm/generated/Modelfile'
+// Deploy syncs this copy so the server's Ollama model is built from the same contract.
+const BACKEND_OUTPUT_FILE = 'backend/Modelfile'
 const DTS_OUTPUT_FILE = 'src/wasm/generated/editorTypes.txt'
 const BASE_MODEL_NAME = 'qwen3.5:9b'
 const GENERATED_FILE_NOTICE = 'Auto generated file from generate-modelfile.ts, do not edit manually'
@@ -230,6 +232,8 @@ function scriptApiContract(): string {
     interfaceText(source, 'AssessmentSubmission'),
     interfaceText(source, 'LessonAIRequest'),
     typeAliasText(source, 'LessonAIResponse'),
+    typeAliasText(source, 'PilotAttention'),
+    interfaceText(source, 'PilotViewOptions'),
     `declare function notifyUser(
   title: string,
   message?: string,
@@ -422,6 +426,8 @@ function main() {
 
   fs.mkdirSync(path.dirname(OUTPUT_FILE), { recursive: true })
   fs.writeFileSync(OUTPUT_FILE, modelfile)
+  fs.mkdirSync(path.dirname(BACKEND_OUTPUT_FILE), { recursive: true })
+  fs.writeFileSync(BACKEND_OUTPUT_FILE, modelfile)
   fs.writeFileSync(DTS_OUTPUT_FILE, dtsContent)
   console.log('Modelfile and editor TypeScript definitions generated successfully')
 }

@@ -92,3 +92,17 @@ sw.*
 # Generated simulator model/editor definitions
 src/wasm/generated/Modelfile
 src/wasm/generated/editorTypes.txt
+# Same Modelfile, synced to the server for `ollama create`
+backend/Modelfile
+
+# references
+references/*
+!references/OAA_LESSON_RULES.md
+
+# PocketBase runtime state and signing keys
+pocketbase/pb_data/
+pocketbase/secrets/
+pocketbase/maintenance-backups/
+backend/pocketbase/pb_data/
+backend/pocketbase/secrets/
+backend/.env

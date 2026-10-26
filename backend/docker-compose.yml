@@ -1,0 +1,54 @@
+# version: '3.7'
+
+services:
+  caddy:
+    image: caddy:latest
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+    depends_on:
+      - pocketbase
+      - peerjs
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # This is required to route to ollama running in the host
+
+  peerjs:
+    image: peerjs/peerjs-server
+    platform: linux/amd64
+    ports:
+      - '9000:9000'
+    restart: unless-stopped
+
+  pocketbase:
+    build:
+      dockerfile: pocketbase/pocketbase.Dockerfile
+      args:
+        POCKETBASE_TAG: v0.40.0
+    container_name: pocketbase
+    restart: unless-stopped
+    command:
+      - serve
+      - --http=0.0.0.0:8090
+      - --origins=*
+      - --dev
+      - --encryptionEnv
+      - ENCRYPTION
+    environment:
+      ENCRYPTION: ${POCKETBASE_ENCRYPTION_KEY:?Set POCKETBASE_ENCRYPTION_KEY in .env or the shell environment}
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./pocketbase/pb_data:/app/pb_data
+      - ./pocketbase/pb_public:/app/pb_public
+      - ./pocketbase/pb_hooks:/app/pb_hooks
+      - ./pocketbase/pb_migrations:/app/pb_migrations
+      - ./pocketbase/secrets:/app/keys:ro
+
+    healthcheck: # optional, recommended since v0.10.0
+      test: wget --no-verbose --tries=1 --spider http://localhost:8090/api/health || exit 1
+      interval: 120s
+      timeout: 5s
+      retries: 5

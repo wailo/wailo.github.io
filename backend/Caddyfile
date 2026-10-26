@@ -1,0 +1,41 @@
+:3000 {
+	handle_path /peerjs/* {
+		reverse_proxy peerjs:9000
+	}
+
+	handle_path /pb/* {
+		reverse_proxy pocketbase:8090
+	}
+
+	# Handle CORS preflight
+	@ollamaPreflight {
+		method OPTIONS
+		path /llm/api/chat*
+	}
+	handle @ollamaPreflight {
+		header Access-Control-Allow-Origin "*"
+		header Access-Control-Allow-Methods "POST, OPTIONS"
+		header Access-Control-Allow-Headers "Content-Type, Authorization"
+		respond "" 204
+	}
+
+	# Handle actual Ollama POST request
+	@ollamaChat {
+		method POST
+		path /llm/api/chat*
+	}
+
+	handle @ollamaChat {
+		uri strip_prefix /llm
+		reverse_proxy host.docker.internal:11434 {
+			transport http {
+				dial_timeout 5s
+				read_timeout 5m
+				write_timeout 30s
+			}
+		}
+	}
+	handle {
+		respond "Caddy is up and routing via Funnel!"
+	}
+}
