@@ -89,3 +89,20 @@ test('resetTimeouts unwinds pending lesson waits instead of stranding them', asy
   resetTimeouts()
   await unwound
 })
+
+test('a cancelled wait that no lesson awaits is not an unhandled rejection', async () => {
+  const unhandled = []
+  const onUnhandled = (reason) => unhandled.push(reason)
+  process.on('unhandledRejection', onUnhandled)
+  try {
+    // Lessons fire-and-forget waits; cancellation must stay silent then.
+    waitFor(60_000)
+    waitForCondition(() => false, 0, 5, null)
+    await new Promise((resolve) => globalThis.setTimeout(resolve, 20))
+    resetTimeouts()
+    await new Promise((resolve) => globalThis.setTimeout(resolve, 40))
+    assert.deepEqual(unhandled, [])
+  } finally {
+    process.off('unhandledRejection', onUnhandled)
+  }
+})

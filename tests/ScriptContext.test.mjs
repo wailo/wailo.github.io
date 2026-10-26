@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { createScriptContext, runUserScript } from '../src/ScriptContext.ts'
+import { LessonCancelledError } from '../src/LessonCancellation.ts'
 
 function createDependencies(props) {
   const noOp = () => {}
@@ -134,4 +135,40 @@ test('runUserScript reports an error once and rethrows the original failure', as
   )
 
   assert.deepEqual(notifications, [['Script Error', 'Error: lesson failed']])
+})
+
+test('runUserScript unwinds a cancelled run without reporting it as a script error', async (t) => {
+  const logged = t.mock.method(console, 'error', () => {})
+  const notifications = []
+  const dependencies = createDependencies({})
+  dependencies.notifyUser = async (...args) => notifications.push(args)
+  const context = createScriptContext(dependencies)
+  const cancellation = new LessonCancelledError()
+
+  await assert.rejects(
+    runUserScript(async () => {
+      throw cancellation
+    }, context),
+    (error) => error === cancellation,
+  )
+
+  assert.equal(logged.mock.callCount(), 0)
+  assert.deepEqual(notifications, [])
+})
+
+test('runUserScript still rethrows when reporting the error fails', async (t) => {
+  t.mock.method(console, 'error', () => {})
+  const dependencies = createDependencies({})
+  dependencies.notifyUser = async () => {
+    throw new LessonCancelledError()
+  }
+  const context = createScriptContext(dependencies)
+  const failure = new Error('lesson failed')
+
+  await assert.rejects(
+    runUserScript(async () => {
+      throw failure
+    }, context),
+    (error) => error === failure,
+  )
 })

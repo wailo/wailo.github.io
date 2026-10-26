@@ -10,6 +10,7 @@ import {
 } from './core'
 
 import { LayoutTypes } from '../src/wasm/siminterface.ts'
+import { isLessonCancelled } from './LessonCancellation'
 import type {
   b747SimProps,
   c172SimProps,
@@ -224,8 +225,12 @@ export async function runUserScript<TProps extends ScriptSimProps>(
   try {
     await script(ctx)
   } catch (err) {
+    // A replaced or stopped run unwinds through this path; it is not a script bug.
+    if (isLessonCancelled(err)) throw err
     console.error('Script execution failed:', err)
-    ctx.notifyUser('Script Error', String(err))
+    // Reporting must not mask the original failure, and the run may be cancelled
+    // while the notification is still in flight.
+    await ctx.notifyUser('Script Error', String(err)).catch(() => {})
     throw err
   }
 }

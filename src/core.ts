@@ -11,6 +11,7 @@ export type { SimulationProperties } from '../src/wasm/generated/flightsimulator
 
 import type { ScriptContext } from './ScriptContext'
 import './ApplicationTimers'
+import { LessonCancelledError } from './LessonCancellation'
 import type { b747, c172 } from './wasm/siminterface'
 export type { ScriptContext } from './ScriptContext'
 
@@ -275,6 +276,15 @@ const settleWait = (id: number) => {
   pendingWaits.delete(id)
 }
 
+/**
+ * Lessons do not await every wait. Attaching a no-op handler keeps a cancelled run
+ * from surfacing as an unhandled rejection while awaiting callers still unwind.
+ */
+const guardCancellation = <T>(promise: Promise<T>): Promise<T> => {
+  promise.catch(() => {})
+  return promise
+}
+
 // Function to wait for a condition to be true after a given confirmation time in ms
 // This function will poll the conditionFunction every pollInterval ms
 // confirmation_ms is the time to wait before checking the condition again
@@ -282,7 +292,7 @@ const settleWait = (id: number) => {
 // hardTimeout_ms is the maximum time to wait for the condition to be true.
 // Pass null for an unbounded wait; every lesson wait should use a finite deadline.
 // throwOnTimeout will throw an error if the condition is not met within the timeout
-export async function waitForCondition(
+export function waitForCondition(
   conditionFunction: () => boolean,
   confirmation_ms: number = 0,
   pollInterval_ms: number = 400,
@@ -302,7 +312,7 @@ export async function waitForCondition(
     }
   }
 
-  return new Promise<boolean>((resolve, reject) => {
+  const promise = new Promise<boolean>((resolve, reject) => {
     let waitId = 0
 
     const finish = (value: boolean) => {
@@ -362,17 +372,20 @@ export async function waitForCondition(
 
     poll()
   })
+
+  return guardCancellation(promise)
 }
 
 // Wait for a given time in ms without interrupting the simulation
-export async function waitFor(ms: number): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
+export function waitFor(ms: number): Promise<void> {
+  const promise = new Promise<void>((resolve, reject) => {
     const waitId = registerWait(reject)
     setTimeout(() => {
       settleWait(waitId)
       resolve()
     }, ms)
   })
+  return guardCancellation(promise)
 }
 
 // Module-level cache
@@ -422,5 +435,5 @@ export const resetTimeouts = (): void => {
   // that no longer exists.
   const waits = [...pendingWaits.values()]
   pendingWaits.clear()
-  for (const reject of waits) reject(new Error('Lesson run cancelled'))
+  for (const reject of waits) reject(new LessonCancelledError())
 }

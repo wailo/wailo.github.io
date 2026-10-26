@@ -536,6 +536,7 @@ import {
 } from '../core.ts'
 import { resetTimeouts } from '../core.ts'
 import { createScriptContext, runUserScript } from '../ScriptContext.ts'
+import { LessonCancelledError } from '../LessonCancellation'
 import type {
   AskQuestionOptions,
   ActiveFlightModelSimProps,
@@ -629,7 +630,17 @@ let aiRunController = new AbortController()
  * catch drop the error once the generation has moved on.
  */
 const assertRunGeneration = (runGeneration: number) => {
-  if (runGeneration !== executionGeneration) throw new Error('Lesson run cancelled')
+  if (runGeneration !== executionGeneration) throw new LessonCancelledError()
+}
+
+/**
+ * Lessons often call prompts without awaiting them. Attaching a no-op handler keeps
+ * a cancelled run from surfacing as an unhandled rejection, while awaiting callers
+ * still observe the cancellation and unwind.
+ */
+const guardCancellation = <T,>(promise: Promise<T>): Promise<T> => {
+  promise.catch(() => {})
+  return promise
 }
 
 // Define the event emitter
@@ -963,35 +974,44 @@ const executeCode = async (lessonId?: string, assignmentId?: string): Promise<bo
       repositionWithAutopilot: repositionWithAutopilot,
       waitFor: waitFor,
       waitForCondition: waitForCondition,
-      notifyUser: async (
+      notifyUser: (
         title: string,
         body?: string,
         timeOut?: number,
         options?: { append?: boolean; replace?: boolean },
-      ) => {
-        assertRunGeneration(runGeneration)
-        addRunEvent(`Prompt: ${title}`, options?.replace ? `prompt:${title}` : undefined)
-        await props.utilityFuncs.notifyUser(title, body, timeOut, options)
-        assertRunGeneration(runGeneration)
-      },
-      waitForUser: async (options: WaitForUserOptions) => {
-        assertRunGeneration(runGeneration)
-        addRunEvent(`Waiting for user: ${options.title}`)
-        await props.utilityFuncs.waitForUser(options)
-        assertRunGeneration(runGeneration)
-        addRunEvent(`User continued: ${options.title}`)
-      },
-      askQuestion: async (options: AskQuestionOptions) => {
-        assertRunGeneration(runGeneration)
-        addRunEvent(`Question: ${options.title}`)
-        const result = await props.utilityFuncs.askQuestion(options)
-        assertRunGeneration(runGeneration)
-        lessonRun.recordAnswer(run.runId, options, result)
-        addRunEvent(
-          `Answer submitted: ${options.title}${result.correct === undefined ? '' : result.correct ? ' · correct' : ' · incorrect'}`,
-        )
-        return result
-      },
+      ) =>
+        guardCancellation(
+          (async () => {
+            assertRunGeneration(runGeneration)
+            addRunEvent(`Prompt: ${title}`, options?.replace ? `prompt:${title}` : undefined)
+            await props.utilityFuncs.notifyUser(title, body, timeOut, options)
+            assertRunGeneration(runGeneration)
+          })(),
+        ),
+      waitForUser: (options: WaitForUserOptions) =>
+        guardCancellation(
+          (async () => {
+            assertRunGeneration(runGeneration)
+            addRunEvent(`Waiting for user: ${options.title}`)
+            await props.utilityFuncs.waitForUser(options)
+            assertRunGeneration(runGeneration)
+            addRunEvent(`User continued: ${options.title}`)
+          })(),
+        ),
+      askQuestion: (options: AskQuestionOptions) =>
+        guardCancellation(
+          (async (): Promise<QuestionResult> => {
+            assertRunGeneration(runGeneration)
+            addRunEvent(`Question: ${options.title}`)
+            const result = await props.utilityFuncs.askQuestion(options)
+            assertRunGeneration(runGeneration)
+            lessonRun.recordAnswer(run.runId, options, result)
+            addRunEvent(
+              `Answer submitted: ${options.title}${result.correct === undefined ? '' : result.correct ? ' · correct' : ' · incorrect'}`,
+            )
+            return result
+          })(),
+        ),
       dataView: props.utilityFuncs.dataView,
       plotView: props.utilityFuncs.plotView,
       dataDisplayReset: props.utilityFuncs.dataDisplayReset,
