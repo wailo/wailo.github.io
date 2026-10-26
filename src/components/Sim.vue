@@ -675,7 +675,10 @@ const handleClassroomLogout = () => {
   isAccountAuthenticated.value = false
   accountName.value = ''
   classRoomComponentState.value = false
-  FlightSimModule.check_licence('', '')
+  // Rejecting an empty base URL leaves the previous token cached, so the next
+  // periodic licence check re-pushed the logged-out account's credentials. A known
+  // URL with an empty token clears it instead and cannot authenticate.
+  FlightSimModule.check_licence(pb.baseURL, '')
 }
 
 const handleClassroomApiData = (receivedApiCall: PeerApiData) => {

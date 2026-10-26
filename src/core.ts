@@ -136,26 +136,52 @@ export async function repositionWithAutopilot(
     positive_climb_altitude_ft = 100 // Minimum altitude to confirm positive climb for C172 in feet
   }
 
+  // Every reposition step needs a deadline: a missed condition must report and
+  // restore the simulator instead of leaving the lesson parked on an await.
+  const stepBudgetMs = Math.max(timeOut, 10_000)
+  const waitForRepositionStep = async (
+    condition: () => boolean,
+    label: string,
+  ): Promise<boolean> => {
+    if ((await waitForCondition(condition, 0, 100, stepBudgetMs)) === true) return true
+
+    const seconds = Math.round(stepBudgetMs / 1000)
+    flightModel.set_freeze_position(false)
+    flightModel.set_freeze_fuel(false)
+    simulation.set_simulation_speed(1)
+    simulation.set_simulation_pause(true)
+    context.notifyUser(
+      'Reposition Failed',
+      `${label} not reached within ${seconds} seconds (altitude: ${target_altitude} ft, speed: ${target_speed} knots, heading: ${target_heading}°, indicated ${flightModel.speed_indicated_knots.toFixed(1)} kt at ${flightModel.altitude_ft.toFixed(0)} ft).`,
+    )
+    return false
+  }
+
   // Wait for speed to cross minimum takeoff speed in knots
-  await waitForCondition(() => {
-    return flightModel.speed_indicated_knots > min_takeoff_speed
-  })
+  const reachedTakeoffSpeed = await waitForRepositionStep(
+    () => flightModel.speed_indicated_knots > min_takeoff_speed,
+    'Take-off speed',
+  )
+  if (!reachedTakeoffSpeed) return false
 
   // Set vertical speed target and toggle vertical speed hold to start climbing
   flightModel.set_autopilot_pitch_target(7) // Set an initial pitch target to help with takeoff
   flightModel.set_autopilot_pitch_hold(true)
 
   // Wait until the aircraft is airborne
-  await waitForCondition(() => !flightModel.weight_on_wheel)
+  const becameAirborne = await waitForRepositionStep(() => !flightModel.weight_on_wheel, 'Lift-off')
+  if (!becameAirborne) return false
 
   // Toggle vertical speed hold
   flightModel.set_autopilot_vertical_speed_target(climb_rate_fpm)
   flightModel.set_autopilot_vertical_speed_hold(true)
 
   // Wait until the altitude crosses the positive climb altitude
-  await waitForCondition(() => {
-    return flightModel.altitude_ft >= Math.min(positive_climb_altitude_ft, target_altitude)
-  })
+  const reachedPositiveClimb = await waitForRepositionStep(
+    () => flightModel.altitude_ft >= Math.min(positive_climb_altitude_ft, target_altitude),
+    'Positive climb',
+  )
+  if (!reachedPositiveClimb) return false
 
   // Landing gear up
   if (flight_model_type == context.controls.GRAPHICSEFlightModel.B747) {
@@ -228,65 +254,125 @@ export async function repositionWithAutopilot(
   return success
 }
 
+/**
+ * Default deadline for a polled condition. Long enough for a scripted manoeuvre,
+ * short enough that a stalled lesson fails with a message instead of hanging.
+ */
+export const DEFAULT_CONDITION_TIMEOUT_MS = 120_000
+
+/**
+ * Pending lesson waits keep a rejection hook so a run reset can unwind them.
+ * Clearing their timers alone left the awaiting lesson parked forever.
+ */
+const pendingWaits = new Map<number, (error: Error) => void>()
+let nextWaitId = 0
+const registerWait = (reject: (error: Error) => void) => {
+  const id = ++nextWaitId
+  pendingWaits.set(id, reject)
+  return id
+}
+const settleWait = (id: number) => {
+  pendingWaits.delete(id)
+}
+
 // Function to wait for a condition to be true after a given confirmation time in ms
 // This function will poll the conditionFunction every pollInterval ms
 // confirmation_ms is the time to wait before checking the condition again
 // pollInterval_ms is the time to wait between each check of the condition
-// hardTimeout_ms is the maximum time to wait for the condition to be true
+// hardTimeout_ms is the maximum time to wait for the condition to be true.
+// Pass null for an unbounded wait; every lesson wait should use a finite deadline.
 // throwOnTimeout will throw an error if the condition is not met within the timeout
 export async function waitForCondition(
   conditionFunction: () => boolean,
   confirmation_ms: number = 0,
   pollInterval_ms: number = 400,
-  hardTimeout_ms: number | null = null,
+  hardTimeout_ms: number | null = DEFAULT_CONDITION_TIMEOUT_MS,
   throwOnTimeout: boolean = false,
 ): Promise<boolean> {
-  const maxAttempts = Math.ceil(confirmation_ms / pollInterval_ms)
+  const pollInterval = Math.max(1, pollInterval_ms)
+  const maxAttempts = Math.max(1, Math.ceil(confirmation_ms / pollInterval))
   let attempts = 0
-  let resolved = false
-  let timeoutHandle: NodeJS.Timeout
+  let settled = false
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined
 
-  const poll = (resolve: (value: boolean) => void, reject: (reason?: any) => void) => {
-    if (resolved) return
-
-    if (conditionFunction() === true) {
-      attempts++
-      if (attempts >= maxAttempts) {
-        clearTimeout(timeoutHandle)
-        resolved = true
-        resolve(true) // Condition confirmed
-      } else {
-        setTimeout(() => poll(resolve, reject), pollInterval_ms)
-      }
-    } else {
-      attempts = 0 // reset if fails
-      setTimeout(() => poll(resolve, reject), pollInterval_ms)
+  const clearDeadline = () => {
+    if (timeoutHandle !== undefined) {
+      clearTimeout(timeoutHandle)
+      timeoutHandle = undefined
     }
   }
 
   return new Promise<boolean>((resolve, reject) => {
+    let waitId = 0
+
+    const finish = (value: boolean) => {
+      if (settled) return
+      settled = true
+      clearDeadline()
+      settleWait(waitId)
+      resolve(value)
+    }
+
+    const fail = (reason: unknown) => {
+      if (settled) return
+      settled = true
+      clearDeadline()
+      settleWait(waitId)
+      reject(
+        reason instanceof Error
+          ? reason
+          : new Error(`waitForCondition condition threw: ${String(reason)}`),
+      )
+    }
+
+    waitId = registerWait(fail)
+
+    const poll = () => {
+      if (settled) return
+
+      let met: boolean
+      try {
+        met = conditionFunction() === true
+      } catch (error) {
+        // An exception used to kill the setTimeout chain, stranding the promise
+        // forever. Fail the wait so the lesson reports instead of hanging.
+        fail(error)
+        return
+      }
+
+      if (met) {
+        attempts++
+        if (attempts >= maxAttempts) {
+          finish(true) // Condition confirmed
+        } else {
+          setTimeout(poll, pollInterval)
+        }
+      } else {
+        attempts = 0 // reset if fails
+        setTimeout(poll, pollInterval)
+      }
+    }
+
     if (hardTimeout_ms !== null) {
       timeoutHandle = setTimeout(() => {
-        if (!resolved) {
-          resolved = true
-          if (throwOnTimeout) {
-            reject(new Error('Condition not met within timeout.'))
-          } else {
-            resolve(false)
-          }
-        }
+        if (throwOnTimeout) fail(new Error(`Condition not met within ${hardTimeout_ms} ms.`))
+        else finish(false)
       }, hardTimeout_ms)
     }
-    poll(resolve, reject)
+
+    poll()
   })
 }
 
 // Wait for a given time in ms without interrupting the simulation
 export async function waitFor(ms: number): Promise<void> {
-  const poll = (resolve: any) => {
-    setTimeout((_) => resolve(), ms)
-  }
-  return new Promise(poll)
+  return new Promise<void>((resolve, reject) => {
+    const waitId = registerWait(reject)
+    setTimeout(() => {
+      settleWait(waitId)
+      resolve()
+    }, ms)
+  })
 }
 
 // Module-level cache
@@ -327,8 +413,14 @@ window.clearTimeout = function (id?: number): void {
   }
 } as typeof window.clearTimeout
 
-// Reset all active timeouts
+// Cancel every timer and pending lesson wait owned by the current run.
 export const resetTimeouts = (): void => {
   cache.forEach((id) => _clearTimeout(id))
   cache.clear()
+
+  // Rejecting the waits unwinds the lesson instead of leaving it awaiting a timer
+  // that no longer exists.
+  const waits = [...pendingWaits.values()]
+  pendingWaits.clear()
+  for (const reject of waits) reject(new Error('Lesson run cancelled'))
 }

@@ -283,6 +283,10 @@ const measureDamping = async (label: string, measurementPeriod: number, context:
     },
     0,
     40,
+    // 30 s of simulated time at ≥0.5× speed; the margin keeps a slow run alive and
+    // still guarantees the measurement reports if the clock stops advancing.
+    Math.max(120_000, measurementPeriod * 4 * 1000),
+    false,
   )
 
   // Proceed with yaw-based damping analysis (standard practice)

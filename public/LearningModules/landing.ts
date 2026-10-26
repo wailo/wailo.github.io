@@ -122,9 +122,15 @@ All actions will follow standard operating procedures.`,
   flightModel.set_autopilot_heading_target(270)
 
   // 🟢 [ACTION] Wait for Localizer Capture
-  await waitForCondition(() => {
-    return flightModel.yaw_deg > 265 && flightModel.yaw_deg < 275
-  })
+  await waitForCondition(
+    () => {
+      return flightModel.yaw_deg > 265 && flightModel.yaw_deg < 275
+    },
+    0,
+    100,
+    300_000,
+    true,
+  )
 
   checkPoint('Established on localizer runway 27')
 
@@ -274,7 +280,7 @@ All actions will follow standard operating procedures.`,
   )
 
   // 🟢 [ACTION] Flare Preparation
-  await waitForCondition(() => flightModel.altitude_radio_ft < 250)
+  await waitForCondition(() => flightModel.altitude_radio_ft < 250, 0, 100, 300_000, true)
   flightModel.set_autopilot_speed_indicated_target(130)
 
   await notifyUser(
@@ -287,7 +293,7 @@ All actions will follow standard operating procedures.`,
   )
 
   // 🟢 [ACTION] Flare Execution
-  await waitForCondition(() => flightModel.altitude_radio_ft < 150)
+  await waitForCondition(() => flightModel.altitude_radio_ft < 150, 0, 50, 180_000, true)
   flightModel.set_autopilot_vertical_speed_target(-20)
 
   await notifyUser(
@@ -300,7 +306,7 @@ All actions will follow standard operating procedures.`,
   )
 
   // 🟢 [ACTION] Touchdown Detection
-  await waitForCondition(() => flightModel.weight_on_wheel)
+  await waitForCondition(() => flightModel.weight_on_wheel, 0, 50, 180_000, true)
 
   await notifyUser(
     'Landing Procedure',
@@ -316,7 +322,7 @@ All actions will follow standard operating procedures.`,
   // Engage thrust reverse
   flightModel.set_engine_throttle_position(0)
 
-  await waitForCondition(() => flightModel.speed_indicated_knots < 90)
+  await waitForCondition(() => flightModel.speed_indicated_knots < 90, 0, 100, 180_000, true)
   flightModel.set_engine_throttle_position(0.275)
 
   await waitFor(2000)
@@ -333,11 +339,17 @@ All actions will follow standard operating procedures.`,
   )
 
   // 🟢 [ACTION] Rollout Monitoring
-  await waitForCondition(() => {
-    // Slowly reduce wind speed
-    flightModel.set_atmosphere_wind_speed(Math.max(flightModel.atmosphere_wind_speed - 1, 0))
-    return flightModel.speed_indicated_knots < 30
-  })
+  await waitForCondition(
+    () => {
+      // Slowly reduce wind speed
+      flightModel.set_atmosphere_wind_speed(Math.max(flightModel.atmosphere_wind_speed - 1, 0))
+      return flightModel.speed_indicated_knots < 30
+    },
+    0,
+    100,
+    90_000,
+    true,
+  )
 
   await notifyUser(
     'Landing Procedure',

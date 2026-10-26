@@ -92,6 +92,7 @@
 import { nextTick, ref } from 'vue'
 import { marked } from 'marked'
 import wButton from './wButton.vue'
+import { applicationTimers } from '../ApplicationTimers'
 import type {
   AskQuestionOptions,
   EssayQuestionOptions,
@@ -239,7 +240,8 @@ async function write(
   await addCard(card, options.replace, options.hud !== false)
 
   if (time <= 0) return
-  await new Promise<void>((resolve) => setTimeout(resolve, time))
+  // Survives a lesson reset: cancelling the run must not strand the awaiting prompt.
+  await new Promise<void>((resolve) => applicationTimers.setTimeout(resolve, time))
 }
 
 const waitForUser = async (options: WaitForUserOptions): Promise<void> => {

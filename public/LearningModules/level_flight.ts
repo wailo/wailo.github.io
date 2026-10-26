@@ -51,11 +51,18 @@ export async function main(context: ScriptContext) {
     flightModel.set_freeze_position(true)
     simControls.simulation.set_simulation_speed(100)
 
-    await waitForCondition(() => {
-      const correction = -flightModel.pitch_deg * 30
-      flightModel.set_empty_mass(flightModel.empty_mass + correction)
-      return Math.abs(flightModel.pitch_deg) < 0.001
-    })
+    // Pitch-trim convergence, not a user gate: a miss means the model is not settling.
+    await waitForCondition(
+      () => {
+        const correction = -flightModel.pitch_deg * 30
+        flightModel.set_empty_mass(flightModel.empty_mass + correction)
+        return Math.abs(flightModel.pitch_deg) < 0.001
+      },
+      0,
+      100,
+      120_000,
+      true,
+    )
     flightModel.set_freeze_position(false)
 
     // Hold current pitch attitude
@@ -174,7 +181,13 @@ export async function main(context: ScriptContext) {
     21000,
   )
 
-  await waitForCondition(() => flightModel.speed_indicated_knots >= acceleratedSpeed - 0.1)
+  await waitForCondition(
+    () => flightModel.speed_indicated_knots >= acceleratedSpeed - 0.1,
+    0,
+    100,
+    120_000,
+    true,
+  )
 
   await waitFor(4000)
 
@@ -235,7 +248,13 @@ export async function main(context: ScriptContext) {
     20000,
   )
 
-  await waitForCondition(() => flightModel.speed_indicated_knots <= targetSpeed + 0.1)
+  await waitForCondition(
+    () => flightModel.speed_indicated_knots <= targetSpeed + 0.1,
+    0,
+    100,
+    120_000,
+    true,
+  )
   await waitFor(4000)
 
   ////////////////////////////////////////////////////////////

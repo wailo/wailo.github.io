@@ -40,7 +40,14 @@ export async function main(context: ScriptContext) {
     )
     simControls.simulation.set_simulation_pause(true)
     await waitFor(500)
-    await waitForCondition(() => simControls.simulation.simulation_pause === false)
+    // User-driven gate: generous, but bounded so a missed resume reports instead of hanging.
+    await waitForCondition(
+      () => simControls.simulation.simulation_pause === false,
+      0,
+      200,
+      600_000,
+      true,
+    )
 
     return { pitch, aoa, speed, cl }
   }
@@ -70,6 +77,10 @@ export async function main(context: ScriptContext) {
 
   await waitForCondition(
     () => Math.abs(simControls.flightModel.vertical_speed - targetVerticalSpeed) < 500,
+    0,
+    100,
+    120_000,
+    true,
   )
   await waitFor(3000)
   climbMetrics = await getLiftSnapshot()
@@ -80,6 +91,10 @@ export async function main(context: ScriptContext) {
   simControls.flightModel.set_autopilot_vertical_speed_target(-targetVerticalSpeed)
   await waitForCondition(
     () => Math.abs(simControls.flightModel.vertical_speed + targetVerticalSpeed) < 500,
+    0,
+    100,
+    120_000,
+    true,
   )
   descentMetrics = await getLiftSnapshot()
   await waitFor(5000)
@@ -88,9 +103,12 @@ export async function main(context: ScriptContext) {
   notifyUser('🔁 Returning to Level Flight', 'Resetting vertical speed to 0.')
   simControls.simulation.set_simulation_speed(10)
   simControls.flightModel.set_autopilot_vertical_speed_target(0)
-  waitForCondition(() => Math.abs(simControls.flightModel.vertical_speed) < 1).then(() =>
-    simControls.simulation.set_simulation_speed(1),
-  )
+  waitForCondition(
+    () => Math.abs(simControls.flightModel.vertical_speed) < 1,
+    0,
+    100,
+    120_000,
+  ).then(() => simControls.simulation.set_simulation_speed(1))
 
   const combinedTable = `
 | **Metric**       | **Level Flight**       | **Climb**             | **Descent**           |

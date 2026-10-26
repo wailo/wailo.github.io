@@ -36,7 +36,14 @@ export async function main(context: ScriptContext) {
     simControls.simulation.set_simulation_pause(true)
     await waitFor(1000)
     notifyUser('📊 Snapshot Paused', `${snapshot}\n\n⏸ Review the values. Resume when ready.`)
-    await waitForCondition(() => simControls.simulation.simulation_pause === false)
+    // User-driven gate: generous, but bounded so a missed resume reports instead of hanging.
+    await waitForCondition(
+      () => simControls.simulation.simulation_pause === false,
+      0,
+      200,
+      600_000,
+      true,
+    )
 
     return snapshot
   }
@@ -58,7 +65,13 @@ export async function main(context: ScriptContext) {
   notifyUser('🐢 Slowing Down', 'Reducing speed to 170 knots. Watch how AoA changes.')
   simControls.flightModel.set_autopilot_speed_indicated_target(170)
   simControls.simulation.set_simulation_speed(4)
-  await waitForCondition(() => Math.abs(simControls.flightModel.speed_indicated_knots - 170) < 0.5)
+  await waitForCondition(
+    () => Math.abs(simControls.flightModel.speed_indicated_knots - 170) < 0.5,
+    0,
+    100,
+    120_000,
+    true,
+  )
   simControls.simulation.set_simulation_speed(1)
   lowSpeedSnapshot = await getAirspeedLiftSnapshot()
   await waitFor(2000)
@@ -67,7 +80,13 @@ export async function main(context: ScriptContext) {
   notifyUser('💨 Speeding Up', 'Now increasing speed to 290 knots. Observe the AoA and Cl.')
   simControls.flightModel.set_autopilot_speed_indicated_target(290)
   simControls.simulation.set_simulation_speed(4)
-  await waitForCondition(() => Math.abs(simControls.flightModel.speed_indicated_knots - 290) < 0.5)
+  await waitForCondition(
+    () => Math.abs(simControls.flightModel.speed_indicated_knots - 290) < 0.5,
+    0,
+    100,
+    120_000,
+    true,
+  )
   simControls.simulation.set_simulation_speed(1)
   highSpeedSnapshot = await getAirspeedLiftSnapshot()
   await waitFor(2000)

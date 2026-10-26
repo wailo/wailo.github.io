@@ -15,6 +15,14 @@ export type ModuleTree = Record<string, ModuleEntry[]>
 export const moduleTree: ModuleTree = {
   Demo: [
     {
+      name: 'B747 Rejected Take-off',
+      id: 'lesson-b747-rejected-takeoff',
+      legacyId: '/LearningModules/b747_rejected_takeoff.ts',
+      path: '/LearningModules/b747_rejected_takeoff.ts',
+      description:
+        'Automatic reject at illustrative V1: braking, reverse thrust, stop and engine shutdown.',
+    },
+    {
       name: 'Intro',
       id: 'lesson-demo',
       legacyId: '/LearningModules/demo.ts',

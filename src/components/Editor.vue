@@ -623,6 +623,15 @@ let runClockTimer: ReturnType<typeof setInterval> | undefined
 let executionGeneration = 0
 let aiRunController = new AbortController()
 
+/**
+ * A replaced or stopped run has to unwind. Returning a promise that never settles
+ * used to strand every lesson await silently; throwing here lets `executeCode`'s
+ * catch drop the error once the generation has moved on.
+ */
+const assertRunGeneration = (runGeneration: number) => {
+  if (runGeneration !== executionGeneration) throw new Error('Lesson run cancelled')
+}
+
 // Define the event emitter
 const emit = defineEmits<{
   (event: 'start', code: string, title: string): void
@@ -960,27 +969,23 @@ const executeCode = async (lessonId?: string, assignmentId?: string): Promise<bo
         timeOut?: number,
         options?: { append?: boolean; replace?: boolean },
       ) => {
-        if (runGeneration !== executionGeneration) return new Promise<void>(() => {})
+        assertRunGeneration(runGeneration)
         addRunEvent(`Prompt: ${title}`, options?.replace ? `prompt:${title}` : undefined)
         await props.utilityFuncs.notifyUser(title, body, timeOut, options)
-        if (runGeneration !== executionGeneration) return new Promise<void>(() => {})
+        assertRunGeneration(runGeneration)
       },
       waitForUser: async (options: WaitForUserOptions) => {
-        if (runGeneration !== executionGeneration) return new Promise<void>(() => {})
+        assertRunGeneration(runGeneration)
         addRunEvent(`Waiting for user: ${options.title}`)
         await props.utilityFuncs.waitForUser(options)
-        if (runGeneration !== executionGeneration) return new Promise<void>(() => {})
+        assertRunGeneration(runGeneration)
         addRunEvent(`User continued: ${options.title}`)
       },
       askQuestion: async (options: AskQuestionOptions) => {
-        if (runGeneration !== executionGeneration) {
-          return new Promise<QuestionResult>(() => {})
-        }
+        assertRunGeneration(runGeneration)
         addRunEvent(`Question: ${options.title}`)
         const result = await props.utilityFuncs.askQuestion(options)
-        if (runGeneration !== executionGeneration) {
-          return new Promise<QuestionResult>(() => {})
-        }
+        assertRunGeneration(runGeneration)
         lessonRun.recordAnswer(run.runId, options, result)
         addRunEvent(
           `Answer submitted: ${options.title}${result.correct === undefined ? '' : result.correct ? ' · correct' : ' · incorrect'}`,
