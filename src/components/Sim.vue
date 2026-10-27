@@ -191,29 +191,35 @@
               </aside>
 
               <aside
-                v-if="sim_module_loaded && isPilotMode && dataDisplayRef"
-                v-show="lessonsOpen"
+                v-if="sim_module_loaded"
+                v-show="lessonsOpen && isPilotMode"
                 class="absolute inset-x-2 top-2 bottom-14 z-20 flex min-h-0 flex-col overflow-hidden rounded border border-panelBorder bg-panelContentBackground/95 shadow-2xl backdrop-blur-sm"
                 aria-label="Lessons"
                 @click.stop
                 @keydown.esc="lessonsOpen = false"
               >
-                <LearningModulesSurface
-                  ref="editorComponentRef"
-                  variant="drawer"
-                  :context-object="FlightSimModule"
-                  :sim-props="flightModelProps"
-                  :is-dark-mode="isDarkMode"
-                  :aircraft-type="activeAircraftType"
-                  :utility-funcs="lessonUtilityFuncs"
-                  :status="scriptComponentStatus"
-                  :active="scriptComponentStatus != 'IDLE'"
-                  @start="handleLessonStart"
-                  @reset="handleLessonReset"
-                  @completed="handleLessonCompleted"
-                  @error="handleLessonError"
-                  @close="lessonsOpen = false"
-                />
+                <!-- One lesson surface for both layouts. It stays mounted while the
+                     layout changes, so a running lesson is not cancelled. -->
+                <Teleport :to="lessonHost" :disabled="!lessonHost">
+                  <LearningModulesSurface
+                    ref="editorComponentRef"
+                    :variant="isPilotMode ? 'drawer' : 'panel'"
+                    panel-id="learning-modules"
+                    :context-object="FlightSimModule"
+                    :sim-props="flightModelProps"
+                    :is-dark-mode="isDarkMode"
+                    :aircraft-type="activeAircraftType"
+                    :utility-funcs="lessonUtilityFuncs"
+                    :status="scriptComponentStatus"
+                    :active="scriptComponentStatus != 'IDLE'"
+                    @maximize="togglePanelMaximize"
+                    @start="handleLessonStart"
+                    @reset="handleLessonReset"
+                    @completed="handleLessonCompleted"
+                    @error="handleLessonError"
+                    @close="lessonsOpen = false"
+                  />
+                </Teleport>
               </aside>
 
               <div
@@ -394,25 +400,9 @@
         </Panel>
       </template>
       <template #learningmodules>
-        <!-- Panel 2 -->
-        <LearningModulesSurface
-          v-if="sim_module_loaded && dataDisplayRef"
-          ref="editorComponentRef"
-          variant="panel"
-          panel-id="learning-modules"
-          :context-object="FlightSimModule"
-          :sim-props="flightModelProps"
-          :is-dark-mode="isDarkMode"
-          :aircraft-type="activeAircraftType"
-          :utility-funcs="lessonUtilityFuncs"
-          :status="scriptComponentStatus"
-          :active="scriptComponentStatus != 'IDLE'"
-          @maximize="togglePanelMaximize"
-          @start="handleLessonStart"
-          @reset="handleLessonReset"
-          @completed="handleLessonCompleted"
-          @error="handleLessonError"
-        />
+        <!-- Panel 2 · host for the single lesson surface, which is teleported here
+             in the instructor layout so a running lesson survives layout changes. -->
+        <div ref="instructorLessonHost" class="h-full w-full"></div>
       </template>
       <template #autopilot>
         <!-- Panel 5 -->
@@ -1178,6 +1168,20 @@ const requestLessonAI = (
   classroomComponentRef.value?.requestLessonAI(request, runId, signal) ??
   Promise.resolve({ status: 'unavailable', reason: 'Classroom unavailable.' })
 const editorComponentRef = ref<InstanceType<typeof LearningModulesSurface> | null>(null)
+// The lesson surface must outlive layout changes: switching layout used to destroy
+// the editor, and its unmount cancelled the running lesson. It is mounted once in the
+// cockpit drawer and teleported into the instructor panel when that layout is active.
+const instructorLessonHost = ref<HTMLElement | null>(null)
+const lessonHost = ref<HTMLElement | null>(null)
+watch(
+  [isPilotMode, instructorLessonHost],
+  async () => {
+    // Wait for the active layout to render its host before re-targeting.
+    await nextTick()
+    lessonHost.value = isPilotMode.value ? null : instructorLessonHost.value
+  },
+  { immediate: true, flush: 'post' },
+)
 const dataDisplayRef = ref<InstanceType<typeof SimDataDisplay> | null>(null) // Use the SimDataDisplay component type
 const markdownRef = ref<InstanceType<typeof MarkDown> | null>(null) // Use the MarkDown component type
 const userActionPending = ref(false)
