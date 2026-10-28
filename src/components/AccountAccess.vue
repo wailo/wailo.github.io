@@ -53,7 +53,10 @@ const accountNumberInput = computed({
 
 const unsubscribeAuth = pb.authStore.onChange(() => {
   userInfo.value = pb.authStore.record
-  if (pb.authStore.isValid) flow.value = 'authenticated'
+  // A session can be dropped without this component unmounting (the simulator
+  // clears a token the server rejected). Fall back to the sign-in choice instead
+  // of leaving a "Signed in as" panel with no session behind it.
+  flow.value = pb.authStore.isValid ? 'authenticated' : props.initialView
 })
 
 watch(flow, (state) => emit('flow-state', state))
@@ -213,7 +216,6 @@ onUnmounted(() => {
           {{ userInfo?.name || 'Account user' }}
         </strong>
       </div>
-      <slot name="status" />
       <button type="button" class="account-button account-button-secondary" @click="logout">
         Sign out
       </button>

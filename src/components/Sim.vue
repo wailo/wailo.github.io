@@ -168,7 +168,8 @@
                   :sim-module-loaded="sim_module_loaded"
                   :account-authenticated="isAccountAuthenticated"
                   :account-name="accountName"
-                  :licence-valid="isLicenceValid"
+                  :licence-state="licenceState"
+                  :licence-detail="licenceDetail"
                   :online="classRoomComponentState"
                   :room-id="classRoomId"
                   :hand-attention="classroomHandAttention"
@@ -456,7 +457,8 @@
           :sim-module-loaded="sim_module_loaded"
           :account-authenticated="isAccountAuthenticated"
           :account-name="accountName"
-          :licence-valid="isLicenceValid"
+          :licence-state="licenceState"
+          :licence-detail="licenceDetail"
           :online="classRoomComponentState"
           :room-id="classRoomId"
           :hand-attention="classroomHandAttention"
@@ -546,6 +548,13 @@ import { applyJoystickChanges } from '../JoystickControls'
 import { trackSimulationValues } from '../SimulationValues'
 import Whiteboard from './Whiteboard.vue'
 import { pb } from '../Pocketbase/pocketbase'
+import {
+  ensureFreshSession,
+  licenceBaseUrl,
+  licenceResolved,
+  probeLicence,
+  type LicenceState,
+} from '../Pocketbase/licence'
 
 import {
   initializeModule,
@@ -651,6 +660,231 @@ const handleInstructorCommand = (command: ClassroomCommand) => {
   }
 }
 
+// How long to wait for the wasm licence callback before reporting the check as
+// failed. The endpoint is local, so a request that never answers is a real
+// problem (blocked by CORS or an extension) rather than a slow server.
+const LICENCE_CHECK_TIMEOUT_MS = 15000
+// One failed check used to leave the simulator on "Trial" for the rest of the
+// session, so an unanswered check is retried before the failure is final.
+const LICENCE_RETRY_DELAYS_MS = [2000, 6000, 15000]
+// The two account surfaces and the startup check can ask for the same check
+// within a second of each other; repeating it only doubles the requests.
+const LICENCE_DUPLICATE_WINDOW_MS = 5000
+let licenceWatchdog: ReturnType<typeof setTimeout> | null = null
+let licenceRetryTimer: ReturnType<typeof setTimeout> | null = null
+let licenceRetries = 0
+let licenceRetryPending = false
+// True once the wasm client accepted a URL/token pair, i.e. when its "invalid"
+// pushes describe this account rather than an unprimed client.
+let licenceRequestAccepted = false
+// The last request handed to the client, used to drop duplicates.
+let licenceLastRequest = { url: '', token: '', at: 0 }
+
+const clearLicenceWatchdog = () => {
+  if (licenceWatchdog === null) return
+  clearTimeout(licenceWatchdog)
+  licenceWatchdog = null
+}
+
+const clearLicenceRetry = () => {
+  licenceRetryPending = false
+  if (licenceRetryTimer === null) return
+  clearTimeout(licenceRetryTimer)
+  licenceRetryTimer = null
+}
+
+const licenceRetriesExhausted = () => licenceRetries >= LICENCE_RETRY_DELAYS_MS.length
+
+/**
+ * Retry a check that could not be completed.
+ *
+ * The client caches the last credentials it accepted, so re-issuing with the
+ * current token also replaces a token that went stale after a refresh.
+ */
+const scheduleLicenceRetry = () => {
+  if (licenceRetriesExhausted()) return
+  const delay = LICENCE_RETRY_DELAYS_MS[licenceRetries++]
+  clearLicenceRetry()
+  licenceRetryPending = true
+  licenceRetryTimer = setTimeout(() => {
+    licenceRetryTimer = null
+    licenceRetryPending = false
+    if (!pb.authStore.isValid || !pb.authStore.token) return
+    requestLicenceCheck(pb.baseURL, pb.authStore.token)
+  }, delay)
+}
+
+const setLicenceState = (state: LicenceState, detail = '') => {
+  licenceState.value = state
+  licenceDetail.value = detail
+  if (licenceResolved(state)) clearLicenceWatchdog()
+}
+
+/**
+ * Drop the credentials cached by the wasm client.
+ *
+ * The client has no setter, so the only way to clear them is to hand it a known
+ * URL with an empty token: it overwrites the cached pair with an unusable one.
+ * The server rejects that request, which is the point.
+ */
+const clearLicenceToken = () => {
+  licenceRequestAccepted = false
+  licenceLastRequest = { url: '', token: '', at: 0 }
+  FlightSimModule?.check_licence(pb.baseURL, '')
+}
+
+/**
+ * Ask the wasm client to check the licence for `token`.
+ *
+ * `check_licence` returns false when the client refuses the base URL. That used
+ * to fall through to a "Trial" badge indistinguishable from a server-verified
+ * answer, so the URL is normalised first and a refusal is reported as a failure.
+ */
+const requestLicenceCheck = (url: string, token: string): boolean => {
+  if (!FlightSimModule) {
+    setLicenceState('unreachable', 'The simulator has not finished loading.')
+    return false
+  }
+
+  // The client compares its argument to a fixed list, so give it the spelling it
+  // knows instead of letting it refuse the check silently.
+  const base = licenceBaseUrl(url)
+  if (!base) {
+    licenceRequestAccepted = false
+    console.error(
+      `[licence] "${url}" is not one of the licence servers the simulator client was built with`,
+    )
+    setLicenceState(
+      'unreachable',
+      `The simulator client does not accept ${url} as a licence server.`,
+    )
+    return false
+  }
+  if (!token) {
+    setLicenceState('signed-out', 'Sign in to check the licence.')
+    return false
+  }
+
+  const now = Date.now()
+  if (
+    licenceLastRequest.url === base &&
+    licenceLastRequest.token === token &&
+    now - licenceLastRequest.at < LICENCE_DUPLICATE_WINDOW_MS
+  ) {
+    return true
+  }
+  licenceLastRequest = { url: base, token, at: now }
+
+  setLicenceState('checking')
+  clearLicenceWatchdog()
+  licenceWatchdog = setTimeout(() => {
+    licenceWatchdog = null
+    if (licenceState.value !== 'checking') return
+    scheduleLicenceRetry()
+    setLicenceState('unreachable', `No answer from ${base} within 15 seconds.`)
+  }, LICENCE_CHECK_TIMEOUT_MS)
+
+  const sent = FlightSimModule.check_licence(base, token)
+  // Without an accepted request the client keeps reporting its empty-token
+  // "trial" state every couple of minutes, which is not an answer about this
+  // account. Remember that so those pushes cannot turn a failed check into a
+  // believable "Trial mode".
+  licenceRequestAccepted = sent
+  if (!sent) {
+    console.error(`[licence] the simulator client refused the check for "${base}"`)
+    setLicenceState('unreachable', `The simulator client refused the licence check for ${base}.`)
+    return false
+  }
+  return true
+}
+
+/**
+ * Explain a "no licence" push from C++.
+ *
+ * The client only reports valid/invalid, so an invalid result may mean the
+ * account really has no licence, the session was rejected, or the request never
+ * completed. Asking the endpoint gives the user a state they can act on.
+ */
+const explainLicenceFailure = async () => {
+  const answer = await probeLicence(pb.baseURL, pb.authStore.token)
+  if (licenceState.value === 'signed-out' || licenceState.value === 'session-expired') return
+  if (answer === 'valid') {
+    // The server confirms the licence, so the client either never sent the
+    // request or did not accept the answer. Retry before reporting a failure.
+    console.error(
+      '[licence] the server confirmed a valid licence, but the simulator client did not accept it',
+    )
+    scheduleLicenceRetry()
+    setLicenceState(
+      'unreachable',
+      `The simulator client did not accept the licence answer from ${pb.baseURL}. A cached copy of that URL in the browser can cause this: reload with "Empty cache and hard reload".`,
+    )
+    return
+  }
+  if (answer === 'expired') {
+    pb.authStore.clear()
+    isAccountAuthenticated.value = false
+    accountName.value = ''
+    setLicenceState('session-expired', 'Your session expired, so the licence cannot be checked.')
+    return
+  }
+  if (answer === 'trial') {
+    licenceRetries = 0
+    setLicenceState('trial', 'No active licence for this account.')
+    return
+  }
+  if (answer === 'wrong-server') {
+    // Retrying cannot fix a wrong host, so report it at once instead of burning
+    // the retry budget on a port that will keep answering with a web page.
+    console.error(
+      `[licence] ${pb.baseURL} answered with a web page instead of PocketBase: another service is using that port`,
+    )
+    setLicenceState(
+      'unreachable',
+      `${pb.baseURL} answered with a web page instead of PocketBase, so another service is using that port.`,
+    )
+    return
+  }
+  scheduleLicenceRetry()
+  setLicenceState('unreachable', `The licence server at ${pb.baseURL} could not be reached.`)
+}
+
+/**
+ * Resolve the licence once at startup instead of waiting for the account panel to
+ * mount. In the pilot layout no account UI exists until the classroom drawer is
+ * opened, which previously left the cockpit status stuck on "Trial".
+ *
+ * The stored session is refreshed first: `authStore.isValid` only checks the
+ * token's local expiry, so a token the server already rejects would fail every
+ * licence check while the app kept claiming the user was signed in.
+ */
+const resolveLicence = async () => {
+  const session = await ensureFreshSession(pb)
+  licenceRetries = 0
+  clearLicenceRetry()
+  if (session !== 'valid') {
+    isAccountAuthenticated.value = false
+    accountName.value = ''
+    setLicenceState(
+      session === 'expired' ? 'session-expired' : 'signed-out',
+      session === 'expired'
+        ? 'Your session expired, so the licence cannot be checked.'
+        : 'Sign in to check the licence.',
+    )
+    if (session === 'expired') {
+      // Drop the rejected token cached by the wasm client, otherwise its periodic
+      // check keeps re-sending credentials the server has already refused.
+      clearLicenceToken()
+      simFunctions.notifyUser('Session expired', 'Sign in again to use your licence.', 10000)
+    }
+    return
+  }
+
+  isAccountAuthenticated.value = true
+  accountName.value = String(pb.authStore.record?.name || '')
+  requestLicenceCheck(pb.baseURL, pb.authStore.token)
+}
+
 const handleClassroomAnnouncement = (message: string) => {
   if (message) simFunctions.notifyUser('Instructor', message, 8000)
 }
@@ -658,17 +892,21 @@ const handleClassroomAnnouncement = (message: string) => {
 const handleClassroomLogin = (url: string, authToken: string, name: string) => {
   isAccountAuthenticated.value = true
   accountName.value = name
-  FlightSimModule.check_licence(url, authToken)
+  // The panel can hand over the token it captured before the startup refresh, so
+  // prefer the current one. The duplicate that the second account surface causes
+  // is then dropped by requestLicenceCheck instead of replacing the client's
+  // cached token with an older one.
+  requestLicenceCheck(url, pb.authStore.token || authToken)
 }
 
 const handleClassroomLogout = () => {
   isAccountAuthenticated.value = false
   accountName.value = ''
   classRoomComponentState.value = false
-  // Rejecting an empty base URL leaves the previous token cached, so the next
-  // periodic licence check re-pushed the logged-out account's credentials. A known
-  // URL with an empty token clears it instead and cannot authenticate.
-  FlightSimModule.check_licence(pb.baseURL, '')
+  licenceRetries = 0
+  clearLicenceRetry()
+  setLicenceState('signed-out', 'Sign in to check the licence.')
+  clearLicenceToken()
 }
 
 const handleClassroomApiData = (receivedApiCall: PeerApiData) => {
@@ -712,7 +950,7 @@ const simulationStatus = computed(() => {
   if (FlightSimModule.flightModel.damaged) return 'Structural Damage'
   if (FlightSimModule.simulation.simulation_speed === 1) {
     if (!licenceChecked.value) return 'Checking'
-    return isLicenceValid.value ? 'Normal' : 'Trial'
+    return licenceState.value === 'valid' ? 'Normal' : 'Trial'
   }
   return `${FlightSimModule.simulation.simulation_speed}x`
 })
@@ -932,10 +1170,34 @@ const monitorLoadingDependencies = (remaining: number) => {
   }
 }
 
-let isLicenceValid = ref(false)
-// The licence state is pushed from C++ (onLicenceState). Until the first push arrives
-// the status is unknown, so it must not claim "Trial".
-const licenceChecked = ref(false)
+// The licence state is pushed from C++ (onLicenceState) and set by the session
+// checks below. Until an answer arrives the state is unknown, so the UI must not
+// claim "Trial".
+const licenceState = ref<LicenceState>('unknown')
+// Why the licence state is what it is. The cockpit header can only say "Normal"
+// or "Trial" (classroom peers read that string), so the reason lives here.
+const licenceDetail = ref('')
+const licenceChecked = computed(() => licenceResolved(licenceState.value))
+
+// The cockpit header can only say "Normal" or "Trial" (the classroom peers read
+// that string), so the reason a check failed is announced in the console panel
+// as well. A retry is still pending after most failures, so only a final one is
+// announced.
+watch(licenceState, (state) => {
+  if (state === 'unreachable' && !licenceRetryPending) {
+    simFunctions.notifyUser(
+      'Licence check failed',
+      licenceDetail.value || 'The simulator could not verify your licence.',
+      10000,
+    )
+  } else if (state === 'trial') {
+    simFunctions.notifyUser(
+      'Trial mode',
+      licenceDetail.value || 'No active licence for this account.',
+      10000,
+    )
+  }
+})
 let classRoomComponentState = ref(false)
 let classRoomId = ref('')
 const classroomHandAttention = ref(false)
@@ -1619,9 +1881,20 @@ onMounted(async () => {
     // Functions to be called from C++
     notifyUser: simFunctions.notifyUser,
     resetComponents: simFunctions.resetComponents,
-    onLicenceState: (LicenceState: boolean) => {
-      isLicenceValid.value = LicenceState
-      licenceChecked.value = true
+    onLicenceState: (valid: boolean) => {
+      // The periodic wasm check keeps the credentials of a session the app has
+      // already discarded; it must not overwrite a more precise state.
+      if (licenceState.value === 'signed-out' || licenceState.value === 'session-expired') return
+      if (valid) {
+        licenceRetries = 0
+        clearLicenceRetry()
+        setLicenceState('valid')
+        return
+      }
+      // A client that never accepted our URL/token reports "invalid" forever;
+      // that is not an answer about this account.
+      if (!licenceRequestAccepted) return
+      void explainLicenceFailure()
     }, // Update licence state
     syncFlightModel: () => fetchSimData(FlightSimModule, initFlightModelParams), // Sync flightmodel
   })
@@ -1641,12 +1914,12 @@ onMounted(async () => {
       // Resolve the licence once at startup instead of waiting for the account panel to
       // mount. In the pilot layout no account UI exists until the classroom drawer is
       // opened, which previously left the cockpit status stuck on "Trial".
-      if (pb.authStore.isValid && pb.authStore.token) {
-        FlightSimModule.check_licence(pb.baseURL, pb.authStore.token)
-      } else {
-        // No stored session: the simulator runs in trial mode, so this is a final answer.
-        licenceChecked.value = true
-      }
+      // The session is re-validated first so a server-rejected token cannot keep
+      // producing a "Trial" state with no way to recover.
+      void resolveLicence().catch((error) => {
+        console.error('Unable to start the licence check', error)
+        setLicenceState('unreachable')
+      })
 
       GLFWModule.GLFW.requestFullscreen = toggleFullscreen // Replace with custom implementation
 
@@ -1750,6 +2023,8 @@ onUnmounted(() => {
   clearTimeout(layoutResizeTimer)
   if (promptAttentionTimer !== null) clearTimeout(promptAttentionTimer)
   if (pilotAttentionTimer !== null) clearTimeout(pilotAttentionTimer)
+  clearLicenceWatchdog()
+  clearLicenceRetry()
   canvasResizeObserver?.disconnect()
   if (canvasResizeFrame !== null) cancelAnimationFrame(canvasResizeFrame)
   document.removeEventListener('fullscreenchange', onFullscreenChange)

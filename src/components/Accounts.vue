@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onUnmounted, ref } from 'vue'
 import AccountAccess from './AccountAccess.vue'
 import { pb } from '../Pocketbase/pocketbase'
 
@@ -11,6 +11,16 @@ const emit = defineEmits<{
 const isLoggedIn = ref(pb.authStore.isValid)
 const accountName = ref(String(pb.authStore.record?.name || ''))
 const settingsOpen = ref(!pb.authStore.isValid)
+
+// The simulator drops a session the server rejects, so the header must follow the
+// auth store instead of only the login/logout events handled below.
+const unsubscribeAuth = pb.authStore.onChange(() => {
+  isLoggedIn.value = pb.authStore.isValid
+  accountName.value = String(pb.authStore.record?.name || '')
+  if (!isLoggedIn.value) settingsOpen.value = true
+})
+
+onUnmounted(unsubscribeAuth)
 
 const handleLogin = (url: string, authToken: string, name: string) => {
   isLoggedIn.value = true

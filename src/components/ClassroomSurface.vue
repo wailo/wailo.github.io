@@ -5,6 +5,7 @@ import Accounts from './Accounts.vue'
 import AccountSurface from './AccountSurface.vue'
 import ClassRoom from './ClassRoom.vue'
 import type { CheckpointData, LessonAIRequest, LessonAIResponse } from '../ScriptContext'
+import type { LicenceState } from '../Pocketbase/licence'
 
 const props = withDefaults(
   defineProps<{
@@ -12,7 +13,8 @@ const props = withDefaults(
     simModuleLoaded?: boolean
     accountAuthenticated?: boolean
     accountName?: string
-    licenceValid?: boolean
+    licenceState?: LicenceState
+    licenceDetail?: string
     online?: boolean
     roomId?: string
     handAttention?: boolean
@@ -23,7 +25,8 @@ const props = withDefaults(
     simModuleLoaded: false,
     accountAuthenticated: false,
     accountName: '',
-    licenceValid: false,
+    licenceState: 'unknown',
+    licenceDetail: '',
     online: false,
     roomId: '',
     handAttention: false,
@@ -140,7 +143,8 @@ defineExpose({
       <AccountSurface
         v-if="props.simModuleLoaded"
         :account-authenticated="props.accountAuthenticated"
-        :licence-valid="props.licenceValid"
+        :licence-state="props.licenceState"
+        :licence-detail="props.licenceDetail"
         :classroom-online="props.online"
         @login="
           (url: string, authToken: string, name: string) => emit('login', url, authToken, name)
