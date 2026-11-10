@@ -33,6 +33,22 @@
 
       <section class="control-group">
         <div class="group-caption">
+          <span class="group-caption-label">WORKSPACE</span>
+        </div>
+        <div class="mt-0.5 grid grid-cols-2 gap-1">
+          <wButton
+            v-for="control in layoutControls"
+            :key="control.id"
+            :button-label="control.label"
+            :button-state="control.value"
+            :button-click="() => control.setValue(true)"
+            class="h-5 min-w-0"
+          />
+        </div>
+      </section>
+
+      <section class="control-group">
+        <div class="group-caption">
           <span class="group-caption-label">APPEARANCE</span>
         </div>
         <div class="mt-0.5 grid grid-cols-2 gap-1">
@@ -50,16 +66,6 @@
             button-icon-only
             :button-state="fullscreenControl.value"
             :button-click="() => toggleControl(fullscreenControl)"
-            class="h-5 min-w-0"
-          />
-        </div>
-        <div class="mt-1 grid grid-cols-3 gap-1">
-          <wButton
-            v-for="control in layoutControls"
-            :key="control.id"
-            :button-label="control.label"
-            :button-state="control.value"
-            :button-click="() => control.setValue(true)"
             class="h-5 min-w-0"
           />
         </div>
