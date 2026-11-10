@@ -23,6 +23,7 @@ test('sim teardown removes keyboard handlers, its asynchronous watcher and sched
   const calls = []
   const keydown = () => {}
   const keyup = () => {}
+  const blur = () => {}
   const globalKeydown = () => {}
   const fullscreen = () => {}
   const panelTab = () => {}
@@ -32,10 +33,10 @@ test('sim teardown removes keyboard handlers, its asynchronous watcher and sched
     return ${hook(source, 'onUnmounted')}`,
     {
       document: { removeEventListener: (...args) => calls.push(['document', ...args]) },
-      canvas: { removeEventListener: (...args) => calls.push(['canvas', ...args]) },
       window: { removeEventListener: (...args) => calls.push(['window', ...args]) },
-      handleCanvasKeydown: keydown,
-      handleCanvasKeyup: keyup,
+      GLFWModule: { GLFW: { onBlur: blur } },
+      handleSimKeydown: keydown,
+      handleSimKeyup: keyup,
       handleGlobalKeydown: globalKeydown,
       onFullscreenChange: fullscreen,
       handlePanelTabRequest: panelTab,
@@ -56,8 +57,9 @@ test('sim teardown removes keyboard handlers, its asynchronous watcher and sched
   dispose()
   assert.deepEqual(calls, [
     ['document', 'keydown', globalKeydown],
-    ['canvas', 'keydown', keydown, true],
-    ['canvas', 'keyup', keyup, true],
+    ['window', 'keydown', keydown, true],
+    ['window', 'keyup', keyup, true],
+    ['window', 'blur', blur, true],
     ['watcher'],
     ['interval', 1],
     ['timeout', 2],
@@ -70,6 +72,84 @@ test('sim teardown removes keyboard handlers, its asynchronous watcher and sched
     ['document', 'fullscreenchange', fullscreen],
     ['window', 'sim:request-panel-tab', panelTab],
   ])
+})
+
+test('flight keys keep working on focused controls but defer to typing and UI shortcuts', () => {
+  const source = componentScript('Sim')
+  const declaration = (name) =>
+    findNode(source, (node) => ts.isVariableDeclaration(node) && node.name.getText(source) === name)
+  const calls = []
+  const canvas = { id: 'canvas' }
+  const activeElement = { current: canvas }
+  const document = {
+    get activeElement() {
+      return activeElement.current
+    },
+  }
+  class FakeElement {
+    constructor({ typing = false, control = false, slider = false, ignored = false } = {}) {
+      this.typing = typing
+      this.control = control
+      this.slider = slider
+      this.ignored = ignored
+      this.isContentEditable = false
+      this.tagName = 'DIV'
+    }
+    closest(selector) {
+      if (selector === '[data-sim-keys-ignore]') return this.ignored ? this : null
+      if (selector === '[role="slider"]') return this.slider ? this : null
+      if (selector.includes('button')) return this.control ? this : null
+      if (selector.includes('input')) return this.typing ? this : null
+      return null
+    }
+  }
+  const handleSimKeydown = evaluate(
+    `
+    ${declaration('isTypingTarget').getText(source)};
+    ${declaration('isControlActivation').getText(source)};
+    ${declaration('isSliderNavigation').getText(source)};
+    ${declaration('handleSimKeydown').getText(source)};
+    return handleSimKeydown;
+    `,
+    {
+      GLFWModule: { GLFW: { onKeydown: (event) => calls.push(event.key) } },
+      document,
+      canvas,
+      Element: FakeElement,
+      HTMLElement: FakeElement,
+    },
+  )
+  const press = ({ key = 'w', target = {}, ...rest } = {}) => {
+    calls.length = 0
+    handleSimKeydown({
+      key,
+      defaultPrevented: false,
+      isComposing: false,
+      target: new FakeElement(target),
+      ...rest,
+    })
+    return calls.length
+  }
+
+  // The point of the change: a focused autopilot button no longer blocks flight keys.
+  assert.equal(press({ target: { control: true } }), 1)
+  assert.equal(press({ target: { control: true }, key: 'w' }), 1)
+  // Typing and native control activation stay with the UI.
+  assert.equal(press({ target: { typing: true } }), 0)
+  assert.equal(press({ target: { control: true }, key: ' ' }), 0)
+  assert.equal(press({ target: { control: true }, key: 'Enter' }), 0)
+  // Sliders own their navigation keys; the classroom owns its whole shortcut layer.
+  assert.equal(press({ target: { slider: true }, key: 'ArrowUp' }), 0)
+  assert.equal(press({ target: { slider: true }, key: 'w' }), 1)
+  assert.equal(press({ target: { ignored: true }, key: 'a' }), 0)
+  // Tab and Escape never reach the engine (Escape keeps its focus-restore role).
+  assert.equal(press({ key: 'Tab' }), 0)
+  activeElement.current = { other: true }
+  assert.equal(press({ key: 'Escape' }), 0)
+  activeElement.current = canvas
+  assert.equal(press({ key: 'Escape' }), 1)
+  assert.equal(press({ defaultPrevented: true }), 0)
+  assert.equal(press({ isComposing: true }), 0)
 })
 
 test('late simulator initialization detaches global engine keys and skips frontend setup', () => {

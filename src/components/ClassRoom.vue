@@ -5,6 +5,7 @@
     class="classroom-shell relative flex h-full min-h-0 w-full flex-col overflow-hidden outline-none"
     tabindex="0"
     aria-label="Classroom controls"
+    data-sim-keys-ignore
     @focus.self="focusClassroomPanel"
     @keydown="handleClassroomKeydown"
   >

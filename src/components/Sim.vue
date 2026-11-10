@@ -1926,7 +1926,10 @@ onMounted(async () => {
       initFlightModelParams()
       observeCanvasContainer()
 
-      // key presses are handled inside the canvas only
+      // Emscripten registers its keyboard handlers on window. Detach them first,
+      // then install guarded window-level handlers so the flight keys keep working
+      // when a control (for example an autopilot toggle) takes focus. Listening on
+      // the canvas alone silently disabled the keyboard as soon as focus left it.
       window.removeEventListener('keydown', GLFWModule.GLFW.onKeydown, true)
       window.removeEventListener('keypress', GLFWModule.GLFW.onKeyPress, true)
       window.removeEventListener('keyup', GLFWModule.GLFW.onKeyup, true)
@@ -1939,21 +1942,70 @@ onMounted(async () => {
 
       const canvas = document.getElementById('canvas')
       canvas?.focus()
-      const handleCanvasKeydown = (e: KeyboardEvent) => GLFWModule.GLFW.onKeydown(e)
-      const handleCanvasKeyup = (e: KeyboardEvent) => GLFWModule.GLFW.onKeyup(e)
-      canvas?.addEventListener('keydown', handleCanvasKeydown, true)
-      canvas?.addEventListener('keyup', handleCanvasKeyup, true)
 
-      function isTextInput() {
-        const activeElement = document.activeElement
+      // Keys typed into form fields and editable content belong to the UI, not the sim.
+      const isTypingTarget = (target: EventTarget | null) => {
+        if (!(target instanceof Element)) return false
+        if (target instanceof HTMLElement && target.isContentEditable) return true
         return (
-          activeElement?.role === 'textbox' ||
-          activeElement?.tagName === 'INPUT' ||
-          activeElement?.tagName === 'TEXTAREA' ||
-          activeElement?.tagName === 'SELECT' ||
-          (activeElement as HTMLElement)?.isContentEditable
+          target.closest(
+            'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]',
+          ) !== null
         )
       }
+
+      // Space/Enter belong to the focused control, or keyboard users could no
+      // longer activate buttons and menu items.
+      const isControlActivation = (event: KeyboardEvent) => {
+        if (event.key !== ' ' && event.key !== 'Enter') return false
+        return (
+          event.target instanceof Element &&
+          event.target.closest(
+            'button, a[href], summary, [role="button"], [role="link"], [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], [role="checkbox"], [role="radio"], [role="switch"], [role="tab"], [role="option"]',
+          ) !== null
+        )
+      }
+
+      // A focused slider (the throttle) owns its arrow/Home/End keys.
+      const isSliderNavigation = (event: KeyboardEvent) => {
+        const isNavigationKey =
+          event.key.startsWith('Arrow') ||
+          event.key === 'Home' ||
+          event.key === 'End' ||
+          event.key === 'PageUp' ||
+          event.key === 'PageDown'
+        return (
+          isNavigationKey &&
+          event.target instanceof Element &&
+          event.target.closest('[role="slider"]') !== null
+        )
+      }
+
+      const handleSimKeydown = (event: KeyboardEvent) => {
+        if (event.defaultPrevented || event.isComposing) return
+        // Tab moves focus between controls; the simulator does not use it.
+        if (event.key === 'Tab') return
+        // Escape is the app's "return focus to the cockpit" shortcut unless the
+        // cockpit already owns the keyboard, where it keeps its native behaviour.
+        if (event.key === 'Escape' && document.activeElement !== canvas) return
+        if (isTypingTarget(event.target)) return
+        // UI regions with their own shortcut layer (the classroom roster) opt out.
+        if (
+          event.target instanceof Element &&
+          event.target.closest('[data-sim-keys-ignore]') !== null
+        )
+          return
+        if (isControlActivation(event)) return
+        if (isSliderNavigation(event)) return
+        GLFWModule.GLFW.onKeydown(event)
+      }
+
+      // Forward every release so a key cannot stick if focus changes between its
+      // keydown and keyup.
+      const handleSimKeyup = (event: KeyboardEvent) => GLFWModule.GLFW.onKeyup(event)
+      window.addEventListener('keydown', handleSimKeydown, true)
+      window.addEventListener('keyup', handleSimKeyup, true)
+      window.addEventListener('blur', GLFWModule.GLFW.onBlur, true)
 
       document.addEventListener('fullscreenchange', onFullscreenChange)
       loadingProgress.value = 100
@@ -1977,7 +2029,7 @@ onMounted(async () => {
         }
 
         // When editing a text input, we don't want the global keybindings to trigger.
-        if (isTextInput()) {
+        if (isTypingTarget(document.activeElement)) {
           return
         }
 
@@ -2001,8 +2053,9 @@ onMounted(async () => {
       })
       cleanupSimListeners = () => {
         document.removeEventListener('keydown', handleGlobalKeydown)
-        canvas?.removeEventListener('keydown', handleCanvasKeydown, true)
-        canvas?.removeEventListener('keyup', handleCanvasKeyup, true)
+        window.removeEventListener('keydown', handleSimKeydown, true)
+        window.removeEventListener('keyup', handleSimKeyup, true)
+        window.removeEventListener('blur', GLFWModule.GLFW.onBlur, true)
         stopStatusWatch()
       }
 
