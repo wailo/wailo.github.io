@@ -50,7 +50,7 @@ export function simPropertiesFixture() {
       simulation: { simulation_pause: false, flight_model_id: 1, flight_model: 1 },
       GRAPHICSEFlightModel: { B747: 1, C172: 0 },
     },
-    LayoutTypes: { INSTRUCTOR: 'instructor', PILOT: 'pilot', FOCUS: 'focus' },
+    LayoutTypes: { INSTRUCTOR: 'instructor', PILOT: 'pilot' },
     layout: ref('instructor'),
     isDarkMode: ref(false),
     isVisuals: ref(true),
@@ -73,6 +73,7 @@ export function simPropertiesFixture() {
     },
   }
   const source = componentScript('Sim')
+  const surfaceSource = componentScript('FlightModelSurface')
   const names = [
     'renderSignal',
     'activeAircraftType',
@@ -84,8 +85,6 @@ export function simPropertiesFixture() {
     'simulationPanelControls',
     'autopilotControls',
     'groupedSimProps',
-    'flightModelFilter',
-    'filteredGroupedSimProps',
     'computedJoystickInputs',
     'computedJoystickOptions',
     'metadataModel',
@@ -95,9 +94,12 @@ export function simPropertiesFixture() {
     'simDisposed',
     'updateSim',
   ]
+  const surfaceNames = ['flightModelFilter', 'filteredGroupedSimProps']
   const api = evaluate(
-    `${declarations(source, names)}; return {
-    ${names.filter((name) => !['simDisposed', 'metadataModel', 'metadataSimulation', 'metadataModelId'].includes(name)).join(',')},
+    `${declarations(source, names)}
+    const props = { get groups() { return groupedSimProps.value } }
+    ${declarations(surfaceSource, surfaceNames)}; return {
+    ${[...names, ...surfaceNames].filter((name) => !['simDisposed', 'metadataModel', 'metadataSimulation', 'metadataModelId'].includes(name)).join(',')},
     dispose() { simDisposed = true },
   }`,
     deps,
