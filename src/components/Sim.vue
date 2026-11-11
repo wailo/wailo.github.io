@@ -120,6 +120,7 @@
                 :console-open="pilotConsoleOpen"
                 :plots-open="pilotPlotsOpen"
                 :autopilot-open="pilotAutopilotOpen"
+                :airport-open="airportDrawerOpen"
                 :controls-open="controlsDrawerOpen"
                 :classroom-open="classroomDrawerOpen"
                 :lessons-open="lessonsOpen"
@@ -132,6 +133,7 @@
                 @toggle-airflow="toggleAirflowPanel"
                 @toggle-whiteboard="toggleWhiteboardPanel"
                 @toggle-autopilot="toggleAutopilotPanel"
+                @toggle-airport="toggleAirportPanel"
                 @toggle-controls="toggleControlsDrawer"
                 @toggle-lessons="toggleLessonsPanel"
                 @toggle-classroom="toggleClassroomDrawer"
@@ -150,8 +152,28 @@
                   :status="activeAircraftType"
                   :groups="groupedSimProps"
                   :joystick-props="joystickProps"
+                  :hidden-tabs="['Airport']"
                   @joystick-input="handleJoystickInput"
                   @close="controlsDrawerOpen = false"
+                />
+              </aside>
+
+              <!-- Airport floats in pilot view. It is a primary overlay peer to
+                   Controls, so only one drawer is open at a time. -->
+              <aside
+                v-if="sim_module_loaded && isPilotMode && airportDrawerOpen"
+                class="absolute right-2 top-2 bottom-14 z-20 flex w-[26rem] max-w-[92%] flex-col overflow-hidden rounded border border-panelBorder bg-panelContentBackground/95 shadow-2xl backdrop-blur-sm"
+                aria-label="Airport and approaches"
+                @click.stop
+                @keydown.esc="airportDrawerOpen = false"
+              >
+                <AirportSurface
+                  :airport="airportView"
+                  :layers="airportLayers"
+                  @select-approach="selectAirportApproach"
+                  @toggle-layer="toggleAirportLayer"
+                  @set-airport-visible="setAirportWorldVisible"
+                  @close="airportDrawerOpen = false"
                 />
               </aside>
 
@@ -443,11 +465,22 @@
           variant="panel"
           panel-id="flight-model"
           :status="activeAircraftType"
+          :airport-status="airportStatus(airportView)"
           :groups="groupedSimProps"
           :joystick-props="joystickProps"
           @maximize="togglePanelMaximize"
           @joystick-input="handleJoystickInput"
-        />
+        >
+          <template #airport>
+            <AirportBody
+              :airport="airportView"
+              :layers="airportLayers"
+              @select-approach="selectAirportApproach"
+              @toggle-layer="toggleAirportLayer"
+              @set-airport-visible="setAirportWorldVisible"
+            />
+          </template>
+        </FlightModelSurface>
       </template>
       <template #classroom>
         <!-- Panel 7 -->
@@ -542,10 +575,13 @@ import LearningModulesSurface from './LearningModulesSurface.vue'
 import SimDataDisplay from './DataDisplay.vue'
 import MarkDown from './MarkDown.vue'
 import MissionHUD from './MissionHUD.vue'
+import AirportBody from './AirportBody.vue'
+import AirportSurface from './AirportSurface.vue'
 import { RemoteCallManager, RemoteCall, RemoteEvent } from '../RemoteCallManager'
 import type { JoystickInput } from './Joystick.vue'
 import { applyJoystickChanges } from '../JoystickControls'
 import { trackSimulationValues } from '../SimulationValues'
+import { airportStatus, snapshotAirport } from '../AirportState'
 import Whiteboard from './Whiteboard.vue'
 import { pb } from '../Pocketbase/pocketbase'
 import {
@@ -1002,6 +1038,7 @@ const simFunctions = {
     controlsDrawerOpen.value = false
     classroomDrawerOpen.value = false
     lessonsOpen.value = false
+    airportDrawerOpen.value = false
     airflowOpen.value = false
     whiteboardOpen.value = false
     pilotConsoleOpen.value = true
@@ -1039,6 +1076,7 @@ const simFunctions = {
     controlsDrawerOpen.value = false
     classroomDrawerOpen.value = false
     lessonsOpen.value = false
+    airportDrawerOpen.value = false
     airflowOpen.value = false
     whiteboardOpen.value = false
     const nextLayout = Object.values(LayoutTypes).includes(mode) ? mode : LayoutTypes.PILOT
@@ -1228,6 +1266,7 @@ const whiteboardOpen = ref(false)
 const pilotConsoleOpen = ref(true)
 const pilotPlotsOpen = ref(true)
 const pilotAutopilotOpen = ref(true)
+const airportDrawerOpen = ref(false)
 const pilotAttention = ref<PilotAttention | null>(null)
 const pilotAttentionPulse = ref(false)
 let pilotAttentionTimer: number | null = null
@@ -1311,12 +1350,18 @@ const toggleAutopilotPanel = () => {
   }
 }
 
-type PilotOverlay = 'controls' | 'classroom' | 'lessons'
+const toggleAirportPanel = () => {
+  if (!isPilotMode.value) return
+  setPilotOverlay(airportDrawerOpen.value ? null : 'airport')
+}
+
+type PilotOverlay = 'controls' | 'classroom' | 'lessons' | 'airport'
 
 const setPilotOverlay = (target: PilotOverlay | null) => {
   controlsDrawerOpen.value = target === 'controls'
   classroomDrawerOpen.value = target === 'classroom'
   lessonsOpen.value = target === 'lessons'
+  airportDrawerOpen.value = target === 'airport'
   if (target) {
     airflowOpen.value = false
     whiteboardOpen.value = false
@@ -1369,6 +1414,7 @@ const applyPilotView = (view: PilotViewOptions) => {
     [
       ['controls', view.controls === true],
       ['lessons', view.lessons === true],
+      ['airport', view.airport === true],
       ['classroom', view.classroom === true],
     ] as const
   )
@@ -1380,6 +1426,7 @@ const applyPilotView = (view: PilotViewOptions) => {
     if (view.airflow === true || view.whiteboard === true) setPilotOverlay(null)
     if (view.controls !== undefined) controlsDrawerOpen.value = view.controls
     if (view.lessons !== undefined) lessonsOpen.value = view.lessons
+    if (view.airport !== undefined) airportDrawerOpen.value = view.airport
     if (view.classroom !== undefined) classroomDrawerOpen.value = view.classroom
     if (view.airflow !== undefined) airflowOpen.value = view.airflow
     if (view.whiteboard !== undefined) whiteboardOpen.value = view.whiteboard
@@ -1477,6 +1524,7 @@ const handleLessonStart = (_code: string, title: string) => {
   scriptComponentStatus.value = 'IN-PROGRESS'
   if (isPilotMode.value) {
     lessonsOpen.value = false
+    airportDrawerOpen.value = false
     pilotConsoleOpen.value = true
     simFunctions.setTab('prompt', 'Console')
   }
@@ -1754,6 +1802,36 @@ const airflowState = computed(() => {
     stalling: model?.stalling ?? false,
   }
 })
+
+// Airport and approach data come from the same generated bindings, so they are
+// resampled on the UI tick as well.
+const airportView = computed(() => {
+  renderSignal.value
+  if (!FlightSimModule) return null
+  return snapshotAirport(FlightSimModule.simulation)
+})
+
+const refreshAirportView = () => {
+  renderSignal.value++
+}
+
+const setAirportWorldVisible = (visible: boolean) => {
+  FlightSimModule?.simulation.set_airport_visible(visible)
+  refreshAirportView()
+}
+
+// The panel mirrors the Controls airport group instead of hand-coding the flags,
+// so a new airport layer needs no panel change.
+const toggleAirportLayer = (layer: SimulationProperties) => {
+  layer.setterFunc?.()
+  refreshAirportView()
+}
+
+const selectAirportApproach = (runwayIndex: number, endIndex: number) => {
+  const world = FlightSimModule?.simulation.world
+  if (!world) return
+  if (world.select_runway_end(runwayIndex, endIndex)) refreshAirportView()
+}
 const simulationPanelControls = computed(() =>
   Object.values(simulationControlsProps.value)
     .filter((control) => control.group === 'simulation' && control.setterFunc)
@@ -1785,6 +1863,10 @@ const groupedSimProps = computed(() =>
       ;(groups[control.group] ??= []).push(control)
       return groups
     }, {}),
+)
+
+const airportLayers = computed(() =>
+  (groupedSimProps.value.airport ?? []).filter((layer) => layer.type === 'boolean'),
 )
 
 const computedJoystickInputs = computed(() => {

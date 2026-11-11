@@ -12,6 +12,7 @@ withDefaults(
     consoleOpen?: boolean
     plotsOpen?: boolean
     autopilotOpen?: boolean
+    airportOpen?: boolean
     controlsOpen?: boolean
     classroomOpen?: boolean
     lessonsOpen?: boolean
@@ -29,6 +30,7 @@ withDefaults(
     consoleOpen: true,
     plotsOpen: true,
     autopilotOpen: true,
+    airportOpen: false,
     controlsOpen: false,
     classroomOpen: false,
     lessonsOpen: false,
@@ -43,6 +45,7 @@ const emit = defineEmits<{
   (event: 'toggle-console'): void
   (event: 'toggle-plots'): void
   (event: 'toggle-autopilot'): void
+  (event: 'toggle-airport'): void
   (event: 'toggle-controls'): void
   (event: 'toggle-classroom'): void
   (event: 'toggle-lessons'): void
@@ -137,6 +140,16 @@ const attentionLabel: Record<Exclude<Attention, null>, string> = {
         @click.stop="emit('toggle-autopilot')"
       >
         A/P
+      </button>
+      <button
+        type="button"
+        class="mission-hud__button"
+        :data-active="airportOpen ? 'true' : 'false'"
+        :aria-pressed="airportOpen"
+        aria-label="Toggle airport"
+        @click.stop="emit('toggle-airport')"
+      >
+        AIRPORT
       </button>
       <button
         type="button"

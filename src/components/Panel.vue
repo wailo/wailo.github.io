@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watchEffect, useSlots, PropType } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watchEffect, useSlots, PropType } from 'vue'
 
 const props = defineProps({
   status: {
@@ -22,6 +22,12 @@ const props = defineProps({
     type: Array as PropType<string[]>,
     default: () => [],
   },
+  // Per-tab status overrides, keyed by slot name. A tab that is not listed
+  // keeps the panel status.
+  tabStatus: {
+    type: Object as PropType<Record<string, string>>,
+    default: () => ({}),
+  },
   translucent: {
     type: Boolean,
     default: false,
@@ -36,12 +42,18 @@ const emit = defineEmits<{
 const tabSlots = useSlots()
 const tabMap = ref<{ name: string; display: string }[]>([])
 const activeTab = ref<string | null>(null)
+const statusLabel = computed(() => {
+  const tab = activeTab.value
+  if (!tab) return props.status
+  return props.tabStatus[tab] ?? props.status
+})
 const tabDisplayNames: Record<string, string> = {
   Controls: 'CONTROLS',
   'Flight-Data': 'FLIGHT DATA',
   Console: 'CONSOLE',
   Classroom: 'CLASSROOM',
   Account: 'ACCOUNT',
+  Airport: 'AIRPORT',
 }
 
 const setActiveTab = (tabName: string) => {
@@ -145,7 +157,7 @@ watchEffect(() => {
           props.active ? 'bg-panelActive' : 'bg-panelStatusBackground',
         ]"
       >
-        {{ status }}
+        {{ statusLabel }}
       </span>
     </div>
 

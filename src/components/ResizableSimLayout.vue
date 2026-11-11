@@ -143,7 +143,8 @@ const layouts: Record<LayoutName, LayoutPreset> = {
   },
 }
 
-const storageKey = (layout: LayoutName) => `sim-split-layout-v5-${layout}`
+// v6 drops the airport column/panel; older presets would restore stale sizes.
+const storageKey = (layout: LayoutName) => `sim-split-layout-v6-${layout}`
 const layoutRevision = ref(0)
 const panelAliases: Record<string, PanelId> = {
   'learning-modules': 'learningmodules',
@@ -154,9 +155,7 @@ const maximizedPanel = computed<PanelId | null>(() => {
   return panelAliases[props.maximizedPanel] ?? (props.maximizedPanel as PanelId)
 })
 
-const layoutColumns = computed(() =>
-  props.layout === 'pilot' ? pilotColumns : instructorColumns,
-)
+const layoutColumns = computed(() => (props.layout === 'pilot' ? pilotColumns : instructorColumns))
 
 // Splitpanes reads pane sizes when its own render runs. The nested workspace
 // toggles panels through props, so give each splitpanes instance a changing
@@ -202,8 +201,7 @@ const activeColumns = computed(() => {
   const maximizedColumnIndex = maximizedPanel.value
     ? columns.findIndex((column) =>
         column.panels.some(
-          (panel) =>
-            panel.id === maximizedPanel.value && isPanelVisible(panel.id, preset),
+          (panel) => panel.id === maximizedPanel.value && isPanelVisible(panel.id, preset),
         ),
       )
     : -1
@@ -221,9 +219,7 @@ const activeColumns = computed(() => {
     // Ignore stale layout data.
   }
   const savedColumns =
-    Array.isArray(saved.columns) && saved.columns.length === columns.length
-      ? saved.columns
-      : null
+    Array.isArray(saved.columns) && saved.columns.length === columns.length ? saved.columns : null
 
   return columns.map((column, columnIndex) => {
     const panels = column.panels.map((panel) => {
@@ -239,10 +235,20 @@ const activeColumns = computed(() => {
       }
     })
 
-    // A single visible panel owns the full column; otherwise use the saved split.
+    // A single visible panel owns the full column; multiple visible panels share it
+    // proportionally so any combination of the toggled panels fills the column.
     if (props.layout === 'pilot') {
       const visiblePanels = panels.filter((panel) => panel.visible)
-      if (visiblePanels.length === 1) visiblePanels[0].size = 100
+      if (visiblePanels.length === 1) {
+        visiblePanels[0].size = 100
+      } else if (visiblePanels.length > 1) {
+        const total = visiblePanels.reduce((sum, panel) => sum + panel.size, 0)
+        if (total > 0) {
+          visiblePanels.forEach((panel) => {
+            panel.size = (panel.size / total) * 100
+          })
+        }
+      }
     }
 
     const maximizedInColumn = panels.some(
@@ -297,11 +303,7 @@ const readSaved = () => {
 
 const saveColumnSizes = ({ panes }: SplitpanesEvent) => {
   if (maximizedPanel.value) return
-  if (
-    props.layout === 'pilot' &&
-    !props.pilotConsoleOpen &&
-    !props.pilotPlotsOpen
-  ) {
+  if (props.layout === 'pilot' && !props.pilotConsoleOpen && !props.pilotPlotsOpen) {
     return
   }
   const saved = readSaved()
@@ -315,9 +317,7 @@ const savePanelSizes = (columnIndex: number, { panes }: SplitpanesEvent) => {
   const preset = layouts[props.layout]
   const column = layoutColumns.value[columnIndex]
   if (!column) return
-  const visiblePanels = column.panels.filter((panel) =>
-    isPanelVisible(panel.id, preset),
-  )
+  const visiblePanels = column.panels.filter((panel) => isPanelVisible(panel.id, preset))
   if (visiblePanels.length < 2) return
   const saved = readSaved()
   saved.panels ||= {}

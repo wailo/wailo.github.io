@@ -60,6 +60,7 @@ export interface PilotViewOptions {
   console?: boolean
   plots?: boolean
   autopilot?: boolean
+  airport?: boolean
   controls?: boolean
   classroom?: boolean
   lessons?: boolean

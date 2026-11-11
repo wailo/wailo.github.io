@@ -13,12 +13,16 @@ const props = withDefaults(
     groups: Record<string, SimulationProperties[]>
     joystickProps: JoystickProps
     status?: string
+    airportStatus?: string
+    hiddenTabs?: string[]
     variant?: 'panel' | 'drawer'
     panelId?: string
     translucent?: boolean
   }>(),
   {
     status: 'UNKNOWN',
+    airportStatus: 'NO AIRPORT',
+    hiddenTabs: () => [],
     variant: 'panel',
     panelId: 'flight-model',
     translucent: false,
@@ -110,6 +114,8 @@ onBeforeMount(() => {
   <Panel
     :panel-id="props.variant === 'panel' ? props.panelId : ''"
     :status="props.status"
+    :tab-status="{ Airport: props.airportStatus }"
+    :hidden-tabs="props.hiddenTabs"
     :translucent="props.translucent"
     @header-dblclick="props.variant === 'panel' && emit('maximize', props.panelId)"
   >
@@ -273,6 +279,10 @@ onBeforeMount(() => {
           No matching controls
         </div>
       </div>
+    </template>
+
+    <template #Airport>
+      <slot name="airport" />
     </template>
 
     <template #Joystick>
