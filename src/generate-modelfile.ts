@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import ts from 'typescript'
-import { Node, ObjectLiteralExpression, Project, SourceFile } from 'ts-morph'
+import { Node, ObjectLiteralExpression, Project, SourceFile, SyntaxKind } from 'ts-morph'
 
 const SIMULATOR_TYPES_FILE = 'src/wasm/generated/flightsimulator_exec.d.ts'
 const SIMULATOR_META_FILE = 'src/wasm/generated/flightsimulator_exec_meta.ts'
@@ -67,6 +67,63 @@ function typeAliasText(source: SourceFile, name: string): string {
 
 function enumText(source: SourceFile, name: string): string {
   return withoutExport(source.getEnumOrThrow(name).getText())
+}
+
+/** Emscripten runtime plumbing that must never reach the lesson contract. */
+const RUNTIME_INTERNALS = new Set(['ClassHandle', 'WasmModule', 'RuntimeExports'])
+
+function findDeclaration(sources: SourceFile[], name: string) {
+  for (const source of sources) {
+    const declaration =
+      source.getInterface(name) ?? source.getTypeAlias(name) ?? source.getEnum(name)
+    if (declaration) return { source, declaration }
+  }
+  return undefined
+}
+
+/** Type names referenced by a declaration, so a curated subset stays complete. */
+function referencedTypeNames(declaration: Node): string[] {
+  const names = new Set<string>()
+  for (const reference of declaration.getDescendantsOfKind(SyntaxKind.TypeReference))
+    names.add(reference.getTypeName().getText())
+  for (const heritage of declaration.getDescendantsOfKind(SyntaxKind.HeritageClause))
+    for (const type of heritage.getTypeNodes()) names.add(type.getExpression().getText())
+  return [...names]
+}
+
+/**
+ * Emits the declarations reachable from `roots`. The lesson contract is a curated
+ * subset of the simulator surface, not the whole Emscripten module, so anything a
+ * kept declaration references must travel with it or the generated contract stops
+ * type-checking whenever the WASM bindings gain a referenced type.
+ * Names that live in a different generated section (metadata or ScriptContext) are
+ * skipped here and resolved when the full contract is validated.
+ */
+function declarationClosure(
+  sources: SourceFile[],
+  roots: string[],
+  provided: Set<string> = new Set(),
+): string[] {
+  const seen = new Set<string>()
+  const emitted: string[] = []
+  const visit = (name: string) => {
+    if (seen.has(name) || RUNTIME_INTERNALS.has(name) || provided.has(name)) return
+    seen.add(name)
+    const found = findDeclaration(sources, name)
+    if (!found) return
+    const { source, declaration } = found
+    // Dependencies first, so every emitted type is declared before it is used.
+    for (const reference of referencedTypeNames(declaration)) visit(reference)
+    emitted.push(
+      Node.isInterfaceDeclaration(declaration)
+        ? interfaceText(source, name, true)
+        : Node.isTypeAliasDeclaration(declaration)
+          ? typeAliasText(source, name)
+          : enumText(source, name),
+    )
+  }
+  roots.forEach(visit)
+  return emitted
 }
 
 function literalValue(object: ObjectLiteralExpression, propertyName: string): string | undefined {
@@ -164,36 +221,10 @@ function catalogInterface(
 }
 
 function simulatorContract(): string {
-  const source = sourceFile(SIMULATOR_TYPES_FILE)
-  const simInterface = sourceFile(SIM_INTERFACE_FILE)
-  return [
-    interfaceText(source, 'b747', true),
-    typeAliasText(source, 'B747GearSelector'),
-    typeAliasText(source, 'B747FlapSelector'),
-    interfaceText(source, 'c172', true),
-    typeAliasText(source, 'C172GearSelector'),
-    typeAliasText(source, 'C172FlapSelector'),
-    interfaceText(source, 'graphics', true),
-    typeAliasText(source, 'GRAPHICSEFlightModel'),
-    typeAliasText(source, 'EmbindString'),
-    interfaceText(source, 'EmbindModule'),
-    'type FlightModelInstance = b747 | c172',
-    'type ExtendedMainModule = EmbindModule & { flightModel: FlightModelInstance; simulation: graphics }',
-    enumText(simInterface, 'LayoutTypes'),
-  ].join('\n\n')
-}
-
-function questionContract(): string {
-  const source = sourceFile(SCRIPT_CONTEXT_FILE)
-  return [
-    interfaceText(source, 'WaitForUserOptions'),
-    interfaceText(source, 'QuestionChoice'),
-    interfaceText(source, 'BaseQuestionOptions'),
-    interfaceText(source, 'MultipleChoiceQuestionOptions'),
-    interfaceText(source, 'EssayQuestionOptions'),
-    typeAliasText(source, 'AskQuestionOptions'),
-    interfaceText(source, 'QuestionResult'),
-  ].join('\n\n')
+  return declarationClosure(
+    [sourceFile(SIMULATOR_TYPES_FILE), sourceFile(SIM_INTERFACE_FILE)],
+    ['ExtendedMainModule', 'LayoutTypes'],
+  ).join('\n\n')
 }
 
 function metadataContract(): string {
@@ -224,16 +255,17 @@ function metadataContract(): string {
   ].join('\n\n')
 }
 
-function scriptApiContract(): string {
+/** Top-level names declared by an already emitted contract section. */
+function declaredNames(text: string): string[] {
+  return [...text.matchAll(/^(?:export\s+)?(?:interface|type|enum)\s+(\w+)/gm)].map(
+    (match) => match[1],
+  )
+}
+
+function scriptApiContract(provided: Set<string>): string {
   const source = sourceFile(SCRIPT_CONTEXT_FILE)
   return [
-    questionContract(),
-    interfaceText(source, 'CheckpointData'),
-    interfaceText(source, 'AssessmentSubmission'),
-    interfaceText(source, 'LessonAIRequest'),
-    typeAliasText(source, 'LessonAIResponse'),
-    typeAliasText(source, 'PilotAttention'),
-    interfaceText(source, 'PilotViewOptions'),
+    ...declarationClosure([source], ['ScriptContext'], provided),
     `declare function notifyUser(
   title: string,
   message?: string,
@@ -248,18 +280,20 @@ function scriptApiContract(): string {
   timeoutMs?: number,
   preConfiguration?: () => void,
 ): Promise<boolean>`,
-    interfaceText(source, 'ScriptContext'),
   ].join('\n\n')
 }
 
 function generateContract(): string {
+  const simulator = simulatorContract()
+  const metadata = metadataContract()
+  const provided = new Set([...declaredNames(simulator), ...declaredNames(metadata)])
   return [
     '// Simulator control values and methods',
-    simulatorContract(),
+    simulator,
     '// Metadata objects accepted by plotView() and dataView()',
-    metadataContract(),
+    metadata,
     '// Lesson authoring API',
-    scriptApiContract(),
+    scriptApiContract(provided),
   ].join('\n\n')
 }
 
