@@ -170,7 +170,9 @@
                 <AirportSurface
                   :airport="airportView"
                   :layers="airportLayers"
+                  :current-speed-kt="currentSpeedKt"
                   @select-approach="selectAirportApproach"
+                  @reposition-approach="repositionApproach"
                   @toggle-layer="toggleAirportLayer"
                   @set-airport-visible="setAirportWorldVisible"
                   @close="airportDrawerOpen = false"
@@ -475,7 +477,9 @@
             <AirportBody
               :airport="airportView"
               :layers="airportLayers"
+              :current-speed-kt="currentSpeedKt"
               @select-approach="selectAirportApproach"
+              @reposition-approach="repositionApproach"
               @toggle-layer="toggleAirportLayer"
               @set-airport-visible="setAirportWorldVisible"
             />
@@ -581,7 +585,7 @@ import { RemoteCallManager, RemoteCall, RemoteEvent } from '../RemoteCallManager
 import type { JoystickInput } from './Joystick.vue'
 import { applyJoystickChanges } from '../JoystickControls'
 import { trackSimulationValues } from '../SimulationValues'
-import { airportStatus, snapshotAirport } from '../AirportState'
+import { airportStatus, snapshotAirport, type ApproachRepositionRequest } from '../AirportState'
 import Whiteboard from './Whiteboard.vue'
 import { pb } from '../Pocketbase/pocketbase'
 import {
@@ -1832,6 +1836,33 @@ const selectAirportApproach = (runwayIndex: number, endIndex: number) => {
   if (!world) return
   if (world.select_runway_end(runwayIndex, endIndex)) refreshAirportView()
 }
+
+// The approach speed field follows the live indicated airspeed until it is
+// edited. Embind getters are not reactive, so it is sampled on the UI tick.
+const currentSpeedKt = computed(() => {
+  renderSignal.value
+  return FlightSimModule?.flightModel.speed_indicated_knots ?? 0
+})
+
+/**
+ * Repositions the aircraft onto an approach. The engine owns every calculation:
+ * the panel only names the airport and runway end and passes the preset's
+ * distances, offsets and target speed.
+ */
+const repositionApproach = (request: ApproachRepositionRequest) => {
+  const module = FlightSimModule
+  if (!module) return
+  module.approachReposition(
+    request.airportId,
+    request.runwayId,
+    request.distanceM,
+    request.lateralOffsetM,
+    request.headingOffsetDeg,
+    request.targetSpeedKt,
+  )
+  refreshAirportView()
+}
+
 const simulationPanelControls = computed(() =>
   Object.values(simulationControlsProps.value)
     .filter((control) => control.group === 'simulation' && control.setterFunc)

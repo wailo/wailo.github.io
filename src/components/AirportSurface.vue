@@ -2,22 +2,25 @@
 import { computed } from 'vue'
 import AirportBody from './AirportBody.vue'
 import Panel from './Panel.vue'
-import { airportStatus, type AirportView } from '../AirportState'
+import { airportStatus, type ApproachRepositionRequest, type AirportView } from '../AirportState'
 import type { SimulationProperties } from '../wasm/siminterface'
 
 const props = withDefaults(
   defineProps<{
     airport: AirportView | null
     layers?: SimulationProperties[]
+    currentSpeedKt?: number
   }>(),
   {
     layers: () => [],
+    currentSpeedKt: 0,
   },
 )
 
 const emit = defineEmits<{
   (event: 'close'): void
   (event: 'select-approach', runwayIndex: number, endIndex: number): void
+  (event: 'reposition-approach', request: ApproachRepositionRequest): void
   (event: 'toggle-layer', layer: SimulationProperties): void
   (event: 'set-airport-visible', visible: boolean): void
 }>()
@@ -44,8 +47,12 @@ const status = computed(() => airportStatus(props.airport))
       <AirportBody
         :airport="props.airport"
         :layers="props.layers"
+        :current-speed-kt="props.currentSpeedKt"
         @select-approach="
           (runwayIndex: number, endIndex: number) => emit('select-approach', runwayIndex, endIndex)
+        "
+        @reposition-approach="
+          (request: ApproachRepositionRequest) => emit('reposition-approach', request)
         "
         @toggle-layer="(layer: SimulationProperties) => emit('toggle-layer', layer)"
         @set-airport-visible="(visible: boolean) => emit('set-airport-visible', visible)"
