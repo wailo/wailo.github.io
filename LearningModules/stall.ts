@@ -26,6 +26,10 @@ export async function main(context: ScriptContext) {
   flightModel.set_flaps_selector_position(simControls.B747FlapSelector.TEN)
   await waitForCondition(
     () => flightModel.flaps_selector_position === simControls.B747FlapSelector.TEN,
+    0,
+    100,
+    30_000,
+    true,
   )
 
   const flapPrediction = await context.askQuestion({

@@ -25,7 +25,13 @@ export async function main(context: ScriptContext) {
       '👀 Watch how lift coefficient (Cl) changes, even though speed (Mach) remains constant.\n' +
       "⏱ After each observation, the simulation will pause.\n▶️ Click resume when you're ready to continue.",
   )
-  await waitForCondition(() => simControls.simulation.simulation_pause === false)
+  await waitForCondition(
+    () => simControls.simulation.simulation_pause === false,
+    0,
+    200,
+    600_000,
+    true,
+  )
 
   // 📊 Snapshot Storage
   let lowAltSnapshot, midAltSnapshot, highAltSnapshot
@@ -48,7 +54,13 @@ export async function main(context: ScriptContext) {
       '📊 Altitude Snapshot',
       `${snapshot}\n\n⏸ Paused: Review the values above. Resume to continue.`,
     )
-    await waitForCondition(() => simControls.simulation.simulation_pause === false)
+    await waitForCondition(
+      () => simControls.simulation.simulation_pause === false,
+      0,
+      200,
+      600_000,
+      true,
+    )
 
     return snapshot
   }
@@ -67,6 +79,10 @@ export async function main(context: ScriptContext) {
       () =>
         Math.abs(simControls.flightModel.speed_mach - targetMach) < 0.001 &&
         Math.abs(simControls.flightModel.altitude_ft - targetAltitude) < 50,
+      0,
+      100,
+      120_000,
+      true,
     )
 
     simControls.simulation.set_simulation_speed(1)

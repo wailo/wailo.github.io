@@ -283,6 +283,10 @@ const measureDamping = async (label: string, measurementPeriod: number, context:
     },
     0,
     40,
+    // 30 s of simulated time at ≥0.5× speed; the margin keeps a slow run alive and
+    // still guarantees the measurement reports if the clock stops advancing.
+    Math.max(120_000, measurementPeriod * 4 * 1000),
+    false,
   )
 
   // Proceed with yaw-based damping analysis (standard practice)
@@ -431,7 +435,8 @@ export async function main(context: ScriptContext) {
   resetPanels()
   simulation.reset_simulation()
   simulation.set_flight_model_b747()
-  context.setLayout(context.layoutTypes.FOCUS)
+  context.setLayout(context.layoutTypes.PILOT)
+  context.setPilotView({ console: true, plots: true, autopilot: false, attention: 'console' })
 
   const preConfiguration = () => {
     simControls.flightModel.set_flaps_selector_position(simControls.B747FlapSelector.TWENTY)

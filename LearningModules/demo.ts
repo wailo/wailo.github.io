@@ -6,18 +6,27 @@ export async function main(context: ScriptContext) {
   const simulation = simControls.simulation
   // Check mode state during the demo's existing waits; no persistent timer is left behind.
   let syncAutopilotPlots = () => {}
+  // Plot bookkeeping must never break a flight wait: an exception inside the polled
+  // condition used to kill the setTimeout chain and strand the lesson silently.
+  const safeSyncAutopilotPlots = () => {
+    try {
+      syncAutopilotPlots()
+    } catch (error) {
+      console.warn('Autopilot plot sync failed', error)
+    }
+  }
   const waitFor = async (milliseconds: number) => {
     const end = Date.now() + milliseconds
     do {
-      syncAutopilotPlots()
+      safeSyncAutopilotPlots()
       await context.waitFor(Math.min(100, Math.max(0, end - Date.now())))
     } while (Date.now() < end)
-    syncAutopilotPlots()
+    safeSyncAutopilotPlots()
   }
   const waitForCondition: ScriptContext['waitForCondition'] = (condition, ...options) =>
     context.waitForCondition(
       () => {
-        syncAutopilotPlots()
+        safeSyncAutopilotPlots()
         return condition()
       },
       ...options,
@@ -189,6 +198,33 @@ No input is required. The checklist tracks flight actions and their conditions; 
   const waitUntil = async (elapsedMs: number) => {
     await waitFor(Math.max(0, elapsedMs - (Date.now() - demonstrationStartedAt)))
   }
+  // A missed milestone must fail the run with the live aircraft state instead of
+  // parking the lesson on an await that never settles.
+  const stateSnapshot = () =>
+    [
+      `IAS ${flightModel.speed_indicated_knots.toFixed(1)} kt`,
+      `N1 ${flightModel.engine_1_n1.toFixed(0)}%`,
+      `throttle ${flightModel.engine_throttle_position.toFixed(2)}`,
+      `ALT ${flightModel.altitude_ft.toFixed(0)} ft`,
+      `T+${simulation.simulation_time.toFixed(1)} s`,
+      `WOW ${flightModel.weight_on_wheel ? 'on' : 'off'}`,
+      flightModel.damaged ? 'damaged' : 'intact',
+      simulation.simulation_pause ? 'paused' : 'unpaused',
+    ].join(' · ')
+  const awaitMilestone = async (
+    label: string,
+    condition: () => boolean,
+    timeoutMs: number,
+    confirmationMs = 300,
+  ) => {
+    if ((await waitForCondition(condition, confirmationMs, 100, timeoutMs)) === true) return
+    const snapshot = stateSnapshot()
+    simulation.set_simulation_pause(true)
+    context.checkPoint(`Timeout — ${label} · ${snapshot}`)
+    throw new Error(
+      `${label} was not reached within ${Math.round(timeoutMs / 1000)} s · ${snapshot}`,
+    )
+  }
   const frame = async (
     index: number,
     title: string,
@@ -213,14 +249,15 @@ No input is required. The checklist tracks flight actions and their conditions; 
 
   const runTakeoff = async () => {
     await showTakeoffProgress(0)
-    await waitForCondition(
+    await awaitMilestone(
+      'Engines stable · all N1 ≥ 35%',
       () =>
         flightModel.engine_1_n1 >= 35 &&
         flightModel.engine_2_n1 >= 35 &&
         flightModel.engine_3_n1 >= 35 &&
         flightModel.engine_4_n1 >= 35,
+      60_000,
       600,
-      100,
     )
     await showTakeoffProgress(1)
     flightModel.set_engine_throttle_position(0.9)
@@ -228,24 +265,37 @@ No input is required. The checklist tracks flight actions and their conditions; 
     await showTakeoffProgress(2)
     resolveN1Stable()
 
-    await waitForCondition(() => flightModel.speed_indicated_knots >= 80, 300, 100)
+    await awaitMilestone(
+      'Cross-check · IAS ≥ 80 kt',
+      () => flightModel.speed_indicated_knots >= 80,
+      60_000,
+    )
     context.checkPoint('80 kt — airspeed cross-check')
     await showTakeoffProgress(3)
 
-    await waitForCondition(() => flightModel.speed_indicated_knots >= 130, 300, 100)
+    await awaitMilestone(
+      'V1 · IAS ≥ 130 kt',
+      () => flightModel.speed_indicated_knots >= 130,
+      60_000,
+    )
     context.checkPoint('V1 reached')
     await showTakeoffProgress(4)
 
-    await waitForCondition(() => flightModel.speed_indicated_knots >= 150, 300, 100)
+    await awaitMilestone(
+      'Rotation · IAS ≥ 150 kt',
+      () => flightModel.speed_indicated_knots >= 150,
+      60_000,
+    )
     rotationSpeed = flightModel.speed_indicated_knots
     flightModel.set_elevator_position(-0.25)
     context.checkPoint(`Rotation initiated at ${rotationSpeed.toFixed(0)} kt`)
     await showTakeoffProgress(5)
 
-    await waitForCondition(
+    await awaitMilestone(
+      'Positive climb · VS > 400 ft/min off the wheels',
       () => flightModel.vertical_speed_ftmin > 400 && !flightModel.weight_on_wheel,
+      90_000,
       800,
-      100,
     )
     resolveAirborne()
     context.plotView(
@@ -260,7 +310,12 @@ No input is required. The checklist tracks flight actions and their conditions; 
     context.checkPoint('Positive climb confirmed — gear retracted')
     await showTakeoffProgress(6)
 
-    await waitForCondition(() => flightModel.altitude_ft >= 1000, 500, 100)
+    await awaitMilestone(
+      'Climb guidance · ALT ≥ 1,000 ft',
+      () => flightModel.altitude_ft >= 1000,
+      120_000,
+      500,
+    )
     flightModel.set_autopilot_pitch_hold(false)
     flightModel.set_autopilot_vertical_speed_hold(true)
     flightModel.set_autopilot_heading_hold(true)
@@ -269,41 +324,59 @@ No input is required. The checklist tracks flight actions and their conditions; 
     flightModel.set_engine_throttle_position(0.8)
     await showTakeoffProgress(7)
 
-    await waitForCondition(
+    await awaitMilestone(
+      'Flaps 10 · ALT ≥ 1,000 ft · IAS ≥ 210 kt',
       () => flightModel.altitude_ft >= 1000 && flightModel.speed_indicated_knots >= 210,
+      120_000,
       400,
-      100,
     )
     flightModel.set_flaps_selector_position(simControls.B747FlapSelector.TEN)
     await showTakeoffProgress(8)
 
-    await waitForCondition(
+    await awaitMilestone(
+      'Flaps 5 · ALT ≥ 1,500 ft · IAS ≥ 220 kt',
       () => flightModel.altitude_ft >= 1500 && flightModel.speed_indicated_knots >= 220,
+      120_000,
       400,
-      100,
     )
     flightModel.set_flaps_selector_position(simControls.B747FlapSelector.FIVE)
     await showTakeoffProgress(9)
 
-    await waitForCondition(
+    await awaitMilestone(
+      'Flaps 1 · ALT ≥ 2,000 ft · IAS ≥ 235 kt',
       () => flightModel.altitude_ft >= 2000 && flightModel.speed_indicated_knots >= 235,
+      120_000,
       400,
-      100,
     )
     flightModel.set_flaps_selector_position(simControls.B747FlapSelector.ONE)
     await showTakeoffProgress(10)
 
-    await waitForCondition(
+    await awaitMilestone(
+      'Flaps up · ALT ≥ 2,500 ft · IAS ≥ 245 kt',
       () => flightModel.altitude_ft >= 2500 && flightModel.speed_indicated_knots >= 245,
+      120_000,
       400,
-      100,
     )
     flightModel.set_flaps_selector_position(simControls.B747FlapSelector.ZERO)
     flightModel.set_autopilot_vertical_speed_hold(false)
     flightModel.set_autopilot_altitude_hold(true)
     context.checkPoint('Take-off and flap-retraction sequence completed')
     await showTakeoffProgress(null)
-    syncAutopilotPlots()
+    safeSyncAutopilotPlots()
+  }
+
+  // A failed take-off must release the gates that the rest of the tour awaits, so the
+  // run reports the failure instead of leaving the demo parked behind `await airborne`.
+  let takeoffFailure: unknown
+  const runTakeoffSafely = async () => {
+    try {
+      await runTakeoff()
+    } catch (error) {
+      takeoffFailure = error
+      resolveN1Stable()
+      resolveAirborne()
+      throw error
+    }
   }
 
   await frame(
@@ -367,14 +440,16 @@ No input is required. The checklist tracks flight actions and their conditions; 
       flightModel.set_engine_throttle_position(0.4)
       if (activeTour) activeTour.done = true
       activeTour = undefined
-      takeoffSequence = runTakeoff()
+      takeoffSequence = runTakeoffSafely()
+      // The rejection is surfaced by the awaits below; mark it handled now so the
+      // browser does not report an unhandled rejection in the meantime.
+      takeoffSequence.catch(() => {})
     },
   )
 
   await n1Stable
   await frame(2, '3 · Visual Scene and Layouts', 'Ground roll · layouts and themes.', async () => {
     const layoutSteps = [
-      { name: 'Focus', layout: context.layoutTypes.FOCUS },
       { name: 'Pilot', layout: context.layoutTypes.PILOT },
       { name: 'Instructor', layout: context.layoutTypes.INSTRUCTOR },
     ]
@@ -465,6 +540,7 @@ No input is required. The checklist tracks flight actions and their conditions; 
 
   // Keep one owner of tour prompts; the take-off task only updates schedule rows.
   await airborne
+  if (takeoffFailure) throw takeoffFailure
   await announce('Airflow', 'Live angle of attack · airspeed · pitch · flaps.')
   context.setTab('realtime', 'Airflow')
   try {
@@ -514,7 +590,7 @@ No input is required. The checklist tracks flight actions and their conditions; 
       context.setTab('realtime', 'Flight-Data')
       flightModel.set_autopilot_bank_hold(true)
       flightModel.set_autopilot_bank_target(30)
-      await waitForCondition(() => Math.abs(flightModel.bank_deg - 30) < 1, 500, 100)
+      await waitForCondition(() => Math.abs(flightModel.bank_deg - 30) < 1, 500, 100, 90_000, true)
       bankEntry.done = true
       const levelEntry: TourEntry = {
         label: 'Autopilot · wings level',
@@ -524,13 +600,14 @@ No input is required. The checklist tracks flight actions and their conditions; 
       tourEntries.push(levelEntry)
       await refreshChecklist()
       flightModel.set_autopilot_bank_target(0)
-      await waitForCondition(() => Math.abs(flightModel.bank_deg) < 1, 500, 100)
+      await waitForCondition(() => Math.abs(flightModel.bank_deg) < 1, 500, 100, 90_000, true)
       await waitFor(1000)
       levelEntry.done = true
       await refreshChecklist()
       context.checkPoint('Autopilot bank guidance demonstrated')
     })()
     backgroundTasks.push(task)
+    task.catch(() => {}) // surfaced by Promise.all once the tour reaches the hand-off
   })
 
   await frame(6, '7 · Simulation Time Control', 'Pause · resume · 0.5× / 2× / 10×.', async () => {

@@ -7,7 +7,8 @@ export async function main(context: ScriptContext) {
   simulation.reset_simulation()
   simulation.set_flight_model_c172()
   simulation.set_pfd_display(false)
-  context.setLayout(context.layoutTypes.FOCUS)
+  context.setLayout(context.layoutTypes.PILOT)
+  context.setPilotView({ console: true, plots: false, autopilot: false, attention: 'instruments' })
 
   repositionWithAutopilot(context, 3000, 100, 45)
   await waitFor(1000)
