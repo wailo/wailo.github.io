@@ -9,11 +9,9 @@ const props = withDefaults(
   defineProps<{
     airport: AirportView | null
     layers?: SimulationProperties[]
-    currentSpeedKt?: number
   }>(),
   {
     layers: () => [],
-    currentSpeedKt: 0,
   },
 )
 
@@ -47,7 +45,6 @@ const status = computed(() => airportStatus(props.airport))
       <AirportBody
         :airport="props.airport"
         :layers="props.layers"
-        :current-speed-kt="props.currentSpeedKt"
         @select-approach="
           (runwayIndex: number, endIndex: number) => emit('select-approach', runwayIndex, endIndex)
         "

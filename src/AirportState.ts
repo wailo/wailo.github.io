@@ -14,12 +14,14 @@ export interface ApproachRepositionRequest {
   airportId: string
   /** The runway end name, for example `36R`. */
   runwayId: string
-  /** Distance from the threshold along the final course. */
-  distanceM: number
-  /** Positive is right of the extended centreline. */
-  lateralOffsetM: number
+  /** Distance from the threshold along the final course, in nautical miles. */
+  distanceNm: number
+  /** Positive is right of the extended centreline, in nautical miles. */
+  lateralOffsetNm: number
   /** The track flown, relative to the final course. */
   headingOffsetDeg: number
+  /** Added to the glide-path altitude, in feet. */
+  altitudeOffsetFt: number
   /** Target speed in knots. */
   targetSpeedKt: number
 }
@@ -111,6 +113,20 @@ export interface AirportView {
 }
 
 export const approachKey = (runwayIndex: number, endIndex: number) => `${runwayIndex}:${endIndex}`
+
+/**
+ * Reads a numeric field that follows a source until it is edited.
+ *
+ * `v-model` on an `<input type="number">` casts the entered text to a number
+ * before it reaches the component, so a draft can be either a number or a
+ * string. Empty text means "follow the source again".
+ */
+export function draftNumber(draft: string | number | null, fallback: number): number {
+  const text = draft === null ? '' : String(draft).trim()
+  if (!text) return fallback
+  const entered = Number(text)
+  return Number.isFinite(entered) ? entered : fallback
+}
 
 // ---------------------------------------------------------------------------
 // The snake_case tree the engine serialises. It is typed here rather than in

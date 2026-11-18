@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { approachKey, airportStatus, snapshotAirport } from '../src/AirportState.ts'
+import { approachKey, airportStatus, draftNumber, snapshotAirport } from '../src/AirportState.ts'
 
 const approach = ({
   runwayIndex,
@@ -255,6 +255,19 @@ test('a world without airportMetadata degrades to no layout', () => {
 
 test('approach keys combine the runway and end indices', () => {
   assert.equal(approachKey(2, 1), '2:1')
+})
+
+test('a numeric field follows its source until it is edited', () => {
+  // Empty or unreadable text means "use the source again".
+  assert.equal(draftNumber(null, 30), 30)
+  assert.equal(draftNumber('', 30), 30)
+  assert.equal(draftNumber('   ', 30), 30)
+  assert.equal(draftNumber('abc', 30), 30)
+  assert.equal(draftNumber('45', 30), 45)
+  // v-model on an <input type="number"> hands the setter a number, not text.
+  assert.equal(draftNumber(500, 0), 500)
+  assert.equal(draftNumber(-45, 0), -45)
+  assert.equal(draftNumber(Number.NaN, 0), 0)
 })
 
 test('status names the loaded airport and refuses to guess without a world', () => {

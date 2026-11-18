@@ -170,7 +170,6 @@
                 <AirportSurface
                   :airport="airportView"
                   :layers="airportLayers"
-                  :current-speed-kt="currentSpeedKt"
                   @select-approach="selectAirportApproach"
                   @reposition-approach="repositionApproach"
                   @toggle-layer="toggleAirportLayer"
@@ -477,7 +476,6 @@
             <AirportBody
               :airport="airportView"
               :layers="airportLayers"
-              :current-speed-kt="currentSpeedKt"
               @select-approach="selectAirportApproach"
               @reposition-approach="repositionApproach"
               @toggle-layer="toggleAirportLayer"
@@ -1837,17 +1835,10 @@ const selectAirportApproach = (runwayIndex: number, endIndex: number) => {
   if (world.select_runway_end(runwayIndex, endIndex)) refreshAirportView()
 }
 
-// The approach speed field follows the live indicated airspeed until it is
-// edited. Embind getters are not reactive, so it is sampled on the UI tick.
-const currentSpeedKt = computed(() => {
-  renderSignal.value
-  return FlightSimModule?.flightModel.speed_indicated_knots ?? 0
-})
-
 /**
  * Repositions the aircraft onto an approach. The engine owns every calculation:
- * the panel only names the airport and runway end and passes the preset's
- * distances, offsets and target speed.
+ * the panel only names the airport and runway end and passes the diagram's
+ * distance and lateral offset, the two offset fields and the target speed.
  */
 const repositionApproach = (request: ApproachRepositionRequest) => {
   const module = FlightSimModule
@@ -1855,9 +1846,10 @@ const repositionApproach = (request: ApproachRepositionRequest) => {
   module.approachReposition(
     request.airportId,
     request.runwayId,
-    request.distanceM,
-    request.lateralOffsetM,
+    request.distanceNm,
+    request.lateralOffsetNm,
     request.headingOffsetDeg,
+    request.altitudeOffsetFt,
     request.targetSpeedKt,
   )
   refreshAirportView()
