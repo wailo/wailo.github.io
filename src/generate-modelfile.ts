@@ -12,7 +12,7 @@ const OUTPUT_FILE = 'src/wasm/generated/Modelfile'
 // Deploy syncs this copy so the server's Ollama model is built from the same contract.
 const BACKEND_OUTPUT_FILE = 'backend/Modelfile'
 const DTS_OUTPUT_FILE = 'src/wasm/generated/editorTypes.txt'
-const BASE_MODEL_NAME = 'qwen3.5:9b'
+const BASE_MODEL_NAME = 'qwen3.6:35b-mlx'
 const GENERATED_FILE_NOTICE = 'Auto generated file from generate-modelfile.ts, do not edit manually'
 
 const project = new Project({ tsConfigFilePath: 'tsconfig.app.json' })

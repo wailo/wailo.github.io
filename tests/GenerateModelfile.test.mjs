@@ -42,6 +42,14 @@ test('generated API contract preserves TypeScript literals and promises', () => 
   assert.doesNotMatch(modelfile, /\) -> /)
 })
 
+test('generated contract is limited to the flight-training simulator surface', () => {
+  assert.match(modelfile, /interface airport_world \{/)
+  assert.match(modelfile, /interface Approach \{/)
+  assert.match(modelfile, /readonly world: airport_world \| null/)
+  assert.match(modelfile, /world: airport_world \} & EmbindModule/)
+  assert.doesNotMatch(modelfile, /HEAP\d|RuntimeExports|WasmModule|GLFW|ClassHandle/)
+})
+
 test('generated lesson instructions are import-free and distinguish values from metadata', () => {
   const systemPrompt = modelfile.match(/SYSTEM """([\s\S]*?)"""/)?.[1] ?? ''
   assert.match(systemPrompt, /Do not .*add imports/)

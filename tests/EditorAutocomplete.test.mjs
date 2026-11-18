@@ -56,21 +56,44 @@ function createLanguageService(source) {
   return { lessonPath, service: ts.createLanguageService(host, ts.createDocumentRegistry()) }
 }
 
-function propertyCompletions(contextType) {
+function completionsAt(markedSource) {
   const marker = '__CURSOR__'
-  const markedSource = `
-    async function lesson(context: ScriptContext<${contextType}>) {
-      context.props.${marker}
-    }
-  `
   const position = markedSource.indexOf(marker)
   const source = markedSource.replace(marker, '')
   const { lessonPath, service } = createLanguageService(source)
   const completions = service.getCompletionsAtPosition(lessonPath, position, {})
   service.dispose()
-  assert.ok(completions, `No context.props completions returned for ${contextType}`)
+  assert.ok(completions, 'No completions returned at the marked position')
   return new Set(completions.entries.map((entry) => entry.name))
 }
+
+function propertyCompletions(contextType) {
+  return completionsAt(`
+    async function lesson(context: ScriptContext<${contextType}>) {
+      context.props.__CURSOR__
+    }
+  `)
+}
+
+/** Emscripten runtime internals that must stay out of the lesson-facing API. */
+const RUNTIME_INTERNALS = [
+  'HEAP8',
+  'HEAP16',
+  'HEAP32',
+  'HEAPU8',
+  'HEAPF32',
+  'HEAPF64',
+  'GLFW',
+  'RuntimeExports',
+  'WasmModule',
+  'FS',
+  'callMain',
+  'ccall',
+  '_malloc',
+  'clone',
+  'delete',
+  'isAliasOf',
+]
 
 function lessonDiagnostics(source) {
   const { lessonPath, service } = createLanguageService(source)
@@ -110,6 +133,61 @@ test('C172 simulator properties are autocomplete-friendly and aircraft-specific'
   assert.ok(completions.has('altitude_ft'))
   assert.ok(completions.has('engine_mixture_position'))
   assert.ok(!completions.has('engine_4_n1'))
+})
+
+test('controls autocomplete is the curated lesson API, not the Emscripten runtime', () => {
+  const completions = completionsAt(`
+    async function lesson(context: ScriptContext) {
+      context.controls.__CURSOR__
+    }
+  `)
+
+  for (const name of [
+    'flightModel',
+    'simulation',
+    'world',
+    'graphics',
+    'check_licence',
+    'FLIGHTMODEL_VERSION',
+    'B747GearSelector',
+    'C172FlapSelector',
+  ])
+    assert.ok(completions.has(name), `missing ${name} from controls autocomplete`)
+  for (const name of RUNTIME_INTERNALS)
+    assert.ok(!completions.has(name), `${name} leaked into lesson autocomplete`)
+})
+
+test('simulation autocomplete stays on the flight-training surface', () => {
+  const completions = completionsAt(`
+    async function lesson(context: ScriptContext) {
+      context.controls.simulation.__CURSOR__
+    }
+  `)
+
+  for (const name of [
+    'flight_model',
+    'airport_name',
+    'world',
+    'set_simulation_pause',
+    'set_flight_model_b747',
+  ])
+    assert.ok(completions.has(name), `missing ${name} from simulation autocomplete`)
+  for (const name of RUNTIME_INTERNALS)
+    assert.ok(!completions.has(name), `${name} leaked into simulation autocomplete`)
+})
+
+test('airport world helpers are typed for runway training scenarios', () => {
+  const diagnostics = lessonDiagnostics(`
+    async function lesson(context: ScriptContext) {
+      context.controls.world.select_runway_end_by_name('27L')
+      const approach = context.controls.world.selected_approach
+      if (approach) context.checkPoint(approach.runway_name)
+      const simulationWorld = context.controls.simulation.world
+      if (simulationWorld) simulationWorld.select_runway_end(0, 1)
+    }
+  `)
+
+  assert.equal(diagnostics.length, 0, diagnosticText(diagnostics))
 })
 
 test('plotView accepts simulator metadata objects and arrays', () => {
