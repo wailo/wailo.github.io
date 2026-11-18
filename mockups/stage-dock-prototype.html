@@ -1,0 +1,2106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Stage + Dock — clickable prototype</title>
+<style>
+  @font-face { font-family: 'Orbitron'; src: url('../src/assets/fonts/orbitron/orbitron-light.otf') format('opentype'); font-weight: 300; }
+  @font-face { font-family: 'Orbitron'; src: url('../src/assets/fonts/orbitron/orbitron-medium.otf') format('opentype'); font-weight: 500; }
+  @font-face { font-family: 'Orbitron'; src: url('../src/assets/fonts/orbitron/orbitron-bold.otf') format('opentype'); font-weight: 700; }
+
+  :root {
+    --bg: #000;
+    --panel: #0b0d0f;
+    --panel-2: #121517;
+    --line: #24272a;
+    --line-2: #363a3e;
+    --text: #d6d6d6;
+    --muted: #8b9195;
+    --dim: #5d6367;
+    --accent: #b9391b;
+    --accent-2: #e0532c;
+    --green: #28c46a;
+    --cyan: #4fd0e0;
+    --amber: #e8b04a;
+    --red: #ff5a4d;
+    --font-ui: Inter, 'Helvetica Neue', system-ui, -apple-system, sans-serif;
+    --font-num: 'Orbitron', 'SF Mono', ui-monospace, monospace;
+    --rail-h: 76px;
+    --dock-h: 52vh;
+    --dock-lift: 0vh;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-ui); overflow: hidden; -webkit-font-smoothing: antialiased; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  button:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--cyan); outline-offset: 2px; }
+  .num { font-family: var(--font-num); }
+  .mono { font-family: 'SF Mono', ui-monospace, Menlo, monospace; }
+  .dim { color: var(--dim); }
+
+  .app { position: relative; width: 100%; height: 100%; overflow: hidden; }
+
+  /* ---------- stage ---------- */
+  .stage { position: absolute; inset: 0; }
+  .scene { position: absolute; inset: 0; transform-origin: 50% 46%; will-change: transform; }
+  .scene svg { display: block; width: 100%; height: 100%; }
+  .stage-shade {
+    position: absolute; inset: 0; pointer-events: none;
+    background:
+      linear-gradient(to bottom, rgba(0,0,0,.62) 0%, rgba(0,0,0,.08) 18%, transparent 42%),
+      linear-gradient(to top, rgba(0,0,0,.72) 0%, rgba(0,0,0,.18) 26%, transparent 46%);
+  }
+  .scan { position: absolute; inset: 0; pointer-events: none; opacity: .16;
+    background: repeating-linear-gradient(to bottom, rgba(255,255,255,.035) 0 1px, transparent 1px 3px);
+    mix-blend-mode: overlay; }
+
+  /* ---------- top bar ---------- */
+  .topbar {
+    position: absolute; inset: 0 0 auto; height: 54px; z-index: 22;
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    padding: 0 14px; pointer-events: none;
+    background: linear-gradient(to bottom, rgba(0,0,0,.55), transparent);
+    transition: opacity .25s ease;
+  }
+  .topbar > * { pointer-events: auto; }
+  .lesson-chip {
+    display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 12px 0 5px;
+    border: 1px solid var(--line); border-radius: 10px;
+    background: rgba(9, 11, 13, .74); backdrop-filter: blur(14px);
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  }
+  .play-btn {
+    width: 28px; height: 28px; border-radius: 7px; display: grid; place-items: center;
+    background: rgba(255,255,255,.06); color: var(--text); font-size: 10px;
+    border: 1px solid rgba(255,255,255,.08);
+  }
+  .play-btn:hover { background: rgba(255,255,255,.12); }
+  .lesson-chip-text { min-width: 0; }
+  .eyebrow { font-family: var(--font-num); font-size: 8px; letter-spacing: .18em; color: var(--dim); text-transform: uppercase; }
+  .beat-line { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 420px; }
+  .beat-line b { font-family: var(--font-num); font-size: 9px; font-weight: 500; color: var(--accent-2); letter-spacing: .08em; }
+  .beat-line .sep { width: 3px; height: 3px; border-radius: 50%; background: var(--dim); }
+  .chip-progress { position: absolute; left: 8px; right: 8px; bottom: 4px; height: 1px; background: rgba(255,255,255,.08); overflow: hidden; }
+  .chip-progress i { display: block; height: 100%; width: 0%; background: var(--accent-2); transition: width .12s linear; }
+  .lesson-chip { position: relative; }
+  .top-right { display: flex; align-items: center; gap: 8px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 10px;
+    border: 1px solid var(--line); border-radius: 999px; background: rgba(9,11,13,.7);
+    font-family: var(--font-num); font-size: 8px; letter-spacing: .14em; color: var(--muted);
+  }
+  .pill:hover { color: var(--text); border-color: var(--line-2); }
+  .pill .led { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .pill[data-paused="true"] .led { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+  .clock { font-family: var(--font-num); font-size: 10px; letter-spacing: .1em; color: var(--muted); min-width: 74px; text-align: right; }
+
+  /* ---------- glareshield instruments (always on the stage) ---------- */
+  .instruments {
+    position: absolute; top: 60px; left: 50%; transform: translateX(-50%); z-index: 12;
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .inst {
+    display: block; padding: 0; border-radius: 9px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,.14);
+    background: rgba(4, 9, 11, .78); backdrop-filter: blur(10px);
+    box-shadow: 0 18px 40px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06);
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  }
+  .inst:hover { transform: translateY(-2px); border-color: rgba(79,208,224,.5); box-shadow: 0 22px 50px rgba(0,0,0,.55), 0 0 0 1px rgba(79,208,224,.15); }
+  .inst svg { display: block; }
+  .pfd { width: 252px; }
+  .nd, .eicas { width: 158px; }
+  .inst text { font-family: var(--font-num); }
+  .inst .lbl { font-size: 6px; letter-spacing: .18em; fill: #6f858c; }
+  .inst .val { fill: #eaf7fa; font-size: 8px; }
+  .inst .tick { stroke: rgba(214,230,235,.35); stroke-width: 1; }
+
+  /* ---------- lesson caption ---------- */
+  .caption {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    bottom: calc(var(--rail-h) + var(--dock-lift) + 16px); z-index: 13;
+    display: flex; align-items: center; gap: 12px;
+    width: max-content; max-width: min(760px, 82vw);
+    padding: 10px 10px 10px 12px; border-radius: 11px;
+    border: 1px solid var(--line); border-left: 2px solid var(--accent);
+    background: rgba(7, 9, 11, .84); backdrop-filter: blur(16px);
+    box-shadow: 0 22px 60px rgba(0,0,0,.55);
+    opacity: 1; transition: bottom .3s cubic-bezier(.22,.61,.36,1), opacity .2s ease, transform .2s ease;
+  }
+  .caption[data-show="false"] { opacity: 0; transform: translate(-50%, 8px); pointer-events: none; }
+  .caption-idx {
+    flex: none; width: 30px; height: 30px; border-radius: 7px; display: grid; place-items: center;
+    font-family: var(--font-num); font-size: 11px; color: #fff;
+    background: rgba(185,57,27,.18); border: 1px solid rgba(185,57,27,.55);
+  }
+  .caption-kicker { font-family: var(--font-num); font-size: 7px; letter-spacing: .2em; color: var(--accent-2); text-transform: uppercase; margin-bottom: 2px; }
+  .caption-text { font-size: 12.5px; line-height: 1.3; color: #e7eaea; }
+  .caption-next {
+    flex: none; height: 26px; padding: 0 10px; border-radius: 7px; border: 1px solid var(--line-2);
+    font-family: var(--font-num); font-size: 8px; letter-spacing: .12em; color: var(--muted);
+  }
+  .caption-next:hover { color: #fff; border-color: var(--accent); }
+
+  /* ---------- rail ---------- */
+  .rail {
+    position: absolute; left: 0; right: 0; bottom: 0; height: var(--rail-h); z-index: 20;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 0 16px 12px; pointer-events: none;
+    background: linear-gradient(to top, rgba(0,0,0,.88) 30%, rgba(0,0,0,.35) 70%, transparent);
+    transition: opacity .25s ease, transform .25s ease;
+  }
+  .rail > * { pointer-events: auto; }
+  .rail-groups {
+    display: flex; gap: 3px; padding: 4px;
+    border: 1px solid var(--line); border-radius: 12px;
+    background: rgba(9,11,13,.78); backdrop-filter: blur(16px);
+    box-shadow: 0 16px 44px rgba(0,0,0,.45);
+  }
+  .rail-btn {
+    display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 14px 0 12px;
+    border-radius: 9px; color: var(--muted); transition: background .16s ease, color .16s ease, box-shadow .16s ease;
+  }
+  .rail-btn svg { width: 15px; height: 15px; opacity: .75; }
+  .rail-btn span { font-family: var(--font-num); font-size: 8.5px; letter-spacing: .16em; }
+  .rail-btn kbd {
+    font-family: var(--font-num); font-size: 7px; color: var(--dim);
+    border: 1px solid var(--line); border-radius: 3px; padding: 1px 3px; margin-left: 2px;
+  }
+  .rail-btn:hover { color: var(--text); background: rgba(255,255,255,.045); }
+  .rail-btn[aria-pressed="true"] { color: #fff; background: rgba(185,57,27,.16); box-shadow: inset 0 0 0 1px rgba(185,57,27,.5); }
+  .rail-btn[aria-pressed="true"] svg { opacity: 1; color: var(--accent-2); }
+  .rail-btn[aria-pressed="true"] kbd { color: rgba(255,255,255,.6); border-color: rgba(255,255,255,.2); }
+  .rail-right { display: flex; align-items: center; gap: 6px; }
+  .rail-mini {
+    display: flex; align-items: center; gap: 7px; height: 34px; padding: 0 11px; border-radius: 9px;
+    border: 1px solid var(--line); background: rgba(9,11,13,.72); color: var(--muted);
+    font-family: var(--font-num); font-size: 9px; letter-spacing: .1em;
+  }
+  .rail-mini small { font-size: 7px; letter-spacing: .16em; color: var(--dim); }
+  .rail-mini:hover { color: var(--text); border-color: var(--line-2); }
+
+  /* ---------- dock ---------- */
+  .dock {
+    position: absolute; left: 0; right: 0; bottom: var(--rail-h); height: var(--dock-h); z-index: 15;
+    transform: translateY(calc(100% + 8px)); opacity: 0; pointer-events: none;
+    transition: transform .32s cubic-bezier(.22,.61,.36,1), opacity .2s ease;
+  }
+  .dock[data-open="true"] { transform: translateY(0); opacity: 1; pointer-events: auto; }
+  .dock-grip {
+    position: absolute; left: 0; right: 0; top: -10px; height: 12px; z-index: 3;
+    cursor: ns-resize; display: grid; place-items: center; touch-action: none;
+  }
+  .dock-grip i { display: block; width: 46px; height: 3px; border-radius: 2px; background: var(--line-2); }
+  .dock-grip:hover i { background: var(--muted); }
+  .dock-shell {
+    height: 100%; margin: 0 10px; display: flex; flex-direction: column;
+    border: 1px solid var(--line); border-bottom: 0; border-radius: 14px 14px 0 0;
+    background: linear-gradient(180deg, rgba(17,20,22,.97), rgba(7,9,10,.99));
+    backdrop-filter: blur(18px);
+    box-shadow: 0 -30px 90px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  .dock-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 9px 14px; border-bottom: 1px solid var(--line); }
+  .dock-title { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+  .dock-kicker { font-family: var(--font-num); font-size: 7px; letter-spacing: .2em; color: var(--dim); }
+  .dock-title h2 { margin: 0; font-family: var(--font-num); font-size: 12px; font-weight: 500; letter-spacing: .22em; color: var(--text); }
+  .dock-sub { font-size: 10px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dock-head-right { display: flex; align-items: center; gap: 10px; }
+  .zone-legend { display: flex; gap: 3px; padding: 3px; border: 1px solid var(--line); border-radius: 8px; background: rgba(0,0,0,.25); }
+  .zone-legend button { height: 22px; padding: 0 8px; border-radius: 5px; font-family: var(--font-num); font-size: 7px; letter-spacing: .12em; color: var(--dim); }
+  .zone-legend button:hover { color: var(--text); background: rgba(255,255,255,.05); }
+  .icon-btn { width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--line); color: var(--muted); display: grid; place-items: center; font-size: 11px; }
+  .icon-btn:hover { color: #fff; border-color: var(--line-2); background: rgba(255,255,255,.05); }
+  .ghost-btn { height: 26px; padding: 0 9px; border-radius: 6px; border: 1px solid var(--line); font-family: var(--font-num); font-size: 7.5px; letter-spacing: .12em; color: var(--muted); }
+  .ghost-btn:hover { color: #fff; border-color: var(--line-2); }
+  .dock-body { flex: 1; min-height: 0; padding: 11px 14px 13px; overflow: hidden; }
+  .dock-section { display: none; height: 100%; min-height: 0; }
+  .dock[data-section="lesson"] .dock-section[data-section="lesson"],
+  .dock[data-section="systems"] .dock-section[data-section="systems"],
+  .dock[data-section="data"] .dock-section[data-section="data"],
+  .dock[data-section="class"] .dock-section[data-section="class"] { display: block; }
+  .dock:not([data-section="systems"]) .zone-legend { display: none; }
+
+  /* ---------- zones ---------- */
+  .zones { display: grid; grid-template-columns: 1.32fr 1fr .92fr; gap: 10px; height: 100%; min-height: 0; }
+  .zone {
+    display: flex; flex-direction: column; min-width: 0; min-height: 0; gap: 7px;
+    padding: 9px; border: 1px solid var(--line); border-radius: 10px;
+    background: linear-gradient(180deg, rgba(255,255,255,.022), rgba(255,255,255,.008));
+    transition: border-color .25s ease, box-shadow .25s ease;
+  }
+  .zone.focused { border-color: rgba(185,57,27,.65); box-shadow: 0 0 0 1px rgba(185,57,27,.25), inset 0 0 40px rgba(185,57,27,.05); }
+  .zone-head { flex: none; display: flex; align-items: flex-start; gap: 8px; }
+  .zone-num { font-family: var(--font-num); font-size: 8px; color: var(--accent-2); border: 1px solid rgba(185,57,27,.45); border-radius: 4px; padding: 2px 4px; line-height: 1; }
+  .zone-head h3 { margin: 0; font-family: var(--font-num); font-size: 9px; font-weight: 500; letter-spacing: .22em; color: var(--text); }
+  .zone-head p { margin: 2px 0 0; font-size: 9.5px; color: var(--dim); }
+  .zone-hint { margin-left: auto; font-family: var(--font-num); font-size: 6.5px; letter-spacing: .16em; color: var(--dim); border: 1px solid var(--line); border-radius: 4px; padding: 2px 5px; }
+  .zone-scroll { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 8px; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
+  .zone-scroll::-webkit-scrollbar { width: 6px; }
+
+  .pedestal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-content: start; }
+  .pedestal-grid .span-2 { grid-column: span 2; }
+
+  /* ---------- cards & controls ---------- */
+  .card { position: relative; min-width: 0; padding: 8px 9px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255,255,255,.018); }
+  .card.pulse { animation: pulse 1.5s ease-out; }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(185,57,27,.55); border-color: rgba(185,57,27,.8); }
+    70% { box-shadow: 0 0 0 7px rgba(185,57,27,0); border-color: rgba(185,57,27,.35); }
+    100% { box-shadow: 0 0 0 0 rgba(185,57,27,0); }
+  }
+  .card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
+  .card-head h4 { margin: 0; font-family: var(--font-num); font-size: 8px; font-weight: 500; letter-spacing: .18em; color: var(--muted); }
+  .tag { font-family: var(--font-num); font-size: 7px; letter-spacing: .1em; padding: 2px 5px; border: 1px solid var(--line); border-radius: 4px; color: var(--dim); white-space: nowrap; }
+  .tag.live { color: var(--green); border-color: rgba(40,196,106,.35); background: rgba(40,196,106,.06); }
+  .tag.warn { color: var(--amber); border-color: rgba(232,176,74,.35); }
+  .card-foot { margin-top: 6px; font-size: 9px; color: var(--dim); }
+  .card-foot b { color: var(--muted); font-weight: 500; }
+
+  .thrust { display: flex; gap: 14px; align-items: stretch; }
+  .thrust-track {
+    position: relative; flex: none; width: 32px; height: 100px; border-radius: 16px;
+    border: 1px solid var(--line-2); cursor: ns-resize; touch-action: none;
+    background:
+      linear-gradient(to top, rgba(255,90,77,.12), rgba(255,255,255,.02) 34%, rgba(79,208,224,.07)),
+      linear-gradient(90deg, rgba(255,255,255,.04), transparent 40%, rgba(0,0,0,.3));
+    box-shadow: inset 0 2px 8px rgba(0,0,0,.6);
+  }
+  .thrust-fill { position: absolute; left: 4px; right: 4px; bottom: 4px; height: 0; border-radius: 12px; background: linear-gradient(to top, rgba(185,57,27,.55), rgba(232,176,74,.32) 55%, rgba(79,208,224,.45)); opacity: .5; }
+  .thrust-idleband { position: absolute; left: 0; right: 0; bottom: 25%; height: 5%; background: repeating-linear-gradient(45deg, rgba(232,176,74,.5) 0 2px, transparent 2px 4px); opacity: .5; }
+  .thrust-tick { position: absolute; left: 0; right: 0; bottom: var(--p); height: 1px; background: rgba(255,255,255,.14); }
+  .thrust-tick span { position: absolute; left: 36px; bottom: -4px; font-family: var(--font-num); font-size: 6.5px; letter-spacing: .12em; color: var(--dim); white-space: nowrap; }
+  .thrust-handle {
+    position: absolute; left: 50%; bottom: 0; width: 30px; height: 12px; border-radius: 4px;
+    transform: translate(-50%, 35%);
+    background: linear-gradient(180deg, #f0f2f2, #9aa0a3 60%, #7c8285);
+    border: 1px solid rgba(255,255,255,.35);
+    box-shadow: 0 3px 10px rgba(0,0,0,.8), 0 0 0 1px rgba(0,0,0,.6);
+  }
+  .thrust-handle::after { content: ''; position: absolute; left: 4px; right: 4px; top: 5px; height: 1px; background: rgba(0,0,0,.35); }
+  .thrust-read { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .thrust-label { font-family: var(--font-num); font-size: 17px; font-weight: 500; letter-spacing: .04em; color: #f2f5f5; line-height: 1.1; }
+  .thrust-raw { font-family: 'SF Mono', ui-monospace, monospace; font-size: 8.5px; color: var(--dim); white-space: nowrap; }
+  .chips { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 2px; }
+  .chips button { height: 20px; padding: 0 6px; border: 1px solid var(--line); border-radius: 4px; font-family: var(--font-num); font-size: 6.5px; letter-spacing: .1em; color: var(--muted); }
+  .chips button:hover { color: #fff; border-color: var(--line-2); background: rgba(255,255,255,.05); }
+  .engine-line { margin-top: auto; display: flex; align-items: baseline; gap: 5px; font-family: var(--font-num); font-size: 7px; color: var(--dim); }
+  .engine-line b { font-size: 13px; color: var(--cyan); font-weight: 500; }
+
+  .seg { display: flex; gap: 2px; }
+  .seg button { flex: 1; height: 23px; border: 1px solid var(--line); border-radius: 4px; font-family: var(--font-num); font-size: 7.5px; color: var(--muted); }
+  .seg button:hover { border-color: var(--line-2); color: var(--text); }
+  .seg button[aria-pressed="true"] { color: var(--cyan); border-color: rgba(79,208,224,.5); background: rgba(79,208,224,.1); }
+  .gear-row { display: flex; align-items: center; gap: 10px; }
+  .gear-switch { display: flex; align-items: center; gap: 7px; }
+  .gear-track { position: relative; width: 40px; height: 20px; border-radius: 10px; border: 1px solid var(--line-2); background: rgba(0,0,0,.5); }
+  .gear-knob { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: linear-gradient(180deg, #e9ecec, #94999c); transition: left .18s ease; }
+  .gear-switch[aria-pressed="true"] .gear-knob { left: 22px; background: linear-gradient(180deg, #b8f0cd, #28c46a); }
+  .gear-caption { font-family: var(--font-num); font-size: 8px; letter-spacing: .12em; color: var(--muted); }
+  .lamps { display: flex; gap: 3px; }
+  .lamp { width: 7px; height: 7px; border-radius: 50%; background: #1d2220; border: 1px solid #2c3330; }
+  .lamp.on { background: var(--green); border-color: var(--green); box-shadow: 0 0 7px rgba(40,196,106,.8); }
+  .lamp.off { background: #241d1b; border-color: #3a2b26; }
+  .pumps { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3px; }
+  .pumps button { display: flex; align-items: center; gap: 5px; height: 21px; padding: 0 6px; border: 1px solid var(--line); border-radius: 4px; font-family: var(--font-num); font-size: 6.5px; letter-spacing: .08em; color: var(--dim); }
+  .pumps button i { width: 5px; height: 5px; border-radius: 50%; background: #2a2f2d; }
+  .pumps button[aria-pressed="true"] { color: var(--green); border-color: rgba(40,196,106,.35); }
+  .pumps button[aria-pressed="true"] i { background: var(--green); box-shadow: 0 0 6px rgba(40,196,106,.8); }
+  .joy-wrap { display: flex; gap: 10px; align-items: center; }
+  .joy { position: relative; flex: none; width: 74px; height: 74px; border: 1px solid var(--line-2); border-radius: 50%; background: radial-gradient(circle at 50% 40%, rgba(255,255,255,.05), rgba(0,0,0,.5)); touch-action: none; cursor: crosshair; }
+  .joy::before, .joy::after { content: ''; position: absolute; background: rgba(255,255,255,.07); }
+  .joy::before { left: 50%; top: 8%; bottom: 8%; width: 1px; }
+  .joy::after { top: 50%; left: 8%; right: 8%; height: 1px; }
+  .joy-dot { position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 12px rgba(79,208,224,.8), 0 0 0 2px rgba(0,0,0,.5); }
+  .joy-reads { display: flex; flex-direction: column; gap: 3px; font-family: 'SF Mono', ui-monospace, monospace; font-size: 8px; color: var(--dim); }
+  .joy-reads b { color: var(--muted); font-weight: 400; }
+
+  .fma { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 7px; }
+  .fma span { font-family: var(--font-num); font-size: 6.5px; letter-spacing: .1em; padding: 2px 5px; border-radius: 3px; border: 1px solid var(--line); color: var(--dim); }
+  .fma span.on { color: var(--green); border-color: rgba(40,196,106,.4); background: rgba(40,196,106,.08); }
+  .ap-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; }
+  .ap-grid button { height: 24px; border: 1px solid var(--line); border-radius: 4px; font-family: var(--font-num); font-size: 7px; letter-spacing: .08em; color: var(--muted); }
+  .ap-grid button:hover { border-color: var(--line-2); color: var(--text); }
+  .ap-grid button[aria-pressed="true"] { color: var(--green); border-color: rgba(40,196,106,.45); background: rgba(40,196,106,.1); }
+  .ap-grid button[data-ap="cmd"][aria-pressed="true"] { color: var(--accent-2); border-color: rgba(185,57,27,.5); background: rgba(185,57,27,.12); }
+
+  .kv { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; font-size: 9px; color: var(--dim); align-items: baseline; }
+  .kv b { font-family: var(--font-num); font-size: 10px; font-weight: 400; color: var(--text); }
+  .kv b.unit { font-size: 8px; color: var(--dim); }
+
+  /* ---------- lesson ---------- */
+  .lesson-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 10px; height: 100%; min-height: 0; }
+  .panel-card { display: flex; flex-direction: column; min-height: 0; border: 1px solid var(--line); border-radius: 9px; background: rgba(255,255,255,.016); }
+  .panel-card > header { flex: none; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  .panel-card > header h3 { margin: 0; font-family: var(--font-num); font-size: 8px; font-weight: 500; letter-spacing: .18em; color: var(--muted); }
+  .panel-card > header .right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .panel-card .body { flex: 1; min-height: 0; padding: 8px 10px; overflow: auto; }
+  .lesson-controls { display: flex; align-items: center; gap: 5px; }
+  .lesson-controls button { height: 22px; min-width: 22px; padding: 0 6px; border: 1px solid var(--line); border-radius: 4px; font-family: var(--font-num); font-size: 7px; color: var(--muted); }
+  .lesson-controls button:hover { color: #fff; border-color: var(--line-2); }
+  .lesson-progress { margin-left: 4px; width: 90px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.08); overflow: hidden; }
+  .lesson-progress i { display: block; height: 100%; width: 0; background: var(--accent-2); transition: width .12s linear; }
+  .beat-list { position: relative; }
+  .beat { display: flex; align-items: flex-start; gap: 8px; width: 100%; padding: 6px 6px 6px 4px; border: 1px solid transparent; border-radius: 7px; text-align: left; }
+  .beat:hover { background: rgba(255,255,255,.035); }
+  .beat-dot { flex: none; width: 18px; height: 18px; margin-top: 1px; border-radius: 50%; border: 1px solid var(--line-2); display: grid; place-items: center; font-family: var(--font-num); font-size: 7px; color: var(--dim); background: rgba(0,0,0,.4); }
+  .beat[data-state="done"] .beat-dot { color: var(--green); border-color: rgba(40,196,106,.5); }
+  .beat[data-state="current"] { background: rgba(185,57,27,.1); border-color: rgba(185,57,27,.4); }
+  .beat[data-state="current"] .beat-dot { color: #fff; border-color: var(--accent); background: rgba(185,57,27,.55); box-shadow: 0 0 0 0 rgba(185,57,27,.5); animation: ring 1.8s infinite; }
+  @keyframes ring { 0% { box-shadow: 0 0 0 0 rgba(185,57,27,.5); } 70% { box-shadow: 0 0 0 6px rgba(185,57,27,0); } 100% { box-shadow: 0 0 0 0 rgba(185,57,27,0); } }
+  .beat-main { min-width: 0; flex: 1; }
+  .beat-title { display: block; font-size: 10.5px; color: var(--muted); line-height: 1.25; }
+  .beat[data-state="current"] .beat-title { color: #f1f3f3; }
+  .beat-sub { display: block; margin-top: 1px; font-family: var(--font-num); font-size: 6.5px; letter-spacing: .1em; color: var(--dim); }
+  .beat-cue { flex: none; font-family: var(--font-num); font-size: 6.5px; letter-spacing: .08em; color: var(--dim); border: 1px solid var(--line); border-radius: 3px; padding: 1px 4px; margin-top: 2px; }
+  .beat[data-state="current"] .beat-cue { color: var(--accent-2); border-color: rgba(185,57,27,.4); }
+
+  .code { margin: 0; padding: 8px; border-radius: 6px; border: 1px solid var(--line); background: rgba(0,0,0,.4); font-family: 'SF Mono', ui-monospace, monospace; font-size: 9px; line-height: 1.55; color: #a8b3b7; white-space: pre-wrap; }
+  .code .k { color: var(--cyan); }
+  .code .s { color: #d7b06a; }
+  .log { font-family: 'SF Mono', ui-monospace, monospace; font-size: 8.5px; line-height: 1.5; color: var(--dim); }
+  .log-line { display: flex; gap: 6px; white-space: nowrap; }
+  .log-t { color: #4a5053; flex: none; }
+  .log-k { flex: none; width: 34px; text-transform: uppercase; font-size: 7px; letter-spacing: .06em; color: #4a5053; }
+  .log-k.wasm { color: var(--cyan); }
+  .log-k.cue { color: var(--accent-2); }
+  .log-k.beat { color: var(--amber); }
+  .log-k.dock { color: #7f8a8e; }
+  .log-line span:last-child { overflow: hidden; text-overflow: ellipsis; }
+
+  /* ---------- data ---------- */
+  .data-grid { display: grid; grid-template-columns: 1fr .86fr .9fr; gap: 10px; height: 100%; min-height: 0; }
+  .data-card { display: flex; flex-direction: column; min-height: 0; border: 1px solid var(--line); border-radius: 9px; background: rgba(255,255,255,.016); padding: 9px 10px; }
+  .data-card h3 { margin: 0 0 7px; font-family: var(--font-num); font-size: 8px; font-weight: 500; letter-spacing: .18em; color: var(--muted); }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 9.5px; }
+  .data-table th { text-align: left; font-family: var(--font-num); font-size: 6.5px; letter-spacing: .12em; color: var(--dim); font-weight: 400; padding: 0 0 4px; border-bottom: 1px solid var(--line); }
+  .data-table td { padding: 3px 0; color: var(--dim); border-bottom: 1px solid rgba(255,255,255,.035); }
+  .data-table td:last-child { text-align: right; font-family: var(--font-num); color: var(--text); }
+  .data-table td small { color: var(--dim); font-size: 7px; margin-left: 3px; }
+  .airflow { width: 100%; height: auto; flex: 1; min-height: 96px; }
+  .stream { stroke-dasharray: 7 7; animation: dash 3.2s linear infinite; }
+  @keyframes dash { to { stroke-dashoffset: -140; } }
+  .debrief { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; }
+  .debrief span { font-family: var(--font-num); font-size: 6.5px; letter-spacing: .08em; padding: 3px 5px; border-radius: 4px; border: 1px solid rgba(40,196,106,.35); color: var(--green); background: rgba(40,196,106,.07); }
+  .plot { width: 100%; height: 66px; display: block; }
+  .plot-row { margin-bottom: 6px; }
+  .plot-label { display: flex; justify-content: space-between; font-family: var(--font-num); font-size: 6.5px; letter-spacing: .12em; color: var(--dim); margin-bottom: 2px; }
+  .plot-label b { color: var(--muted); font-weight: 400; }
+
+  /* ---------- class ---------- */
+  .class-head { display: flex; align-items: center; gap: 12px; margin-bottom: 9px; }
+  .class-head h3 { margin: 0; font-family: var(--font-num); font-size: 9px; letter-spacing: .18em; font-weight: 500; color: var(--muted); }
+  .class-head .spacer { flex: 1; }
+  .switch-row { display: flex; align-items: center; gap: 6px; font-size: 9.5px; color: var(--dim); }
+  .switch { position: relative; width: 30px; height: 16px; border-radius: 9px; border: 1px solid var(--line-2); background: rgba(0,0,0,.5); }
+  .switch i { position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 50%; background: #8b9195; transition: left .16s ease, background .16s ease; }
+  .switch[aria-pressed="true"] { border-color: rgba(40,196,106,.5); background: rgba(40,196,106,.12); }
+  .switch[aria-pressed="true"] i { left: 16px; background: var(--green); box-shadow: 0 0 7px rgba(40,196,106,.8); }
+  .class-body { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 10px; flex: 1; min-height: 0; }
+  .roster { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; grid-auto-rows: min-content; gap: 6px; overflow: auto; min-height: 0; }
+  .student-view { display: flex; flex-direction: column; gap: 8px; min-height: 0; padding: 9px 10px; border: 1px solid var(--line); border-radius: 7px; background: rgba(255,255,255,.015); }
+  .sv-head { display: flex; align-items: center; gap: 8px; font-family: var(--font-num); font-size: 7px; letter-spacing: .16em; color: var(--muted); }
+  .sv-head .tag { margin-left: auto; }
+  .sv-stage { position: relative; flex: 1; min-height: 76px; overflow: hidden; border: 1px solid var(--line-2); border-radius: 5px; background: linear-gradient(to bottom, #0a1016 0%, #163042 42%, #4a3220 52%, #120e0a 100%); }
+  .sv-stage::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 60%, rgba(232,176,74,.28), transparent 62%); }
+  .sv-runway { position: absolute; left: 50%; top: 52%; width: 26px; height: 48%; transform: translateX(-50%) perspective(40px) rotateX(48deg); background: repeating-linear-gradient(to bottom, rgba(232,176,74,.55) 0 3px, rgba(232,176,74,.12) 3px 9px); }
+  .sv-caption { position: absolute; left: 6px; right: 6px; bottom: 5px; display: flex; gap: 5px; align-items: center; padding: 4px 6px; border-radius: 4px; background: rgba(0,0,0,.72); font-size: 8.5px; color: var(--text); }
+  .sv-caption b { flex: none; font-family: var(--font-num); font-size: 7px; color: var(--accent-2); }
+  .sv-caption span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .student-view p { margin: 0; font-size: 8.5px; line-height: 1.45; color: var(--dim); }
+  .student-view .switch-row { margin-top: auto; }
+  .student { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 7px; background: rgba(255,255,255,.015); }
+  .avatar { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-num); font-size: 8px; color: #cfd6d6; background: #1b2022; border: 1px solid var(--line-2); }
+  .student-main { min-width: 0; flex: 1; }
+  .student-name { display: block; line-height: 1.15; font-size: 9.5px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .student-state { display: flex; align-items: center; gap: 4px; margin-top: 3px; line-height: 1; font-family: var(--font-num); font-size: 6.5px; letter-spacing: .08em; color: var(--dim); }
+  .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--dim); }
+  .dot.flying { background: var(--green); box-shadow: 0 0 6px rgba(40,196,106,.8); }
+  .dot.briefing { background: var(--amber); }
+  .dot.offline { background: #3a3f42; }
+  .student .ghost-btn { opacity: 0; }
+  .student:hover .ghost-btn { opacity: 1; }
+
+  /* ---------- palette ---------- */
+  .palette-wrap { position: fixed; inset: 0; z-index: 60; }
+  .palette-wrap[hidden] { display: none; }
+  .palette-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.55); backdrop-filter: blur(5px); }
+  .palette {
+    position: relative; width: min(620px, 92vw); max-height: 74vh; margin: 12vh auto 0; overflow: hidden;
+    display: flex; flex-direction: column;
+    border: 1px solid var(--line-2); border-radius: 13px; background: rgba(11,13,15,.985);
+    box-shadow: 0 40px 120px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .palette-input { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .palette-input .pfx { font-family: var(--font-ui); font-size: 16px; line-height: 1; color: var(--accent-2); }
+  .palette-input input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--text); font-family: var(--font-ui); font-size: 14px; }
+  .palette-input input::placeholder { color: var(--dim); }
+  .palette-input kbd { font-family: var(--font-num); font-size: 7px; color: var(--dim); border: 1px solid var(--line); border-radius: 3px; padding: 2px 5px; }
+  .palette-list { flex: 1; min-height: 0; max-height: 56vh; overflow: auto; padding: 5px; }
+  .palette-item { display: flex; align-items: center; gap: 9px; width: 100%; padding: 8px 9px; border-radius: 7px; text-align: left; color: var(--muted); }
+  .palette-item .pi-icon { width: 20px; height: 20px; border-radius: 5px; display: grid; place-items: center; border: 1px solid var(--line); font-family: var(--font-num); font-size: 8px; color: var(--dim); }
+  .palette-item .pi-label { flex: 1; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .palette-item .tag { flex: none; }
+  .palette-item[data-active="true"] { background: rgba(255,255,255,.06); color: #fff; }
+  .palette-item[data-active="true"] .pi-icon { color: var(--accent-2); border-color: rgba(185,57,27,.5); }
+  .palette-empty { padding: 18px 12px; text-align: center; font-size: 11px; color: var(--dim); }
+  .palette-foot { display: flex; gap: 14px; padding: 7px 14px; border-top: 1px solid var(--line); font-family: var(--font-num); font-size: 6.5px; letter-spacing: .1em; color: var(--dim); }
+
+  /* ---------- stage-only ---------- */
+  .stage-only-pill { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 30; display: flex; align-items: center; gap: 10px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 999px; background: rgba(9,11,13,.78); backdrop-filter: blur(14px); font-family: var(--font-num); font-size: 7.5px; letter-spacing: .12em; color: var(--dim); opacity: 0; pointer-events: none; transition: opacity .2s ease; }
+  .stage-only-pill kbd { font-size: 7px; border: 1px solid var(--line); border-radius: 3px; padding: 1px 4px; color: var(--muted); }
+  body.stage-only .topbar, body.stage-only .rail, body.stage-only .dock { opacity: 0; pointer-events: none; }
+  body.stage-only .rail { transform: translateY(14px); }
+  body.stage-only .stage-only-pill { opacity: 1; pointer-events: auto; }
+
+  .toast { position: absolute; left: 50%; bottom: calc(var(--rail-h) + var(--dock-lift) + 86px); transform: translate(-50%, 10px); z-index: 40; padding: 7px 12px; border-radius: 7px; border: 1px solid var(--line-2); background: rgba(9,11,13,.94); font-family: var(--font-num); font-size: 7.5px; letter-spacing: .1em; color: var(--muted); opacity: 0; pointer-events: none; transition: opacity .18s ease, transform .18s ease; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  .thrust-scale { position: relative; flex: none; width: 24px; height: 100px; font-family: var(--font-num); font-size: 5.5px; letter-spacing: .08em; color: var(--dim); }
+  .thrust-scale span { position: absolute; right: 0; }
+  .thrust-scale span:nth-child(1) { bottom: 96%; }
+  .thrust-scale span:nth-child(2) { bottom: 25%; }
+  .thrust-scale span:nth-child(3) { bottom: 0; }
+  .seg.wrap { flex-wrap: wrap; }
+  .seg.wrap button { flex: 1 0 21%; }
+  .kv .unit { font-size: 7px; color: var(--dim); }
+  .js-now { font-size: 10px; line-height: 1.3; color: var(--text); margin-bottom: 4px; }
+  .js-next { display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px; font-family: var(--font-num); font-size: 6.5px; letter-spacing: .08em; color: var(--dim); }
+  .js-class { display: flex; flex-wrap: wrap; gap: 3px 10px; font-size: 9px; color: var(--dim); }
+  .js-class > div { display: flex; align-items: center; gap: 4px; }
+  .script-body { display: flex; flex-direction: column; gap: 8px; }
+  .console-prompt { display: flex; align-items: center; gap: 6px; margin-top: auto; padding-top: 7px; border-top: 1px solid rgba(255,255,255,.05); font-family: var(--font-num); font-size: 7px; letter-spacing: .08em; color: var(--dim); }
+  .console-prompt span { color: var(--accent-2); }
+  .console-prompt i { width: 5px; height: 9px; background: var(--muted); animation: caret 1.1s steps(1) infinite; }
+  @keyframes caret { 50% { opacity: 0; } }
+  .subhead { display: flex; align-items: center; gap: 8px; }
+  .subhead h3 { margin: 0; font-family: var(--font-num); font-size: 8px; font-weight: 500; letter-spacing: .18em; color: var(--muted); }
+  .subhead .tag { margin-left: auto; }
+
+  .thrust-side { height: 92px; margin-left: auto; display: flex; flex-direction: column; justify-content: space-between; gap: 5px; text-align: right; }
+  .thrust-side div { display: flex; flex-direction: column; gap: 1px; }
+  .thrust-side span { font-family: var(--font-num); font-size: 5.5px; letter-spacing: .14em; color: var(--dim); }
+  .thrust-side b { font-family: var(--font-num); font-size: 11px; font-weight: 400; color: var(--text); }
+  .zone-scroll > .card:last-child { flex: 1; }
+  .class-note { margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--line); font-family: var(--font-num); font-size: 6.5px; letter-spacing: .14em; color: var(--dim); }
+  .dock[data-section="class"] .dock-section[data-section="class"] { display: flex; flex-direction: column; }
+  .dock-section[data-section="class"] .roster { flex: 1; }
+
+  @media (max-width: 1180px) {
+    .zones { grid-template-columns: 1.3fr 1fr; }
+    .zone[data-zone="jumpseat"] { display: none; }
+    .data-grid { grid-template-columns: 1fr 1fr; }
+    .data-grid .data-card:last-child { display: none; }
+    .roster { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .beat-line { max-width: 280px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: .001s !important; transition-duration: .001s !important; }
+  }
+
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="stage" id="stage">
+    <!-- ============ flight view (the stage) ============ -->
+    <div class="scene" id="scene" aria-hidden="true">
+      <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <linearGradient id="gSky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#08131d" />
+            <stop offset=".35" stop-color="#123042" />
+            <stop offset=".72" stop-color="#2f586b" />
+            <stop offset=".92" stop-color="#8b7f70" />
+            <stop offset="1" stop-color="#c9a27a" />
+          </linearGradient>
+          <linearGradient id="gGround" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#2b3128" />
+            <stop offset=".4" stop-color="#1a1f18" />
+            <stop offset="1" stop-color="#080a08" />
+          </linearGradient>
+          <linearGradient id="gRunway" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#565a55" />
+            <stop offset=".55" stop-color="#33362f" />
+            <stop offset="1" stop-color="#191b17" />
+          </linearGradient>
+          <radialGradient id="gSun" cx=".5" cy=".5" r=".5">
+            <stop offset="0" stop-color="#ffcf94" stop-opacity=".8" />
+            <stop offset=".35" stop-color="#ff9f4d" stop-opacity=".26" />
+            <stop offset="1" stop-color="#ff9f4d" stop-opacity="0" />
+          </radialGradient>
+          <linearGradient id="gHaze" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#d7b089" stop-opacity="0" />
+            <stop offset="1" stop-color="#d7b089" stop-opacity=".3" />
+          </linearGradient>
+          <radialGradient id="gVig" cx=".5" cy=".42" r=".78">
+            <stop offset=".55" stop-color="#000" stop-opacity="0" />
+            <stop offset="1" stop-color="#000" stop-opacity=".66" />
+          </radialGradient>
+          <filter id="gBlur"><feGaussianBlur stdDeviation="16" /></filter>
+        </defs>
+
+        <rect width="1600" height="900" fill="url(#gSky)" />
+        <circle cx="1180" cy="322" r="280" fill="url(#gSun)" />
+        <circle cx="1180" cy="322" r="30" fill="#ffdcab" opacity=".55" />
+
+        <g fill="#ecdcc6" opacity=".12" filter="url(#gBlur)">
+          <ellipse cx="330" cy="150" rx="310" ry="16" />
+          <ellipse cx="540" cy="118" rx="180" ry="10" />
+          <ellipse cx="980" cy="196" rx="240" ry="12" />
+          <ellipse cx="1380" cy="120" rx="260" ry="14" />
+          <ellipse cx="1420" cy="240" rx="320" ry="18" />
+        </g>
+        <rect y="238" width="1600" height="100" fill="url(#gHaze)" />
+
+        <path d="M0 330 L90 314 L180 322 L300 300 L420 320 L520 310 L640 326 L760 312 L900 328 L1040 310 L1180 326 L1320 314 L1440 328 L1600 316 L1600 342 L0 342 Z" fill="#1b2625" opacity=".92" />
+        <g fill="#121a19">
+          <rect x="880" y="318" width="16" height="14" />
+          <rect x="902" y="322" width="10" height="10" />
+          <rect x="920" y="315" width="22" height="17" />
+          <rect x="950" y="323" width="12" height="9" />
+          <rect x="974" y="319" width="26" height="13" />
+          <rect x="1010" y="324" width="14" height="8" />
+        </g>
+        <rect y="330" width="1600" height="570" fill="url(#gGround)" />
+        <path d="M528 900 L764 330 L802 330 L648 900 Z" fill="#23261f" opacity=".85" />
+        <path d="M1170 900 L836 330 L812 330 L1040 900 Z" fill="#1d211b" opacity=".7" />
+        <polygon points="650,900 950,900 812,330 788,330" fill="url(#gRunway)" />
+        <line x1="788" y1="330" x2="650" y2="900" stroke="#c3c8c0" stroke-opacity=".32" stroke-width="2" />
+        <line x1="812" y1="330" x2="950" y2="900" stroke="#c3c8c0" stroke-opacity=".32" stroke-width="2" />
+        <path d="M800 336 L800 900" stroke="#eef0ea" stroke-width="3" stroke-dasharray="12 22" opacity=".5" />
+        <g fill="#ffce7a">
+          <circle cx="791" cy="352" r="1.6" /><circle cx="809" cy="352" r="1.6" />
+          <circle cx="786" cy="378" r="1.8" /><circle cx="814" cy="378" r="1.8" />
+          <circle cx="780" cy="414" r="2" /><circle cx="820" cy="414" r="2" />
+          <circle cx="773" cy="462" r="2.2" /><circle cx="827" cy="462" r="2.2" />
+          <circle cx="764" cy="524" r="2.5" /><circle cx="836" cy="524" r="2.5" />
+          <circle cx="753" cy="602" r="2.8" /><circle cx="847" cy="602" r="2.8" />
+          <circle cx="739" cy="700" r="3.2" /><circle cx="861" cy="700" r="3.2" />
+          <circle cx="722" cy="820" r="3.6" /><circle cx="878" cy="820" r="3.6" />
+        </g>
+        <g fill="#94c8e0" opacity=".7">
+          <circle cx="604" cy="640" r="1.6" /><circle cx="624" cy="700" r="1.8" /><circle cx="646" cy="770" r="2" /><circle cx="672" cy="850" r="2.2" />
+        </g>
+        <g fill="#111817">
+          <rect x="252" y="284" width="24" height="46" />
+          <rect x="244" y="274" width="40" height="12" />
+          <rect x="261" y="250" width="2" height="24" />
+        </g>
+        <circle cx="262" cy="248" r="2.6" fill="#ff5a4d" class="beacon" />
+        <rect width="1600" height="900" fill="url(#gVig)" />
+      </svg>
+    </div>
+    <div class="stage-shade"></div>
+    <div class="scan"></div>
+
+    <!-- ============ top bar ============ -->
+    <header class="topbar">
+      <div class="lesson-chip">
+        <button class="play-btn" id="playBtn" title="Play lesson (Space)" aria-label="Play lesson">▶</button>
+        <div class="lesson-chip-text">
+          <div class="eyebrow">B747 · Rejected takeoff</div>
+          <div class="beat-line">
+            <b id="beatIndex">BEAT 1 / 8</b>
+            <span class="sep"></span>
+            <span id="beatTitle">Battery &amp; fuel pumps on</span>
+          </div>
+        </div>
+        <div class="chip-progress"><i id="beatBar"></i></div>
+      </div>
+      <div class="top-right">
+        <button class="pill" id="pauseBtn" aria-live="polite"><span class="led"></span><span id="pauseText">SIM RUNNING</span></button>
+        <div class="clock" id="clock">09:41:00</div>
+      </div>
+    </header>
+
+    <!-- ============ glareshield: always on the stage ============ -->
+    <div class="instruments" id="instruments">
+      <button class="inst pfd" data-open-dock="systems" data-zone="glareshield" title="PFD — open systems dock">
+        <svg viewBox="0 0 250 148" role="img" aria-label="Primary flight display">
+          <rect x=".5" y=".5" width="249" height="147" rx="8" fill="rgba(4,10,12,.85)" stroke="rgba(255,255,255,.13)" />
+          <defs><clipPath id="pfdClip"><rect x="34" y="14" width="150" height="96" rx="3" /></clipPath></defs>
+          <g clip-path="url(#pfdClip)">
+            <g transform="translate(109 62)">
+              <g id="pfdAtt">
+                <rect x="-240" y="-300" width="480" height="300" fill="#2b6f93" />
+                <rect x="-240" y="0" width="480" height="300" fill="#5a4426" />
+                <g id="pfdLadder"></g>
+                <line x1="-240" y1="0" x2="240" y2="0" stroke="#e8f6ff" stroke-width="1.6" />
+              </g>
+            </g>
+          </g>
+          <g fill="none" stroke="#cfe6ee" stroke-width="1" opacity=".55">
+            <path d="M71 34 A 60 60 0 0 1 147 34" />
+            <line x1="109" y1="14" x2="109" y2="24" />
+            <line x1="73" y1="36" x2="77" y2="42" />
+            <line x1="145" y1="36" x2="141" y2="42" />
+          </g>
+          <polygon id="pfdBankMark" points="109,22 105,30 113,30" fill="#ffcf5a" />
+          <g>
+            <rect x="4" y="14" width="27" height="96" rx="3" fill="rgba(0,0,0,.6)" stroke="rgba(255,255,255,.12)" />
+            <g id="pfdSpdTape" fill="#cfe3e8" font-size="7.5" text-anchor="end"></g>
+            <rect x="1" y="55" width="32" height="14" rx="2" fill="rgba(4,10,12,.96)" stroke="#4fd0e0" />
+            <text id="pfdSpd" x="30" y="65.5" text-anchor="end" font-size="9.5" fill="#fff"></text>
+          </g>
+          <g>
+            <rect x="196" y="14" width="34" height="96" rx="3" fill="rgba(0,0,0,.6)" stroke="rgba(255,255,255,.12)" />
+            <g id="pfdAltTape" fill="#cfe3e8" font-size="7.5"></g>
+            <rect x="194" y="55" width="38" height="14" rx="2" fill="rgba(4,10,12,.96)" stroke="#4fd0e0" />
+            <text id="pfdAlt" x="229" y="65.5" text-anchor="end" font-size="9.5" fill="#fff"></text>
+          </g>
+          <rect x="34" y="116" width="150" height="20" rx="3" fill="rgba(0,0,0,.55)" stroke="rgba(255,255,255,.1)" />
+          <text x="42" y="125" class="lbl" font-size="5.5">HDG</text>
+          <text id="pfdHdg" x="109" y="131.5" text-anchor="middle" font-size="10" fill="#eaf7fa"></text>
+          <text x="8" y="10" class="lbl">PFD</text>
+          <text x="8" y="143" class="lbl">SPD</text>
+          <text x="242" y="143" class="lbl" text-anchor="end">ALT</text>
+        </svg>
+      </button>
+
+      <button class="inst nd" data-open-dock="data" title="ND — open flight data">
+        <svg viewBox="0 0 158 148" role="img" aria-label="Navigation display">
+          <rect x=".5" y=".5" width="157" height="147" rx="8" fill="rgba(4,10,12,.85)" stroke="rgba(255,255,255,.13)" />
+          <g id="ndRose" transform="rotate(0 79 70)">
+            <circle cx="79" cy="70" r="46" fill="none" stroke="rgba(160,210,220,.28)" stroke-width="1" />
+            <circle cx="79" cy="70" r="38" fill="none" stroke="rgba(160,210,220,.12)" stroke-width="1" />
+            <g id="ndTicks"></g>
+            <g id="ndLabels" font-size="7" fill="#9fc3cc" text-anchor="middle"></g>
+          </g>
+          <path d="M79 70 L104 44" stroke="#e05ab0" stroke-width="1.2" stroke-dasharray="3 3" opacity=".85" />
+          <circle cx="104" cy="44" r="2.2" fill="none" stroke="#e05ab0" stroke-width="1.2" />
+          <text x="104" y="38" font-size="5.5" fill="#e05ab0" text-anchor="middle">TOC</text>
+          <path d="M79 64 L79 76 M79 70 L84 70" stroke="#eaf7fa" stroke-width="1.2" />
+          <rect x="64" y="7" width="30" height="15" rx="2" fill="rgba(4,10,12,.95)" stroke="#4fd0e0" />
+          <text id="ndHdg" x="79" y="17.5" text-anchor="middle" font-size="9" fill="#fff"></text>
+          <polygon points="79,24 76,30 82,30" fill="#ffcf5a" />
+          <text x="8" y="10" class="lbl">ND</text>
+          <text x="150" y="143" class="lbl" text-anchor="end">3 NM</text>
+          <text x="8" y="143" class="lbl">TFC</text>
+        </svg>
+      </button>
+
+      <button class="inst eicas" data-open-dock="systems" data-zone="pedestal" title="EICAS — open systems dock">
+        <svg viewBox="0 0 158 148" role="img" aria-label="Engine display">
+          <rect x=".5" y=".5" width="157" height="147" rx="8" fill="rgba(4,10,12,.85)" stroke="rgba(255,255,255,.13)" />
+          <text x="8" y="10" class="lbl">EICAS</text>
+          <text x="150" y="10" class="lbl" text-anchor="end">N1 %</text>
+          <g font-size="7" fill="#7f9aa1">
+            <text x="8" y="34">1</text><text x="8" y="58">2</text><text x="8" y="82">3</text><text x="8" y="106">4</text>
+          </g>
+          <g id="eicasBars"></g>
+          <g font-size="9" fill="#eaf7fa" text-anchor="end">
+            <text id="n1Txt0" x="150" y="37"></text><text id="n1Txt1" x="150" y="61"></text>
+            <text id="n1Txt2" x="150" y="85"></text><text id="n1Txt3" x="150" y="109"></text>
+          </g>
+          <line x1="8" y1="118" x2="150" y2="118" stroke="rgba(255,255,255,.1)" />
+          <text x="8" y="130" font-size="5.5" fill="#6f858c">FF</text>
+          <text x="8" y="141" font-size="8" fill="#cfe3e8"><tspan data-k="ff">0.0</tspan> t/h</text>
+          <text x="150" y="130" font-size="5.5" fill="#6f858c" text-anchor="end">EGT</text>
+          <text x="150" y="141" font-size="8" fill="#cfe3e8" text-anchor="end"><tspan data-k="egt">18</tspan> °C</text>
+        </svg>
+      </button>
+    </div>
+
+    <!-- ============ lesson caption ============ -->
+    <div class="caption" id="caption" data-show="true" aria-live="polite">
+      <div class="caption-idx" id="captionIndex">1</div>
+      <div>
+        <div class="caption-kicker" id="captionKicker">BEAT 1 · PREFLIGHT</div>
+        <div class="caption-text" id="captionText">Battery on, fuel pumps on. Watch the EICAS wake up.</div>
+      </div>
+      <button class="caption-next" id="captionNext" title="Next beat (→)">NEXT →</button>
+    </div>
+
+    <!-- ============ rail ============ -->
+    <nav class="rail" id="rail" aria-label="Contextual dock sections">
+      <div class="rail-groups">
+        <button class="rail-btn" data-dock="lesson" aria-pressed="false"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M3 2.5h8.5v11H4.5a1 1 0 0 1-1-1z"/><path d="M4.6 5.2h5.4M4.6 7.6h5.4M4.6 10h3.2"/></svg><span>LESSON</span><kbd>1</kbd></button>
+        <button class="rail-btn" data-dock="systems" aria-pressed="false"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.6v1.8M8 12.6v1.8M1.6 8h1.8M12.6 8h1.8M3.5 3.5l1.3 1.3M11.2 11.2l1.3 1.3M12.5 3.5l-1.3 1.3M4.8 11.2l-1.3 1.3"/></svg><span>SYSTEMS</span><kbd>2</kbd></button>
+        <button class="rail-btn" data-dock="data" aria-pressed="false"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M2.5 13V3M2.5 13h11"/><path d="M5 10.5V7M8 10.5V4.6M11 10.5V6"/></svg><span>DATA</span><kbd>3</kbd></button>
+        <button class="rail-btn" data-dock="class" aria-pressed="false"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="5.5" cy="5.6" r="2.1"/><path d="M2.2 13c.3-2.1 1.6-3.3 3.3-3.3s3 1.2 3.3 3.3"/><circle cx="11.2" cy="6.2" r="1.6"/><path d="M9.6 12.6c.2-1.6 1.2-2.5 2.4-2.5 1 0 1.8.7 2 1.9"/></svg><span>CLASS</span><kbd>4</kbd></button>
+      </div>
+      <div class="rail-right">
+        <button class="rail-mini" id="paletteBtn" title="Command palette (⌘K)">⌘K <small>COMMAND</small></button>
+        <button class="rail-mini" id="stageOnlyBtn" title="Stage only (S)">⛶ <small>STAGE</small></button>
+      </div>
+    </nav>
+
+    <!-- ============ contextual dock ============ -->
+    <section class="dock" id="dock" data-open="false" data-section="systems" aria-label="Contextual dock">
+      <div class="dock-grip" id="dockGrip" title="Drag to resize · double-click to reset"><i></i></div>
+      <div class="dock-shell">
+        <div class="dock-head">
+          <div class="dock-title">
+            <span class="dock-kicker">CONTEXTUAL DOCK</span>
+            <h2 id="dockTitle">SYSTEMS</h2>
+            <span class="dock-sub" id="dockSub">one dock · three cockpit zones · no tabs</span>
+          </div>
+          <div class="dock-head-right">
+            <div class="zone-legend" id="zoneLegend">
+              <button data-zone-jump="pedestal">PEDESTAL</button>
+              <button data-zone-jump="glareshield">GLARESHIELD</button>
+              <button data-zone-jump="jumpseat">JUMP SEAT</button>
+            </div>
+            <button class="ghost-btn" id="dockStageBtn">STAGE ONLY</button>
+            <button class="icon-btn" id="dockClose" title="Close dock (Esc)">✕</button>
+          </div>
+        </div>
+        <div class="dock-body">
+          <!-- ---------- SYSTEMS ---------- -->
+          <div class="dock-section" data-section="systems">
+            <div class="zones">
+              <section class="zone" data-zone="pedestal">
+                <header class="zone-head">
+                  <span class="zone-num">01</span>
+                  <div><h3>PEDESTAL</h3><p>what your hands reach</p></div>
+                  <span class="zone-hint">ZONES, NOT TABS</span>
+                </header>
+                <div class="zone-scroll pedestal-grid">
+                  <article class="card span-2" data-focus="throttle">
+                    <div class="card-head"><h4>THRUST · COMBINED LEVER</h4><span class="tag live">LIVE</span></div>
+                    <div class="thrust">
+                      <div class="thrust-scale" aria-hidden="true"><span>MAX</span><span>IDLE</span><span>REV</span></div>
+                      <div class="thrust-track" id="thrustTrack" role="slider" tabindex="0" aria-label="Engine thrust" aria-valuemin="0" aria-valuemax="100" aria-valuenow="30" aria-valuetext="IDLE">
+                        <div class="thrust-fill" id="thrustFill"></div>
+                        <div class="thrust-idleband"></div>
+                        <div class="thrust-tick" style="--p:25%"></div>
+                        <div class="thrust-tick" style="--p:30%"></div>
+                        <div class="thrust-handle" id="thrustHandle"></div>
+                      </div>
+                      <div class="thrust-read">
+                        <div class="thrust-label" id="thrustLabel">IDLE</div>
+                        <div class="thrust-raw" id="thrustRaw">thr 0.260 · rev 0.00</div>
+                        <div class="chips">
+                          <button data-thrust="0">REV</button>
+                          <button data-thrust="0.3">IDLE</button>
+                          <button data-thrust="0.6">60%</button>
+                          <button data-thrust="1">MAX</button>
+                        </div>
+                      </div>
+                      <div class="thrust-side">
+                        <div><span>N1</span><b data-k="n1">0.0</b></div>
+                        <div><span>FF</span><b data-k="ff">0.0</b></div>
+                        <div><span>REVERSER</span><b id="revState">STOWED</b></div>
+                      </div>
+                    </div>
+                  </article>
+
+                  <article class="card" data-focus="flaps">
+                    <div class="card-head"><h4>FLAPS</h4><span class="tag" id="flapsTag">5</span></div>
+                    <div class="seg wrap" id="flapsSeg">
+                      <button data-flaps="0">0</button><button data-flaps="1">1</button><button data-flaps="5">5</button>
+                      <button data-flaps="10">10</button><button data-flaps="20">20</button><button data-flaps="25">25</button>
+                      <button data-flaps="30">30</button>
+                    </div>
+                    <div class="card-foot">selector <b id="flapsSel">5</b> · actual <b data-k="flaps">5</b></div>
+                  </article>
+
+                  <article class="card" data-focus="gear">
+                    <div class="card-head"><h4>LANDING GEAR</h4><span class="tag" id="gearTag">DOWN</span></div>
+                    <div class="gear-row">
+                      <button class="gear-switch" id="gearLever" aria-pressed="true" aria-label="Landing gear lever">
+                        <span class="gear-track"><span class="gear-knob"></span></span>
+                        <span class="gear-caption" id="gearCaption">DN</span>
+                      </button>
+                      <div class="lamps"><i class="lamp on"></i><i class="lamp on"></i><i class="lamp on"></i></div>
+                    </div>
+                  </article>
+
+                  <article class="card" data-focus="fuel">
+                    <div class="card-head"><h4>FUEL PUMPS</h4><span class="tag" id="fuelTag">OFF</span></div>
+                    <div class="pumps" id="pumps">
+                      <button data-pump="0" aria-pressed="false"><i></i>PUMP 1</button>
+                      <button data-pump="1" aria-pressed="false"><i></i>PUMP 2</button>
+                      <button data-pump="2" aria-pressed="false"><i></i>PUMP 3</button>
+                      <button data-pump="3" aria-pressed="false"><i></i>PUMP 4</button>
+                    </div>
+                  </article>
+
+                  <article class="card" data-focus="joystick">
+                    <div class="card-head"><h4>JOYSTICK</h4><span class="tag">AIL / ELEV</span></div>
+                    <div class="joy-wrap">
+                      <div class="joy" id="joyPad" tabindex="0" role="application" aria-label="Joystick">
+                        <div class="joy-dot" id="joyDot"></div>
+                      </div>
+                      <div class="joy-reads">
+                        <span>AIL <b data-k="ail">0.00</b></span>
+                        <span>ELEV <b data-k="elev">0.00</b></span>
+                        <span>PITCH <b data-k="pitch">0.0</b>°</span>
+                      </div>
+                    </div>
+                  </article>
+                </div>
+              </section>
+
+              <section class="zone" data-zone="glareshield">
+                <header class="zone-head">
+                  <span class="zone-num">02</span>
+                  <div><h3>GLARESHIELD</h3><p>what your eyes fly</p></div>
+                </header>
+                <div class="zone-scroll">
+                  <article class="card" data-focus="ap">
+                    <div class="card-head"><h4>AUTOPILOT</h4><span class="tag" id="apTag">OFF</span></div>
+                    <div class="fma" id="fma"></div>
+                    <div class="ap-grid" id="apGrid">
+                      <button data-ap="cmd">CMD</button>
+                      <button data-ap="at">A/T</button>
+                      <button data-ap="lnav">LNAV</button>
+                      <button data-ap="vnav">VNAV</button>
+                      <button data-ap="hdg">HDG</button>
+                      <button data-ap="alt">ALT</button>
+                      <button data-ap="spd">SPD</button>
+                    </div>
+                  </article>
+                  <article class="card">
+                    <div class="card-head"><h4>FLIGHT DATA</h4><span class="tag live">LIVE</span></div>
+                    <div class="kv">
+                      <span>ALT</span><b><span data-k="alt">0</span> <span class="unit">ft</span></b>
+                      <span>IAS</span><b><span data-k="spd">0</span> <span class="unit">kt</span></b>
+                      <span>HDG</span><b><span data-k="hdg">270</span>°</b>
+                      <span>V/S</span><b><span data-k="vs">0</span> <span class="unit">fpm</span></b>
+                      <span>N1</span><b><span data-k="n1">0.0</span> %</b>
+                      <span>GW</span><b><span data-k="gw">213.4</span> <span class="unit">t</span></b>
+                    </div>
+                  </article>
+                  <article class="card">
+                    <div class="card-head"><h4>AIRCRAFT</h4><span class="tag">B747-8F</span></div>
+                    <div class="kv">
+                      <span>Fuel</span><b>34.2 <span class="unit">t</span></b>
+                      <span>CG</span><b>28.1 <span class="unit">%</span></b>
+                      <span>Flaps</span><b><span data-k="flaps">5</span></b>
+                      <span>Gear</span><b id="gearKv">DOWN</b>
+                    </div>
+                  </article>
+                </div>
+              </section>
+
+              <section class="zone" data-zone="jumpseat">
+                <header class="zone-head">
+                  <span class="zone-num">03</span>
+                  <div><h3>JUMP SEAT</h3><p>what the instructor sees</p></div>
+                </header>
+                <div class="zone-scroll">
+                  <article class="card" data-focus="lesson-mini">
+                    <div class="card-head"><h4>LESSON</h4><span class="tag" id="jsBeatTag">BEAT 1/8</span></div>
+                    <div class="js-now" id="jsNow">Battery &amp; fuel pumps on</div>
+                    <div class="js-next" id="jsNext"></div>
+                    <button class="ghost-btn" id="jsOpenLesson">OPEN LESSON BOARD</button>
+                  </article>
+                  <article class="card">
+                    <div class="card-head"><h4>CONSOLE</h4><span class="tag">OUTPUT</span></div>
+                    <div class="log" data-log="mini"></div>
+                  </article>
+                  <article class="card">
+                    <div class="card-head"><h4>CLASSROOM</h4><span class="tag" id="jsClassTag">12</span></div>
+                    <div class="js-class">
+                      <div><span class="dot flying"></span> 9 in flight</div>
+                      <div><span class="dot briefing"></span> 2 briefing</div>
+                      <div><span class="dot offline"></span> 1 offline</div>
+                    </div>
+                    <div class="switch-row" style="margin-top:6px">
+                      <button class="switch" id="jsBroadcast" aria-pressed="true" aria-label="Broadcast stage"><i></i></button>
+                      <span>Broadcasting stage</span>
+                    </div>
+                    <button class="ghost-btn" id="jsOpenClass" style="margin-top:6px">OPEN ROSTER</button>
+                  </article>
+                </div>
+              </section>
+            </div>
+          </div>
+          <!-- ---------- LESSON ---------- -->
+          <div class="dock-section" data-section="lesson">
+            <div class="lesson-grid">
+              <div class="panel-card">
+                <header>
+                  <h3>BEATS · B747 REJECTED TAKEOFF</h3>
+                  <div class="right lesson-controls">
+                    <button id="lessonPrev" title="Previous beat (←)">◀</button>
+                    <button id="lessonPlay" title="Play lesson (Space)">▶</button>
+                    <button id="lessonNext" title="Next beat (→)">▶❙</button>
+                    <div class="lesson-progress"><i id="lessonBar"></i></div>
+                  </div>
+                </header>
+                <div class="body"><div class="beat-list" id="beatList"></div></div>
+              </div>
+              <div class="panel-card">
+                <header><h3>SCRIPT</h3><div class="right"><span class="tag">context.beat()</span></div></header>
+                <div class="body script-body">
+                  <pre class="code" id="scriptCode"></pre>
+                  <div class="subhead"><h3>CONSOLE</h3><span class="tag">EVENTS</span></div>
+                  <div class="log" data-log="lesson"></div>
+                  <div class="console-prompt"><span>›</span> awaiting next cue<i></i></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ---------- DATA ---------- -->
+          <div class="dock-section" data-section="data">
+            <div class="data-grid">
+              <div class="data-card">
+                <h3>FLIGHT DATA</h3>
+                <table class="data-table">
+                  <thead><tr><th>PARAM</th><th>VALUE</th></tr></thead>
+                  <tbody>
+                    <tr><td>Altitude</td><td><span data-k="alt">0</span><small>ft</small></td></tr>
+                    <tr><td>Indicated speed</td><td><span data-k="spd">0</span><small>kt</small></td></tr>
+                    <tr><td>Heading</td><td><span data-k="hdg">270</span><small>°</small></td></tr>
+                    <tr><td>Pitch</td><td><span data-k="pitch">0.0</span><small>°</small></td></tr>
+                    <tr><td>Bank</td><td><span data-k="bank">0</span><small>°</small></td></tr>
+                    <tr><td>Vertical speed</td><td><span data-k="vs">0</span><small>fpm</small></td></tr>
+                    <tr><td>Engine N1</td><td><span data-k="n1">0.0</span><small>%</small></td></tr>
+                    <tr><td>Fuel flow</td><td><span data-k="ff">0.0</span><small>t/h</small></td></tr>
+                    <tr><td>EGT</td><td><span data-k="egt">18</span><small>°C</small></td></tr>
+                    <tr><td>Flaps</td><td><span data-k="flaps">5</span></td></tr>
+                    <tr><td>Gross weight</td><td><span data-k="gw">213.4</span><small>t</small></td></tr>
+                    <tr><td>Fuel</td><td><span data-k="fuel">34.2</span><small>t</small></td></tr>
+                    <tr><td>CG</td><td><span data-k="cg">28.1</span><small>%</small></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="data-card">
+                <h3>AIRFLOW · LIFT</h3>
+                <svg class="airflow" viewBox="0 0 260 110" aria-label="Airflow over the wing">
+                  <path d="M16 58 C 62 30, 156 26, 246 50 C 200 64, 120 76, 16 58 Z" fill="rgba(79,208,224,.10)" stroke="rgba(79,208,224,.55)" />
+                  <g class="stream" fill="none" stroke="rgba(214,214,214,.38)" stroke-width="1">
+                    <path d="M8 36 C 80 16, 180 16, 252 32" />
+                    <path d="M8 56 C 90 30, 170 30, 252 50" />
+                    <path d="M8 78 C 80 58, 180 56, 252 70" />
+                  </g>
+                </svg>
+                <div class="kv">
+                  <span>C<sub>L</sub></span><b>1.24</b>
+                  <span>Angle of attack</span><b>4.1°</b>
+                  <span>Stall margin</span><b>1.42</b>
+                </div>
+                <div class="subhead" style="margin-top:9px"><h3>DEBRIEF</h3><span class="tag">LIVE</span></div>
+                <div class="debrief">
+                  <span>CALLOUTS 6/8</span><span>PROFILE ✓</span><span>SCORE 82</span>
+                </div>
+              </div>
+              <div class="data-card">
+                <h3>ROLLING PLOTS</h3>
+                <div class="plot-row">
+                  <div class="plot-label"><span>ALTITUDE</span><b><span data-k="alt">0</span> FT</b></div>
+                  <canvas class="plot" id="plotAlt"></canvas>
+                </div>
+                <div class="plot-row">
+                  <div class="plot-label"><span>IAS</span><b><span data-k="spd">0</span> KT</b></div>
+                  <canvas class="plot" id="plotSpd"></canvas>
+                </div>
+                <div class="plot-row">
+                  <div class="plot-label"><span>N1</span><b><span data-k="n1">0</span> %</b></div>
+                  <canvas class="plot" id="plotN1"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ---------- CLASSROOM ---------- -->
+          <div class="dock-section" data-section="class">
+            <div class="class-head">
+              <h3>ROSTER · 12 STUDENTS</h3>
+              <div class="spacer"></div>
+              <div class="switch-row"><button class="switch" id="broadcastToggle" aria-pressed="true" aria-label="Broadcast my stage"><i></i></button><span>Broadcast my stage</span></div>
+              <div class="switch-row"><button class="switch" id="lockToggle" aria-pressed="false" aria-label="Lock student controls"><i></i></button><span>Lock student controls</span></div>
+            </div>
+            <div class="class-body">
+              <div class="roster" id="roster"></div>
+              <aside class="student-view">
+                <div class="sv-head"><span>STUDENT VIEW</span><span class="tag live">LIVE</span></div>
+                <div class="sv-stage">
+                  <span class="sv-runway"></span>
+                  <div class="sv-caption"><b id="svBeat">3</b> <span id="svText">Advance thrust to 60%</span></div>
+                </div>
+                <p>Students get the stage, the instruments and the beat caption. The dock stays instructor-side.</p>
+                <div class="switch-row"><button class="switch" id="pushDock" aria-pressed="false" aria-label="Push dock to students"><i></i></button><span>Push this dock to students</span></div>
+              </aside>
+            </div>
+            <div class="class-note">STUDENTS SEE THE STAGE + CAPTION · THE DOCK IS INSTRUCTOR-SIDE</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+<div class="stage-only-pill" id="stageOnlyPill">STAGE ONLY · <kbd>S</kbd> TO EXIT · <kbd>⌘K</kbd> COMMANDS</div>
+
+<div class="palette-wrap" id="paletteWrap" hidden>
+  <div class="palette-backdrop" id="paletteBackdrop"></div>
+  <div class="palette" role="dialog" aria-modal="true" aria-label="Command palette">
+    <div class="palette-input">
+      <span class="pfx">›</span>
+      <input id="paletteInput" placeholder="Search controls, docks, lesson beats…" autocomplete="off" spellcheck="false" />
+      <kbd>ESC</kbd>
+    </div>
+    <div class="palette-list" id="paletteList"></div>
+    <div class="palette-foot"><span>↑↓ NAVIGATE</span><span>↵ RUN</span><span>ESC CLOSE</span></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  'use strict'
+
+  /* ---------------------------------------------------------------------
+     Stage + Dock — clickable prototype
+     · the stage always wins; one contextual dock slides over it
+     · the dock is zoned like a cockpit: pedestal / glareshield / jump seat
+     · lesson beats decide the caption, the dock and the aircraft state
+     · ⌘K summons anything without leaving the stage
+     --------------------------------------------------------------------- */
+
+  const $ = (s, r = document) => r.querySelector(s)
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s))
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
+  const lerp = (a, b, t) => a + (b - a) * t
+  const pad2 = (n) => String(Math.floor(n)).padStart(2, '0')
+
+  // Verified B747 lever contract (mirrors src/ThrottleControl.ts)
+  const IDLE = 0.26
+  const REV_ENTRY = 0.25
+  const FWD_EXIT = 0.3
+
+  const S = {
+    running: true,
+    stageOnly: false,
+    dock: null,
+    dockH: 52,
+    beat: 0,
+    playing: false,
+    beatElapsed: 0,
+    toastTimer: 0,
+    thrAxis: 0.3,
+    lastChannel: '',
+    lastLogAt: 0,
+    flaps: 5,
+    flapsActual: 5,
+    gear: 1,
+    pumps: [false, false, false, false],
+    ap: { cmd: false, at: false, lnav: false, vnav: false, hdg: false, alt: false, spd: false },
+    hdgTarget: 330,
+    turnAssist: false,
+    joy: { x: 0, y: 0 },
+    alt: 0,
+    spd: 0,
+    hdg: 270,
+    vs: 0,
+    pitch: 0,
+    bank: 0,
+    airborne: false,
+    n1: 0,
+    ff: 0,
+    egt: 18,
+    gw: 213.4,
+    clock: 0,
+    logs: [],
+    hist: { alt: [], spd: [], n1: [] },
+  }
+
+  const DOCK_META = {
+    lesson: { title: 'LESSON', sub: 'beats drive the caption, the dock and the aircraft' },
+    systems: { title: 'SYSTEMS', sub: 'one dock · three cockpit zones · no tabs' },
+    data: { title: 'DATA', sub: 'flight data, airflow and rolling plots' },
+    class: { title: 'CLASSROOM', sub: 'instructor view · students see the stage' },
+  }
+
+  const BEATS = [
+    {
+      title: 'Battery & fuel pumps on',
+      caption: 'Battery on, fuel pumps on. Watch the EICAS wake up.',
+      kicker: 'BEAT 1 · PREFLIGHT',
+      dock: 'systems', zone: 'pedestal', focus: 'fuel',
+      cue() { setFuel(true); log('lesson cue · fuel pumps on', 'cue') },
+    },
+    {
+      title: 'Flaps 5 · line up runway 27',
+      caption: 'Flaps 5, line up and wait, runway 27.',
+      kicker: 'BEAT 2 · TAXI',
+      dock: 'systems', zone: 'pedestal', focus: 'flaps',
+      cue() { setFlaps(5); setGear(1); log('lesson cue · flaps 5, gear down', 'cue') },
+    },
+    {
+      title: 'Advance thrust to 60%',
+      caption: 'Advance thrust to 60% — call “stable”.',
+      kicker: 'BEAT 3 · TAKEOFF ROLL',
+      dock: 'systems', zone: 'pedestal', focus: 'throttle',
+      cue() { S.spd = Math.max(S.spd, 18); animateThrust(0.6, 1500); log('lesson cue · thrust 60%', 'cue') },
+    },
+    {
+      title: 'Rotate at Vr — 150 kt',
+      caption: 'At Vr, rotate smoothly to 15° pitch.',
+      kicker: 'BEAT 4 · ROTATE',
+      dock: null, zone: null, focus: null,
+      cue() { S.spd = Math.max(S.spd, 145); animateJoy(0, 0.55, 900); log('lesson cue · rotate', 'cue') },
+    },
+    {
+      title: 'Positive rate — gear up',
+      caption: 'Positive rate. Gear up.',
+      kicker: 'BEAT 5 · INITIAL CLIMB',
+      dock: 'systems', zone: 'pedestal', focus: 'gear',
+      cue() { setGear(0); animateJoy(0, 0.2, 800); log('lesson cue · gear up', 'cue') },
+    },
+    {
+      title: 'Turn right, heading 330',
+      caption: 'Turn right, heading 330.',
+      kicker: 'BEAT 6 · DEPARTURE',
+      dock: null, zone: null, focus: null,
+      cue() { S.hdgTarget = 330; S.turnAssist = true; log('lesson cue · heading 330', 'cue') },
+    },
+    {
+      title: 'Autopilot · LNAV + VNAV',
+      caption: 'Engage the autopilot: LNAV and VNAV.',
+      kicker: 'BEAT 7 · CLEAN UP',
+      dock: 'systems', zone: 'glareshield', focus: 'ap',
+      cue() { setAP({ cmd: true, at: true, lnav: true, vnav: true }); S.turnAssist = false; animateJoy(0, 0.15, 600); log('lesson cue · A/P engaged', 'cue') },
+    },
+    {
+      title: 'Debrief',
+      caption: 'Debrief — replay the profile and the callouts.',
+      kicker: 'BEAT 8 · DEBRIEF',
+      dock: 'data', zone: null, focus: null,
+      cue() { log('lesson complete', 'done') },
+    },
+  ]
+
+  /* ---------- lever model ---------- */
+  function lever(axis) {
+    const a = clamp(axis, 0, 1)
+    if (a < REV_ENTRY) {
+      const rev = 1 - a / REV_ENTRY
+      return { thr: IDLE * (1 - rev), rev, label: `REV ${Math.round(rev * 100)}%`, kind: 'rev', pct: rev }
+    }
+    if (a <= FWD_EXIT) return { thr: IDLE, rev: 0, label: 'IDLE', kind: 'idle', pct: 0 }
+    const f = (a - FWD_EXIT) / (1 - FWD_EXIT)
+    return { thr: IDLE + (1 - IDLE) * f, rev: 0, label: `FWD ${Math.round(f * 100)}%`, kind: 'fwd', pct: f }
+  }
+
+  function fmtClock(sec) {
+    const t = 9 * 3600 + 41 * 60 + Math.floor(sec)
+    return `${pad2(t / 3600)}:${pad2((t % 3600) / 60)}:${pad2(t % 60)}`
+  }
+
+  function log(text, kind = 'info') {
+    S.logs.push({ t: fmtClock(S.clock), text, kind })
+    if (S.logs.length > 120) S.logs.shift()
+    renderLog()
+  }
+
+  function logChannel(force) {
+    const now = performance.now()
+    if (!force && now - S.lastLogAt < 140) return
+    const L = lever(S.thrAxis)
+    const key = L.rev > 0.001 ? `rev ${L.rev.toFixed(2)}` : `thr ${L.thr.toFixed(3)}`
+    if (key === S.lastChannel && !force) return
+    S.lastChannel = key
+    S.lastLogAt = now
+    if (L.rev > 0.001) log(`set_engine_throttle_reverser_position(${L.rev.toFixed(2)})`, 'wasm')
+    else log(`set_engine_throttle_position(${L.thr.toFixed(3)})`, 'wasm')
+  }
+
+  function toast(text) {
+    const el = $('#toast')
+    el.textContent = text
+    el.classList.add('show')
+    clearTimeout(S.toastTimer)
+    S.toastTimer = setTimeout(() => el.classList.remove('show'), 1800)
+  }
+
+  /* ---------- aircraft controls ---------- */
+  function setThrust(axis, opts = {}) {
+    S.thrAxis = clamp(axis, 0, 1)
+    renderThrust()
+    if (!opts.quiet) logChannel(false)
+  }
+
+  function animateThrust(target, ms = 900) {
+    const from = S.thrAxis
+    const t0 = performance.now()
+    const step = (now) => {
+      const t = clamp((now - t0) / ms, 0, 1)
+      S.thrAxis = lerp(from, target, 1 - Math.pow(1 - t, 3))
+      renderThrust()
+      if (t < 1) requestAnimationFrame(step)
+      else logChannel(true)
+    }
+    requestAnimationFrame(step)
+  }
+
+  function animateJoy(x, y, ms = 500) {
+    const from = { ...S.joy }
+    const t0 = performance.now()
+    const step = (now) => {
+      const t = clamp((now - t0) / ms, 0, 1)
+      const e = 1 - Math.pow(1 - t, 3)
+      S.joy.x = lerp(from.x, x, e)
+      S.joy.y = lerp(from.y, y, e)
+      renderJoy()
+      if (t < 1) requestAnimationFrame(step)
+    }
+    requestAnimationFrame(step)
+  }
+
+  function setFlaps(v) {
+    S.flaps = v
+    log(`flaps_selector → ${v}`, 'info')
+    renderFlaps()
+  }
+
+  function setGear(v) {
+    S.gear = v
+    log(`landing_gear_selector → ${v ? 'DOWN' : 'UP'}`, 'info')
+    renderGear()
+  }
+
+  function setFuel(on) {
+    S.pumps = S.pumps.map(() => on)
+    log(`fuel pumps ${on ? 'on' : 'off'}`, 'info')
+    renderFuel()
+  }
+
+  function setAP(patch) {
+    Object.assign(S.ap, patch)
+    renderAP()
+    if (patch.cmd !== undefined) log(`autopilot ${S.ap.cmd ? 'CMD engaged' : 'disengaged'}`, 'info')
+  }
+
+  function focusZone(zone, ms = 1600) {
+    const el = $(`.zone[data-zone="${zone}"]`)
+    if (!el) return
+    el.classList.add('focused')
+    const scroller = $('.zone-scroll', el)
+    if (scroller) scroller.scrollTo({ top: 0, behavior: 'smooth' })
+    setTimeout(() => el.classList.remove('focused'), ms)
+  }
+
+  function pulseCard(name) {
+    const el = $(`[data-focus="${name}"]`)
+    if (!el) return
+    el.classList.remove('pulse')
+    void el.offsetWidth
+    el.classList.add('pulse')
+    setTimeout(() => el.classList.remove('pulse'), 1700)
+  }
+
+  /* ---------- renderers ---------- */
+  function setStat(key, value) {
+    $$(`[data-k="${key}"]`).forEach((el) => { el.textContent = value })
+  }
+
+  function renderThrust() {
+    const L = lever(S.thrAxis)
+    const pct = (S.thrAxis * 100).toFixed(2)
+    $('#thrustHandle').style.bottom = pct + '%'
+    $('#thrustFill').style.height = pct + '%'
+    $('#thrustLabel').textContent = L.label
+    $('#thrustLabel').style.color = L.rev > 0.001 ? 'var(--amber)' : '#f2f5f5'
+    $('#thrustRaw').textContent = `thr ${L.thr.toFixed(3)} · rev ${L.rev.toFixed(2)}`
+    const revState = $('#revState')
+    if (revState) {
+      revState.textContent = L.rev > 0.001 ? 'DEPLOYED' : 'STOWED'
+      revState.style.color = L.rev > 0.001 ? 'var(--amber)' : 'var(--green)'
+    }
+    const track = $('#thrustTrack')
+    track.setAttribute('aria-valuenow', String(Math.round(S.thrAxis * 100)))
+    track.setAttribute('aria-valuetext', L.label)
+  }
+
+  function renderFlaps() {
+    $$('#flapsSeg button').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.flaps) === S.flaps)))
+    $('#flapsSel').textContent = String(S.flaps)
+    $('#flapsTag').textContent = String(S.flaps)
+  }
+
+  function renderGear() {
+    const down = S.gear === 1
+    $('#gearLever').setAttribute('aria-pressed', String(down))
+    $('#gearCaption').textContent = down ? 'DN' : 'UP'
+    $('#gearTag').textContent = down ? 'DOWN' : 'UP'
+    $('#gearKv').textContent = down ? 'DOWN' : 'UP'
+    $$('.lamp').forEach((l) => { l.className = 'lamp ' + (down ? 'on' : 'off') })
+  }
+
+  function renderFuel() {
+    $$('#pumps button').forEach((b, i) => b.setAttribute('aria-pressed', String(S.pumps[i])))
+    $('#fuelTag').textContent = S.pumps.some(Boolean) ? 'ON' : 'OFF'
+  }
+
+  function renderJoy() {
+    $('#joyDot').style.left = `${50 + S.joy.x * 42}%`
+    $('#joyDot').style.top = `${50 - S.joy.y * 42}%`
+    setStat('ail', S.joy.x.toFixed(2))
+    setStat('elev', S.joy.y.toFixed(2))
+  }
+
+  function renderAP() {
+    $$('#apGrid button').forEach((b) => b.setAttribute('aria-pressed', String(!!S.ap[b.dataset.ap])))
+    const modes = []
+    if (S.ap.at) modes.push('A/T ARM')
+    if (S.ap.cmd) modes.push('CMD')
+    if (S.ap.lnav) modes.push('LNAV')
+    if (S.ap.vnav) modes.push('VNAV')
+    if (S.ap.hdg) modes.push('HDG SEL')
+    if (S.ap.alt) modes.push('ALT HOLD')
+    if (S.ap.spd) modes.push('SPD')
+    $('#fma').innerHTML = modes.length ? modes.map((m) => `<span class="on">${m}</span>`).join('') : '<span>— — —</span>'
+    $('#apTag').textContent = S.ap.cmd ? 'CMD' : S.ap.at ? 'A/T' : 'OFF'
+    $('#apTag').className = 'tag' + (S.ap.cmd ? ' live' : '')
+  }
+
+  function renderStats() {
+    const pad3 = (n) => String(Math.round(n) % 360).padStart(3, '0')
+    setStat('alt', Math.round(S.alt).toLocaleString('en-US'))
+    setStat('spd', String(Math.round(S.spd)))
+    setStat('hdg', pad3(S.hdg))
+    setStat('vs', (S.vs >= 0 ? '+' : '') + Math.round(S.vs))
+    setStat('n1', S.n1.toFixed(1))
+    setStat('gw', S.gw.toFixed(1))
+    setStat('flaps', String(S.flapsActual))
+    setStat('ff', S.ff.toFixed(1))
+    setStat('egt', String(Math.round(S.egt)))
+    setStat('pitch', S.pitch.toFixed(1))
+    setStat('bank', String(Math.round(S.bank)))
+    setStat('fuel', (34.2 - S.clock * 0.0009).toFixed(1))
+    setStat('thr', lever(S.thrAxis).thr.toFixed(3))
+    setStat('rev', lever(S.thrAxis).rev.toFixed(2))
+  }
+
+  function renderInstruments() {
+    const spd = Math.round(S.spd)
+    const spdTape = $('#pfdSpdTape')
+    if (spdTape) {
+      const rows = [32, 44, 76, 88]
+      spdTape.innerHTML = [spd - 20, spd - 10, spd + 10, spd + 20]
+        .map((v, i) => {
+          const val = clamp(Math.round(v / 10) * 10, 0, 990)
+          return v < 0 ? '' : `<text x="27" y="${rows[i]}">${val}</text>`
+        })
+        .join('')
+    }
+    $('#pfdSpd').textContent = String(spd)
+
+    const alt = Math.round(S.alt / 100) * 100
+    const altTape = $('#pfdAltTape')
+    if (altTape) {
+      const rows = [32, 44, 76, 88]
+      altTape.innerHTML = [alt - 200, alt - 100, alt + 100, alt + 200]
+        .map((v, i) => (v < 0 ? '' : `<text x="229" y="${rows[i]}" text-anchor="end">${v.toLocaleString('en-US')}</text>`))
+        .join('')
+    }
+    $('#pfdAlt').textContent = Math.round(S.alt).toLocaleString('en-US')
+    const hdgText = String(Math.round(S.hdg) % 360).padStart(3, '0')
+    $('#pfdHdg').textContent = hdgText
+    $('#ndHdg').textContent = hdgText
+
+    const att = $('#pfdAtt')
+    if (att) att.setAttribute('transform', `rotate(${(-S.bank).toFixed(2)}) translate(0 ${(S.pitch * 2.4).toFixed(2)})`)
+    const mark = $('#pfdBankMark')
+    if (mark) mark.setAttribute('transform', `rotate(${S.bank.toFixed(2)} 109 62)`)
+
+    const rose = $('#ndRose')
+    if (rose) rose.setAttribute('transform', `rotate(${(-S.hdg).toFixed(2)} 79 70)`)
+
+    for (let i = 0; i < 4; i++) {
+      const bar = $(`#n1Bar${i}`)
+      if (bar) bar.setAttribute('width', String((112 * clamp(S.n1, 0, 100)) / 100))
+      const txt = $(`#n1Txt${i}`)
+      if (txt) txt.textContent = S.n1.toFixed(1)
+    }
+  }
+
+  function renderBeat() {
+    const b = BEATS[S.beat]
+    $('#beatIndex').textContent = `BEAT ${S.beat + 1} / ${BEATS.length}`
+    $('#beatTitle').textContent = b.title
+    $('#captionIndex').textContent = String(S.beat + 1)
+    $('#captionKicker').textContent = b.kicker
+    $('#captionText').textContent = b.caption
+    $('#jsBeatTag').textContent = `BEAT ${S.beat + 1}/${BEATS.length}`
+    $('#jsNow').textContent = b.title
+    const svBeat = $('#svBeat')
+    if (svBeat) svBeat.textContent = String(S.beat + 1)
+    const svText = $('#svText')
+    if (svText) svText.textContent = b.caption
+    const next = BEATS.slice(S.beat + 1, S.beat + 3)
+    $('#jsNext').innerHTML = next.length
+      ? next.map((n, i) => `<div>NEXT ${i + 1} · ${n.title}</div>`).join('')
+      : '<div>END OF LESSON</div>'
+    updateBars()
+    updatePlayIcons()
+  }
+
+  function updateBars() {
+    const progress = S.playing ? clamp(S.beatElapsed / 7000, 0, 1) : 0
+    const pct = ((S.beat + progress) / BEATS.length) * 100
+    const a = $('#beatBar')
+    const b = $('#lessonBar')
+    if (a) a.style.width = pct.toFixed(1) + '%'
+    if (b) b.style.width = pct.toFixed(1) + '%'
+  }
+
+  function updatePlayIcons() {
+    const icon = S.playing ? '❚❚' : '▶'
+    $('#playBtn').textContent = icon
+    $('#lessonPlay').textContent = icon
+    $('#playBtn').setAttribute('aria-label', S.playing ? 'Pause lesson' : 'Play lesson')
+  }
+
+  function renderBeatList() {
+    $('#beatList').innerHTML = BEATS.map((b, i) => {
+      const state = i < S.beat ? 'done' : i === S.beat ? 'current' : 'upcoming'
+      const cue = b.dock ? `→ ${b.dock.toUpperCase()}${b.zone ? '/' + b.zone.toUpperCase() : ''}` : '→ STAGE'
+      return `<button class="beat" data-state="${state}" data-beat="${i}">
+        <span class="beat-dot">${state === 'done' ? '✓' : i + 1}</span>
+        <span class="beat-main"><span class="beat-title">${b.title}</span><span class="beat-sub">${b.kicker}</span></span>
+        <span class="beat-cue">${cue}</span>
+      </button>`
+    }).join('')
+  }
+
+  function renderScript() {
+    const b = BEATS[S.beat]
+    const q = (v) => `<span class="s">'${v}'</span>`
+    $('#scriptCode').innerHTML = `<span class="k">context.beat</span>({
+  caption: <span class="s">${JSON.stringify(b.caption)}</span>,
+  dock: ${b.dock ? q(b.dock) : '<span class="k">null</span>'},
+  focus: ${b.focus ? q(b.focus) : '<span class="k">null</span>'},
+})`
+  }
+
+  function renderLine(l) {
+    return `<div class="log-line"><span class="log-t">${l.t}</span><span class="log-k ${l.kind}">${l.kind}</span><span>${l.text}</span></div>`
+  }
+
+  function renderLog() {
+    const lesson = $('[data-log="lesson"]')
+    if (lesson) {
+      lesson.innerHTML = S.logs.slice(-40).map(renderLine).join('')
+      lesson.scrollTop = lesson.scrollHeight
+    }
+    const mini = $('[data-log="mini"]')
+    if (mini) mini.innerHTML = S.logs.slice(-4).map(renderLine).join('')
+  }
+
+  const STUDENTS = [
+    ['A. Novak', 'flying'], ['M. Chen', 'flying'], ['S. Ahmed', 'briefing'],
+    ['L. Rossi', 'flying'], ['K. Tanaka', 'offline'], ['J. Okafor', 'flying'],
+    ['P. Silva', 'flying'], ['N. Ivanova', 'briefing'], ['D. Kim', 'flying'],
+    ['R. Müller', 'flying'], ['E. Dubois', 'flying'], ['T. Haddad', 'flying'],
+  ]
+
+  function renderRoster() {
+    const label = { flying: 'IN FLIGHT', briefing: 'BRIEFING', offline: 'OFFLINE' }
+    $('#roster').innerHTML = STUDENTS.map(([name, state]) => {
+      const initials = name.replace(/[^A-Za-z. ]/g, '').split(/[ .]+/).filter(Boolean).slice(0, 2).map((s) => s[0]).join('')
+      return `<div class="student">
+        <span class="avatar">${initials}</span>
+        <span class="student-main"><span class="student-name">${name}</span><span class="student-state"><span class="dot ${state}"></span>${label[state]}</span></span>
+        <button class="ghost-btn">VIEW</button>
+      </div>`
+    }).join('')
+  }
+
+  function renderDockChrome() {
+    const meta = DOCK_META[S.dock] || DOCK_META.systems
+    $('#dockTitle').textContent = meta.title
+    $('#dockSub').textContent = meta.sub
+  }
+
+  /* ---------- plots ---------- */
+  function pushHist() {
+    S.hist.alt.push(S.alt)
+    S.hist.spd.push(S.spd)
+    S.hist.n1.push(S.n1)
+    Object.values(S.hist).forEach((h) => { if (h.length > 140) h.shift() })
+  }
+
+  function drawPlot(canvas, data, stroke, fill) {
+    if (!canvas) return
+    const dpr = window.devicePixelRatio || 1
+    const w = canvas.clientWidth
+    const h = canvas.clientHeight
+    if (!w || !h) return
+    if (canvas.width !== Math.round(w * dpr)) {
+      canvas.width = Math.round(w * dpr)
+      canvas.height = Math.round(h * dpr)
+    }
+    const ctx = canvas.getContext('2d')
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    ctx.clearRect(0, 0, w, h)
+    ctx.strokeStyle = 'rgba(255,255,255,.055)'
+    ctx.lineWidth = 1
+    for (let i = 1; i < 4; i++) {
+      const y = (h / 4) * i
+      ctx.beginPath()
+      ctx.moveTo(0, y + 0.5)
+      ctx.lineTo(w, y + 0.5)
+      ctx.stroke()
+    }
+    const d = data.slice(-140)
+    if (d.length < 2) return
+    const min = Math.min(...d)
+    const max = Math.max(...d)
+    const lo = min - Math.max(1, (max - min) * 0.18)
+    const hi = max + Math.max(1, (max - min) * 0.18)
+    const span = hi - lo
+    ctx.beginPath()
+    d.forEach((v, i) => {
+      const x = (i / (d.length - 1)) * w
+      const y = h - 4 - ((v - lo) / span) * (h - 8)
+      if (i) ctx.lineTo(x, y)
+      else ctx.moveTo(x, y)
+    })
+    ctx.strokeStyle = stroke
+    ctx.lineWidth = 1.5
+    ctx.lineJoin = 'round'
+    ctx.stroke()
+    ctx.lineTo(w, h)
+    ctx.lineTo(0, h)
+    ctx.closePath()
+    ctx.fillStyle = fill
+    ctx.fill()
+  }
+
+  function renderPlots() {
+    drawPlot($('#plotAlt'), S.hist.alt, 'rgba(79,208,224,.9)', 'rgba(79,208,224,.10)')
+    drawPlot($('#plotSpd'), S.hist.spd, 'rgba(232,176,74,.9)', 'rgba(232,176,74,.10)')
+    drawPlot($('#plotN1'), S.hist.n1, 'rgba(40,196,106,.9)', 'rgba(40,196,106,.10)')
+  }
+
+  /* ---------- static graphics built once ---------- */
+  function initGraphics() {
+    let ladder = ''
+    for (let p = -20; p <= 20; p += 10) {
+      if (p === 0) continue
+      const y = -p * 2.4
+      const w = Math.abs(p) === 20 ? 17 : 12
+      ladder += `<line x1="${-w}" y1="${y}" x2="${w}" y2="${y}" stroke="#dff2ff" stroke-width="1" opacity=".85"/>`
+      ladder += `<text x="${w + 3}" y="${y + 2.4}" font-size="6" fill="#dff2ff">${Math.abs(p)}</text>`
+    }
+    $('#pfdLadder').innerHTML = ladder
+
+    let ticks = ''
+    for (let d = 0; d < 360; d += 5) {
+      const a = (d * Math.PI) / 180
+      const major = d % 30 === 0
+      const r1 = major ? 40 : 43
+      const x1 = 79 + Math.sin(a) * r1
+      const y1 = 70 - Math.cos(a) * r1
+      const x2 = 79 + Math.sin(a) * 46
+      const y2 = 70 - Math.cos(a) * 46
+      ticks += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="rgba(160,210,220,${major ? '0.55' : '0.22'})" stroke-width="1"/>`
+    }
+    $('#ndTicks').innerHTML = ticks
+
+    let labels = ''
+    for (let d = 0; d < 360; d += 30) {
+      const a = (d * Math.PI) / 180
+      const x = 79 + Math.sin(a) * 31
+      const y = 70 - Math.cos(a) * 31 + 2.4
+      const v = d === 0 ? '36' : String(d / 10).padStart(2, '0')
+      labels += `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}">${v}</text>`
+    }
+    $('#ndLabels').innerHTML = labels
+
+    let bars = ''
+    for (let i = 0; i < 4; i++) {
+      const y = 25 + i * 24
+      bars += `<rect x="20" y="${y}" width="112" height="8" rx="2" fill="rgba(255,255,255,.06)"/>`
+      bars += `<rect id="n1Bar${i}" x="20" y="${y}" width="0" height="8" rx="2" fill="#4fd0e0" opacity=".8"/>`
+    }
+    $('#eicasBars').innerHTML = bars
+  }
+
+  /* ---------- dock ---------- */
+  function openDock(section, opts = {}) {
+    if (!DOCK_META[section]) return
+    S.dock = section
+    const d = $('#dock')
+    d.dataset.section = section
+    d.dataset.open = 'true'
+    document.body.classList.add('dock-open')
+    document.documentElement.style.setProperty('--dock-h', S.dockH + 'vh')
+    document.documentElement.style.setProperty('--dock-lift', S.dockH + 'vh')
+    $$('.rail-btn').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.dock === section)))
+    renderDockChrome()
+    if (!opts.silent) log(`dock · ${section}`, 'dock')
+  }
+
+  function closeDock(opts = {}) {
+    S.dock = null
+    $('#dock').dataset.open = 'false'
+    document.body.classList.remove('dock-open')
+    document.documentElement.style.setProperty('--dock-lift', '0vh')
+    $$('.rail-btn').forEach((b) => b.setAttribute('aria-pressed', 'false'))
+    if (!opts.silent) log('dock · closed', 'dock')
+  }
+
+  function applyBeat(i, opts = {}) {
+    S.beat = clamp(i, 0, BEATS.length - 1)
+    S.beatElapsed = 0
+    if (S.stageOnly) setStageOnly(false, true)
+    const b = BEATS[S.beat]
+    log(`beat ${S.beat + 1}/${BEATS.length} · ${b.title}`, 'beat')
+    if (b.cue) b.cue()
+    if (b.dock) openDock(b.dock, { silent: true })
+    else closeDock({ silent: true })
+    if (b.zone) focusZone(b.zone, 1500)
+    if (b.focus) pulseCard(b.focus)
+    renderBeat()
+    renderBeatList()
+    renderScript()
+  }
+
+  function nextBeat() { applyBeat(S.beat + 1) }
+  function prevBeat() { applyBeat(S.beat - 1) }
+
+  function togglePlay() {
+    if (!S.playing && S.beat >= BEATS.length - 1) applyBeat(0, { silent: true })
+    S.playing = !S.playing
+    S.beatElapsed = 0
+    updatePlayIcons()
+    updateBars()
+    toast(S.playing ? 'Lesson playing · 7s per beat' : 'Lesson paused')
+  }
+
+  function toggleSim() {
+    S.running = !S.running
+    S.running ? log('simulation running', 'info') : log('simulation paused', 'info')
+  }
+
+  function setStageOnly(on, silent) {
+    S.stageOnly = on
+    document.body.classList.toggle('stage-only', on)
+    if (on) closeDock({ silent: true })
+  }
+
+  /* ---------- command palette ---------- */
+  const COMMANDS = [
+    { label: 'Open lesson board', tag: 'dock', run: () => openDock('lesson') },
+    { label: 'Open systems dock', tag: 'dock', run: () => openDock('systems') },
+    { label: 'Open flight data', tag: 'dock', run: () => openDock('data') },
+    { label: 'Open classroom roster', tag: 'dock', run: () => openDock('class') },
+    { label: 'Close the dock', tag: 'dock', run: () => closeDock() },
+    { label: 'Stage-only view', tag: 'view', run: () => setStageOnly(true) },
+    { label: 'Play / pause lesson', tag: 'lesson', run: togglePlay },
+    { label: 'Next beat', tag: 'lesson', run: nextBeat },
+    { label: 'Previous beat', tag: 'lesson', run: prevBeat },
+    { label: 'Thrust · full reverse', tag: 'control', run: () => setThrust(0) },
+    { label: 'Thrust · idle', tag: 'control', run: () => setThrust(0.3) },
+    { label: 'Thrust · 60%', tag: 'control', run: () => setThrust(0.6) },
+    { label: 'Thrust · max forward', tag: 'control', run: () => setThrust(1) },
+    { label: 'Flaps 5', tag: 'control', run: () => setFlaps(5) },
+    { label: 'Flaps 20', tag: 'control', run: () => setFlaps(20) },
+    { label: 'Gear up', tag: 'control', run: () => setGear(0) },
+    { label: 'Gear down', tag: 'control', run: () => setGear(1) },
+    { label: 'Fuel pumps on', tag: 'control', run: () => setFuel(true) },
+    { label: 'Toggle autopilot CMD', tag: 'control', run: () => setAP({ cmd: !S.ap.cmd }) },
+    { label: 'Pause / start simulation', tag: 'sim', run: toggleSim },
+    ...BEATS.map((b, i) => ({ label: `Beat ${i + 1} · ${b.title}`, tag: 'beat', run: () => applyBeat(i) })),
+  ]
+
+  let paletteItems = []
+  let paletteIndex = 0
+
+  function renderPalette(query) {
+    const q = query.trim().toLowerCase()
+    paletteItems = COMMANDS.filter((c) => !q || (c.label + ' ' + c.tag).toLowerCase().includes(q))
+    paletteIndex = Math.min(paletteIndex, Math.max(0, paletteItems.length - 1))
+    $('#paletteList').innerHTML = paletteItems.length
+      ? paletteItems.map((c, i) => `<button class="palette-item" data-index="${i}" data-active="${i === paletteIndex}">
+          <span class="pi-icon">›</span><span class="pi-label">${c.label}</span><span class="tag">${c.tag}</span>
+        </button>`).join('')
+      : '<div class="palette-empty">No matching command</div>'
+  }
+
+  function openPalette() {
+    $('#paletteWrap').hidden = false
+    $('#paletteInput').value = ''
+    paletteIndex = 0
+    renderPalette('')
+    setTimeout(() => $('#paletteInput').focus(), 10)
+  }
+
+  function closePalette() {
+    $('#paletteWrap').hidden = true
+  }
+
+  function runPalette(i) {
+    const item = paletteItems[i]
+    if (!item) return
+    closePalette()
+    item.run()
+  }
+
+  /* ---------- flight model (prototype-grade, target driven) ---------- */
+  function angleDiff(target, current) {
+    return ((target - current + 540) % 360) - 180
+  }
+
+  function tick(dt) {
+    if (!S.running) return
+    S.clock += dt
+    const L = lever(S.thrAxis)
+    const fwd = L.kind === 'fwd' ? L.pct : 0
+    const rev = L.rev
+    const fuelOn = S.pumps.some(Boolean)
+    const targetN1 = fuelOn ? (rev > 0.001 ? 20 + 55 * rev : 20 + 80 * fwd) : 0
+    S.n1 += (targetN1 - S.n1) * Math.min(1, dt * 1.3)
+
+    let accel = fuelOn ? fwd * 30 - rev * 16 : -1.2
+    accel -= S.spd * 0.022
+    if (S.gear === 1) accel -= 0.5
+    S.spd = clamp(S.spd + accel * dt, 0, 200)
+
+    const pitchTarget = S.joy.y * 12 + (S.airborne ? 4 : 0)
+    S.pitch += (pitchTarget - S.pitch) * Math.min(1, dt * 2.6)
+
+    if (!S.airborne && S.spd > 145 && S.pitch > 6) {
+      S.airborne = true
+      log('airborne · positive rate', 'info')
+    }
+    if (S.airborne) {
+      let vsTarget = (S.pitch - 4) * 270
+      if (S.ap.cmd && S.ap.vnav) vsTarget = 800
+      S.vs += (vsTarget - S.vs) * Math.min(1, dt * 1.1)
+      S.alt = Math.max(0, S.alt + (S.vs * dt) / 60)
+      if (S.alt <= 0 && S.vs < 0) {
+        S.airborne = false
+        S.vs = 0
+        log('touchdown', 'info')
+      }
+    } else {
+      S.vs = 0
+    }
+
+    let bankTarget = S.joy.x * 24
+    if (S.turnAssist) bankTarget = clamp(angleDiff(S.hdgTarget, S.hdg) * 0.9, -25, 25)
+    if (S.ap.cmd && S.ap.hdg) bankTarget = clamp(angleDiff(S.hdgTarget, S.hdg) * 1.2, -25, 25)
+    if (S.ap.cmd && S.ap.lnav) bankTarget = 0
+    S.bank += (bankTarget - S.bank) * Math.min(1, dt * 2.2)
+    if (S.airborne) S.hdg = (S.hdg + (S.bank / 25) * 9 * dt + 360) % 360
+
+    S.flapsActual += (S.flaps - S.flapsActual) * Math.min(1, dt * 2.5)
+    S.ff = fuelOn ? 0.4 + fwd * 3.6 + S.n1 * 0.02 : 0
+    S.egt = 18 + S.n1 * 4.4
+  }
+
+  function paint() {
+    renderStats()
+    renderInstruments()
+    renderThrust()
+    renderJoy()
+    renderPlots()
+    pushHist()
+    updateBars()
+    $('#clock').textContent = fmtClock(S.clock)
+    $('#pauseBtn').dataset.paused = String(!S.running)
+    $('#pauseText').textContent = S.running ? 'SIM RUNNING' : 'SIM PAUSED'
+  }
+
+  /* ---------- wiring: rail, dock, instruments, lesson ---------- */
+  $$('.rail-btn').forEach((b) => b.addEventListener('click', () => {
+    if (S.dock === b.dataset.dock) closeDock()
+    else openDock(b.dataset.dock)
+  }))
+  $$('[data-open-dock]').forEach((b) => b.addEventListener('click', () => {
+    openDock(b.dataset.openDock)
+    if (b.dataset.zone) focusZone(b.dataset.zone)
+  }))
+  $('#dockClose').addEventListener('click', () => closeDock())
+  $('#dockStageBtn').addEventListener('click', () => setStageOnly(true))
+  $$('#zoneLegend button').forEach((b) => b.addEventListener('click', () => {
+    const zone = b.dataset.zoneJump
+    focusZone(zone, 2200)
+    const el = $(`.zone[data-zone="${zone}"] .zone-scroll`)
+    if (el) el.scrollTo({ top: 0, behavior: 'smooth' })
+  }))
+
+  $('#playBtn').addEventListener('click', togglePlay)
+  $('#pauseBtn').addEventListener('click', toggleSim)
+  $('#captionNext').addEventListener('click', nextBeat)
+  $('#lessonPlay').addEventListener('click', togglePlay)
+  $('#lessonPrev').addEventListener('click', prevBeat)
+  $('#lessonNext').addEventListener('click', nextBeat)
+  $('#beatList').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-beat]')
+    if (b) applyBeat(Number(b.dataset.beat))
+  })
+  $('#jsOpenLesson').addEventListener('click', () => openDock('lesson'))
+  $('#jsOpenClass').addEventListener('click', () => openDock('class'))
+  $('#paletteBtn').addEventListener('click', openPalette)
+  $('#stageOnlyBtn').addEventListener('click', () => setStageOnly(true))
+  $('#stageOnlyPill').addEventListener('click', () => setStageOnly(false))
+
+  const broadcastBtns = [$('#broadcastToggle'), $('#jsBroadcast')]
+  broadcastBtns.forEach((el) => el.addEventListener('click', () => {
+    const on = el.getAttribute('aria-pressed') !== 'true'
+    broadcastBtns.forEach((b) => b.setAttribute('aria-pressed', String(on)))
+    log(`broadcast ${on ? 'on' : 'off'}`, 'info')
+  }))
+  $('#lockToggle').addEventListener('click', (e) => {
+    const el = e.currentTarget
+    const on = el.getAttribute('aria-pressed') !== 'true'
+    el.setAttribute('aria-pressed', String(on))
+    log(`student controls ${on ? 'locked' : 'unlocked'}`, 'info')
+  })
+  const pushDock = $('#pushDock')
+  if (pushDock) pushDock.addEventListener('click', () => {
+    const on = pushDock.getAttribute('aria-pressed') !== 'true'
+    pushDock.setAttribute('aria-pressed', String(on))
+    log(on ? `dock ${S.dock || 'none'} pushed to class` : 'dock returned to instructor', 'info')
+    toast(on ? 'Dock shared with 12 students' : 'Dock is instructor-only again')
+  })
+
+  /* ---------- wiring: thrust lever ---------- */
+  const thrustTrack = $('#thrustTrack')
+  let draggingThrust = false
+  const axisFromY = (clientY) => {
+    const r = thrustTrack.getBoundingClientRect()
+    let v = clamp(1 - (clientY - r.top) / r.height, 0, 1)
+    for (const d of [0, REV_ENTRY, FWD_EXIT, 1]) if (Math.abs(v - d) < 0.018) v = d
+    return v
+  }
+  thrustTrack.addEventListener('pointerdown', (e) => {
+    draggingThrust = true
+    thrustTrack.setPointerCapture(e.pointerId)
+    thrustTrack.focus({ preventScroll: true })
+    setThrust(axisFromY(e.clientY))
+  })
+  thrustTrack.addEventListener('pointermove', (e) => { if (draggingThrust) setThrust(axisFromY(e.clientY)) })
+  thrustTrack.addEventListener('pointerup', () => { draggingThrust = false })
+  thrustTrack.addEventListener('pointercancel', () => { draggingThrust = false })
+  thrustTrack.addEventListener('keydown', (e) => {
+    const step = e.shiftKey ? 0.1 : 0.02
+    const map = { ArrowUp: step, ArrowRight: step, ArrowDown: -step, ArrowLeft: -step, PageUp: 0.1, PageDown: -0.1 }
+    if (e.key in map) { e.preventDefault(); setThrust(S.thrAxis + map[e.key]) }
+    else if (e.key === 'Home') { e.preventDefault(); setThrust(0) }
+    else if (e.key === 'End') { e.preventDefault(); setThrust(1) }
+  })
+  $$('[data-thrust]').forEach((b) => b.addEventListener('click', () => setThrust(Number(b.dataset.thrust))))
+
+  /* ---------- wiring: pedestal + glareshield ---------- */
+  $('#flapsSeg').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-flaps]')
+    if (b) setFlaps(Number(b.dataset.flaps))
+  })
+  $('#gearLever').addEventListener('click', () => setGear(S.gear ? 0 : 1))
+  $('#pumps').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-pump]')
+    if (!b) return
+    const i = Number(b.dataset.pump)
+    S.pumps[i] = !S.pumps[i]
+    log(`fuel pump ${i + 1} ${S.pumps[i] ? 'on' : 'off'}`, 'info')
+    renderFuel()
+  })
+  $('#apGrid').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-ap]')
+    if (!b) return
+    const k = b.dataset.ap
+    setAP({ [k]: !S.ap[k] })
+  })
+
+  /* ---------- wiring: joystick ---------- */
+  const joyPad = $('#joyPad')
+  let draggingJoy = false
+  const joyFrom = (e) => {
+    const r = joyPad.getBoundingClientRect()
+    return {
+      x: clamp(((e.clientX - r.left) / r.width) * 2 - 1, -1, 1),
+      y: clamp(1 - ((e.clientY - r.top) / r.height) * 2, -1, 1),
+    }
+  }
+  joyPad.addEventListener('pointerdown', (e) => {
+    draggingJoy = true
+    joyPad.setPointerCapture(e.pointerId)
+    S.joy = joyFrom(e)
+    renderJoy()
+  })
+  joyPad.addEventListener('pointermove', (e) => {
+    if (!draggingJoy) return
+    S.joy = joyFrom(e)
+    renderJoy()
+  })
+  const releaseJoy = () => {
+    if (!draggingJoy) return
+    draggingJoy = false
+    animateJoy(0, 0, 240)
+  }
+  joyPad.addEventListener('pointerup', releaseJoy)
+  joyPad.addEventListener('pointercancel', releaseJoy)
+  joyPad.addEventListener('keydown', (e) => {
+    const map = { ArrowLeft: [-0.12, 0], ArrowRight: [0.12, 0], ArrowUp: [0, 0.12], ArrowDown: [0, -0.12] }
+    if (map[e.key]) {
+      e.preventDefault()
+      S.joy.x = clamp(S.joy.x + map[e.key][0], -1, 1)
+      S.joy.y = clamp(S.joy.y + map[e.key][1], -1, 1)
+      renderJoy()
+    } else if (e.key === 'Home' || e.key === 'Escape') {
+      e.preventDefault()
+      animateJoy(0, 0, 200)
+    }
+  })
+
+  /* ---------- wiring: dock resize ---------- */
+  const grip = $('#dockGrip')
+  let resizingDock = false
+  grip.addEventListener('pointerdown', (e) => {
+    resizingDock = true
+    grip.setPointerCapture(e.pointerId)
+  })
+  grip.addEventListener('pointermove', (e) => {
+    if (!resizingDock) return
+    S.dockH = clamp((1 - e.clientY / window.innerHeight) * 100, 27, 64)
+    document.documentElement.style.setProperty('--dock-h', S.dockH + 'vh')
+    if (S.dock) document.documentElement.style.setProperty('--dock-lift', S.dockH + 'vh')
+  })
+  grip.addEventListener('pointerup', () => { resizingDock = false })
+  grip.addEventListener('pointercancel', () => { resizingDock = false })
+  grip.addEventListener('dblclick', () => {
+    S.dockH = 52
+    document.documentElement.style.setProperty('--dock-h', '52vh')
+    document.documentElement.style.setProperty('--dock-lift', S.dock ? '52vh' : '0vh')
+  })
+
+  /* ---------- wiring: palette ---------- */
+  const paletteInput = $('#paletteInput')
+  paletteInput.addEventListener('input', () => {
+    paletteIndex = 0
+    renderPalette(paletteInput.value)
+  })
+  paletteInput.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      paletteIndex = clamp(paletteIndex + 1, 0, paletteItems.length - 1)
+      renderPalette(paletteInput.value)
+      scrollPaletteIntoView()
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      paletteIndex = clamp(paletteIndex - 1, 0, paletteItems.length - 1)
+      renderPalette(paletteInput.value)
+      scrollPaletteIntoView()
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      runPalette(paletteIndex)
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      closePalette()
+    }
+    e.stopPropagation()
+  })
+  function scrollPaletteIntoView() {
+    requestAnimationFrame(() => {
+      const active = $('#paletteList [data-active="true"]')
+      if (active) active.scrollIntoView({ block: 'nearest' })
+    })
+  }
+  $('#paletteList').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-index]')
+    if (b) runPalette(Number(b.dataset.index))
+  })
+  $('#paletteBackdrop').addEventListener('click', closePalette)
+
+  /* ---------- global keyboard ---------- */
+  window.addEventListener('keydown', (e) => {
+    const paletteOpen = !$('#paletteWrap').hidden
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault()
+      if (paletteOpen) closePalette()
+      else openPalette()
+      return
+    }
+    if (paletteOpen) return
+
+    const tag = (e.target && e.target.tagName ? e.target.tagName : '').toLowerCase()
+    const typing = tag === 'input' || tag === 'textarea'
+    const onControl = e.target === thrustTrack || e.target === joyPad
+    const onButton = tag === 'button'
+
+    if (e.key === 'Escape') {
+      if (S.stageOnly) setStageOnly(false)
+      else if (S.dock) closeDock()
+      return
+    }
+    if (typing || onControl) return
+
+    if (['1', '2', '3', '4'].includes(e.key)) {
+      e.preventDefault()
+      const section = ['lesson', 'systems', 'data', 'class'][Number(e.key) - 1]
+      if (S.dock === section) closeDock()
+      else openDock(section)
+      return
+    }
+    if (e.key === 's' || e.key === 'S') {
+      e.preventDefault()
+      setStageOnly(!S.stageOnly)
+      return
+    }
+    if (e.key === ' ' && !onButton) {
+      e.preventDefault()
+      togglePlay()
+      return
+    }
+    if (e.key === 'ArrowRight') {
+      e.preventDefault()
+      nextBeat()
+      return
+    }
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault()
+      prevBeat()
+    }
+  })
+
+  window.addEventListener('resize', () => renderPlots())
+
+  /* ---------- frame loop ---------- */
+  let lastFrame = performance.now()
+  let lastPaint = 0
+  function frame(now) {
+    const dt = Math.min(0.05, (now - lastFrame) / 1000)
+    lastFrame = now
+    tick(dt)
+
+    const scene = $('#scene')
+    scene.style.transform = `scale(1.09) rotate(${(-S.bank * 0.28).toFixed(2)}deg) translateY(${(S.pitch * 3.4).toFixed(1)}px)`
+
+    if (S.playing) {
+      S.beatElapsed += dt * 1000
+      if (S.beatElapsed >= 7000) {
+        if (S.beat < BEATS.length - 1) applyBeat(S.beat + 1)
+        else {
+          S.playing = false
+          updatePlayIcons()
+        }
+      }
+    }
+
+    if (now - lastPaint > 110) {
+      lastPaint = now
+      paint()
+    }
+    requestAnimationFrame(frame)
+  }
+
+  /* ---------- boot ---------- */
+  initGraphics()
+  renderRoster()
+  renderThrust()
+  renderFlaps()
+  renderGear()
+  renderFuel()
+  renderAP()
+  renderJoy()
+  renderDockChrome()
+  log('simulation ready · B747-8F', 'info')
+  applyBeat(0, { silent: true })
+  paint()
+  requestAnimationFrame(frame)
+})()
+</script>
+</body>
+</html>

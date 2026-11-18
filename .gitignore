@@ -89,9 +89,10 @@ sw.*
 # Vim swap files
 *.swp
 
-# Generated simulator model/editor definitions
-src/wasm/generated/Modelfile
-src/wasm/generated/editorTypes.txt
+# Generated simulator model, editor definitions and wasm bindings. The wasm
+# binaries under public/ are fetched by `preinstall` from the pinned `wasmTag`.
+src/wasm/generated/
+public/flightsimulator_exec.*
 # Same Modelfile, synced to the server for `ollama create`
 backend/Modelfile
 
@@ -106,3 +107,8 @@ pocketbase/maintenance-backups/
 backend/pocketbase/pb_data/
 backend/pocketbase/secrets/
 backend/.env
+backend/pocketbase/auxiliary.db
+
+# Generated screenshots and session transcripts
+screenshots/
+session-*.md
