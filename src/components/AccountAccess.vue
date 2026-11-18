@@ -2,6 +2,7 @@
 import type { RecordModel } from 'pocketbase'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import {
+  developmentAccountCode,
   formatAccountCode,
   generateAccountNumber,
   loginWithAccountCode,
@@ -33,7 +34,10 @@ const emit = defineEmits<{
 const flow = ref<AccountFlowState>(pb.authStore.isValid ? 'authenticated' : props.initialView)
 const userInfo = ref<RecordModel | null>(pb.authStore.record)
 const accountName = ref('')
-const accountNumber = ref('')
+// The development build signs in with one fixed number, so start with it filled
+// in instead of making it be typed again. Empty in production builds.
+const blankAccountNumber = () => formatAccountCode(developmentAccountCode())
+const accountNumber = ref(blankAccountNumber())
 const generatedNumber = ref('')
 const animatedDigits = ref<string[]>([])
 const pending = ref(false)
@@ -96,7 +100,7 @@ const animateAccountNumber = (number: string) => {
 const openFlow = (state: 'choice' | 'create' | 'signin') => {
   flow.value = state
   errorMessage.value = ''
-  if (state !== 'signin') accountNumber.value = ''
+  if (state !== 'signin') accountNumber.value = blankAccountNumber()
 }
 
 const generateNumber = async () => {
@@ -134,7 +138,7 @@ const signIn = async () => {
   errorMessage.value = ''
   try {
     const result = await loginWithAccountCode(accountNumber.value)
-    accountNumber.value = ''
+    accountNumber.value = blankAccountNumber()
     emit('login', pb.baseURL, result.token, String(result.record.name || ''))
   } catch (error) {
     errorMessage.value = readableError(error)
@@ -155,7 +159,7 @@ const copyNumber = async () => {
 const startOver = () => {
   generatedNumber.value = ''
   animatedDigits.value = []
-  accountNumber.value = ''
+  accountNumber.value = blankAccountNumber()
   accountName.value = ''
   copied.value = false
   openFlow('create')
@@ -166,7 +170,7 @@ const logout = () => {
   userInfo.value = null
   generatedNumber.value = ''
   animatedDigits.value = []
-  accountNumber.value = ''
+  accountNumber.value = blankAccountNumber()
   accountName.value = ''
   copied.value = false
   flow.value = props.initialView
