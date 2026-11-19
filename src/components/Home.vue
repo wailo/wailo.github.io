@@ -54,10 +54,9 @@ const featureGroups = [
     ],
   },
 ]
-const isDark = ref(
-  savedTheme === 'dark' ||
-    (savedTheme !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches),
-)
+// Dark is the app default, matching the simulator's `|| 'dark'`. Only an explicit
+// light choice is remembered; the OS preference no longer seeds the theme.
+const isDark = ref(savedTheme !== 'light')
 watch(
   isDark,
   (dark) => {
